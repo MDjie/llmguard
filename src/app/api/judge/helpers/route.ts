@@ -6,7 +6,7 @@ import { eq, or } from 'drizzle-orm';
 // GET: 获取裁判模型配置所需的辅助数据
 export async function GET(request: NextRequest) {
   try {
-    // 获取可用作裁判模型的 Provider (useCase 为 'judge' 或 'both')
+    // 获取所有 Provider（配置页面需要展示所有可选的，包括关闭的）
     const judgeProviders = await db
       .select({
         id: llmProviders.id,
@@ -16,9 +16,9 @@ export async function GET(request: NextRequest) {
         defaultModel: llmProviders.defaultModel,
         useCase: llmProviders.useCase,
         isDefaultJudge: llmProviders.isDefaultJudge,
+        isEnabled: llmProviders.isEnabled,
       })
-      .from(llmProviders)
-      .where(eq(llmProviders.isEnabled, true));
+      .from(llmProviders);
 
     // 过滤出可以用作裁判模型的 Provider (useCase 为 'judge' 或 'both')
     const availableProviders = judgeProviders.filter(
@@ -47,6 +47,7 @@ export async function GET(request: NextRequest) {
           useCase: p.useCase,
           defaultModel: p.defaultModel,
           isDefaultJudge: p.isDefaultJudge,
+          isEnabled: p.isEnabled,
         })),
         dimensions: dimensions.map(d => ({
           code: d.code,

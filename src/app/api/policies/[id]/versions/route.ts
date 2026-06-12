@@ -12,7 +12,7 @@ export async function GET(
 
     const { data, error } = await client
       .from('policy_versions')
-      .select('*')
+      .select()
       .eq('policy_id', id)
       .order('version', { ascending: false })
       .limit(20);

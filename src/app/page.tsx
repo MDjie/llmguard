@@ -680,9 +680,8 @@ export default function HomePage() {
             {messages.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-gray-400">
                 <Bot className="h-12 w-12 mb-4" />
-                <p>开始对话，体验实时安全检测</p>
-                <p className="text-sm mt-2">输入将被检测，高风险内容将被拦截</p>
-                <p className="text-xs mt-1 text-gray-300">安全护栏采用 fail-closed 策略</p>
+                <p>开始对话</p>
+                <p className="text-sm mt-2">安全对话模式，输入输出双向检测 · 关键词引擎 + 裁判模型双引擎守护</p>
               </div>
             ) : (
               messages.map(message => (

@@ -73,6 +73,9 @@ export async function POST(request: NextRequest) {
       latencyMs: result.latencyMs,
       originalText: text,
       processedText: text,
+      // 裁判模型结果
+      judgeModel: result.judgeModelResult || null,
+      decisionTrace: result.decisionTrace || null,
       // 策略信息（供前端判断是否有风险）
       effectivePolicyId,
       originalPolicyId: targetPolicyId,

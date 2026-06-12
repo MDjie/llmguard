@@ -15,7 +15,7 @@ export async function GET(
 
     const { data, error } = await client
       .from('keyword_rules')
-      .select('*')
+      .select()
       .eq('policy_id', policyId)
       .eq('enabled', true);
 

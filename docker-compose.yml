@@ -46,6 +46,14 @@ services:
       LLM_MODEL_NAME: ${LLM_MODEL_NAME:-}
       # 安全密钥
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:-guardllm-encryption-key-change-in-production}
+      # Supabase兼容配置
+      COZE_SUPABASE_URL: http://postgres:5432
+      COZE_SUPABASE_ANON_KEY: dummy
+      COZE_SUPABASE_DB_URL: postgres://${DB_USER:-guardllm}:${DB_PASSWORD:-guardllm_secret_2024}@postgres:5432/${DB_NAME:-guardllm}
+      # Ollama本地模型
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "${APP_PORT:-5000}:5000"
     networks:

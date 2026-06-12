@@ -63,8 +63,8 @@ export async function GET(
         weight: parseFloat(config.weight || '0.5'),
         applyToInput: config.applyToInput,
         applyToOutput: config.applyToOutput,
-        enabledDimensions: config.enabledDimensions || [],
-        semanticDimensions: config.semanticDimensions || [],
+        enabledDimensions: Array.isArray(config.enabledDimensions) ? config.enabledDimensions : [],
+        semanticDimensions: Array.isArray(config.semanticDimensions) ? config.semanticDimensions : [],
         timeoutMs: config.timeoutMs,
         fallbackAction: config.fallbackAction,
         failClosedForHighRisk: config.failClosedForHighRisk,
@@ -119,15 +119,19 @@ export async function PUT(
       const providers = await db
         .select()
         .from(llmProviders)
-        .where(and(
-          eq(llmProviders.id, providerId),
-          eq(llmProviders.isEnabled, true)
-        ))
+        .where(eq(llmProviders.id, providerId))
         .limit(1);
 
       if (providers.length === 0) {
         return NextResponse.json(
-          { success: false, error: '指定的模型供应商不存在或未启用' },
+          { success: false, error: '指定的模型供应商不存在' },
+          { status: 400 }
+        );
+      }
+
+      if (!providers[0].isEnabled) {
+        return NextResponse.json(
+          { success: false, error: '指定的模型供应商已关闭，请先在模型管理中启用' },
           { status: 400 }
         );
       }

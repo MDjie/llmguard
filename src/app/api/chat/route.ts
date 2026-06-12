@@ -49,11 +49,18 @@ async function callLLMApi(
       baseUrl = provider.baseUrl || 'https://dashscope.aliyuncs.com/compatible-mode/v1';
       break;
     case 'ollama':
-      baseUrl = provider.baseUrl || 'http://localhost:11434/v1';
+      baseUrl = provider.baseUrl || 'http://localhost:11434';
+      delete headers['Authorization']; // Ollama不需要API Key
       break;
   }
   
-  const response = await fetch(`${baseUrl}/chat/completions`, {
+  // 根据provider类型选择API端点和格式
+  const isOllama = provider.providerType === 'ollama';
+  // Ollama使用OpenAI兼容API (/v1/chat/completions)
+  const endpoint = isOllama ? `${baseUrl}/v1/chat/completions` : `${baseUrl}/chat/completions`;
+  const ollamaBody = isOllama ? { ...requestBody, stream: false } : requestBody;
+
+  const response = await fetch(endpoint, {
     method: 'POST',
     headers,
     body: JSON.stringify(requestBody),
@@ -67,8 +74,8 @@ async function callLLMApi(
   const data = await response.json();
   const latencyMs = Date.now() - startTime;
   
-  // 提取响应内容
-  const content = data.choices?.[0]?.message?.content || '';
+  // 提取响应内容（兼容Ollama原生API和OpenAI格式）
+  const content = data.choices?.[0]?.message?.content || data.message?.content || '';
   
   return { content, latencyMs };
 }
@@ -136,7 +143,8 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    if (!provider.apiKeyEncrypted) {
+    // Ollama不需要API Key
+    if (provider.providerType !== 'ollama' && !provider.apiKeyEncrypted) {
       return NextResponse.json(
         { success: false, error: `供应商 "${provider.displayName}" 未配置 API Key` },
         { status: 400 }

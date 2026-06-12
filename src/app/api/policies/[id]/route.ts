@@ -33,7 +33,7 @@ export async function GET(
     // 获取策略基本信息
     const { data: profile, error } = await client
       .from('policy_profiles')
-      .select('*')
+      .select()
       .eq('id', id)
       .single();
 
@@ -46,11 +46,11 @@ export async function GET(
 
     // 获取规则、关键词分类、关键词、检测维度
     const [rulesResult, categoriesResult, keywordsResult, versionsResult, dimensionsResult] = await Promise.all([
-      client.from('policy_rules').select('*').eq('policy_id', id),
-      client.from('keyword_categories').select('*').eq('policy_id', id).order('priority'),
-      client.from('keyword_rules').select('*').eq('policy_id', id).order('created_at', { ascending: false }),
-      client.from('policy_versions').select('*').eq('policy_id', id).order('version', { ascending: false }).limit(10),
-      client.from('detection_dimensions').select('*').eq('enabled', true).order('name'),
+      client.from('policy_rules').select().eq('policy_id', id),
+      client.from('keyword_categories').select().eq('policy_id', id).order('priority'),
+      client.from('keyword_rules').select().eq('policy_id', id).order('created_at', { ascending: false }),
+      client.from('policy_versions').select().eq('policy_id', id).order('version', { ascending: false }).limit(10),
+      client.from('detection_dimensions').select().eq('enabled', true).order('name'),
     ]);
 
     // 合并 policy_rules 和 detection_dimensions，确保所有维度都显示

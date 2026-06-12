@@ -10,7 +10,7 @@ export async function GET() {
     // 获取所有策略配置和检测维度总数
     const { data: profiles, error } = await client
       .from('policy_profiles')
-      .select('*')
+      .select()
       .order('created_at', { ascending: false });
 
     // 获取启用的检测维度总数
@@ -48,7 +48,7 @@ export async function GET() {
     const policiesWithDetails = await Promise.all(
       (profiles || []).map(async (profile) => {
         const [rulesResult, keywordsResult, categoriesResult] = await Promise.all([
-          client.from('policy_rules').select('*').eq('policy_id', profile.id),
+          client.from('policy_rules').select().eq('policy_id', profile.id),
           client.from('keyword_rules').select('id', { count: 'exact', head: true }).eq('policy_id', profile.id),
           client.from('keyword_categories').select('id', { count: 'exact', head: true }).eq('policy_id', profile.id),
         ]);
@@ -116,9 +116,9 @@ export async function POST(request: NextRequest) {
     // 如果是从现有策略克隆
     if (cloneFrom) {
       const [rulesResult, keywordsResult, categoriesResult] = await Promise.all([
-        client.from('policy_rules').select('*').eq('policy_id', cloneFrom),
-        client.from('keyword_rules').select('*').eq('policy_id', cloneFrom),
-        client.from('keyword_categories').select('*').eq('policy_id', cloneFrom),
+        client.from('policy_rules').select().eq('policy_id', cloneFrom),
+        client.from('keyword_rules').select().eq('policy_id', cloneFrom),
+        client.from('keyword_categories').select().eq('policy_id', cloneFrom),
       ]);
       rulesToClone = rulesResult.data || [];
       keywordsToClone = keywordsResult.data || [];
@@ -231,7 +231,7 @@ export async function POST(request: NextRequest) {
     // 创建初始版本快照
     const { data: newRules } = await client
       .from('policy_rules')
-      .select('*')
+      .select()
       .eq('policy_id', profile.id);
 
     await client.from('policy_versions').insert({
@@ -278,7 +278,7 @@ export async function PUT(request: NextRequest) {
     // 获取当前策略信息
     const { data: currentPolicy } = await client
       .from('policy_profiles')
-      .select('*')
+      .select()
       .eq('id', policyId)
       .single();
 
@@ -374,14 +374,14 @@ export async function PUT(request: NextRequest) {
     // 创建版本快照
     const newVersion = currentPolicy.version + 1;
     const [newRules, newKeywords, newCategories] = await Promise.all([
-      client.from('policy_rules').select('*').eq('policy_id', policyId),
-      client.from('keyword_rules').select('*').eq('policy_id', policyId),
-      client.from('keyword_categories').select('*').eq('policy_id', policyId),
+      client.from('policy_rules').select().eq('policy_id', policyId),
+      client.from('keyword_rules').select().eq('policy_id', policyId),
+      client.from('keyword_categories').select().eq('policy_id', policyId),
     ]);
 
     const { data: updatedPolicy } = await client
       .from('policy_profiles')
-      .select('*')
+      .select()
       .eq('id', policyId)
       .single();
 

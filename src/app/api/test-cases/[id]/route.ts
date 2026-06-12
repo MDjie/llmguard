@@ -11,7 +11,7 @@ export async function GET(
 
     const { data, error } = await client
       .from('test_cases')
-      .select('*')
+      .select()
       .eq('id', id)
       .single();
 
@@ -63,7 +63,7 @@ export async function PUT(
       .from('test_cases')
       .update(updateData)
       .eq('id', id)
-      .select('*');
+      .select();
 
     if (result.error) {
       return NextResponse.json(

@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, CheckCircle, AlertTriangle, Shield, Eye, Clock, TrendingUp, BarChart3, RefreshCw, XCircle } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart, PieChart, Pie, Cell } from 'recharts';
 
 interface StatsData {
   totalDetections: number;
@@ -21,7 +21,7 @@ interface StatsData {
   avgScore: number | null;
   avgLatency: number | null;
   blockRate: string;
-  trend: Array<{ date: string; count: number }>;
+  trend: Array<{ date: string; count: number; blockCount: number; warnCount: number; maskCount: number }>;
 }
 
 interface InterceptionItem {
@@ -229,32 +229,84 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* 风险维度分布 */}
+        {/* 风险维度饼图 */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Shield className="h-5 w-5" />
               风险维度分布
             </CardTitle>
-            <CardDescription>各维度风险检出次数</CardDescription>
+            <CardDescription>各维度风险检出占比</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3 max-h-[300px] overflow-y-auto">
-              {Object.entries(stats.riskDistribution)
-                .filter(([, count]) => count > 0)
-                .sort(([, a], [, b]) => b - a)
-                .map(([dimension, count]) => (
-                  <div key={dimension} className="flex items-center justify-between">
-                    <span className="text-sm">{dimensionLabels[dimension] || dimension}</span>
-                    <Badge variant="outline">{count} 次</Badge>
-                  </div>
-                ))}
-              {Object.values(stats.riskDistribution).every(c => c === 0) && (
-                <div className="text-center text-muted-foreground py-8">
-                  暂无风险检出记录
+            {Object.values(stats.riskDistribution).every(c => c === 0) ? (
+              <div className="text-center text-muted-foreground py-8">
+                暂无风险检出记录
+              </div>
+            ) : (
+              <div className="flex items-center gap-6">
+                <div className="w-[220px] h-[220px] flex-shrink-0">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={Object.entries(stats.riskDistribution)
+                          .filter(([, count]) => count > 0)
+                          .sort(([, a], [, b]) => b - a)
+                          .map(([dimension, count]) => ({
+                            name: dimensionLabels[dimension] || dimension,
+                            value: count,
+                          }))
+                        }
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={45}
+                        outerRadius={85}
+                        paddingAngle={3}
+                        dataKey="value"
+                        strokeWidth={1}
+                        stroke="hsl(var(--card))"
+                      >
+                        {Object.entries(stats.riskDistribution)
+                          .filter(([, count]) => count > 0)
+                          .sort(([, a], [, b]) => b - a)
+                          .map((_, index) => {
+                            const colors = ['#6366f1', '#ef4444', '#f59e0b', '#3b82f6', '#10b981', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#64748b', '#84cc16', '#06b6d4'];
+                            return <Cell key={index} fill={colors[index % colors.length]} />;
+                          })
+                        }
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: 'hsl(var(--card))',
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '8px'
+                        }}
+                        formatter={(value: number, name: string) => [`${value} 次`, name]}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
                 </div>
-              )}
-            </div>
+                <div className="flex-1 space-y-2">
+                  {Object.entries(stats.riskDistribution)
+                    .filter(([, count]) => count > 0)
+                    .sort(([, a], [, b]) => b - a)
+                    .map(([dimension, count], index) => {
+                      const colors = ['#6366f1', '#ef4444', '#f59e0b', '#3b82f6', '#10b981', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#64748b', '#84cc16', '#06b6d4'];
+                      const total = Object.values(stats.riskDistribution).reduce((a, b) => a + b, 0);
+                      const pct = total > 0 ? ((count / total) * 100).toFixed(1) : '0';
+                      return (
+                        <div key={dimension} className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: colors[index % colors.length] }} />
+                          <span className="text-sm flex-1 truncate">{dimensionLabels[dimension] || dimension}</span>
+                          <span className="text-sm font-medium">{count}</span>
+                          <span className="text-xs text-muted-foreground w-12 text-right">{pct}%</span>
+                        </div>
+                      );
+                    })
+                  }
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -263,16 +315,28 @@ export default function DashboardPage() {
       <Card>
         <CardHeader>
           <CardTitle>检测趋势</CardTitle>
-          <CardDescription>最近7天检测次数变化</CardDescription>
+          <CardDescription>最近7天检测次数变化（总体 / 拦截 / 警告 / 脱敏）</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="h-[250px]">
+          <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={stats.trend} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <defs>
-                  <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                  <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="colorBlock" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="colorWarn" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="colorMask" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
@@ -300,18 +364,69 @@ export default function DashboardPage() {
                     const d = new Date(date + 'T00:00:00');
                     return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`;
                   }}
-                  formatter={(value: number) => [`${value} 次`, '检测次数']}
+                  formatter={(value: number, name: string) => {
+                    const labels: Record<string, string> = {
+                      count: '总检测',
+                      blockCount: '拦截',
+                      warnCount: '警告',
+                      maskCount: '脱敏',
+                    };
+                    return [`${value} 次`, labels[name] || name];
+                  }}
                 />
                 <Area 
                   type="monotone" 
                   dataKey="count" 
-                  stroke="hsl(var(--primary))" 
+                  stroke="#6366f1"
                   strokeWidth={2}
-                  fill="url(#colorCount)"
-                  name="检测次数"
+                  fill="url(#colorTotal)"
+                  name="count"
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="blockCount" 
+                  stroke="#ef4444"
+                  strokeWidth={2}
+                  fill="url(#colorBlock)"
+                  name="blockCount"
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="warnCount" 
+                  stroke="#f59e0b"
+                  strokeWidth={2}
+                  fill="url(#colorWarn)"
+                  name="warnCount"
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="maskCount" 
+                  stroke="#3b82f6"
+                  strokeWidth={2}
+                  fill="url(#colorMask)"
+                  name="maskCount"
                 />
               </AreaChart>
             </ResponsiveContainer>
+          </div>
+          {/* 图例 */}
+          <div className="flex items-center justify-center gap-6 mt-4">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-[#6366f1]"></div>
+              <span className="text-sm text-muted-foreground">总体数量</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-[#ef4444]"></div>
+              <span className="text-sm text-muted-foreground">拦截数量</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-[#f59e0b]"></div>
+              <span className="text-sm text-muted-foreground">警告数量</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-[#3b82f6]"></div>
+              <span className="text-sm text-muted-foreground">脱敏数量</span>
+            </div>
           </div>
         </CardContent>
       </Card>

@@ -45,8 +45,11 @@ export class OpenAICompatibleAdapter implements IProviderAdapter {
   async chat(request: LLMChatRequest): Promise<LLMChatResponse> {
     const startTime = Date.now();
 
-    // 构建请求 URL
-    const url = `${this.baseUrl}/v1/chat/completions`;
+    // 构建请求 URL - Ollama用 /v1/chat/completions，其他用 /v1/chat/completions
+    // 如果baseUrl已经包含/v1就直接加 /chat/completions，否则加 /v1/chat/completions
+    const url = this.baseUrl.includes('/v1') 
+      ? `${this.baseUrl}/chat/completions` 
+      : `${this.baseUrl}/v1/chat/completions`;
 
     // 构建请求体
     const body = {

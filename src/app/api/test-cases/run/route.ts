@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
     // 获取测试用例
     let query = client
       .from('test_cases')
-      .select('*')
+      .select()
       .eq('enabled', true);
 
     if (testCaseIds && testCaseIds.length > 0) {
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     if (policyId) {
       const { data, error } = await client
         .from('policy_profiles')
-        .select('*')
+        .select()
         .eq('id', policyId)
         .single();
       
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     } else {
       const { data, error } = await client
         .from('policy_profiles')
-        .select('*')
+        .select()
         .eq('is_default', true)
         .single();
       
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
     // 获取策略规则
     const { data: rules, error: rulesError } = await client
       .from('policy_rules')
-      .select('*')
+      .select()
       .eq('policy_id', policy.id)
       .eq('enabled', true);
 
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
     // 获取关键词规则
     const { data: keywords, error: keywordsError } = await client
       .from('keyword_rules')
-      .select('*')
+      .select()
       .eq('policy_id', policy.id)
       .eq('enabled', true);
 

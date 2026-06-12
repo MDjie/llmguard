@@ -24,7 +24,8 @@ import {
   User,
   ChevronDown,
   LogOut,
-  UserCog
+  UserCog,
+  MessageCircle
 } from 'lucide-react';
 import { UserProfileModal } from '@/components/login/user-profile-modal';
 
@@ -33,7 +34,7 @@ const navigationGroups = [
   {
     title: '核心功能',
     items: [
-      { name: '检测工作台', href: '/', icon: Shield, desc: '实时安全检测' },
+      { name: '安全对话', href: '/', icon: MessageCircle, desc: '双引擎安全对话' },
       { name: '链路演示', href: '/simulate', icon: Zap, desc: '完整检测流程' },
       { name: '文档检测', href: '/document-scan', icon: FileText, desc: '文档安全扫描' },
     ]
@@ -204,9 +205,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
         <div className="flex items-center justify-between h-16 px-6">
           <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg shadow-blue-500/20">
-              <Shield className="h-6 w-6 text-white" />
-            </div>
+            <img src="/logo.png" alt="国舜" className="h-10 w-auto" />
             <div>
               <h1 className="text-lg font-bold text-gray-900">
                 大模型安全护栏检测平台

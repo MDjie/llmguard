@@ -67,7 +67,7 @@ export async function GET() {
       ? recordsData.reduce((sum, r) => sum + (r.totalLatencyMs || 0), 0) / recordsData.length
       : 0;
 
-    // 获取最近7天的趋势数据（今天 + 前6天）
+    // 获取最近7天的趋势数据（按动作分类）
     const last7Days = [];
     const trendTodayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
     
@@ -78,13 +78,19 @@ export async function GET() {
       const dayEnd = new Date(dayStart);
       dayEnd.setDate(dayEnd.getDate() + 1);
 
-      const dayCountResult = await db
-        .select({ count: sql<number>`count(*)` })
+      // 按动作分类统计当天数据
+      const daySessions = await db
+        .select({ finalAction: detectionSessions.finalAction })
         .from(detectionSessions)
         .where(and(
           gte(detectionSessions.createdAt, dayStart),
           lt(detectionSessions.createdAt, dayEnd)
         ));
+
+      const dayTotal = daySessions.length;
+      const dayBlock = daySessions.filter(s => s.finalAction === 'block').length;
+      const dayWarn = daySessions.filter(s => s.finalAction === 'warn').length;
+      const dayMask = daySessions.filter(s => s.finalAction === 'mask').length;
 
       // 格式化日期为 YYYY-MM-DD
       const year = dayStart.getFullYear();
@@ -94,7 +100,10 @@ export async function GET() {
 
       last7Days.push({
         date: dateStr,
-        count: Number(dayCountResult[0]?.count || 0),
+        count: dayTotal,
+        blockCount: dayBlock,
+        warnCount: dayWarn,
+        maskCount: dayMask,
       });
     }
 

@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
     // 获取 Provider 配置
     const { data: providers, error: fetchError } = await client
       .from('llm_providers')
-      .select('*')
+      .select()
       .eq('id', providerId)
       .limit(1);
 

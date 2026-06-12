@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     // 查询用户
     const { data: users, error } = await client
       .from('users')
-      .select('*')
+      .select()
       .eq('username', username)
       .limit(1);
 
@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
 
     response.cookies.set('auth-token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: false,
       sameSite: 'lax',
       maxAge: rememberMe ? 7 * 24 * 60 * 60 : 24 * 60 * 60,
       path: '/',

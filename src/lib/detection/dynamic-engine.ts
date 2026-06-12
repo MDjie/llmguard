@@ -918,6 +918,10 @@ export async function detectWithDynamicRules(
     }
   } catch (error) {
     console.error('裁判模型检测失败:', error);
+    // 记录更多错误信息
+    if (error instanceof Error) {
+      console.error('裁判模型错误详情:', error.message, error.stack?.substring(0, 200));
+    }
     // 裁判模型失败时继续使用规则检测结果
   }
 

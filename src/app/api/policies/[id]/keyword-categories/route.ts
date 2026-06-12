@@ -12,7 +12,7 @@ export async function GET(
 
     const { data, error } = await client
       .from('keyword_categories')
-      .select('*')
+      .select()
       .eq('policy_id', policyId)
       .order('priority');
 

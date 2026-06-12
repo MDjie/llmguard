@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
     
     const { data: providers, error } = await client
       .from('llm_providers')
-      .select('*')
+      .select()
       .order('created_at', { ascending: false });
 
     if (error) {

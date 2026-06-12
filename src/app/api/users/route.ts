@@ -174,7 +174,7 @@ export async function PUT(request: NextRequest) {
     // 检查用户是否存在
     const { data: existing } = await client
       .from('users')
-      .select('*')
+      .select()
       .eq('id', id)
       .single();
 
@@ -248,7 +248,7 @@ export async function DELETE(request: NextRequest) {
     // 检查用户是否存在
     const { data: existing } = await client
       .from('users')
-      .select('*')
+      .select()
       .eq('id', id)
       .single();
 

@@ -7,7 +7,7 @@ export async function GET() {
     
     const result = await client
       .from('test_cases')
-      .select('*')
+      .select()
       .order('created_at', { ascending: false });
 
     if (result.error) {

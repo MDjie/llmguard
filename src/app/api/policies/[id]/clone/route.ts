@@ -23,7 +23,7 @@ export async function POST(
     // 获取原策略
     const { data: sourcePolicy, error: sourceError } = await client
       .from('policy_profiles')
-      .select('*')
+      .select()
       .eq('id', id)
       .single();
 
@@ -59,7 +59,7 @@ export async function POST(
         is_active: true,
         version: 1,
       })
-      .select('*')
+      .select()
       .single();
 
     if (createError || !newPolicy) {
@@ -72,7 +72,7 @@ export async function POST(
     // 克隆规则
     const { data: rules } = await client
       .from('policy_rules')
-      .select('*')
+      .select()
       .eq('policy_id', id);
 
     if (rules && rules.length > 0) {
@@ -92,7 +92,7 @@ export async function POST(
     // 克隆分类和关键词
     const { data: categories } = await client
       .from('keyword_categories')
-      .select('*')
+      .select()
       .eq('policy_id', id);
 
     const categoryIdMap: Record<string, string> = {};
@@ -120,7 +120,7 @@ export async function POST(
 
     const { data: keywords } = await client
       .from('keyword_rules')
-      .select('*')
+      .select()
       .eq('policy_id', id);
 
     if (keywords && keywords.length > 0) {
