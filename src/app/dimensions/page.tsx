@@ -60,6 +60,8 @@ const categoryColors: Record<string, string> = {
   compliance: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
   content: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
   spam: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
+  safety: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+  quality: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400',
 };
 
 const categoryLabels: Record<string, string> = {
@@ -68,6 +70,8 @@ const categoryLabels: Record<string, string> = {
   compliance: '合规',
   content: '内容',
   spam: '垃圾信息',
+  safety: '人身安全',
+  quality: '质量',
 };
 
 const dimensionIcons: Record<string, React.ReactNode> = {
@@ -87,6 +91,15 @@ const dimensionIcons: Record<string, React.ReactNode> = {
   copyright_risk: <Eye className="h-5 w-5" />,
   business_sensitive: <Eye className="h-5 w-5" />,
   output_leak: <Eye className="h-5 w-5" />,
+  politically_sensitive: <AlertTriangle className="h-5 w-5" />,
+  hallucination: <Eye className="h-5 w-5" />,
+  topic_safety: <Shield className="h-5 w-5" />,
+  dialog_manipulation: <Ban className="h-5 w-5" />,
+  data_exfiltration: <UserX className="h-5 w-5" />,
+  model_extraction: <Code className="h-5 w-5" />,
+  livelihood_sensitive: <Eye className="h-5 w-5" />,
+  public_health_sensitive: <AlertTriangle className="h-5 w-5" />,
+  malicious_url: <Ban className="h-5 w-5" />,
 };
 
 export default function DimensionsPage() {

@@ -2,21 +2,26 @@ import { NextResponse } from 'next/server';
 import { query, update, remove, getDb } from '@/lib/db';
 import { clearPolicyCache } from '@/lib/detection/dynamic-engine';
 
-// 辅助函数：根据 UUID 或 code 获取维度
+// 辅助函数：根据 ID 或 code 获取维度
+// 策略：先尝试精确ID查询，再尝试code查询
 async function getDimensionByIdOrCode(idOrCode: string) {
-  const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrCode);
-
-  if (isUUID) {
-    return await query('detection_dimensions', {
-      filter: { id: idOrCode },
-      single: true
-    });
-  } else {
-    return await query('detection_dimensions', {
-      filter: { code: idOrCode },
-      single: true
-    });
+  // 先尝试用 id 精确查询
+  const idResult = await query('detection_dimensions', {
+    filter: { id: idOrCode },
+    single: true
+  });
+  
+  if (idResult.data && !Array.isArray(idResult.data)) {
+    return idResult;
   }
+  
+  // id没找到，尝试用 code 查询
+  const codeResult = await query('detection_dimensions', {
+    filter: { code: idOrCode },
+    single: true
+  });
+  
+  return codeResult;
 }
 
 // 获取单个维度详情
@@ -29,7 +34,7 @@ export async function GET(
 
     const dimensionResult = await getDimensionByIdOrCode(id);
 
-    if (dimensionResult.error || !dimensionResult.data) {
+    if (dimensionResult.error || !dimensionResult.data || (Array.isArray(dimensionResult.data) && dimensionResult.data.length === 0)) {
       return NextResponse.json(
         { success: false, error: '维度不存在' },
         { status: 404 }
@@ -85,7 +90,7 @@ export async function PUT(
     // 检查维度是否存在
     const existingResult = await getDimensionByIdOrCode(id);
 
-    if (existingResult.error || !existingResult.data) {
+    if (existingResult.error || !existingResult.data || (Array.isArray(existingResult.data) && existingResult.data.length === 0)) {
       return NextResponse.json(
         { success: false, error: '维度不存在' },
         { status: 404 }
@@ -139,7 +144,7 @@ export async function DELETE(
     // 检查维度是否存在
     const existingResult = await getDimensionByIdOrCode(id);
 
-    if (existingResult.error || !existingResult.data) {
+    if (existingResult.error || !existingResult.data || (Array.isArray(existingResult.data) && existingResult.data.length === 0)) {
       return NextResponse.json(
         { success: false, error: '维度不存在' },
         { status: 404 }
