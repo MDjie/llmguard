@@ -1,0 +1,21 @@
+[Unit]
+Description=GuardLLM control application
+After=network-online.target container-runtime.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/guardllm/runtime.env
+ExecStartPre=/usr/local/libexec/guardllm-verify-image app
+ExecStart=/usr/bin/podman run --rm --name guardllm-app --network guardllm --read-only --cap-drop ALL --security-opt no-new-privileges --tmpfs /tmp:rw,noexec,nosuid,size=1g --env-file /etc/guardllm/runtime.env -p 127.0.0.1:5000:5000 ${GUARDLLM_APP_IMAGE}
+ExecStop=/usr/bin/podman stop --time 45 guardllm-app
+Restart=always
+RestartSec=5
+TimeoutStopSec=60
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=guardllm.target

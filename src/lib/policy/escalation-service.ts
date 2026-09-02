@@ -6,6 +6,7 @@
 import { db } from '@/lib/db';
 import { policyProfiles, userPolicyStates } from '@/storage/database/shared/schema';
 import { eq, and } from 'drizzle-orm';
+import { scopePredicate, type TenantScope } from '@/lib/tenancy';
 
 // 策略升级配置
 export interface EscalationConfig {
@@ -42,12 +43,18 @@ export interface EscalationResult {
 /**
  * 获取策略升级配置
  */
-export async function getEscalationConfig(policyId: string): Promise<EscalationConfig> {
+export async function getEscalationConfig(
+  scope: TenantScope,
+  policyId: string,
+): Promise<EscalationConfig> {
 	try {
 		const policies = await db
 			.select()
 			.from(policyProfiles)
-			.where(eq(policyProfiles.id, policyId))
+			.where(and(
+				eq(policyProfiles.id, policyId),
+				scopePredicate(policyProfiles, scope),
+			))
 			.limit(1);
 
 		if (policies.length === 0) {
@@ -82,6 +89,7 @@ function getDefaultEscalationConfig(): EscalationConfig {
  * 获取用户策略状态
  */
 export async function getUserPolicyState(
+	scope: TenantScope,
 	userId: string,
 	sessionId: string
 ): Promise<UserPolicyState | null> {
@@ -92,7 +100,8 @@ export async function getUserPolicyState(
 			.where(
 				and(
 					eq(userPolicyStates.userId, userId),
-					eq(userPolicyStates.sessionId, sessionId)
+					eq(userPolicyStates.sessionId, sessionId),
+					scopePredicate(userPolicyStates, scope),
 				)
 			)
 			.limit(1);
@@ -108,6 +117,7 @@ export async function getUserPolicyState(
  * 创建用户策略状态
  */
 export async function createUserPolicyState(
+	scope: TenantScope,
 	userId: string,
 	sessionId: string,
 	policyId: string
@@ -116,6 +126,8 @@ export async function createUserPolicyState(
 	const result = await db
 		.insert(userPolicyStates)
 		.values({
+			tenantId: scope.tenantId,
+			applicationId: scope.applicationId,
 			userId,
 			sessionId,
 			originalPolicyId: policyId,
@@ -136,26 +148,38 @@ export async function createUserPolicyState(
 /**
  * 更新用户策略状态
  */
-export async function updateUserPolicyState(state: Partial<UserPolicyState> & { id: string }): Promise<void> {
+export async function updateUserPolicyState(
+	scope: TenantScope,
+	state: Partial<UserPolicyState> & { id: string },
+): Promise<void> {
+	const { id, ...changes } = state;
 	await db
 		.update(userPolicyStates)
 		.set({
-			...state,
+			...changes,
 			updatedAt: new Date(),
 		})
-		.where(eq(userPolicyStates.id, state.id));
+		.where(and(
+			eq(userPolicyStates.id, id),
+			scopePredicate(userPolicyStates, scope),
+		));
 }
 
 /**
  * 删除用户策略状态（会话重置）
  */
-export async function deleteUserPolicyState(userId: string, sessionId: string): Promise<void> {
+export async function deleteUserPolicyState(
+	scope: TenantScope,
+	userId: string,
+	sessionId: string,
+): Promise<void> {
 	await db
 		.delete(userPolicyStates)
 		.where(
 			and(
 				eq(userPolicyStates.userId, userId),
-				eq(userPolicyStates.sessionId, sessionId)
+				eq(userPolicyStates.sessionId, sessionId),
+				scopePredicate(userPolicyStates, scope),
 			)
 		);
 }
@@ -163,13 +187,16 @@ export async function deleteUserPolicyState(userId: string, sessionId: string): 
 /**
  * 获取默认严格策略ID
  */
-async function getDefaultStrictPolicyId(): Promise<string | null> {
+async function getDefaultStrictPolicyId(scope: TenantScope): Promise<string | null> {
 	try {
 		// 查找名称包含"严格"的策略
 		const strictPolicies = await db
 			.select()
 			.from(policyProfiles)
-			.where(eq(policyProfiles.isActive, true))
+			.where(and(
+				eq(policyProfiles.isActive, true),
+				scopePredicate(policyProfiles, scope),
+			))
 			.limit(10);
 
 		// 优先查找名称包含"严格"的策略
@@ -205,13 +232,14 @@ function isInCooldown(state: UserPolicyState, cooldownMinutes: number): boolean 
  * 输入或输出有风险就加1次，输入和输出都有风险也只加1次
  */
 export async function handlePolicyEscalationOnce(
+	scope: TenantScope,
 	userId: string,
 	sessionId: string,
 	hasRisk: boolean,
 	originalPolicyId: string
 ): Promise<EscalationResult> {
 	// 1. 获取策略升级配置
-	const config = await getEscalationConfig(originalPolicyId);
+	const config = await getEscalationConfig(scope, originalPolicyId);
 
 	// 如果未启用策略升级，直接返回
 	if (!config.enabled) {
@@ -225,9 +253,9 @@ export async function handlePolicyEscalationOnce(
 	}
 
 	// 2. 获取或创建用户策略状态
-	let state = await getUserPolicyState(userId, sessionId);
+	let state = await getUserPolicyState(scope, userId, sessionId);
 	if (!state) {
-		state = await createUserPolicyState(userId, sessionId, originalPolicyId);
+		state = await createUserPolicyState(scope, userId, sessionId, originalPolicyId);
 	}
 
 	// 3. 如果当前策略与原始策略不同（可能从其他地方修改了），重置
@@ -256,7 +284,7 @@ export async function handlePolicyEscalationOnce(
 			// 获取目标策略
 			let targetPolicyId = config.targetPolicyId;
 			if (!targetPolicyId) {
-				targetPolicyId = await getDefaultStrictPolicyId();
+				targetPolicyId = await getDefaultStrictPolicyId(scope);
 			}
 
 			if (targetPolicyId) {
@@ -292,7 +320,7 @@ export async function handlePolicyEscalationOnce(
 
 	// 5. 更新状态
 	if (Object.keys(updates).length > 0) {
-		await updateUserPolicyState({ id: state.id, ...updates });
+		await updateUserPolicyState(scope, { id: state.id, ...updates });
 		state = { ...state, ...updates } as UserPolicyState;
 	}
 
@@ -309,6 +337,7 @@ export async function handlePolicyEscalationOnce(
  * 处理策略升级逻辑
  */
 export async function handlePolicyEscalation(
+	scope: TenantScope,
 	userId: string,
 	sessionId: string,
 	detectionAction: 'allow' | 'warn' | 'block',
@@ -317,7 +346,7 @@ export async function handlePolicyEscalation(
 	hasRisk: boolean = false
 ): Promise<EscalationResult> {
 	// 1. 获取策略升级配置
-	const config = await getEscalationConfig(originalPolicyId);
+	const config = await getEscalationConfig(scope, originalPolicyId);
 
 	// 如果未启用策略升级，直接返回
 	if (!config.enabled) {
@@ -331,9 +360,9 @@ export async function handlePolicyEscalation(
 	}
 
 	// 2. 获取或创建用户策略状态
-	let state = await getUserPolicyState(userId, sessionId);
+	let state = await getUserPolicyState(scope, userId, sessionId);
 	if (!state) {
-		state = await createUserPolicyState(userId, sessionId, originalPolicyId);
+		state = await createUserPolicyState(scope, userId, sessionId, originalPolicyId);
 	}
 
 	// 3. 如果当前策略与原始策略不同（可能从其他地方修改了），重置
@@ -366,7 +395,7 @@ export async function handlePolicyEscalation(
 			// 获取目标策略
 			let targetPolicyId = config.targetPolicyId;
 			if (!targetPolicyId) {
-				targetPolicyId = await getDefaultStrictPolicyId();
+				targetPolicyId = await getDefaultStrictPolicyId(scope);
 			}
 
 			if (targetPolicyId) {
@@ -403,7 +432,7 @@ export async function handlePolicyEscalation(
 
 	// 5. 更新状态
 	if (Object.keys(updates).length > 0) {
-		await updateUserPolicyState({ id: state.id, ...updates });
+		await updateUserPolicyState(scope, { id: state.id, ...updates });
 		state = { ...state, ...updates } as UserPolicyState;
 	}
 
@@ -420,11 +449,12 @@ export async function handlePolicyEscalation(
  * 重置会话策略状态（刷新页面时调用）
  */
 export async function resetSessionPolicyState(
+	scope: TenantScope,
 	userId: string,
 	sessionId: string
 ): Promise<{ success: boolean }> {
 	try {
-		await deleteUserPolicyState(userId, sessionId);
+		await deleteUserPolicyState(scope, userId, sessionId);
 		return { success: true };
 	} catch (error) {
 		console.error('[策略升级] 重置会话状态失败:', error);
@@ -436,10 +466,11 @@ export async function resetSessionPolicyState(
  * 获取当前生效策略ID
  */
 export async function getEffectivePolicyId(
+	scope: TenantScope,
 	userId: string,
 	sessionId: string,
 	defaultPolicyId: string
 ): Promise<string> {
-	const state = await getUserPolicyState(userId, sessionId);
+	const state = await getUserPolicyState(scope, userId, sessionId);
 	return state?.currentPolicyId ?? defaultPolicyId;
 }

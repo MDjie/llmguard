@@ -1,0 +1,23 @@
+apiVersion: minio.min.io/v2
+kind: Tenant
+metadata:
+  name: guardllm-object-store
+  namespace: guard-data-access
+spec:
+  requestAutoCert: false
+  configuration:
+    name: guardllm-minio-env
+  pools:
+    - name: pool-0
+      servers: 4
+      volumesPerServer: 4
+      volumeClaimTemplate:
+        metadata: {}
+        spec:
+          accessModes: [ReadWriteOnce]
+          storageClassName: encrypted-block
+          resources:
+            requests: { storage: 2Ti }
+      podManagementPolicy: Parallel
+  mountPath: /export
+  subPath: /data

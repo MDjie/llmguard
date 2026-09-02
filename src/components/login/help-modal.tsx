@@ -72,7 +72,7 @@ export function HelpModal({ open, onOpenChange }: HelpModalProps) {
               <div>
                 <p className="text-sm font-medium text-gray-900">如何调整检测规则？</p>
                 <p className="text-sm text-gray-600 mt-1">
-                  登录后进入"检测维度""策略配置""白名单规则"等页面，根据业务场景调整规则、阈值和处理动作。
+                  登录后进入&quot;检测维度&quot;、&quot;策略配置&quot;、&quot;白名单规则&quot;等页面，根据业务场景调整规则、阈值和处理动作。
                 </p>
               </div>
             </div>

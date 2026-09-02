@@ -6,6 +6,7 @@
  */
 
 import { useEffect, useState, useCallback } from 'react';
+import { csrfHeaders } from '@/lib/auth/csrf-client';
 
 /**
  * 生成 UUID（兼容所有环境）
@@ -31,14 +32,6 @@ function generateUUID(): string {
     const v = c === 'x' ? r : (r & 0x3 | 0x8);
     return v.toString(16);
   });
-}
-
-interface PolicyState {
-  sessionId: string;
-  userId: string;
-  effectivePolicyId: string | null;
-  isEscalated: boolean;
-  consecutiveWarningCount: number;
 }
 
 interface EscalationInfo {
@@ -77,19 +70,20 @@ export function usePolicyState(defaultUserId: string = 'anonymous') {
     if (!sessionId) return;
 
     try {
-      // 使用 sendBeacon 确保请求在页面关闭时也能发送
-      const data = JSON.stringify({
-        userId,
-        sessionId,
-        action: 'reset',
+      await fetch('/api/policy-state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
+        body: JSON.stringify({
+          sessionId,
+          action: 'reset',
+        }),
+        keepalive: true,
       });
-
-      navigator.sendBeacon('/api/policy-state', data);
       console.log('[策略状态] 会话已重置');
     } catch (error) {
       console.error('[策略状态] 重置失败:', error);
     }
-  }, [sessionId, userId]);
+  }, [sessionId]);
 
   // 强制重置会话（清除 sessionStorage 并创建新会话）
   const forceNewSession = useCallback(async () => {
@@ -128,10 +122,15 @@ export function usePolicyState(defaultUserId: string = 'anonymous') {
 /**
  * 处理检测结果中的策略升级信息
  */
-export function processEscalationInfo(detectionResult: any): EscalationInfo {
-  const message = detectionResult?.escalationMessage || null;
-  const isEscalated = detectionResult?.policyEscalated || false;
-  const isDeescalated = detectionResult?.policyDeescalated || false;
+export function processEscalationInfo(detectionResult: unknown): EscalationInfo {
+  const result =
+    typeof detectionResult === 'object' && detectionResult !== null
+      ? (detectionResult as Record<string, unknown>)
+      : {};
+  const message =
+    typeof result.escalationMessage === 'string' ? result.escalationMessage : null;
+  const isEscalated = result.policyEscalated === true;
+  const isDeescalated = result.policyDeescalated === true;
 
   return {
     message,

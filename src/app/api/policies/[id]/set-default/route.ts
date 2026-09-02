@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+import {
+  emptyQuerySchema,
+  jsonObjectResponseSchema,
+} from '@/contracts/http/common';
+import { policyParamsSchema } from '@/contracts/http/policies';
+import { withLegacyApiSecurity } from '@/lib/api-security';
 import { getDb } from '@/lib/db';
 
 // 设为默认策略
-export async function PUT(
+async function setDefaultPolicy(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -62,3 +68,21 @@ export async function PUT(
     );
   }
 }
+
+export const PUT = withLegacyApiSecurity(
+  {
+    permission: 'policy:manage',
+    paramsSchema: policyParamsSchema,
+    querySchema: emptyQuerySchema,
+    responseSchema: jsonObjectResponseSchema,
+    maxBodyBytes: 0,
+    auditEvent: 'policy.set-default',
+    rateLimitPolicy: {
+      id: 'policy-set-default',
+      windowMs: 60_000,
+      maxRequests: 10,
+      scope: 'principal',
+    },
+  },
+  setDefaultPolicy,
+);

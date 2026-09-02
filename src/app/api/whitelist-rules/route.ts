@@ -1,41 +1,117 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { jsonObjectResponseSchema } from '@/contracts/http/common';
+import { withLegacyApiSecurity, type AuthenticatedPrincipal } from '@/lib/api-security';
 import { db } from '@/lib/db';
 import { whitelistRules, whitelistRulePolicies, policyProfiles, detectionDimensions } from '@/lib/db';
-import { sql, eq, inArray } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
+import { compileSafeRegex } from '@/lib/detection/safe-regex';
+import { requireTenantContext, scopePredicate } from '@/lib/tenancy';
 
-// 白名单规则创建/更新请求类型
-interface WhitelistRuleRequest {
-  id?: string;
-  name: string;
-  description?: string;
-  policyScope: 'all' | 'specific';
-  policyIds?: string[];
-  dimensionScope: 'all' | 'specific';
-  dimensionCodes?: string[];
-  priority: number;
-  pattern: string;
-  matchType: 'exact' | 'contains' | 'prefix' | 'suffix' | 'regex';
-  caseSensitive: boolean;
-  enabled: boolean;
+const whitelistRuleFields = {
+  name: z.string().trim().min(1).max(128),
+  description: z.string().max(2_000).optional(),
+  policyScope: z.enum(['all', 'specific']),
+  policyIds: z.array(z.string().min(1).max(36)).max(100).default([]),
+  dimensionScope: z.enum(['all', 'specific']),
+  dimensionCodes: z
+    .array(z.string().min(1).max(64).regex(/^[a-z][a-z0-9_]*$/))
+    .max(100)
+    .default([]),
+  priority: z.number().int().min(0).max(10_000).default(100),
+  pattern: z.string().trim().min(1).max(4_096),
+  matchType: z.enum(['exact', 'contains', 'prefix', 'suffix', 'regex']),
+  caseSensitive: z.boolean().default(false),
+  enabled: z.boolean().default(true),
+};
+
+function validateWhitelistScope(
+  value: {
+    policyScope: 'all' | 'specific';
+    policyIds: string[];
+    dimensionScope: 'all' | 'specific';
+    dimensionCodes: string[];
+    matchType: 'exact' | 'contains' | 'prefix' | 'suffix' | 'regex';
+    pattern: string;
+    caseSensitive: boolean;
+  },
+  context: z.RefinementCtx,
+): void {
+  if (value.policyScope === 'specific' && value.policyIds.length === 0) {
+    context.addIssue({
+      code: 'custom',
+      path: ['policyIds'],
+      message: 'At least one policy is required for a specific policy scope',
+    });
+  }
+  if (value.dimensionScope === 'specific' && value.dimensionCodes.length === 0) {
+    context.addIssue({
+      code: 'custom',
+      path: ['dimensionCodes'],
+      message: 'At least one dimension is required for a specific dimension scope',
+    });
+  }
+  if (value.matchType === 'regex') {
+    try {
+      compileSafeRegex(value.pattern, value.caseSensitive ? '' : 'i');
+    } catch {
+      context.addIssue({
+        code: 'custom',
+        path: ['pattern'],
+        message: 'The regular expression is invalid or unsupported',
+      });
+    }
+  }
 }
 
+const createWhitelistRuleSchema = z
+  .object(whitelistRuleFields)
+  .strict()
+  .superRefine(validateWhitelistScope);
+const updateWhitelistRuleSchema = z
+  .object({ id: z.string().min(1).max(128), ...whitelistRuleFields })
+  .strict()
+  .superRefine(validateWhitelistScope);
+type CreateWhitelistRuleInput = z.infer<typeof createWhitelistRuleSchema>;
+type UpdateWhitelistRuleInput = z.infer<typeof updateWhitelistRuleSchema>;
+const listQuerySchema = z
+  .object({
+    policyId: z.string().min(1).max(36).optional(),
+  })
+  .strict();
+const deleteQuerySchema = z
+  .object({
+    id: z.string().min(1).max(128),
+  })
+  .strict();
+
 // GET: 获取所有白名单规则（包含策略绑定信息）
-export async function GET(request: NextRequest) {
+async function getWhitelistRules(
+  request: NextRequest,
+  _routeContext: unknown,
+  context: { principal: AuthenticatedPrincipal | null },
+) {
   try {
+    const scope = requireTenantContext(context.principal);
     const { searchParams } = new URL(request.url);
     const policyId = searchParams.get('policyId');
 
     // 获取所有白名单规则
-    const rules = await db.select().from(whitelistRules).orderBy(sql`${whitelistRules.priority} DESC`);
+    const rules = await db.select().from(whitelistRules)
+      .where(scopePredicate(whitelistRules, scope))
+      .orderBy(sql`${whitelistRules.priority} DESC`);
 
     // 获取所有策略绑定
-    const policyBindings = await db.select().from(whitelistRulePolicies);
+    const policyBindings = await db.select().from(whitelistRulePolicies)
+      .where(scopePredicate(whitelistRulePolicies, scope));
 
     // 获取所有策略信息
-    const policies = await db.select().from(policyProfiles);
+    const policies = await db.select().from(policyProfiles)
+      .where(scopePredicate(policyProfiles, scope));
 
     // 获取所有维度信息
-    const dimensions = await db.select().from(detectionDimensions);
+    const dimensions = await db.select().from(detectionDimensions)
+      .where(scopePredicate(detectionDimensions, scope));
 
     // 组装返回数据
     const rulesWithBindings = rules.map(rule => {
@@ -77,9 +153,14 @@ export async function GET(request: NextRequest) {
 }
 
 // POST: 创建白名单规则
-export async function POST(request: NextRequest) {
+async function createWhitelistRule(
+  request: NextRequest,
+  _routeContext: unknown,
+  context: { principal: AuthenticatedPrincipal | null },
+) {
   try {
-    const body: WhitelistRuleRequest = await request.json();
+    const scope = requireTenantContext(context.principal);
+    const body = (await request.json()) as CreateWhitelistRuleInput;
     const {
       name,
       description,
@@ -94,54 +175,15 @@ export async function POST(request: NextRequest) {
       enabled
     } = body;
 
-    // 参数校验
-    if (!pattern || !pattern.trim()) {
-      return NextResponse.json(
-        { success: false, error: '匹配内容不能为空' },
-        { status: 400 }
-      );
-    }
-
-    if (!name || !name.trim()) {
-      return NextResponse.json(
-        { success: false, error: '白名单名称不能为空' },
-        { status: 400 }
-      );
-    }
-
-    if (policyScope === 'specific' && (!policyIds || policyIds.length === 0)) {
-      return NextResponse.json(
-        { success: false, error: '指定策略模式下必须选择至少一个策略' },
-        { status: 400 }
-      );
-    }
-
-    if (dimensionScope === 'specific' && (!dimensionCodes || dimensionCodes.length === 0)) {
-      return NextResponse.json(
-        { success: false, error: '指定维度模式下必须选择至少一个维度' },
-        { status: 400 }
-      );
-    }
-
-    // 正则表达式校验
-    if (matchType === 'regex') {
-      try {
-        new RegExp(pattern);
-      } catch {
-        return NextResponse.json(
-          { success: false, error: '正则表达式语法错误' },
-          { status: 400 }
-        );
-      }
-    }
-
     // 创建白名单规则
     const result = await db.insert(whitelistRules).values({
+      tenantId: scope.tenantId,
+      applicationId: scope.applicationId,
       name,
       description: description || null,
       policyScope,
       dimensionScope,
-      dimensionCodes: dimensionCodes as any,
+      dimensionCodes,
       priority,
       pattern,
       matchType,
@@ -154,6 +196,8 @@ export async function POST(request: NextRequest) {
     // 如果是指定策略，创建策略绑定
     if (policyScope === 'specific' && policyIds.length > 0) {
       const bindingValues = policyIds.map(policyId => ({
+        tenantId: scope.tenantId,
+        applicationId: scope.applicationId,
         whitelistRuleId: newRule.id,
         policyId,
       }));
@@ -171,9 +215,14 @@ export async function POST(request: NextRequest) {
 }
 
 // PUT: 更新白名单规则
-export async function PUT(request: NextRequest) {
+async function updateWhitelistRule(
+  request: NextRequest,
+  _routeContext: unknown,
+  context: { principal: AuthenticatedPrincipal | null },
+) {
   try {
-    const body: WhitelistRuleRequest & { id: string } = await request.json();
+    const scope = requireTenantContext(context.principal);
+    const body = (await request.json()) as UpdateWhitelistRuleInput;
     const {
       id,
       name,
@@ -189,40 +238,6 @@ export async function PUT(request: NextRequest) {
       enabled
     } = body;
 
-    if (!id) {
-      return NextResponse.json(
-        { success: false, error: '缺少白名单ID' },
-        { status: 400 }
-      );
-    }
-
-    // 参数校验
-    if (!pattern || !pattern.trim()) {
-      return NextResponse.json(
-        { success: false, error: '匹配内容不能为空' },
-        { status: 400 }
-      );
-    }
-
-    if (!name || !name.trim()) {
-      return NextResponse.json(
-        { success: false, error: '白名单名称不能为空' },
-        { status: 400 }
-      );
-    }
-
-    // 正则表达式校验
-    if (matchType === 'regex') {
-      try {
-        new RegExp(pattern);
-      } catch {
-        return NextResponse.json(
-          { success: false, error: '正则表达式语法错误' },
-          { status: 400 }
-        );
-      }
-    }
-
     // 更新白名单规则
     const result = await db.update(whitelistRules)
       .set({
@@ -230,7 +245,7 @@ export async function PUT(request: NextRequest) {
         description: description || null,
         policyScope,
         dimensionScope,
-        dimensionCodes: dimensionCodes as any,
+        dimensionCodes,
         priority,
         pattern,
         matchType,
@@ -238,7 +253,10 @@ export async function PUT(request: NextRequest) {
         enabled,
         updatedAt: new Date(),
       })
-      .where(sql`${whitelistRules.id} = ${id}`)
+      .where(and(
+        eq(whitelistRules.id, id),
+        scopePredicate(whitelistRules, scope),
+      ))
       .returning();
 
     if (result.length === 0) {
@@ -250,11 +268,16 @@ export async function PUT(request: NextRequest) {
 
     // 删除旧的策略绑定
     await db.delete(whitelistRulePolicies)
-      .where(sql`${whitelistRulePolicies.whitelistRuleId} = ${id}`);
+      .where(and(
+        eq(whitelistRulePolicies.whitelistRuleId, id),
+        scopePredicate(whitelistRulePolicies, scope),
+      ));
 
     // 创建新的策略绑定
     if (policyScope === 'specific' && policyIds.length > 0) {
       const bindingValues = policyIds.map(policyId => ({
+        tenantId: scope.tenantId,
+        applicationId: scope.applicationId,
         whitelistRuleId: id,
         policyId,
       }));
@@ -272,8 +295,13 @@ export async function PUT(request: NextRequest) {
 }
 
 // DELETE: 删除白名单规则
-export async function DELETE(request: NextRequest) {
+async function deleteWhitelistRule(
+  request: NextRequest,
+  _routeContext: unknown,
+  context: { principal: AuthenticatedPrincipal | null },
+) {
   try {
+    const scope = requireTenantContext(context.principal);
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 
@@ -286,11 +314,17 @@ export async function DELETE(request: NextRequest) {
 
     // 先删除策略绑定
     await db.delete(whitelistRulePolicies)
-      .where(sql`${whitelistRulePolicies.whitelistRuleId} = ${id}`);
+      .where(and(
+        eq(whitelistRulePolicies.whitelistRuleId, id),
+        scopePredicate(whitelistRulePolicies, scope),
+      ));
 
     // 再删除白名单规则
     const result = await db.delete(whitelistRules)
-      .where(sql`${whitelistRules.id} = ${id}`)
+      .where(and(
+        eq(whitelistRules.id, id),
+        scopePredicate(whitelistRules, scope),
+      ))
       .returning();
 
     if (result.length === 0) {
@@ -309,3 +343,71 @@ export async function DELETE(request: NextRequest) {
     );
   }
 }
+
+export const GET = withLegacyApiSecurity(
+  {
+    permission: 'policy:read',
+    querySchema: listQuerySchema,
+    responseSchema: jsonObjectResponseSchema,
+    maxBodyBytes: 0,
+    auditEvent: 'whitelist.list',
+    rateLimitPolicy: {
+      id: 'whitelist-list',
+      windowMs: 60_000,
+      maxRequests: 60,
+      scope: 'principal',
+    },
+  },
+  getWhitelistRules,
+);
+
+export const POST = withLegacyApiSecurity(
+  {
+    permission: 'policy:manage',
+    bodySchema: createWhitelistRuleSchema,
+    responseSchema: jsonObjectResponseSchema,
+    maxBodyBytes: 64 * 1_024,
+    auditEvent: 'whitelist.create',
+    rateLimitPolicy: {
+      id: 'whitelist-create',
+      windowMs: 60_000,
+      maxRequests: 30,
+      scope: 'principal',
+    },
+  },
+  createWhitelistRule,
+);
+
+export const PUT = withLegacyApiSecurity(
+  {
+    permission: 'policy:manage',
+    bodySchema: updateWhitelistRuleSchema,
+    responseSchema: jsonObjectResponseSchema,
+    maxBodyBytes: 64 * 1_024,
+    auditEvent: 'whitelist.update',
+    rateLimitPolicy: {
+      id: 'whitelist-update',
+      windowMs: 60_000,
+      maxRequests: 30,
+      scope: 'principal',
+    },
+  },
+  updateWhitelistRule,
+);
+
+export const DELETE = withLegacyApiSecurity(
+  {
+    permission: 'policy:manage',
+    querySchema: deleteQuerySchema,
+    responseSchema: jsonObjectResponseSchema,
+    maxBodyBytes: 0,
+    auditEvent: 'whitelist.delete',
+    rateLimitPolicy: {
+      id: 'whitelist-delete',
+      windowMs: 60_000,
+      maxRequests: 10,
+      scope: 'principal',
+    },
+  },
+  deleteWhitelistRule,
+);

@@ -1,14 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
+import type { z } from 'zod';
+import { jsonObjectResponseSchema } from '@/contracts/http/common';
+import { batchKeywordSchema, policyParamsSchema } from '@/contracts/http/policies';
+import { withLegacyApiSecurity } from '@/lib/api-security';
 import { getDb } from '@/lib/db';
 
+type BatchKeywordInput = z.infer<typeof batchKeywordSchema>;
+
 // 批量添加关键词
-export async function POST(
+async function batchCreateKeywords(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id: policyId } = await params;
-    const body = await request.json();
+    const body = (await request.json()) as BatchKeywordInput;
     const { keywords, categoryId, dimension } = body;
 
     if (!keywords || !Array.isArray(keywords) || keywords.length === 0) {
@@ -28,14 +34,18 @@ export async function POST(
     const client = getDb();
 
     // 获取已存在的关键词
-    const keywordValues = keywords.map((k) => k.keyword || k);
+    const keywordValues = keywords.map((keyword) =>
+      typeof keyword === 'string' ? keyword : keyword.keyword,
+    );
     const { data: existing } = await client
-      .from('keyword_rules')
+      .from<{ keyword: string }>('keyword_rules')
       .select('keyword')
       .eq('policy_id', policyId)
       .in('keyword', keywordValues);
 
-    const existingSet = new Set((existing || []).map((k) => k.keyword));
+    const existingSet = new Set(
+      (existing || []).map((row) => row.keyword),
+    );
 
     // 过滤掉已存在的
     const toInsert = keywords
@@ -91,3 +101,21 @@ export async function POST(
     );
   }
 }
+
+export const POST = withLegacyApiSecurity(
+  {
+    permission: 'policy:manage',
+    paramsSchema: policyParamsSchema,
+    bodySchema: batchKeywordSchema,
+    responseSchema: jsonObjectResponseSchema,
+    maxBodyBytes: 2 * 1_024 * 1_024,
+    auditEvent: 'keyword.batch-create',
+    rateLimitPolicy: {
+      id: 'keyword-batch-create',
+      windowMs: 60_000,
+      maxRequests: 10,
+      scope: 'principal',
+    },
+  },
+  batchCreateKeywords,
+);

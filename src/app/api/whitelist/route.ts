@@ -1,15 +1,50 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { emptyQuerySchema, jsonObjectResponseSchema } from '@/contracts/http/common';
+import { withLegacyApiSecurity, type AuthenticatedPrincipal } from '@/lib/api-security';
 import { db } from '@/lib/db';
 import { whitelistRules, policyProfiles } from '@/lib/db';
-import { sql, eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
+import { compileSafeRegex } from '@/lib/detection/safe-regex';
+import { requireTenantContext, scopePredicate, type TenantScope } from '@/lib/tenancy';
+
+const createLegacyWhitelistSchema = z
+  .object({
+    policyId: z.string().min(1).max(36).optional(),
+    dimensionId: z.string().min(1).max(128).nullable().optional(),
+    pattern: z.string().min(1).max(4_096),
+    matchType: z
+      .enum(['exact', 'contains', 'prefix', 'suffix', 'regex'])
+      .default('contains'),
+    caseSensitive: z.boolean().default(false),
+    description: z.string().max(2_000).optional(),
+    enabled: z.boolean().default(true),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (value.matchType === 'regex') {
+      try {
+        compileSafeRegex(value.pattern, value.caseSensitive ? '' : 'i');
+      } catch {
+        context.addIssue({
+          code: 'custom',
+          path: ['pattern'],
+          message: 'The regular expression is invalid or unsupported',
+        });
+      }
+    }
+  });
 
 // 获取默认策略ID
-async function getDefaultPolicyId(): Promise<string | null> {
+async function getDefaultPolicyId(scope: TenantScope): Promise<string | null> {
   try {
     // 优先查找 is_default 为 true 的策略
     const defaultPolicies = await db.select()
       .from(policyProfiles)
-      .where(eq(policyProfiles.isDefault, true))
+      .where(and(
+        eq(policyProfiles.isDefault, true),
+        scopePredicate(policyProfiles, scope),
+      ))
       .limit(1);
     
     if (defaultPolicies.length > 0) {
@@ -19,6 +54,7 @@ async function getDefaultPolicyId(): Promise<string | null> {
     // 如果没有默认策略，获取第一个策略
     const allPolicies = await db.select()
       .from(policyProfiles)
+      .where(scopePredicate(policyProfiles, scope))
       .limit(1);
     
     if (allPolicies.length > 0) {
@@ -33,10 +69,16 @@ async function getDefaultPolicyId(): Promise<string | null> {
 }
 
 // GET: 获取所有白名单规则
-export async function GET() {
+async function getLegacyWhitelist(
+  _request: NextRequest,
+  _routeContext: unknown,
+  context: { principal: AuthenticatedPrincipal | null },
+) {
   try {
+    const scope = requireTenantContext(context.principal);
     // 尝试从数据库获取白名单规则
-    const rules = await db.select().from(whitelistRules);
+    const rules = await db.select().from(whitelistRules)
+      .where(scopePredicate(whitelistRules, scope));
 
     // 如果数据库为空，返回友好提示
     if (rules.length === 0) {
@@ -62,10 +104,23 @@ export async function GET() {
 }
 
 // POST: 创建白名单规则
-export async function POST(request: NextRequest) {
+async function createLegacyWhitelist(
+  request: NextRequest,
+  _routeContext: unknown,
+  context: { principal: AuthenticatedPrincipal | null },
+) {
   try {
+    const scope = requireTenantContext(context.principal);
     const body = await request.json();
-    let { policyId, dimensionId, pattern, matchType, caseSensitive, description, enabled } = body;
+    let policyId = body.policyId as string | null | undefined;
+    const {
+      dimensionId,
+      pattern,
+      matchType,
+      caseSensitive,
+      description,
+      enabled,
+    } = body;
 
     if (!pattern) {
       return NextResponse.json(
@@ -76,7 +131,7 @@ export async function POST(request: NextRequest) {
 
     // 如果没有传入 policyId，从数据库获取默认策略
     if (!policyId) {
-      policyId = await getDefaultPolicyId();
+      policyId = await getDefaultPolicyId(scope);
       if (!policyId) {
         return NextResponse.json(
           { success: false, error: '未找到可用策略，请先创建策略' },
@@ -84,9 +139,21 @@ export async function POST(request: NextRequest) {
         );
       }
     }
+    const [policy] = await db.select({ id: policyProfiles.id }).from(policyProfiles).where(and(
+      eq(policyProfiles.id, policyId),
+      scopePredicate(policyProfiles, scope),
+    )).limit(1);
+    if (!policy) {
+      return NextResponse.json(
+        { success: false, error: '策略不属于当前应用' },
+        { status: 404 },
+      );
+    }
 
     // 使用 gen_random_uuid() 生成 UUID
     const result = await db.insert(whitelistRules).values({
+      tenantId: scope.tenantId,
+      applicationId: scope.applicationId,
       policyId,
       dimensionId: dimensionId || null,
       pattern,
@@ -105,3 +172,37 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+export const GET = withLegacyApiSecurity(
+  {
+    permission: 'policy:read',
+    querySchema: emptyQuerySchema,
+    responseSchema: jsonObjectResponseSchema,
+    maxBodyBytes: 0,
+    auditEvent: 'whitelist.legacy.list',
+    rateLimitPolicy: {
+      id: 'whitelist-legacy-list',
+      windowMs: 60_000,
+      maxRequests: 60,
+      scope: 'principal',
+    },
+  },
+  getLegacyWhitelist,
+);
+
+export const POST = withLegacyApiSecurity(
+  {
+    permission: 'policy:manage',
+    bodySchema: createLegacyWhitelistSchema,
+    responseSchema: jsonObjectResponseSchema,
+    maxBodyBytes: 64 * 1_024,
+    auditEvent: 'whitelist.legacy.create',
+    rateLimitPolicy: {
+      id: 'whitelist-legacy-create',
+      windowMs: 60_000,
+      maxRequests: 30,
+      scope: 'principal',
+    },
+  },
+  createLegacyWhitelist,
+);

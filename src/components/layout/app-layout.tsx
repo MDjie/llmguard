@@ -18,50 +18,66 @@ import {
   Zap,
   Layers,
   CheckCircle,
-  Sparkles,
   Database,
   Loader2,
   User,
   ChevronDown,
   LogOut,
   UserCog,
-  MessageCircle
+  MessageCircle,
+  Building2,
 } from 'lucide-react';
 import { UserProfileModal } from '@/components/login/user-profile-modal';
+import { csrfHeaders } from '@/lib/auth/csrf-client';
+import type { Permission } from '@/lib/api-security';
 
 // 导航分组结构
-const navigationGroups = [
+interface NavigationItem {
+  readonly name: string;
+  readonly href: string;
+  readonly icon: typeof Shield;
+  readonly desc: string;
+  readonly permission: Permission;
+}
+
+const navigationGroups: readonly {
+  readonly title: string;
+  readonly items: readonly NavigationItem[];
+}[] = [
   {
     title: '核心功能',
     items: [
-      { name: '安全对话', href: '/', icon: MessageCircle, desc: '双引擎安全对话' },
-      { name: '链路演示', href: '/simulate', icon: Zap, desc: '完整检测流程' },
-      { name: '文档检测', href: '/document-scan', icon: FileText, desc: '文档安全扫描' },
+      { name: '安全对话', href: '/', icon: MessageCircle, desc: '双引擎安全对话', permission: 'guard:use' },
+      { name: '链路演示', href: '/simulate', icon: Zap, desc: '完整检测流程', permission: 'guard:use' },
+      { name: '文档检测', href: '/document-scan', icon: FileText, desc: '文档安全扫描', permission: 'security:operate' },
     ]
   },
   {
     title: '配置管理',
     items: [
-      { name: '检测维度', href: '/dimensions', icon: Layers, desc: '维度与规则配置' },
-      { name: '白名单规则', href: '/whitelist', icon: CheckCircle, desc: '安全内容放行' },
-      { name: '策略配置', href: '/policies', icon: Settings, desc: '检测策略管理' },
-      { name: '模型管理', href: '/providers', icon: Cloud, desc: '模型供应商配置' },
+      { name: '检测维度', href: '/dimensions', icon: Layers, desc: '维度与规则配置', permission: 'policy:manage' },
+      { name: '白名单规则', href: '/whitelist', icon: CheckCircle, desc: '安全内容放行', permission: 'policy:manage' },
+      { name: '策略配置', href: '/policies', icon: Settings, desc: '检测策略管理', permission: 'policy:manage' },
+      { name: '策略发布', href: '/policy-releases', icon: GitCompare, desc: '审批、灰度与回滚', permission: 'policy:manage' },
+      { name: '模型管理', href: '/providers', icon: Cloud, desc: '模型供应商配置', permission: 'provider:manage' },
     ]
   },
   {
     title: '测试评估',
     items: [
-      { name: '测试用例', href: '/test-cases', icon: TestTube, desc: '用例管理与执行' },
-      { name: '多模型评测', href: '/model-eval', icon: Cpu, desc: '模型安全评估' },
+      { name: '测试用例', href: '/test-cases', icon: TestTube, desc: '用例管理与执行', permission: 'policy:manage' },
+      { name: '多模型评测', href: '/model-eval', icon: Cpu, desc: '模型安全评估', permission: 'policy:read' },
+      { name: '评测门禁', href: '/evaluation-runs', icon: TestTube, desc: '异步回归与发布证据', permission: 'policy:read' },
     ]
   },
   {
     title: '数据统计',
     items: [
-      { name: '检测看板', href: '/dashboard', icon: BarChart3, desc: '数据可视化' },
-      { name: '历史记录', href: '/history', icon: History, desc: '检测历史查询' },
-      { name: 'Agent日志', href: '/agent-logs', icon: FileText, desc: '调用日志追踪' },
-      { name: '导出报告', href: '/export', icon: Download, desc: '数据导出报告' },
+      { name: '检测看板', href: '/dashboard', icon: BarChart3, desc: '数据可视化', permission: 'history:read' },
+      { name: '安全事件', href: '/incidents', icon: Shield, desc: '研判与处置闭环', permission: 'security:operate' },
+      { name: '历史记录', href: '/history', icon: History, desc: '检测历史查询', permission: 'history:read' },
+      { name: 'Agent日志', href: '/agent-logs', icon: FileText, desc: '调用日志追踪', permission: 'audit:read' },
+      { name: '导出报告', href: '/export', icon: Download, desc: '数据导出报告', permission: 'audit:export' },
     ]
   },
 ];
@@ -77,6 +93,18 @@ interface UserInfo {
   username: string;
   nickname?: string;
   role: string;
+  permissions: Permission[];
+  mustChangePassword?: boolean;
+  tenantId: string;
+  applicationId: string;
+}
+
+interface ApplicationInfo {
+  id: string;
+  tenantId: string;
+  code: string;
+  name: string;
+  status: 'active' | 'disabled';
 }
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
@@ -85,17 +113,25 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [dbStatus, setDbStatus] = useState<DbStatus>('checking');
   const [authStatus, setAuthStatus] = useState<AuthStatus>('checking');
   const [user, setUser] = useState<UserInfo | null>(null);
+  const [applications, setApplications] = useState<ApplicationInfo[]>([]);
+  const [switchingApplication, setSwitchingApplication] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const hasCheckedRef = useRef(false);
+  const visibleNavigationGroups = navigationGroups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => user?.permissions.includes(item.permission)),
+    }))
+    .filter((group) => group.items.length > 0);
 
-  // 登录页面不显示布局
-  const isLoginPage = pathname === '/login';
+  // 认证页面不显示主应用布局
+  const isAuthPage = pathname === '/login' || pathname === '/change-password';
 
   // 检查登录状态
   useEffect(() => {
-    if (isLoginPage) {
+    if (isAuthPage) {
       setAuthStatus('unauthenticated');
       return;
     }
@@ -110,8 +146,24 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         if (res.ok) {
           const data = await res.json();
           if (data.success && data.user) {
+            if (data.user.mustChangePassword) {
+              router.replace('/change-password');
+              return;
+            }
             setUser(data.user);
             setAuthStatus('authenticated');
+            const applicationsResponse = await fetch('/api/applications', {
+              method: 'GET',
+              cache: 'no-store',
+            });
+            if (applicationsResponse.ok) {
+              const applicationsPayload = await applicationsResponse.json();
+              setApplications(
+                (applicationsPayload.items ?? []).filter(
+                  (item: ApplicationInfo) => item.status === 'active',
+                ),
+              );
+            }
           } else {
             setAuthStatus('unauthenticated');
             router.push('/login');
@@ -127,11 +179,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     };
 
     checkAuth();
-  }, [pathname, isLoginPage, router]);
+  }, [pathname, isAuthPage, router]);
 
   // 只在首次访问时检查数据库状态
   useEffect(() => {
-    if (hasCheckedRef.current || isLoginPage || authStatus !== 'authenticated') return;
+    if (hasCheckedRef.current || isAuthPage || authStatus !== 'authenticated') return;
     hasCheckedRef.current = true;
 
     const checkDbStatus = async () => {
@@ -153,7 +205,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     };
 
     checkDbStatus();
-  }, [isLoginPage, authStatus]);
+  }, [isAuthPage, authStatus]);
 
   // 点击外部关闭用户菜单
   useEffect(() => {
@@ -170,15 +222,39 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   // 退出登录
   const handleLogout = async () => {
     try {
-      await fetch('/api/auth/logout', { method: 'POST' });
+      await fetch('/api/auth/logout', { method: 'POST', headers: csrfHeaders() });
       router.push('/login');
     } catch {
       router.push('/login');
     }
   };
 
+  const handleApplicationChange = async (applicationId: string) => {
+    const application = applications.find((item) => item.id === applicationId);
+    if (!application || application.id === user?.applicationId) return;
+    setSwitchingApplication(true);
+    try {
+      const response = await fetch('/api/auth/scope', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          ...csrfHeaders(),
+        },
+        body: JSON.stringify({
+          tenantId: application.tenantId,
+          applicationId: application.id,
+        }),
+      });
+      if (response.ok) {
+        window.location.reload();
+      }
+    } finally {
+      setSwitchingApplication(false);
+    }
+  };
+
   // 登录页面直接返回children
-  if (isLoginPage) {
+  if (isAuthPage) {
     return <>{children}</>;
   }
 
@@ -216,6 +292,27 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             </div>
           </div>
           
+          <div className="flex items-center gap-3">
+            {applications.length > 0 && (
+              <label className="flex items-center gap-2 text-sm text-gray-600">
+                <Building2 className="h-4 w-4" />
+                <span className="sr-only">当前应用</span>
+                <select
+                  aria-label="当前应用"
+                  value={user?.applicationId ?? ''}
+                  disabled={switchingApplication}
+                  onChange={(event) => void handleApplicationChange(event.target.value)}
+                  className="h-9 max-w-56 rounded-md border border-gray-200 bg-white px-2 text-sm text-gray-700"
+                >
+                  {applications.map((application) => (
+                    <option key={application.id} value={application.id}>
+                      {application.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+
           {/* 用户信息 */}
           <div className="relative" ref={userMenuRef}>
             <button
@@ -255,6 +352,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               </div>
             )}
           </div>
+          </div>
         </div>
       </header>
 
@@ -263,14 +361,16 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         open={showProfileModal}
         onOpenChange={setShowProfileModal}
         user={user}
-        onUserUpdate={(updatedUser) => setUser(updatedUser)}
+        onUserUpdate={(updatedUser) =>
+          setUser((current) => (current ? { ...current, ...updatedUser } : current))
+        }
       />
 
       <div className="flex">
         {/* 侧边栏 */}
         <aside className="w-60 bg-white border-r border-gray-200 min-h-[calc(100vh-64px)] sticky top-16 overflow-y-auto">
           <nav className="p-3 space-y-4">
-            {navigationGroups.map((group) => (
+            {visibleNavigationGroups.map((group) => (
               <div key={group.title}>
                 {/* 分组标题 */}
                 <div className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-2">

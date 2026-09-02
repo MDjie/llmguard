@@ -1,22 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
+import {
+  emptyQuerySchema,
+  jsonObjectResponseSchema,
+} from '@/contracts/http/common';
+import { judgeConfigSchema, policyParamsSchema } from '@/contracts/http/policies';
+import { withLegacyApiSecurity, type AuthenticatedPrincipal } from '@/lib/api-security';
 import { db } from '@/lib/db';
-import { policyJudgeConfigs, llmProviders, detectionDimensions } from '@/storage/database/shared/schema';
-import { eq, and } from 'drizzle-orm';
-import type { PolicyJudgeConfig } from '@/lib/judge/types';
+import { policyJudgeConfigs, llmProviders, policyProfiles } from '@/storage/database/shared/schema';
+import { and, eq } from 'drizzle-orm';
+import { requireTenantContext, scopePredicate } from '@/lib/tenancy';
 
 // GET: 获取策略的裁判模型配置
-export async function GET(
+async function getJudgeConfig(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
+  context: { principal: AuthenticatedPrincipal | null },
 ) {
   try {
+    const scope = requireTenantContext(context.principal);
     const { id: policyId } = await params;
 
     // 查询裁判模型配置
     const configs = await db
       .select()
       .from(policyJudgeConfigs)
-      .where(eq(policyJudgeConfigs.policyId, policyId))
+      .where(and(
+        eq(policyJudgeConfigs.policyId, policyId),
+        scopePredicate(policyJudgeConfigs, scope),
+      ))
       .limit(1);
 
     if (configs.length === 0) {
@@ -85,13 +96,22 @@ export async function GET(
 }
 
 // PUT: 更新或创建裁判模型配置
-export async function PUT(
+async function updateJudgeConfig(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
+  context: { principal: AuthenticatedPrincipal | null },
 ) {
   try {
+    const scope = requireTenantContext(context.principal);
     const { id: policyId } = await params;
     const body = await request.json();
+    const [policy] = await db.select({ id: policyProfiles.id }).from(policyProfiles).where(and(
+      eq(policyProfiles.id, policyId),
+      scopePredicate(policyProfiles, scope),
+    )).limit(1);
+    if (!policy) {
+      return NextResponse.json({ success: false, error: '策略不属于当前应用' }, { status: 404 });
+    }
 
     // 验证必填字段
     const {
@@ -119,7 +139,10 @@ export async function PUT(
       const providers = await db
         .select()
         .from(llmProviders)
-        .where(eq(llmProviders.id, providerId))
+        .where(and(
+          eq(llmProviders.id, providerId),
+          scopePredicate(llmProviders, scope),
+        ))
         .limit(1);
 
       if (providers.length === 0) {
@@ -149,7 +172,10 @@ export async function PUT(
     const existingConfigs = await db
       .select()
       .from(policyJudgeConfigs)
-      .where(eq(policyJudgeConfigs.policyId, policyId))
+      .where(and(
+        eq(policyJudgeConfigs.policyId, policyId),
+        scopePredicate(policyJudgeConfigs, scope),
+      ))
       .limit(1);
 
     if (existingConfigs.length > 0) {
@@ -176,7 +202,10 @@ export async function PUT(
           blockExternalForSecrets: blockExternalForSecrets ?? true,
           updatedAt: new Date(),
         })
-        .where(eq(policyJudgeConfigs.id, existingConfigs[0].id));
+        .where(and(
+          eq(policyJudgeConfigs.id, existingConfigs[0].id),
+          scopePredicate(policyJudgeConfigs, scope),
+        ));
 
       return NextResponse.json({
         success: true,
@@ -185,6 +214,8 @@ export async function PUT(
     } else {
       // 创建新配置
       await db.insert(policyJudgeConfigs).values({
+        tenantId: scope.tenantId,
+        applicationId: scope.applicationId,
         policyId,
         enabled: enabled ?? false,
         providerId: providerId || null,
@@ -220,16 +251,21 @@ export async function PUT(
 }
 
 // DELETE: 删除裁判模型配置
-export async function DELETE(
+async function deleteJudgeConfig(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
+  context: { principal: AuthenticatedPrincipal | null },
 ) {
   try {
+    const scope = requireTenantContext(context.principal);
     const { id: policyId } = await params;
 
     await db
       .delete(policyJudgeConfigs)
-      .where(eq(policyJudgeConfigs.policyId, policyId));
+      .where(and(
+        eq(policyJudgeConfigs.policyId, policyId),
+        scopePredicate(policyJudgeConfigs, scope),
+      ));
 
     return NextResponse.json({
       success: true,
@@ -243,3 +279,57 @@ export async function DELETE(
     );
   }
 }
+
+export const GET = withLegacyApiSecurity(
+  {
+    permission: 'policy:read',
+    paramsSchema: policyParamsSchema,
+    querySchema: emptyQuerySchema,
+    responseSchema: jsonObjectResponseSchema,
+    maxBodyBytes: 0,
+    auditEvent: 'policy.judge.read',
+    rateLimitPolicy: {
+      id: 'policy-judge-read',
+      windowMs: 60_000,
+      maxRequests: 60,
+      scope: 'principal',
+    },
+  },
+  getJudgeConfig,
+);
+
+export const PUT = withLegacyApiSecurity(
+  {
+    permission: 'policy:manage',
+    paramsSchema: policyParamsSchema,
+    bodySchema: judgeConfigSchema,
+    responseSchema: jsonObjectResponseSchema,
+    maxBodyBytes: 32 * 1_024,
+    auditEvent: 'policy.judge.update',
+    rateLimitPolicy: {
+      id: 'policy-judge-update',
+      windowMs: 60_000,
+      maxRequests: 30,
+      scope: 'principal',
+    },
+  },
+  updateJudgeConfig,
+);
+
+export const DELETE = withLegacyApiSecurity(
+  {
+    permission: 'policy:manage',
+    paramsSchema: policyParamsSchema,
+    querySchema: emptyQuerySchema,
+    responseSchema: jsonObjectResponseSchema,
+    maxBodyBytes: 0,
+    auditEvent: 'policy.judge.delete',
+    rateLimitPolicy: {
+      id: 'policy-judge-delete',
+      windowMs: 60_000,
+      maxRequests: 10,
+      scope: 'principal',
+    },
+  },
+  deleteJudgeConfig,
+);

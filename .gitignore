@@ -38,6 +38,9 @@ storybook-static
 bin/
 *.test
 
+# Java / Maven build outputs
+target/
+
 # Editor / IDE
 .vscode/
 .idea/
@@ -98,6 +101,8 @@ out/
 .rsbuild/
 # Testing
 coverage/
+playwright-report/
+test-results/
 *.lcov
 .nyc_output
 # Environment variables
@@ -149,6 +154,7 @@ Desktop.ini
 *.temp
 .tmp/
 .temp/
+/tmp/
 # Optional files
 *.tgz
 *.tar

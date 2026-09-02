@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { jsonObjectResponseSchema } from '@/contracts/http/common';
+import { policyParamsSchema, togglePolicySchema } from '@/contracts/http/policies';
+import { withLegacyApiSecurity } from '@/lib/api-security';
 import { getDb } from '@/lib/db';
 import { clearPolicyCache } from '@/lib/detection/dynamic-engine';
 
 // 启用/禁用策略
-export async function PUT(
+async function togglePolicy(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -48,3 +51,21 @@ export async function PUT(
     );
   }
 }
+
+export const PUT = withLegacyApiSecurity(
+  {
+    permission: 'policy:manage',
+    paramsSchema: policyParamsSchema,
+    bodySchema: togglePolicySchema,
+    responseSchema: jsonObjectResponseSchema,
+    maxBodyBytes: 8 * 1_024,
+    auditEvent: 'policy.toggle',
+    rateLimitPolicy: {
+      id: 'policy-toggle',
+      windowMs: 60_000,
+      maxRequests: 30,
+      scope: 'principal',
+    },
+  },
+  togglePolicy,
+);

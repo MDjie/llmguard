@@ -1,8 +1,48 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { jsonObjectResponseSchema } from '@/contracts/http/common';
+import { clonePolicySchema, policyParamsSchema } from '@/contracts/http/policies';
+import { withLegacyApiSecurity } from '@/lib/api-security';
 import { getDb } from '@/lib/db';
 
+interface CloneRuleRow {
+  dimension: string;
+  enabled?: boolean;
+  warn_threshold?: number;
+  block_threshold?: number;
+  auto_mask?: boolean;
+  auto_rewrite?: boolean;
+}
+
+interface CloneKeywordRow {
+  category_id?: string | null;
+  dimension: string;
+  keyword: string;
+  score?: number;
+  match_type?: string;
+  case_sensitive?: boolean;
+  enabled?: boolean;
+  description?: string;
+  tags?: string[];
+}
+
+interface ClonePolicyRow {
+  readonly id: string;
+  readonly name: string;
+  readonly description?: string | null;
+  readonly tags?: readonly string[] | null;
+}
+
+interface CloneCategoryRow {
+  readonly id: string;
+  readonly name: string;
+  readonly dimension: string;
+  readonly description?: string | null;
+  readonly priority?: number;
+  readonly enabled?: boolean;
+}
+
 // 克隆策略
-export async function POST(
+async function clonePolicy(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -22,7 +62,7 @@ export async function POST(
 
     // 获取原策略
     const { data: sourcePolicy, error: sourceError } = await client
-      .from('policy_profiles')
+      .from<ClonePolicyRow>('policy_profiles')
       .select()
       .eq('id', id)
       .single();
@@ -36,7 +76,7 @@ export async function POST(
 
     // 检查名称是否已存在
     const { data: existing } = await client
-      .from('policy_profiles')
+      .from<{ id: string }>('policy_profiles')
       .select('id')
       .eq('name', name)
       .single();
@@ -50,7 +90,7 @@ export async function POST(
 
     // 创建新策略
     const { data: newPolicy, error: createError } = await client
-      .from('policy_profiles')
+      .from<ClonePolicyRow>('policy_profiles')
       .insert({
         name,
         description: `${sourcePolicy.description} (克隆自 ${sourcePolicy.name})`,
@@ -71,13 +111,14 @@ export async function POST(
 
     // 克隆规则
     const { data: rules } = await client
-      .from('policy_rules')
+      .from<CloneRuleRow>('policy_rules')
       .select()
       .eq('policy_id', id);
 
-    if (rules && rules.length > 0) {
+    const sourceRules = rules ?? [];
+    if (sourceRules.length > 0) {
       await client.from('policy_rules').insert(
-        rules.map((rule) => ({
+        sourceRules.map((rule) => ({
           policy_id: newPolicy.id,
           dimension: rule.dimension,
           enabled: rule.enabled,
@@ -91,7 +132,7 @@ export async function POST(
 
     // 克隆分类和关键词
     const { data: categories } = await client
-      .from('keyword_categories')
+      .from<CloneCategoryRow>('keyword_categories')
       .select()
       .eq('policy_id', id);
 
@@ -100,7 +141,7 @@ export async function POST(
     if (categories && categories.length > 0) {
       for (const cat of categories) {
         const { data: newCat } = await client
-          .from('keyword_categories')
+          .from<{ id: string }>('keyword_categories')
           .insert({
             policy_id: newPolicy.id,
             name: cat.name,
@@ -119,13 +160,14 @@ export async function POST(
     }
 
     const { data: keywords } = await client
-      .from('keyword_rules')
+      .from<CloneKeywordRow>('keyword_rules')
       .select()
       .eq('policy_id', id);
 
-    if (keywords && keywords.length > 0) {
+    const sourceKeywords = keywords ?? [];
+    if (sourceKeywords.length > 0) {
       await client.from('keyword_rules').insert(
-        keywords.map((kw) => ({
+        sourceKeywords.map((kw) => ({
           policy_id: newPolicy.id,
           category_id: kw.category_id ? categoryIdMap[kw.category_id] : null,
           dimension: kw.dimension,
@@ -153,3 +195,21 @@ export async function POST(
     );
   }
 }
+
+export const POST = withLegacyApiSecurity(
+  {
+    permission: 'policy:manage',
+    paramsSchema: policyParamsSchema,
+    bodySchema: clonePolicySchema,
+    responseSchema: jsonObjectResponseSchema,
+    maxBodyBytes: 16 * 1_024,
+    auditEvent: 'policy.clone',
+    rateLimitPolicy: {
+      id: 'policy-clone',
+      windowMs: 60_000,
+      maxRequests: 10,
+      scope: 'principal',
+    },
+  },
+  clonePolicy,
+);

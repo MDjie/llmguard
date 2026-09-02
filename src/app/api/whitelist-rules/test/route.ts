@@ -1,14 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { jsonObjectResponseSchema } from '@/contracts/http/common';
+import { withLegacyApiSecurity, type AuthenticatedPrincipal } from '@/lib/api-security';
 import { db } from '@/lib/db';
 import { whitelistRules, whitelistRulePolicies, detectionDimensions } from '@/lib/db';
-import { sql, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
+import { safeRegexTest } from '@/lib/detection/safe-regex';
+import { requireTenantContext, scopePredicate } from '@/lib/tenancy';
 
-// 白名单测试请求类型
-interface WhitelistTestRequest {
-  policyId?: string;  // 测试策略ID
-  text: string;       // 测试文本
-  ruleId?: string;    // 可选：只测试指定规则
-}
+const testWhitelistSchema = z
+  .object({
+    policyId: z.string().min(1).max(36).optional(),
+    text: z.string().trim().min(1).max(32_768),
+    ruleId: z.string().min(1).max(128).optional(),
+  })
+  .strict();
 
 // 白名单匹配结果
 interface WhitelistMatchResult {
@@ -42,8 +48,7 @@ function testMatch(text: string, pattern: string, matchType: string, caseSensiti
       return compareText.endsWith(comparePattern);
     case 'regex':
       try {
-        const regex = new RegExp(pattern, caseSensitive ? '' : 'i');
-        return regex.test(text);
+        return safeRegexTest(text, pattern, caseSensitive);
       } catch {
         return false;
       }
@@ -53,9 +58,14 @@ function testMatch(text: string, pattern: string, matchType: string, caseSensiti
 }
 
 // POST: 测试白名单
-export async function POST(request: NextRequest) {
+async function testWhitelistRules(
+  request: NextRequest,
+  _routeContext: unknown,
+  apiContext: { principal: AuthenticatedPrincipal | null },
+) {
   try {
-    const body: WhitelistTestRequest = await request.json();
+    const scope = requireTenantContext(apiContext.principal);
+    const body = await request.json();
     const { policyId, text, ruleId } = body;
 
     if (!text || !text.trim()) {
@@ -66,7 +76,8 @@ export async function POST(request: NextRequest) {
     }
 
     // 获取所有维度
-    const dimensions = await db.select().from(detectionDimensions);
+    const dimensions = await db.select().from(detectionDimensions)
+      .where(scopePredicate(detectionDimensions, scope));
     const dimensionMap = new Map(dimensions.map(d => [d.code, d.name]));
 
     // 获取要测试的白名单规则
@@ -75,17 +86,24 @@ export async function POST(request: NextRequest) {
       // 只测试指定规则
       rules = await db.select()
         .from(whitelistRules)
-        .where(sql`${whitelistRules.id} = ${ruleId}`);
+        .where(and(
+          eq(whitelistRules.id, ruleId),
+          scopePredicate(whitelistRules, scope),
+        ));
     } else {
       // 获取所有启用的白名单规则
       rules = await db.select()
         .from(whitelistRules)
-        .where(sql`${whitelistRules.enabled} = true`)
+        .where(and(
+          eq(whitelistRules.enabled, true),
+          scopePredicate(whitelistRules, scope),
+        ))
         .orderBy(sql`${whitelistRules.priority} DESC`);
     }
 
     // 获取所有策略绑定
-    const policyBindings = await db.select().from(whitelistRulePolicies);
+    const policyBindings = await db.select().from(whitelistRulePolicies)
+      .where(scopePredicate(whitelistRulePolicies, scope));
 
     // 测试每个白名单规则
     const matchedRules: WhitelistMatchResult[] = [];
@@ -123,9 +141,9 @@ export async function POST(request: NextRequest) {
       // 确定效果描述
       let effect: string;
       if (rule.dimensionScope === 'all') {
-        effect = '跳过所有维度检测';
+        effect = '跳过所有维度的适用普通规则；强制拒绝规则仍执行';
       } else {
-        effect = `跳过 ${dimNames.join('、')} 维度检测`;
+        effect = `跳过 ${dimNames.join('、')} 维度的适用普通规则；强制拒绝规则仍执行`;
       }
 
       matchedRules.push({
@@ -208,6 +226,7 @@ export async function POST(request: NextRequest) {
         name: dimensionMap.get(code) || code,
       })),
       notAffectedDimensions,
+      mandatoryDenyStillEvaluated: true,
     };
 
     return NextResponse.json({ success: true, data: result });
@@ -219,3 +238,20 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+export const POST = withLegacyApiSecurity(
+  {
+    permission: 'policy:read',
+    bodySchema: testWhitelistSchema,
+    responseSchema: jsonObjectResponseSchema,
+    maxBodyBytes: 64 * 1_024,
+    auditEvent: 'whitelist.test',
+    rateLimitPolicy: {
+      id: 'whitelist-test',
+      windowMs: 60_000,
+      maxRequests: 60,
+      scope: 'principal',
+    },
+  },
+  testWhitelistRules,
+);

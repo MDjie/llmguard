@@ -1,8 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
+import {
+  emptyQuerySchema,
+  jsonObjectResponseSchema,
+} from '@/contracts/http/common';
+import {
+  createKeywordCategorySchema,
+  keywordCategoryDeleteQuerySchema,
+  policyParamsSchema,
+  updateKeywordCategorySchema,
+} from '@/contracts/http/policies';
+import { withLegacyApiSecurity } from '@/lib/api-security';
 import { getDb } from '@/lib/db';
 
 // 获取策略的关键词分类列表
-export async function GET(
+async function getKeywordCategories(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -25,7 +36,7 @@ export async function GET(
 
     // 获取每个分类的关键词数量
     const categoriesWithCount = await Promise.all(
-      (data || []).map(async (cat) => {
+      (data || []).map(async (cat: Record<string, unknown>) => {
         const { count } = await client
           .from('keyword_rules')
           .select('id', { count: 'exact', head: true })
@@ -52,7 +63,7 @@ export async function GET(
 }
 
 // 创建关键词分类
-export async function POST(
+async function createKeywordCategory(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -104,7 +115,7 @@ export async function POST(
 }
 
 // 更新关键词分类
-export async function PUT(
+async function updateKeywordCategory(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -156,7 +167,7 @@ export async function PUT(
 }
 
 // 删除关键词分类
-export async function DELETE(
+async function deleteKeywordCategory(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -200,3 +211,75 @@ export async function DELETE(
     );
   }
 }
+
+export const GET = withLegacyApiSecurity(
+  {
+    permission: 'policy:read',
+    paramsSchema: policyParamsSchema,
+    querySchema: emptyQuerySchema,
+    responseSchema: jsonObjectResponseSchema,
+    maxBodyBytes: 0,
+    auditEvent: 'keyword-category.list',
+    rateLimitPolicy: {
+      id: 'keyword-category-list',
+      windowMs: 60_000,
+      maxRequests: 60,
+      scope: 'principal',
+    },
+  },
+  getKeywordCategories,
+);
+
+export const POST = withLegacyApiSecurity(
+  {
+    permission: 'policy:manage',
+    paramsSchema: policyParamsSchema,
+    bodySchema: createKeywordCategorySchema,
+    responseSchema: jsonObjectResponseSchema,
+    maxBodyBytes: 32 * 1_024,
+    auditEvent: 'keyword-category.create',
+    rateLimitPolicy: {
+      id: 'keyword-category-create',
+      windowMs: 60_000,
+      maxRequests: 30,
+      scope: 'principal',
+    },
+  },
+  createKeywordCategory,
+);
+
+export const PUT = withLegacyApiSecurity(
+  {
+    permission: 'policy:manage',
+    paramsSchema: policyParamsSchema,
+    bodySchema: updateKeywordCategorySchema,
+    responseSchema: jsonObjectResponseSchema,
+    maxBodyBytes: 32 * 1_024,
+    auditEvent: 'keyword-category.update',
+    rateLimitPolicy: {
+      id: 'keyword-category-update',
+      windowMs: 60_000,
+      maxRequests: 30,
+      scope: 'principal',
+    },
+  },
+  updateKeywordCategory,
+);
+
+export const DELETE = withLegacyApiSecurity(
+  {
+    permission: 'policy:manage',
+    paramsSchema: policyParamsSchema,
+    querySchema: keywordCategoryDeleteQuerySchema,
+    responseSchema: jsonObjectResponseSchema,
+    maxBodyBytes: 0,
+    auditEvent: 'keyword-category.delete',
+    rateLimitPolicy: {
+      id: 'keyword-category-delete',
+      windowMs: 60_000,
+      maxRequests: 20,
+      scope: 'principal',
+    },
+  },
+  deleteKeywordCategory,
+);

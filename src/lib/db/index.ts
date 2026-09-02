@@ -13,7 +13,7 @@ export function getDb() {
 // 通用查询函数
 export async function query<T>(table: string, options?: {
   select?: string;
-  filter?: Record<string, any>;
+  filter?: Record<string, unknown>;
   order?: { column: string; ascending?: boolean };
   limit?: number;
   single?: boolean;
@@ -51,7 +51,7 @@ export async function query<T>(table: string, options?: {
 }
 
 // 插入数据
-export async function insert<T>(table: string, data: Record<string, any> | Record<string, any>[]): Promise<T> {
+export async function insert<T>(table: string, data: Record<string, unknown> | Record<string, unknown>[]): Promise<T> {
   const client = getDb();
   const { data: result, error } = await client
     .from(table)
@@ -67,7 +67,7 @@ export async function insert<T>(table: string, data: Record<string, any> | Recor
 }
 
 // 更新数据
-export async function update<T>(table: string, id: string, data: Record<string, any>): Promise<T> {
+export async function update<T>(table: string, id: string, data: Record<string, unknown>): Promise<T> {
   const client = getDb();
   const { data: result, error } = await client
     .from(table)

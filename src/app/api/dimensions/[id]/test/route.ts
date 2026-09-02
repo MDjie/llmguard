@@ -1,8 +1,36 @@
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
+import { idOrCodeParamsSchema, jsonObjectResponseSchema } from '@/contracts/http/common';
+import { withLegacyApiSecurity } from '@/lib/api-security';
 import { query } from '@/lib/db';
+import { safeRegexMatches, safeRegexTest } from '@/lib/detection/safe-regex';
+
+interface RuleRecord {
+  readonly id?: unknown;
+  readonly name?: unknown;
+  readonly type?: unknown;
+  readonly pattern?: string;
+  readonly match_type?: string;
+  readonly case_sensitive?: boolean;
+  readonly score?: number;
+  readonly confidence?: unknown;
+}
+
+interface DimensionRecord {
+  readonly id: string;
+  readonly code: string;
+  readonly name: string;
+  readonly weight: string | number;
+}
+
+const testDimensionSchema = z
+  .object({
+    text: z.string().min(1).max(32_768),
+  })
+  .strict();
 
 // 规则匹配函数
-function matchRule(text: string, rule: any): boolean {
+function matchRule(text: string, rule: RuleRecord): boolean {
   const searchText = rule.case_sensitive ? text : text.toLowerCase();
   const pattern = rule.case_sensitive ? rule.pattern : rule.pattern?.toLowerCase();
 
@@ -19,8 +47,7 @@ function matchRule(text: string, rule: any): boolean {
       return searchText.endsWith(pattern);
     case 'regex':
       try {
-        const flags = rule.case_sensitive ? 'g' : 'gi';
-        return new RegExp(pattern, flags).test(text);
+        return safeRegexTest(text, pattern, rule.case_sensitive === true);
       } catch {
         return false;
       }
@@ -31,7 +58,7 @@ function matchRule(text: string, rule: any): boolean {
 
 // 计算维度评分
 function calculateDimensionScore(
-  matchedRules: any[],
+  matchedRules: RuleRecord[],
   dimensionWeight: number
 ): number {
   if (matchedRules.length === 0) return 0;
@@ -52,7 +79,7 @@ function calculateDimensionScore(
 }
 
 // 测试维度检测
-export async function POST(
+async function testDimension(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -69,7 +96,7 @@ export async function POST(
     }
 
     // 获取维度信息
-    const dimensionResult = await query('detection_dimensions', {
+    const dimensionResult = await query<DimensionRecord>('detection_dimensions', {
       filter: { id },
       single: true
     });
@@ -81,18 +108,18 @@ export async function POST(
       );
     }
 
-    const dimension = Array.isArray(dimensionResult.data) ? dimensionResult.data[0] : dimensionResult.data;
+    const dimension = dimensionResult.data;
 
     // 获取该维度的所有启用规则
-    const rulesResult = await query('detection_rules', {
+    const rulesResult = await query<RuleRecord>('detection_rules', {
       filter: { dimensionId: id, enabled: true },
       order: { column: 'priority', ascending: false }
     });
 
-    const rules = rulesResult.data && Array.isArray(rulesResult.data) ? rulesResult.data : [];
+    const rules = rulesResult.data ?? [];
 
     // 执行规则匹配
-    const matchedRules: any[] = [];
+    const matchedRules: RuleRecord[] = [];
     const matchedEvidence: string[] = [];
 
     for (const rule of rules) {
@@ -101,23 +128,25 @@ export async function POST(
         // 提取匹配的证据
         if (rule.match_type === 'regex') {
           try {
-            const flags = rule.case_sensitive ? 'g' : 'gi';
-            const regex = new RegExp(rule.pattern, flags);
-            const matches = text.match(regex);
-            if (matches) {
-              matchedEvidence.push(...matches.slice(0, 3)); // 最多取3个匹配
-            }
+            const matches = safeRegexMatches(
+              text,
+              rule.pattern,
+              rule.case_sensitive === true,
+            );
+            matchedEvidence.push(...matches.slice(0, 3).map((match) => match.raw));
           } catch {
             // 忽略无效正则
           }
-        } else {
+        } else if (rule.pattern) {
           matchedEvidence.push(rule.pattern);
         }
       }
     }
 
     // 计算评分
-    const dimensionWeight = parseFloat(dimension.weight) || 1.0;
+    const dimensionWeight = typeof dimension.weight === 'number'
+      ? dimension.weight
+      : Number.parseFloat(dimension.weight) || 1.0;
     const score = calculateDimensionScore(matchedRules, dimensionWeight);
 
     return NextResponse.json({
@@ -152,3 +181,21 @@ export async function POST(
     );
   }
 }
+
+export const POST = withLegacyApiSecurity(
+  {
+    permission: 'policy:read',
+    paramsSchema: idOrCodeParamsSchema,
+    bodySchema: testDimensionSchema,
+    responseSchema: jsonObjectResponseSchema,
+    maxBodyBytes: 64 * 1_024,
+    auditEvent: 'dimension.test',
+    rateLimitPolicy: {
+      id: 'dimension-test',
+      windowMs: 60_000,
+      maxRequests: 60,
+      scope: 'principal',
+    },
+  },
+  testDimension,
+);

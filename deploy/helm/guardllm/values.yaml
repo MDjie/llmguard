@@ -1,0 +1,248 @@
+nameOverride: ""
+fullnameOverride: ""
+
+namespace:
+  create: false
+namespaces:
+  edge: guard-edge
+  online: guard-online
+  inference: guard-inference
+  media: guard-media
+  control: guard-control
+  dataAccess: guard-data-access
+  observability: guard-observability
+
+images:
+  app:
+    repository: registry.example.invalid/guardllm/app
+    digest: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+  gateway:
+    repository: registry.example.invalid/guardllm/gateway
+    digest: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+  worker:
+    repository: registry.example.invalid/guardllm/worker
+    digest: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+  analyzer:
+    repository: registry.example.invalid/guardllm/media-analyzer
+    digest: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+  pullPolicy: IfNotPresent
+  pullSecrets: []
+
+config:
+  NODE_ENV: production
+  LOG_LEVEL: info
+  GUARD_GATEWAY_MODE: enforce
+  GUARD_REDIS_URI: rediss://redis.guard-data-access.svc.cluster.local:6380
+  GUARD_RATE_LIMIT_ENABLED: "true"
+  GUARD_RATE_LIMIT_FAIL_CLOSED: "true"
+  GUARD_RATE_LIMIT_REQUESTS_PER_MINUTE: "600"
+  GUARD_RATE_LIMIT_TEXT_CHARS_PER_MINUTE: "10000000"
+  GUARD_RATE_LIMIT_ESTIMATED_TOKENS_PER_MINUTE: "2500000"
+  GUARD_RATE_LIMIT_MAX_TEXT_CHARS_PER_REQUEST: "1000000"
+  GUARD_CONCURRENCY_ENABLED: "true"
+  GUARD_TENANT_MAX_IN_FLIGHT: "200"
+  GUARD_APPLICATION_MAX_IN_FLIGHT: "100"
+  GUARD_PRINCIPAL_MAX_IN_FLIGHT: "20"
+  GUARD_CREDENTIAL_MAX_IN_FLIGHT: "50"
+  GUARD_API_MAX_IN_FLIGHT: "200"
+  GUARD_CONCURRENCY_MAX_TRACKED_SCOPES: "10000"
+  GUARD_DISTRIBUTED_CONCURRENCY_ENABLED: "true"
+  GUARD_DISTRIBUTED_CONCURRENCY_FAIL_CLOSED: "true"
+  GUARD_DISTRIBUTED_CONCURRENCY_LEASE_TTL: "30s"
+  GUARD_MODEL_ROUTES_JSON: ""
+  GATEWAY_MTLS_REQUIRED: "false"
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.guard-observability.svc:4318
+  ANALYZER_VISUAL_COMMAND: /models/bin/visual-classifier
+  ANALYZER_ASR_COMMAND: /models/bin/asr
+  ANALYZER_AUDIO_CLASSIFIER_COMMAND: /models/bin/audio-classifier
+  ANALYZER_TTS_COMMAND: /models/bin/tts
+  ANALYZER_OBJECT_STORE_HOSTS: minio.guard-data-access.svc.cluster.local
+secretRef: guardllm-runtime-secrets
+
+serviceMesh:
+  enabled: true
+  injectionLabel: istio-injection
+  injectionValue: enabled
+
+gatewayDirectTls:
+  enabled: false
+  secretName: guard-gateway-mtls
+  mountPath: /var/run/secrets/guardllm/mtls
+
+gatewayGrpc:
+  enabled: true
+  port: 9090
+  tlsRequired: true
+  secretName: guard-gateway-grpc-mtls
+  mountPath: /var/run/secrets/guardllm/grpc
+
+analyzerModels:
+  claimName: guardllm-analyzer-models
+  mountPath: /models
+
+trustedTimestampEgress:
+  enabled: false
+  cidrs: []
+  port: 443
+
+workloads:
+  gateway:
+    enabled: true
+    namespaceKey: edge
+    imageKey: gateway
+    replicas: 3
+    port: 8080
+    service: true
+    healthPath: /actuator/health/readiness
+    command: []
+    args: []
+    resources:
+      requests: { cpu: 500m, memory: 512Mi }
+      limits: { cpu: "2", memory: 2Gi }
+    autoscaling: { enabled: true, minReplicas: 3, maxReplicas: 20, cpuUtilization: 60 }
+  app:
+    enabled: true
+    namespaceKey: online
+    imageKey: app
+    replicas: 3
+    port: 5000
+    service: true
+    healthPath: /api/health/live
+    command: []
+    args: []
+    resources:
+      requests: { cpu: 500m, memory: 768Mi }
+      limits: { cpu: "2", memory: 2Gi }
+    autoscaling: { enabled: true, minReplicas: 3, maxReplicas: 20, cpuUtilization: 60 }
+  evaluation:
+    enabled: true
+    namespaceKey: control
+    imageKey: worker
+    replicas: 2
+    service: false
+    command: ["pnpm"]
+    args: ["evaluation:worker"]
+    resources:
+      requests: { cpu: 250m, memory: 512Mi }
+      limits: { cpu: "1", memory: 1Gi }
+    autoscaling: { enabled: false }
+  audit-timestamp:
+    enabled: false
+    namespaceKey: control
+    imageKey: worker
+    replicas: 1
+    service: false
+    command: ["pnpm"]
+    args: ["audit:timestamp-worker"]
+    resources:
+      requests: { cpu: 100m, memory: 256Mi }
+      limits: { cpu: 500m, memory: 512Mi }
+    autoscaling: { enabled: false }
+  artifact:
+    enabled: true
+    namespaceKey: media
+    imageKey: worker
+    replicas: 2
+    service: false
+    command: ["pnpm"]
+    args: ["artifact:worker"]
+    resources:
+      requests: { cpu: 250m, memory: 512Mi }
+      limits: { cpu: "1", memory: 1Gi }
+    autoscaling: { enabled: false }
+  multimodal:
+    enabled: true
+    namespaceKey: media
+    imageKey: worker
+    replicas: 2
+    service: false
+    command: ["pnpm"]
+    args: ["multimodal:worker"]
+    resources:
+      requests: { cpu: 500m, memory: 1Gi }
+      limits: { cpu: "2", memory: 4Gi }
+    autoscaling: { enabled: false }
+  media:
+    enabled: true
+    namespaceKey: media
+    imageKey: worker
+    replicas: 2
+    service: false
+    command: ["pnpm"]
+    args: ["media:worker"]
+    resources:
+      requests: { cpu: "1", memory: 2Gi }
+      limits: { cpu: "4", memory: 8Gi }
+    autoscaling: { enabled: false }
+  marking:
+    enabled: true
+    namespaceKey: media
+    imageKey: worker
+    replicas: 2
+    service: false
+    command: ["pnpm"]
+    args: ["content-marking:worker"]
+    resources:
+      requests: { cpu: 250m, memory: 512Mi }
+      limits: { cpu: "1", memory: 1Gi }
+    autoscaling: { enabled: false }
+  analyzer:
+    enabled: true
+    namespaceKey: media
+    imageKey: analyzer
+    replicas: 2
+    port: 8090
+    service: true
+    healthPath: /health/ready
+    command: ["node"]
+    args: ["/app/server.mjs"]
+    resources:
+      requests: { cpu: "2", memory: 4Gi }
+      limits: { cpu: "8", memory: 16Gi }
+    autoscaling: { enabled: false }
+  rag:
+    enabled: true
+    namespaceKey: online
+    imageKey: worker
+    replicas: 2
+    service: false
+    command: ["pnpm"]
+    args: ["rag:worker"]
+    resources:
+      requests: { cpu: 250m, memory: 512Mi }
+      limits: { cpu: "1", memory: 2Gi }
+    autoscaling: { enabled: false }
+  callback:
+    enabled: true
+    namespaceKey: control
+    imageKey: worker
+    replicas: 2
+    service: false
+    command: ["pnpm"]
+    args: ["callback:worker"]
+    resources:
+      requests: { cpu: 100m, memory: 256Mi }
+      limits: { cpu: 500m, memory: 512Mi }
+    autoscaling: { enabled: false }
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+networkPolicy:
+  enabled: true
+  ingressNamespaceLabel:
+    kubernetes.io/metadata.name: ingress-nginx
+  dnsNamespaceLabel:
+    kubernetes.io/metadata.name: kube-system
+  dnsPodLabel:
+    k8s-app: kube-dns
+  dataPorts: [5432, 6379, 6380, 9092, 9000, 9200, 443]
+  inferencePorts: [5000, 8000, 8080, 11434]
+  observabilityPorts: [4317, 4318, 9090]
+
+serviceMonitor:
+  enabled: false
+  bearerTokenSecret:
+    name: guardllm-metrics-token
+    key: token

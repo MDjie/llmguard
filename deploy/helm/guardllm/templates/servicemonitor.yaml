@@ -1,0 +1,21 @@
+{{- if .Values.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "guardllm.fullname" . }}-app
+  namespace: {{ .Values.namespaces.observability }}
+spec:
+  namespaceSelector:
+    matchNames: [{{ .Values.namespaces.online }}]
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      guardllm.io/component: app
+  endpoints:
+    - port: http
+      path: /api/metrics
+      interval: 15s
+      bearerTokenSecret:
+        name: {{ .Values.serviceMonitor.bearerTokenSecret.name }}
+        key: {{ .Values.serviceMonitor.bearerTokenSecret.key }}
+{{- end }}

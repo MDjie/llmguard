@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { UserCog, User, Mail, Phone, Building, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { csrfHeaders } from '@/lib/auth/csrf-client';
 
 interface UserInfo {
   id: string;
@@ -58,7 +59,7 @@ export function UserProfileModal({ open, onOpenChange, user, onUserUpdate }: Use
     try {
       const response = await fetch(`/api/users/${user.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
         body: JSON.stringify(formData),
       });
 
@@ -69,7 +70,7 @@ export function UserProfileModal({ open, onOpenChange, user, onUserUpdate }: Use
         onUserUpdate?.({ ...user, ...formData });
         onOpenChange(false);
       } else {
-        toast.error(data.error || '更新失败');
+        toast.error(data.detail || data.error || '更新失败');
       }
     } catch {
       toast.error('网络错误，请稍后重试');

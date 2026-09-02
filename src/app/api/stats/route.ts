@@ -1,14 +1,23 @@
 import { NextResponse } from 'next/server';
+import { emptyQuerySchema, jsonObjectResponseSchema } from '@/contracts/http/common';
+import { withLegacyApiSecurity, type AuthenticatedPrincipal } from '@/lib/api-security';
 import { db } from '@/lib/db';
 import { detectionSessions, detectionRecords, riskFindings, detectionDimensions } from '@/lib/db';
 import { sql, eq, and, gte, lt } from 'drizzle-orm';
+import { requireTenantContext, scopePredicate } from '@/lib/tenancy';
 
-export async function GET() {
+async function getStats(
+  _request: Request,
+  _routeContext: unknown,
+  apiContext: { principal: AuthenticatedPrincipal | null },
+) {
   try {
+    const scope = requireTenantContext(apiContext.principal);
     // 获取总检测次数
     const totalCountResult = await db
       .select({ count: sql<number>`count(*)` })
-      .from(detectionSessions);
+      .from(detectionSessions)
+      .where(scopePredicate(detectionSessions, scope));
     
     const totalCount = Number(totalCountResult[0]?.count || 0);
 
@@ -19,14 +28,18 @@ export async function GET() {
     const todayCountResult = await db
       .select({ count: sql<number>`count(*)` })
       .from(detectionSessions)
-      .where(gte(detectionSessions.createdAt, todayStart));
+      .where(and(
+        gte(detectionSessions.createdAt, todayStart),
+        scopePredicate(detectionSessions, scope),
+      ));
 
     const todayCount = Number(todayCountResult[0]?.count || 0);
 
     // 获取动作分布
     const sessionsData = await db
       .select({ finalAction: detectionSessions.finalAction })
-      .from(detectionSessions);
+      .from(detectionSessions)
+      .where(scopePredicate(detectionSessions, scope));
 
     const actionDistribution = {
       allow: sessionsData.filter(s => s.finalAction === 'allow').length,
@@ -40,11 +53,15 @@ export async function GET() {
     const dimensions = await db
       .select({ code: detectionDimensions.code })
       .from(detectionDimensions)
-      .where(eq(detectionDimensions.enabled, true));
+      .where(and(
+        eq(detectionDimensions.enabled, true),
+        scopePredicate(detectionDimensions, scope),
+      ));
 
     const findingsData = await db
       .select({ dimension: riskFindings.dimension })
-      .from(riskFindings);
+      .from(riskFindings)
+      .where(scopePredicate(riskFindings, scope));
 
     const riskDistribution: Record<string, number> = {};
     for (const dim of dimensions) {
@@ -57,7 +74,8 @@ export async function GET() {
         overallScore: detectionRecords.overallScore,
         totalLatencyMs: detectionRecords.totalLatencyMs,
       })
-      .from(detectionRecords);
+      .from(detectionRecords)
+      .where(scopePredicate(detectionRecords, scope));
 
     const avgScore = recordsData.length > 0
       ? recordsData.reduce((sum, r) => sum + (r.overallScore ? parseFloat(r.overallScore) : 0), 0) / recordsData.length
@@ -84,7 +102,8 @@ export async function GET() {
         .from(detectionSessions)
         .where(and(
           gte(detectionSessions.createdAt, dayStart),
-          lt(detectionSessions.createdAt, dayEnd)
+          lt(detectionSessions.createdAt, dayEnd),
+          scopePredicate(detectionSessions, scope),
         ));
 
       const dayTotal = daySessions.length;
@@ -133,3 +152,20 @@ export async function GET() {
     );
   }
 }
+
+export const GET = withLegacyApiSecurity(
+  {
+    permission: 'history:read',
+    querySchema: emptyQuerySchema,
+    responseSchema: jsonObjectResponseSchema,
+    maxBodyBytes: 0,
+    auditEvent: 'statistics.read',
+    rateLimitPolicy: {
+      id: 'statistics-read',
+      windowMs: 60_000,
+      maxRequests: 60,
+      scope: 'principal',
+    },
+  },
+  getStats,
+);

@@ -1,0 +1,52 @@
+{
+  "annotations": { "list": [] },
+  "editable": false,
+  "graphTooltip": 1,
+  "panels": [
+    {
+      "id": 1,
+      "title": "Fast path P99 (ms)",
+      "type": "timeseries",
+      "targets": [{ "expr": "guardllm:guard_p99_ms:5m", "legendFormat": "P99" }],
+      "fieldConfig": { "defaults": { "unit": "ms", "thresholds": { "mode": "absolute", "steps": [{ "color": "green" }, { "color": "red", "value": 300 }] } } },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 0 }
+    },
+    {
+      "id": 2,
+      "title": "Availability",
+      "type": "stat",
+      "targets": [{ "expr": "guardllm:http_availability:ratio_5m", "legendFormat": "5m" }],
+      "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0.99, "max": 1 } },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 0 }
+    },
+    {
+      "id": 3,
+      "title": "Guard decisions",
+      "type": "timeseries",
+      "targets": [{ "expr": "sum by (action) (rate(guardllm_guard_decisions_total[5m]))", "legendFormat": "{{action}}" }],
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 0 }
+    },
+    {
+      "id": 4,
+      "title": "Pending jobs",
+      "type": "timeseries",
+      "targets": [{ "expr": "max by (job_type) (guardllm_guard_jobs_pending)", "legendFormat": "{{job_type}}" }],
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 }
+    },
+    {
+      "id": 5,
+      "title": "Required detector failures",
+      "type": "timeseries",
+      "targets": [{ "expr": "sum by (direction) (increase(guardllm_required_detector_failures_total[5m]))", "legendFormat": "{{direction}}" }],
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 }
+    }
+  ],
+  "schemaVersion": 41,
+  "tags": ["guardllm", "security", "slo"],
+  "templating": { "list": [] },
+  "time": { "from": "now-6h", "to": "now" },
+  "timezone": "browser",
+  "title": "GuardLLM SLO and safety controls",
+  "uid": "guardllm-slo",
+  "version": 1
+}

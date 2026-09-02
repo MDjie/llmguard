@@ -7,6 +7,8 @@ import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import * as schema from './schema';
 import { loadEnv } from '../supabase-client';
+import { logger } from '@/lib/observability/logger';
+import { resolveDatabaseTls } from './tls';
 
 // 加载环境变量
 loadEnv();
@@ -45,17 +47,23 @@ function getDb() {
       throw new Error('未找到数据库连接配置，请设置 PGDATABASE_URL 或 DATABASE_URL 环境变量');
     }
 
-    console.log('[数据库连接] 使用连接字符串:', connectionString.replace(/:[^:@]+@/, ':***@'));
+    const databaseUrl = new URL(connectionString);
+    logger.info('database.connecting', {
+      host: databaseUrl.hostname,
+      port: databaseUrl.port || '5432',
+      database: databaseUrl.pathname.replace(/^\//, ''),
+    });
 
     // 创建 postgres-js 客户端
     _client = postgres(connectionString, {
       max: 10,
       idle_timeout: 20,
       connect_timeout: 10,
-      // SSL 配置：云数据库通常需要 SSL
-      ssl: connectionString.includes('supabase.co') || 
-           connectionString.includes('sslmode') ? 
-           { rejectUnauthorized: false } : false,
+      ssl: resolveDatabaseTls(connectionString, {
+        sslMode: process.env.DATABASE_SSL_MODE,
+        caCertificate: process.env.DATABASE_CA_CERT,
+        nodeEnv: process.env.NODE_ENV,
+      }),
     });
 
     _db = drizzle(_client, { schema });

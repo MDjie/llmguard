@@ -30,11 +30,42 @@ import {
   policyJudgeConfigs,
   judgeModelInvocations,
   userPolicyStates,
+  securityAuditEvents,
+  exportApprovalRequests,
 } from '@/storage/database/shared/schema';
 import { eq, and, or, desc, asc, sql, inArray, isNotNull, isNull, lt, gt, gte, lte, like, ilike, not, ne } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
+import type { PgColumn, PgTable, TableConfig } from 'drizzle-orm/pg-core';
+import { getCurrentTenantScope } from '@/lib/tenancy/runtime';
+import { logger } from '@/lib/observability/logger';
 
 // 表名到 schema 的映射
-const tableMap: Record<string, any> = {
+type DynamicTable = PgTable<TableConfig>;
+type DynamicColumn = PgColumn;
+type CompatibilityRow = Record<string, unknown>;
+interface CompatibilityError {
+  readonly code: 'DB_OPERATION_FAILED';
+  readonly message: 'Database operation failed';
+}
+type CompatibilityResult<T> = {
+  readonly data: T | null;
+  readonly error: CompatibilityError | null;
+  readonly count?: number;
+};
+
+interface QueryOptions {
+  readonly filter?: Readonly<Record<string, unknown>>;
+  readonly single?: boolean;
+  readonly order?: { readonly column: string; readonly ascending?: boolean };
+  readonly limit?: number;
+  readonly offset?: number;
+}
+
+function compatibilityError(): CompatibilityError {
+  return { code: 'DB_OPERATION_FAILED', message: 'Database operation failed' };
+}
+
+const tableMap: Readonly<Record<string, DynamicTable>> = {
   'detection_dimensions': detectionDimensions,
   'detection_rules': detectionRules,
   'rule_groups': ruleGroups,
@@ -60,6 +91,8 @@ const tableMap: Record<string, any> = {
   'policy_judge_configs': policyJudgeConfigs,
   'judge_model_invocations': judgeModelInvocations,
   'user_policy_states': userPolicyStates,
+  'security_audit_events': securityAuditEvents,
+  'export_approval_requests': exportApprovalRequests,
 };
 
 // snake_case 转 camelCase
@@ -72,35 +105,46 @@ function camelToSnake(str: string): string {
   return str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
 }
 
+export function mapCompatibilityRow(
+  row: Readonly<Record<string, unknown>>,
+  fields: readonly string[] = ['*'],
+): CompatibilityRow {
+  const mapped = Object.fromEntries(
+    Object.entries(row).map(([key, value]) => [camelToSnake(key), value]),
+  );
+  if (fields.includes('*')) return mapped;
+  return Object.fromEntries(fields.filter((field) => field in mapped).map((field) => [field, mapped[field]]));
+}
+
 // 获取 schema 字段（支持 snake_case 和 camelCase 输入）
-function getSchemaField(schema: any, columnName: string): any {
+function getSchemaField(schema: DynamicTable, columnName: string): DynamicColumn | null {
+  const fields = schema as unknown as Readonly<Record<string, unknown>>;
   // 直接尝试 camelCase（Drizzle schema 属性名）
-  if (schema[columnName]) {
-    return schema[columnName];
+  if (fields[columnName]) {
+    return fields[columnName] as DynamicColumn;
   }
   // 转换 snake_case 到 camelCase
   const camelName = snakeToCamel(columnName);
-  if (schema[camelName]) {
-    return schema[camelName];
+  if (fields[camelName]) {
+    return fields[camelName] as DynamicColumn;
   }
   return null;
 }
 
 // 查询构建器类
-class QueryBuilder {
+class QueryBuilder<T extends object = CompatibilityRow> {
   private tableName: string;
-  private schema: any;
-  private conditions: any[] = [];
+  private schema: DynamicTable;
+  private conditions: SQL<unknown>[] = [];
   private orderByClause: { column: string; direction: 'asc' | 'desc' }[] = [];
   private limitValue: number | null = null;
   private offsetValue: number | null = null;
   private selectFields: string[] = ['*'];
   private countMode: 'exact' | 'estimated' | null = null;
   private headOnly: boolean = false;
-  private singleResult: boolean = false;
   private operationType: 'select' | 'insert' | 'update' | 'delete' = 'select';
-  private insertData: any = null;
-  private updateData: any = null;
+  private insertData: CompatibilityRow[] | null = null;
+  private updateData: CompatibilityRow | null = null;
 
   constructor(tableName: string) {
     this.tableName = tableName;
@@ -110,9 +154,28 @@ class QueryBuilder {
     }
   }
 
-  select(fields: string | string[], options?: { count?: 'exact' | 'estimated'; head?: boolean }) {
+  private scopedConditions(): SQL<unknown>[] {
+    const scope = getCurrentTenantScope();
+    const tenantId = getSchemaField(this.schema, 'tenantId');
+    const applicationId = getSchemaField(this.schema, 'applicationId');
+    if (!scope || !tenantId || !applicationId) {
+      return this.conditions;
+    }
+    return [
+      ...this.conditions,
+      eq(tenantId, scope.tenantId),
+      eq(applicationId, scope.applicationId),
+    ];
+  }
+
+  select(
+    fields: string | string[] = '*',
+    options?: { count?: 'exact' | 'estimated'; head?: boolean },
+  ) {
     if (typeof fields === 'string') {
-      this.selectFields = fields === '*' ? ['*'] : [fields];
+      this.selectFields = fields === '*'
+        ? ['*']
+        : fields.split(',').map((field) => field.trim()).filter(Boolean);
     } else {
       this.selectFields = fields;
     }
@@ -125,19 +188,22 @@ class QueryBuilder {
     return this;
   }
 
-  eq(column: string, value: any) {
+  eq(column: string, value: unknown) {
     if (value !== undefined && value !== null) {
       const field = getSchemaField(this.schema, column);
       if (field) {
         this.conditions.push(eq(field, value));
       } else {
-        console.warn(`Field "${column}" not found in table "${this.tableName}"`);
+        logger.warn('database.compatibility.filter_field_missing', {
+          table: this.tableName,
+          column,
+        });
       }
     }
     return this;
   }
 
-  neq(column: string, value: any) {
+  neq(column: string, value: unknown) {
     if (value !== undefined && value !== null) {
       const field = getSchemaField(this.schema, column);
       if (field) {
@@ -147,19 +213,22 @@ class QueryBuilder {
     return this;
   }
 
-  gte(column: string, value: any) {
+  gte(column: string, value: unknown) {
     if (value !== undefined && value !== null) {
       const field = getSchemaField(this.schema, column);
       if (field) {
         this.conditions.push(gte(field, value));
       } else {
-        console.warn(`Field "${column}" not found in table "${this.tableName}"`);
+        logger.warn('database.compatibility.filter_field_missing', {
+          table: this.tableName,
+          column,
+        });
       }
     }
     return this;
   }
 
-  lte(column: string, value: any) {
+  lte(column: string, value: unknown) {
     if (value !== undefined && value !== null) {
       const field = getSchemaField(this.schema, column);
       if (field) {
@@ -169,7 +238,7 @@ class QueryBuilder {
     return this;
   }
 
-  gt(column: string, value: any) {
+  gt(column: string, value: unknown) {
     if (value !== undefined && value !== null) {
       const field = getSchemaField(this.schema, column);
       if (field) {
@@ -179,7 +248,7 @@ class QueryBuilder {
     return this;
   }
 
-  lt(column: string, value: any) {
+  lt(column: string, value: unknown) {
     if (value !== undefined && value !== null) {
       const field = getSchemaField(this.schema, column);
       if (field) {
@@ -209,7 +278,7 @@ class QueryBuilder {
     return this;
   }
 
-  in(column: string, values: any[]) {
+  in(column: string, values: readonly unknown[]) {
     if (values && values.length > 0) {
       const field = getSchemaField(this.schema, column);
       if (field) {
@@ -260,25 +329,24 @@ class QueryBuilder {
     return this;
   }
 
-  single() {
-    this.singleResult = true;
+  async single(): Promise<CompatibilityResult<T>> {
     this.limitValue = 1;
-    return this.execute();
+    const result = await this.execute();
+    return {
+      ...result,
+      data: result.data?.[0] ?? null,
+    };
   }
 
-  maybeSingle() {
-    this.singleResult = true;
-    this.limitValue = 1;
-    return this.execute();
+  maybeSingle(): Promise<CompatibilityResult<T>> {
+    return this.single();
   }
 
-  async execute() {
+  async execute(): Promise<CompatibilityResult<T[]>> {
     try {
       // 构建查询
-      let query: any = null;
-
       // 过滤掉无效的条件（undefined 或 null）
-      const validConditions = this.conditions.filter(c => c !== undefined && c !== null);
+      const validConditions = this.scopedConditions().filter(c => c !== undefined && c !== null);
 
       if (this.headOnly) {
         // 只获取计数，不返回数据
@@ -295,7 +363,7 @@ class QueryBuilder {
       }
 
       // 正常查询
-      query = db.select().from(this.schema);
+      let query = db.select().from(this.schema).$dynamic();
 
       if (validConditions.length > 0) {
         query = query.where(and(...validConditions));
@@ -306,25 +374,29 @@ class QueryBuilder {
           const orderFn = o.direction === 'asc' ? asc : desc;
           const field = getSchemaField(this.schema, o.column);
           if (!field) {
-            console.warn(`Order field "${o.column}" not found in table "${this.tableName}"`);
+            logger.warn('database.compatibility.order_field_missing', {
+              table: this.tableName,
+              column: o.column,
+            });
             return null;
           }
           return orderFn(field);
-        }).filter(Boolean);
+        }).filter((item): item is SQL => item !== null);
         if (orderClauses.length > 0) {
           query = query.orderBy(...orderClauses);
         }
       }
 
-      if (this.limitValue) {
+      if (this.limitValue !== null) {
         query = query.limit(this.limitValue);
       }
 
-      if (this.offsetValue) {
+      if (this.offsetValue !== null) {
         query = query.offset(this.offsetValue);
       }
 
-      const data = await query;
+      const rows = await query as unknown as Readonly<Record<string, unknown>>[];
+      const data = rows.map((row) => mapCompatibilityRow(row, this.selectFields)) as T[];
 
       // 如果请求了 count，额外查询总数
       if (this.countMode) {
@@ -340,44 +412,38 @@ class QueryBuilder {
         };
       }
 
-      if (this.singleResult && data.length > 0) {
-        return {
-          data: data[0],
-          error: null,
-        };
-      }
-
       return {
         data,
         error: null,
         count: data.length,
       };
-    } catch (error: any) {
-      console.error(`Database query error for table ${this.tableName}:`, error);
+    } catch (error) {
+      logger.error('database.compatibility.query_failed', { table: this.tableName, error });
       return {
         data: null,
-        error: error.message || 'Unknown error',
+        error: compatibilityError(),
         count: 0,
       };
     }
   }
 
   // 插入 - 返回 this 支持链式调用
-  insert(data: any | any[]) {
+  insert(data: CompatibilityRow | readonly CompatibilityRow[]) {
     this.operationType = 'insert';
     this.insertData = Array.isArray(data) ? data : [data];
     return this;
   }
 
   // 实际执行插入
-  async executeInsert() {
+  async executeInsert(): Promise<CompatibilityResult<T[]>> {
     try {
       if (!this.insertData || this.insertData.length === 0) {
         throw new Error('No data provided for insert');
       }
       // 转换 snake_case 字段名到 camelCase（匹配 Drizzle schema）
-      const convertedData = this.insertData.map(item => {
-        const converted: Record<string, any> = {};
+      const scope = getCurrentTenantScope();
+      const convertedData = this.insertData.map((item: Record<string, unknown>) => {
+        const converted: CompatibilityRow = {};
         for (const [key, value] of Object.entries(item)) {
           const camelKey = snakeToCamel(key);
           // 如果是 ISO 字符串格式的日期，转换为 Date 对象
@@ -387,37 +453,45 @@ class QueryBuilder {
             converted[camelKey] = value;
           }
         }
+        if (scope && getSchemaField(this.schema, 'tenantId') && getSchemaField(this.schema, 'applicationId')) {
+          converted.tenantId = scope.tenantId;
+          converted.applicationId = scope.applicationId;
+        }
         return converted;
       });
-      const result = await db.insert(this.schema).values(convertedData).returning();
+      const inserted = ((await db.insert(this.schema).values(convertedData).returning()) as unknown) as Readonly<Record<string, unknown>>[];
+      const result = inserted.map((row) => mapCompatibilityRow(row, this.selectFields)) as T[];
       return {
         data: result,
         error: null,
       };
-    } catch (error: any) {
-      console.error(`Database insert error for table ${this.tableName}:`, error);
+    } catch (error) {
+      logger.error('database.compatibility.insert_failed', { table: this.tableName, error });
       return {
         data: null,
-        error: error.message || 'Unknown error',
+        error: compatibilityError(),
       };
     }
   }
 
   // 更新 - 返回 this 支持链式调用
-  update(data: any) {
+  update(data: CompatibilityRow) {
     this.operationType = 'update';
     this.updateData = data;
     return this;
   }
 
   // 实际执行更新
-  async executeUpdate() {
+  async executeUpdate(): Promise<CompatibilityResult<T[]>> {
     try {
       if (this.conditions.length === 0) {
         throw new Error('Update requires at least one condition');
       }
+      if (!this.updateData) {
+        throw new Error('No data provided for update');
+      }
       // 转换 snake_case 字段名到 camelCase
-      const convertedData: Record<string, any> = {};
+      const convertedData: CompatibilityRow = {};
       for (const [key, value] of Object.entries(this.updateData)) {
         const camelKey = snakeToCamel(key);
         // 如果是 ISO 字符串格式的日期，转换为 Date 对象
@@ -427,20 +501,22 @@ class QueryBuilder {
           convertedData[camelKey] = value;
         }
       }
-      const result = await db
+      const scopedConditions = this.scopedConditions();
+      const updated = ((await db
         .update(this.schema)
         .set(convertedData)
-        .where(and(...this.conditions))
-        .returning();
+        .where(and(...scopedConditions))
+        .returning()) as unknown) as Readonly<Record<string, unknown>>[];
+      const result = updated.map((row) => mapCompatibilityRow(row, this.selectFields)) as T[];
       return {
         data: result,
         error: null,
       };
-    } catch (error: any) {
-      console.error(`Database update error for table ${this.tableName}:`, error);
+    } catch (error) {
+      logger.error('database.compatibility.update_failed', { table: this.tableName, error });
       return {
         data: null,
-        error: error.message || 'Unknown error',
+        error: compatibilityError(),
       };
     }
   }
@@ -452,30 +528,35 @@ class QueryBuilder {
   }
 
   // 实际执行删除
-  async executeDelete() {
+  async executeDelete(): Promise<CompatibilityResult<T[]>> {
     try {
       if (this.conditions.length === 0) {
         throw new Error('Delete requires at least one condition');
       }
-      const result = await db
+      const scopedConditions = this.scopedConditions();
+      const deleted = ((await db
         .delete(this.schema)
-        .where(and(...this.conditions))
-        .returning();
+        .where(and(...scopedConditions))
+        .returning()) as unknown) as Readonly<Record<string, unknown>>[];
+      const result = deleted.map((row) => mapCompatibilityRow(row, this.selectFields)) as T[];
       return {
         data: result,
         error: null,
       };
-    } catch (error: any) {
-      console.error(`Database delete error for table ${this.tableName}:`, error);
+    } catch (error) {
+      logger.error('database.compatibility.delete_failed', { table: this.tableName, error });
       return {
         data: null,
-        error: error.message || 'Unknown error',
+        error: compatibilityError(),
       };
     }
   }
 
   // 使 thenable 以支持 await
-  then(resolve: (value: any) => any, reject: (reason: any) => any) {
+  then<TResult1 = CompatibilityResult<T[]>, TResult2 = never>(
+    resolve?: ((value: CompatibilityResult<T[]>) => TResult1 | PromiseLike<TResult1>) | null,
+    reject?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
+  ): Promise<TResult1 | TResult2> {
     if (this.operationType === 'delete') {
       return this.executeDelete().then(resolve, reject);
     }
@@ -491,8 +572,8 @@ class QueryBuilder {
 
 // 数据库客户端
 class DatabaseClient {
-  from(tableName: string) {
-    return new QueryBuilder(tableName);
+  from<T extends object = CompatibilityRow>(tableName: string) {
+    return new QueryBuilder<T>(tableName);
   }
 }
 
@@ -504,14 +585,19 @@ export function getDb() {
 }
 
 // 导出辅助函数供直接使用
-export function query<T = any>(table: string, options?: { 
-  filter?: Record<string, any>; 
-  single?: boolean;
-  order?: { column: string; ascending?: boolean };
-  limit?: number;
-  offset?: number;
-}) {
-  const builder = new QueryBuilder(table);
+export function query<T extends object>(
+  table: string,
+  options: QueryOptions & { readonly single: true },
+): Promise<CompatibilityResult<T>>;
+export function query<T extends object = CompatibilityRow>(
+  table: string,
+  options?: QueryOptions & { readonly single?: false | undefined },
+): Promise<CompatibilityResult<T[]>>;
+export function query<T extends object = CompatibilityRow>(
+  table: string,
+  options?: QueryOptions,
+): Promise<CompatibilityResult<T> | CompatibilityResult<T[]>> {
+  const builder = new QueryBuilder<T>(table);
   if (options?.filter) {
     Object.entries(options.filter).forEach(([key, value]) => {
       builder.eq(key, value);
@@ -520,20 +606,24 @@ export function query<T = any>(table: string, options?: {
   if (options?.order) {
     builder.order(options.order.column, { ascending: options.order.ascending });
   }
-  if (options?.limit) {
+  if (options?.limit !== undefined) {
     builder.limit(options.limit);
   }
-  if (options?.offset) {
+  if (options?.offset !== undefined) {
     builder.offset(options.offset);
   }
   if (options?.single) {
-    return builder.single() as Promise<{ data: T | null; error: any; count?: number }>;
+    return builder.single();
   }
-  return builder.execute() as Promise<{ data: T[] | null; error: any; count?: number }>;
+  return builder.execute();
 }
 
-export async function update(table: string, id: string, data: any) {
-  const builder = new QueryBuilder(table);
+export async function update<T extends object = CompatibilityRow>(
+  table: string,
+  id: string,
+  data: CompatibilityRow,
+) {
+  const builder = new QueryBuilder<T>(table);
   builder.eq('id', id);
   return builder.update(data);
 }
@@ -544,8 +634,11 @@ export async function remove(table: string, id: string) {
   return builder.delete();
 }
 
-export async function insert(table: string, data: any) {
-  const builder = new QueryBuilder(table);
+export async function insert<T extends object = CompatibilityRow>(
+  table: string,
+  data: CompatibilityRow,
+) {
+  const builder = new QueryBuilder<T>(table);
   return builder.insert(data);
 }
 
@@ -576,4 +669,6 @@ export {
   documentScanFindings,
   users,
   userPolicyStates,
+  securityAuditEvents,
+  exportApprovalRequests,
 } from '@/storage/database/shared/schema';

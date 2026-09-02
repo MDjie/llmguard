@@ -45,6 +45,11 @@ const eslintConfig = defineConfig([
     // Build artifacts:
     'server.js',
     'dist/**',
+    '**/dist/**',
+    '**/target/**',
+    'coverage/**',
+    'playwright-report/**',
+    'test-results/**',
     // Script files (CommonJS):
     'scripts/**/*.js',
   ]),

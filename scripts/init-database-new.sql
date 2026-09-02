@@ -17,7 +17,24 @@ CREATE TABLE health_check (
 );
 
 -- =====================================================
--- 2. LLM 提供商表 (llm_providers)
+-- 2. 密钥信封表 (secret_envelopes)
+-- =====================================================
+DROP TABLE IF EXISTS secret_envelopes CASCADE;
+CREATE TABLE secret_envelopes (
+  ref VARCHAR(80) PRIMARY KEY,
+  key_id VARCHAR(100) NOT NULL,
+  algorithm VARCHAR(30) NOT NULL DEFAULT 'AES-256-GCM',
+  iv VARCHAR(32) NOT NULL,
+  ciphertext TEXT NOT NULL,
+  auth_tag VARCHAR(32) NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX secret_envelopes_key_id_idx ON secret_envelopes(key_id);
+
+-- =====================================================
+-- 3. LLM 提供商表 (llm_providers)
 -- =====================================================
 DROP TABLE IF EXISTS llm_providers CASCADE;
 CREATE TABLE llm_providers (
@@ -26,6 +43,7 @@ CREATE TABLE llm_providers (
   display_name VARCHAR(200) NOT NULL,
   provider_type VARCHAR(50) NOT NULL,
   base_url VARCHAR(500),
+  secret_ref VARCHAR(80) REFERENCES secret_envelopes(ref) ON DELETE SET NULL,
   api_key_encrypted TEXT,
   default_model VARCHAR(100),
   use_case VARCHAR(20),

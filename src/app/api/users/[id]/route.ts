@@ -1,77 +1,85 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { verify } from 'jsonwebtoken';
-import { getDb } from '@/lib/db';
+import { z } from 'zod';
+import { ApiProblem, withApiSecurity, type ApiContext } from '@/lib/api-security';
+import { findUserByEmail, updateOwnProfile } from '@/lib/auth';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'guardllm-secret-key-2024';
+type ProfileRouteContext = { params: Promise<{ id: string }> };
+type DefaultQuery = Readonly<Record<string, string | readonly string[]>>;
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params;
+const profileBodySchema = z
+  .object({
+    nickname: z.string().trim().max(100).nullable().optional(),
+    email: z.email().max(255).nullable().optional(),
+    phone: z.string().trim().max(20).nullable().optional(),
+    department: z.string().trim().max(100).nullable().optional(),
+  })
+  .strict()
+  .refine((body) => Object.keys(body).length > 0, { message: 'At least one field is required' });
 
-    // 验证登录状态
-    const token = request.cookies.get('auth-token')?.value;
-    if (!token) {
-      return NextResponse.json(
-        { success: false, error: '未登录' },
-        { status: 401 }
-      );
+const profileResponseSchema = z.object({
+  success: z.literal(true),
+  user: z.object({
+    id: z.string(),
+    nickname: z.string().nullable(),
+    email: z.string().nullable(),
+    phone: z.string().nullable(),
+    department: z.string().nullable(),
+  }),
+});
+
+export const PATCH = withApiSecurity(
+  {
+    permission: 'profile:self:write',
+    bodySchema: profileBodySchema,
+    responseSchema: profileResponseSchema,
+    maxBodyBytes: 8_192,
+    auditEvent: 'iam.profile.update',
+    rateLimitPolicy: { id: 'iam-profile-update', windowMs: 60_000, maxRequests: 20, scope: 'principal' },
+  },
+  async ({ body, principal, routeContext }: ApiContext<
+    z.infer<typeof profileBodySchema>,
+    DefaultQuery,
+    ProfileRouteContext
+  >) => {
+    if (!principal) throw new Error('Authenticated principal missing after authorization');
+    const { id } = await routeContext.params;
+    if (principal.subject !== id) {
+      throw new ApiProblem({
+        status: 403,
+        code: 'PROFILE_SCOPE_DENIED',
+        title: '无权修改',
+        detail: '只能修改自己的个人资料。',
+      });
+    }
+    if (body.email) {
+      const emailOwner = await findUserByEmail(body.email);
+      if (emailOwner && emailOwner.id !== id) {
+        throw new ApiProblem({
+          status: 409,
+          code: 'EMAIL_CONFLICT',
+          title: '邮箱已存在',
+          detail: '该邮箱已被使用。',
+        });
+      }
     }
 
-    let decoded;
-    try {
-      decoded = verify(token, JWT_SECRET) as { userId: string };
-    } catch {
-      return NextResponse.json(
-        { success: false, error: '登录已过期' },
-        { status: 401 }
-      );
+    const updated = await updateOwnProfile(id, body, new Date());
+    if (!updated) {
+      throw new ApiProblem({
+        status: 404,
+        code: 'USER_NOT_FOUND',
+        title: '用户不存在',
+        detail: '未找到指定用户。',
+      });
     }
-
-    // 只能修改自己的信息
-    if (decoded.userId !== id) {
-      return NextResponse.json(
-        { success: false, error: '无权限修改他人信息' },
-        { status: 403 }
-      );
-    }
-
-    const body = await request.json();
-    const { nickname, email, phone, department } = body;
-
-    const client = getDb();
-
-    // 更新用户信息
-    const { error } = await client
-      .from('users')
-      .update({
-        nickname,
-        email,
-        phone,
-        department,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', id);
-
-    if (error) {
-      console.error('更新用户信息失败:', error);
-      return NextResponse.json(
-        { success: false, error: '更新失败' },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({
-      success: true,
-      user: { id, nickname, email, phone, department },
+    return Response.json({
+      success: true as const,
+      user: {
+        id: updated.id,
+        nickname: updated.nickname,
+        email: updated.email,
+        phone: updated.phone,
+        department: updated.department,
+      },
     });
-  } catch (error) {
-    console.error('更新用户信息错误:', error);
-    return NextResponse.json(
-      { success: false, error: '服务器错误' },
-      { status: 500 }
-    );
-  }
-}
+  },
+);

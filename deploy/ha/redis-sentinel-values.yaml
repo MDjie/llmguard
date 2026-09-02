@@ -1,0 +1,29 @@
+architecture: replication
+auth:
+  enabled: true
+  existingSecret: guardllm-redis-auth
+master:
+  persistence:
+    enabled: true
+    storageClass: encrypted-block
+    size: 100Gi
+  podAntiAffinityPreset: hard
+replica:
+  replicaCount: 3
+  persistence:
+    enabled: true
+    storageClass: encrypted-block
+    size: 100Gi
+  podAntiAffinityPreset: hard
+sentinel:
+  enabled: true
+  quorum: 2
+  downAfterMilliseconds: 10000
+  failoverTimeout: 60000
+networkPolicy:
+  enabled: true
+metrics:
+  enabled: true
+pdb:
+  create: true
+  minAvailable: 2

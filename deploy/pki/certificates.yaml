@@ -1,0 +1,60 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: guard-gateway-client
+  namespace: guard-edge
+spec:
+  secretName: guard-gateway-mtls
+  duration: 720h
+  renewBefore: 168h
+  commonName: guard-gateway
+  usages: [client auth, digital signature, key encipherment]
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+    rotationPolicy: Always
+  issuerRef:
+    name: guardllm-enterprise-ca
+    kind: ClusterIssuer
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: guard-online-server
+  namespace: guard-online
+spec:
+  secretName: guard-online-mtls
+  duration: 720h
+  renewBefore: 168h
+  dnsNames:
+    - guardllm-app.guard-online.svc
+    - guardllm-app.guard-online.svc.cluster.local
+  usages: [server auth, digital signature, key encipherment]
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+    rotationPolicy: Always
+  issuerRef:
+    name: guardllm-enterprise-ca
+    kind: ClusterIssuer
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: guard-inference-server
+  namespace: guard-inference
+spec:
+  secretName: guard-inference-mtls
+  duration: 720h
+  renewBefore: 168h
+  dnsNames:
+    - model-serving.guard-inference.svc
+    - model-serving.guard-inference.svc.cluster.local
+  usages: [server auth, digital signature, key encipherment]
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+    rotationPolicy: Always
+  issuerRef:
+    name: guardllm-enterprise-ca
+    kind: ClusterIssuer

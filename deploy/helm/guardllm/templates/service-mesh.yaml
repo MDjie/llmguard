@@ -1,0 +1,42 @@
+{{- if .Values.serviceMesh.enabled }}
+{{- $root := . }}
+{{- range $key, $namespace := .Values.namespaces }}
+---
+apiVersion: security.istio.io/v1
+kind: PeerAuthentication
+metadata:
+  name: guardllm-strict-mtls
+  namespace: {{ $namespace }}
+spec:
+  mtls:
+    mode: STRICT
+{{- end }}
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: app-only-from-gateway
+  namespace: {{ .Values.namespaces.online }}
+spec:
+  selector:
+    matchLabels: { guardllm.io/component: app }
+  rules:
+    - from:
+        - source:
+            principals:
+              - "cluster.local/ns/{{ .Values.namespaces.edge }}/sa/{{ include "guardllm.fullname" . }}-gateway"
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: model-only-from-gateway
+  namespace: {{ .Values.namespaces.inference }}
+spec:
+  selector:
+    matchLabels: { guardllm.io/role: model-serving }
+  rules:
+    - from:
+        - source:
+            principals:
+              - "cluster.local/ns/{{ .Values.namespaces.edge }}/sa/{{ include "guardllm.fullname" . }}-gateway"
+{{- end }}

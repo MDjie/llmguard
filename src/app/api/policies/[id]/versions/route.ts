@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+import {
+  emptyQuerySchema,
+  jsonObjectResponseSchema,
+} from '@/contracts/http/common';
+import { policyParamsSchema } from '@/contracts/http/policies';
+import { withLegacyApiSecurity } from '@/lib/api-security';
 import { getDb } from '@/lib/db';
 
 // 获取策略版本历史
-export async function GET(
+async function getPolicyVersions(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -36,3 +42,21 @@ export async function GET(
     );
   }
 }
+
+export const GET = withLegacyApiSecurity(
+  {
+    permission: 'policy:read',
+    paramsSchema: policyParamsSchema,
+    querySchema: emptyQuerySchema,
+    responseSchema: jsonObjectResponseSchema,
+    maxBodyBytes: 0,
+    auditEvent: 'policy.version.list',
+    rateLimitPolicy: {
+      id: 'policy-version-list',
+      windowMs: 60_000,
+      maxRequests: 60,
+      scope: 'principal',
+    },
+  },
+  getPolicyVersions,
+);

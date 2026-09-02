@@ -1,0 +1,121 @@
+{
+  "ACC": {
+    "component": "API contracts and Java security gateway",
+    "implementationStatus": "PARTIAL",
+    "implementation": ["packages/contracts", "services/guard-gateway", "src/lib/api-security", "src/lib/stream-gate"],
+    "tests": ["tests/contracts/guard-contracts.test.mjs", "tests/api-security", "tests/stream-gate"],
+    "upgradeIds": ["UPG-ACC-001", "UPG-ACC-002", "UPG-ACC-003", "UPG-ACC-004", "UPG-ACC-005"]
+  },
+  "IN": {
+    "component": "GuardEngine normalization and input detectors",
+    "implementationStatus": "PARTIAL",
+    "implementation": ["src/lib/guard-engine-v2", "src/lib/document", "src/lib/data-protection"],
+    "tests": ["tests/guard-engine-v2", "tests/detection"],
+    "upgradeIds": ["UPG-DET-001", "UPG-DET-002", "UPG-DET-003", "UPG-DET-004", "UPG-DET-005", "UPG-DET-006", "UPG-DET-007"]
+  },
+  "MM": {
+    "component": "Artifact, multimodal/media workers and built-in Analyzer",
+    "implementationStatus": "PARTIAL_BUILTIN_ANALYZER_TARGET_MODELS_PENDING",
+    "implementation": ["src/lib/artifacts", "src/lib/multimodal", "src/lib/media", "services/media-analyzer"],
+    "tests": ["tests/artifacts", "tests/multimodal", "tests/media", "tests/media-analyzer"],
+    "upgradeIds": ["UPG-MM-001", "UPG-MM-002", "UPG-MM-003", "UPG-MM-004", "UPG-MM-005", "UPG-MM-006", "UPG-MM-007"]
+  },
+  "AGT": {
+    "component": "Five-stage RAG guard and Tool/MCP policy enforcement point",
+    "implementationStatus": "IMPLEMENTED_PENDING_POC",
+    "implementation": ["src/lib/rag", "src/lib/tools", "src/app/api/v1/guard/rag", "src/app/api/v1/guard/tools"],
+    "tests": ["tests/rag", "tests/tools"],
+    "upgradeIds": ["UPG-AGT-001", "UPG-AGT-002", "UPG-AGT-003", "UPG-AGT-004", "UPG-AGT-005"]
+  },
+  "OUT": {
+    "component": "Output guard, decision state machine and stream commit gate",
+    "implementationStatus": "PARTIAL",
+    "implementation": ["src/lib/guard-engine-v2", "src/lib/stream-gate", "src/lib/detection"],
+    "tests": ["tests/guard-engine-v2", "tests/stream-gate", "tests/detection"],
+    "upgradeIds": ["UPG-OUT-001", "UPG-OUT-002", "UPG-OUT-003", "UPG-OUT-004", "UPG-OUT-005", "UPG-OUT-006"]
+  },
+  "POL": {
+    "component": "Signed policy bundle lifecycle",
+    "implementationStatus": "PARTIAL",
+    "implementation": ["src/lib/policy-bundle", "src/app/api/policy-bundles", "src/app/api/policies"],
+    "tests": ["tests/policy-bundle", "tests/detection"],
+    "upgradeIds": ["UPG-POL-001", "UPG-POL-002", "UPG-POL-003"]
+  },
+  "EVAL": {
+    "component": "Asynchronous production-parity evaluation",
+    "implementationStatus": "PARTIAL",
+    "implementation": ["src/lib/evaluation", "src/app/api/evaluation-runs", "scripts/evaluation-worker.ts"],
+    "tests": ["tests/evaluation"],
+    "upgradeIds": ["UPG-EVAL-001", "UPG-EVAL-002", "UPG-EVAL-003", "UPG-EVAL-004"]
+  },
+  "AUD": {
+    "component": "Scoped audit, retention and controlled export",
+    "implementationStatus": "PARTIAL",
+    "implementation": ["src/lib/audit", "src/lib/api-security/database-auditor.ts", "src/lib/data-protection", "src/app/api/audit", "src/app/api/history", "src/app/api/export"],
+    "tests": ["tests/audit", "tests/api-security", "tests/data-protection", "tests/observability"],
+    "upgradeIds": ["UPG-AUD-001", "UPG-AUD-002"]
+  },
+  "OPS": {
+    "component": "Operations console and event workflow",
+    "implementationStatus": "PARTIAL",
+    "implementation": ["src/app", "src/lib/incidents", "src/app/api/incidents", "src/app/api/stats", "src/app/api/history"],
+    "tests": ["tests/incidents", "tests/api-security/route-inventory.test.mjs"],
+    "upgradeIds": ["UPG-OPS-001"]
+  },
+  "IAM": {
+    "component": "Authentication, three-role separation and tenant scope",
+    "implementationStatus": "PARTIAL_EXTERNAL_SSO",
+    "implementation": ["src/lib/auth", "src/lib/tenancy", "src/app/api/users"],
+    "tests": ["tests/auth", "tests/tenancy", "tests/integration/tenancy-isolation.sql"],
+    "upgradeIds": ["UPG-IAM-001", "UPG-IAM-002"]
+  },
+  "DAT": {
+    "component": "Data minimization, encryption, provenance and lifecycle",
+    "implementationStatus": "PARTIAL",
+    "implementation": ["src/lib/data-catalog", "src/lib/content-marking", "src/lib/data-protection", "src/lib/secrets", "src/lib/rag/provenance.ts"],
+    "tests": ["tests/data-catalog", "tests/content-marking", "tests/data-protection", "tests/security/secrets.test.ts", "tests/rag"],
+    "upgradeIds": ["UPG-DAT-001", "UPG-DAT-002"]
+  },
+  "INT": {
+    "component": "Versioned integration contracts and governed adapters",
+    "implementationStatus": "PARTIAL_EXTERNAL_INTEGRATION",
+    "implementation": ["packages/contracts", "src/lib/platform-adapters", "services/guard-gateway"],
+    "tests": ["tests/contracts", "tests/platform-adapters"],
+    "upgradeIds": ["UPG-INT-001", "UPG-INT-002"]
+  },
+  "PER": {
+    "component": "Performance and effect acceptance harness",
+    "implementationStatus": "HARNESS_READY_EXTERNAL_RUN_REQUIRED",
+    "implementation": ["tests/performance", "scripts/acceptance"],
+    "tests": ["acceptance/poc-manifest.json"],
+    "upgradeIds": ["UPG-OBS-001"]
+  },
+  "AVA": {
+    "component": "Kubernetes HA and disaster recovery",
+    "implementationStatus": "HARNESS_READY_EXTERNAL_RUN_REQUIRED",
+    "implementation": ["deploy/helm/guardllm", "deploy/ha", "docs/runbooks"],
+    "tests": ["scripts/dr/record-drill.mjs", "acceptance/poc-manifest.json"],
+    "upgradeIds": ["UPG-ACC-005", "UPG-OBS-001"]
+  },
+  "SEC": {
+    "component": "Platform and software supply-chain security",
+    "implementationStatus": "HARNESS_READY_EXTERNAL_ASSESSMENT_REQUIRED",
+    "implementation": ["security", ".github/workflows/security.yml", "deploy/pki", "deploy/policies"],
+    "tests": ["scripts/security/generate-ai-bom.mjs", "scripts/release/validate-production-values.mjs"],
+    "upgradeIds": ["UPG-DAT-001", "UPG-AUD-001"]
+  },
+  "XIN": {
+    "component": "Domestic-platform adapter and certification matrix",
+    "implementationStatus": "PENDING_TARGET_POC",
+    "implementation": ["deploy/compatibility/matrix.json", "src/lib/platform-adapters", "deploy/systemd"],
+    "tests": ["scripts/compatibility/validate-matrix.mjs"],
+    "upgradeIds": ["UPG-INT-001", "UPG-ACC-005"]
+  },
+  "OBS": {
+    "component": "OpenTelemetry, Prometheus SLOs and structured logs",
+    "implementationStatus": "IMPLEMENTED_PENDING_ENVIRONMENT_POC",
+    "implementation": ["src/lib/observability", "deploy/observability"],
+    "tests": ["tests/observability"],
+    "upgradeIds": ["UPG-OBS-001"]
+  }
+}

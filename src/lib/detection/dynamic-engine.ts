@@ -15,7 +15,7 @@ import {
   policyProfiles,
   policyRules,
 } from '@/lib/db';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and, inArray } from 'drizzle-orm';
 
 // 导入裁判模型模块
 import {
@@ -24,7 +24,7 @@ import {
   executeJudgeDetection,
   getJudgeConfig,
 } from '@/lib/judge';
-import type { PolicyJudgeConfig, JudgeModelResult, DecisionTrace } from '@/lib/judge';
+import type { JudgeModelResult, DecisionTrace } from '@/lib/judge';
 
 // 从类型文件导入
 export type {
@@ -52,6 +52,21 @@ import type {
   DetectionFinding,
   DetectionResult,
 } from './types';
+import { DetectionPolicyError } from './errors';
+import {
+  exceptionSkipsRule,
+  isMandatoryDenyRule,
+  strictestRiskAction,
+  terminalAction,
+  type RiskAction,
+} from './decision';
+import {
+  compileSafeRegex,
+  safeRegexMatches,
+  safeRegexTest,
+  UnsafeRegexError,
+} from './safe-regex';
+import { scopePredicate, type TenantScope } from '@/lib/tenancy';
 
 // 缓存
 const policyCache = new Map<string, CachedPolicyConfig>();
@@ -60,39 +75,19 @@ const CACHE_TTL = 30 * 1000; // 30秒缓存，更快响应配置变更
 // 清除缓存（配置变更时调用）
 export function clearPolicyCache(policyId?: string) {
   if (policyId) {
-    policyCache.delete(policyId);
+    for (const key of policyCache.keys()) {
+      if (key.endsWith(`:${policyId}`)) {
+        policyCache.delete(key);
+      }
+    }
   } else {
     policyCache.clear();
   }
   console.log(`[检测引擎] 缓存已清除: ${policyId || '全部'}`);
 }
 
-// 规则匹配函数 - 返回是否匹配（用于白名单等场景）
-function matchRule(text: string, rule: DetectionRule): boolean {
-  if (!rule.pattern) return false;
-  
-  const searchText = rule.caseSensitive ? text : text.toLowerCase();
-  const pattern = rule.caseSensitive ? rule.pattern : rule.pattern.toLowerCase();
-
-  switch (rule.matchType) {
-    case 'exact':
-      return searchText === pattern;
-    case 'contains':
-      return searchText.includes(pattern);
-    case 'prefix':
-      return searchText.startsWith(pattern);
-    case 'suffix':
-      return searchText.endsWith(pattern);
-    case 'regex':
-      try {
-        const flags = rule.caseSensitive ? 'g' : 'gi';
-        return new RegExp(rule.pattern, flags).test(text);
-      } catch {
-        return false;
-      }
-    default:
-      return false;
-  }
+function policyCacheKey(scope: TenantScope, policyId: string): string {
+  return `${scope.tenantId}:${scope.applicationId}:${policyId}`;
 }
 
 // ============ 数字边界判断辅助函数 ============
@@ -134,34 +129,6 @@ function passNumericBoundary(text: string, index: number, length: number): boole
   const after = text[index + length];
 
   return !isDigitChar(before) && !isDigitChar(after);
-}
-
-/**
- * 标准化正则模式
- * 修复历史错误数据（如 \\d 被存成双反斜杠）
- */
-function normalizeRegexPattern(pattern: string): string {
-  let p = pattern.trim();
-
-  // 兼容 /xxx/gi 格式
-  const slashFormat = p.match(/^\/(.+)\/([gimsuy]*)$/);
-  if (slashFormat) {
-    p = slashFormat[1];
-  }
-
-  // 修复历史错误数据：如果数据库里真实存的是 \\d、\\s 等
-  // 动态 new RegExp 时会变成匹配字面量，需要修复
-  p = p
-    .replace(/\\\\d/g, '\\d')
-    .replace(/\\\\D/g, '\\D')
-    .replace(/\\\\s/g, '\\s')
-    .replace(/\\\\S/g, '\\S')
-    .replace(/\\\\w/g, '\\w')
-    .replace(/\\\\W/g, '\\W')
-    .replace(/\\\\b/g, '\\b')
-    .replace(/\\\\B/g, '\\B');
-
-  return p;
 }
 
 // 全量匹配函数 - 返回所有匹配结果
@@ -229,38 +196,11 @@ function matchRuleAll(text: string, rule: DetectionRule): Array<{ raw: string; i
       break;
     }
     case 'regex': {
-      try {
-        // 标准化正则模式
-        const source = normalizeRegexPattern(rule.pattern);
-        let flags = 'g';
-        
-        if (!rule.caseSensitive && !flags.includes('i')) flags += 'i';
-        
-        const regex = new RegExp(source, flags);
-        
-        for (const match of text.matchAll(regex)) {
-          const raw = match[0];
-          const index = match.index ?? 0;
-          
-          if (!raw) continue;
-          
-          // 检查数字边界（对于手机号、身份证号、银行卡号等规则）
-          if (needNumericBoundary && !passNumericBoundary(text, index, raw.length)) {
-            continue;
-          }
-          
-          matches.push({
-            raw,
-            index,
-          });
+      for (const match of safeRegexMatches(text, rule.pattern, rule.caseSensitive)) {
+        if (needNumericBoundary && !passNumericBoundary(text, match.index, match.raw.length)) {
+          continue;
         }
-      } catch (error) {
-        console.error('[检测引擎] 正则规则编译失败:', {
-          ruleId: rule.id,
-          ruleName: rule.name,
-          pattern: rule.pattern,
-          error,
-        });
+        matches.push(match);
       }
       break;
     }
@@ -284,60 +224,33 @@ function matchWhitelist(text: string, whitelist: WhitelistRule): boolean {
     case 'suffix':
       return searchText.endsWith(pattern);
     case 'regex':
-      try {
-        const flags = whitelist.caseSensitive ? 'g' : 'gi';
-        return new RegExp(whitelist.pattern, flags).test(text);
-      } catch {
-        return false;
-      }
+      return safeRegexTest(text, whitelist.pattern, whitelist.caseSensitive);
     default:
       return false;
   }
 }
 
-// 计算维度评分
-function calculateDimensionScore(
-  matchedRules: DetectionRule[],
-  dimensionWeight: number,
-  policyWeight: number = 1.0
-): number {
-  if (matchedRules.length === 0) return 0;
-
-  // 取最高分
-  const maxRuleScore = Math.max(...matchedRules.map(r => r.score), 0);
-
-  // 其他规则衰减累加
-  const extraScore = matchedRules
-    .filter(r => r.score !== maxRuleScore)
-    .reduce((sum, r) => sum + r.score * 0.2, 0);
-
-  // 加权计算
-  const finalScore = (maxRuleScore + extraScore) * dimensionWeight * policyWeight;
-
-  // 限制在0-100
-  return Math.min(Math.max(finalScore, 0), 100);
-}
-
 // 获取默认策略ID
-export async function getDefaultPolicyId(): Promise<string | null> {
-  try {
-    const profiles = await db
-      .select()
-      .from(policyProfiles)
-      .where(eq(policyProfiles.isDefault, true))
-      .limit(1);
-
-    return profiles.length > 0 ? profiles[0].id : null;
-  } catch (error) {
-    console.error('获取默认策略失败:', error);
-    return null;
-  }
+export async function getDefaultPolicyId(scope: TenantScope): Promise<string | null> {
+  const profiles = await db
+    .select()
+    .from(policyProfiles)
+    .where(and(
+      eq(policyProfiles.isDefault, true),
+      scopePredicate(policyProfiles, scope),
+    ))
+    .limit(1);
+  return profiles.length > 0 ? profiles[0].id : null;
 }
 
 // 获取策略配置（带缓存）- 支持从policy_dimension_config或policy_profiles.rules获取
-export async function getPolicyConfig(policyId: string): Promise<CachedPolicyConfig | null> {
+export async function getPolicyConfig(
+  policyId: string,
+  scope: TenantScope,
+): Promise<CachedPolicyConfig | null> {
+  const cacheKey = policyCacheKey(scope, policyId);
   // 检查缓存
-  const cached = policyCache.get(policyId);
+  const cached = policyCache.get(cacheKey);
   if (cached && Date.now() - cached.cachedAt < CACHE_TTL) {
     return cached;
   }
@@ -351,17 +264,17 @@ export async function getPolicyConfig(policyId: string): Promise<CachedPolicyCon
         .where(
           and(
             eq(policyDimensionConfig.policyId, policyId),
-            eq(policyDimensionConfig.enabled, true)
+            eq(policyDimensionConfig.enabled, true),
+            scopePredicate(policyDimensionConfig, scope),
           )
         );
 
       // 如果policy_dimension_config表有数据，使用原有逻辑
       if (dimConfigs && dimConfigs.length > 0) {
-        return await buildConfigFromDimensionConfig(policyId, dimConfigs);
+        return await buildConfigFromDimensionConfig(policyId, dimConfigs, scope);
       }
-    } catch {
-      // policy_dimension_config表不存在，继续尝试从policy_rules获取
-      console.log('policy_dimension_config表不存在，尝试从policy_rules获取配置');
+    } catch (error) {
+      if (!isUndefinedTableError(error)) throw error;
     }
 
     // 从policy_rules表获取配置
@@ -369,115 +282,143 @@ export async function getPolicyConfig(policyId: string): Promise<CachedPolicyCon
       const policyRulesData = await db
         .select()
         .from(policyRules)
-        .where(eq(policyRules.policyId, policyId));
+        .where(and(
+          eq(policyRules.policyId, policyId),
+          scopePredicate(policyRules, scope),
+        ));
 
       if (policyRulesData && policyRulesData.length > 0) {
-        // 根据dimension code构建配置
-        return await buildConfigFromPolicyRules(policyId, policyRulesData);
+        return await buildConfigFromPolicyRules(policyId, policyRulesData, scope);
       }
-    } catch {
-      console.log('policy_rules表不存在');
+    } catch (error) {
+      if (!isUndefinedTableError(error)) throw error;
     }
 
     return null;
   } catch (error) {
-    console.error('获取策略配置失败:', error);
-    return null;
+    if (error instanceof DetectionPolicyError) throw error;
+    if (error instanceof UnsafeRegexError) {
+      throw new DetectionPolicyError(
+        'POLICY_PATTERN_INVALID',
+        'Policy contains a regular expression that cannot be compiled safely',
+        { cause: error },
+      );
+    }
+    throw new DetectionPolicyError('POLICY_LOAD_FAILED', 'Policy configuration could not be loaded', {
+      cause: error,
+    });
   }
+}
+
+function isUndefinedTableError(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    (error as { code?: unknown }).code === '42P01'
+  );
+}
+
+function validatePolicyPatterns(config: CachedPolicyConfig): void {
+  for (const rules of config.rules.values()) {
+    for (const rule of rules) {
+      if (rule.matchType === 'regex' && rule.pattern) {
+        compileSafeRegex(rule.pattern, rule.caseSensitive ? '' : 'i');
+      }
+    }
+  }
+  for (const exception of config.whitelists) {
+    if (exception.matchType === 'regex') {
+      compileSafeRegex(exception.pattern, exception.caseSensitive ? '' : 'i');
+    }
+  }
+}
+
+function mapDimension(dim: typeof detectionDimensions.$inferSelect): DetectionDimension {
+  return {
+    id: dim.id,
+    code: dim.code,
+    name: dim.name,
+    description: dim.description || undefined,
+    category: dim.category || undefined,
+    weight: parseFloat(dim.weight) || 1,
+    priority: dim.priority,
+    enabled: dim.enabled,
+    isSystem: dim.isSystem,
+    config: (dim.config as Record<string, unknown>) || {},
+  };
+}
+
+function mapRule(rule: typeof detectionRules.$inferSelect): DetectionRule {
+  return {
+    id: rule.id,
+    dimensionId: rule.dimensionId,
+    groupId: rule.groupId || undefined,
+    name: rule.name,
+    type: rule.type as DetectionRule['type'],
+    pattern: rule.pattern || undefined,
+    matchType: rule.matchType as DetectionRule['matchType'],
+    caseSensitive: rule.caseSensitive,
+    score: parseFloat(rule.score) || 50,
+    confidence: parseFloat(rule.confidence) || 0.8,
+    priority: rule.priority,
+    enabled: rule.enabled,
+    description: rule.description || undefined,
+    config: (rule.config as Record<string, unknown>) || {},
+    suggestion: rule.suggestion || undefined,
+  };
+}
+
+function mapRuleGroup(group: typeof ruleGroups.$inferSelect): RuleGroup {
+  return {
+    id: group.id,
+    dimensionId: group.dimensionId,
+    name: group.name,
+    description: group.description || undefined,
+    logic: group.logic as RuleGroup['logic'],
+    score: parseFloat(group.score) || 50,
+    priority: group.priority,
+    enabled: group.enabled,
+  };
 }
 
 // 从policy_dimension_config表构建配置
 async function buildConfigFromDimensionConfig(
   policyId: string,
-  dimConfigs: typeof policyDimensionConfig.$inferSelect[]
+  dimConfigs: typeof policyDimensionConfig.$inferSelect[],
+  scope: TenantScope,
 ): Promise<CachedPolicyConfig | null> {
   const dimensionIds = dimConfigs.map(dc => dc.dimensionId);
-  const dimensions: DetectionDimension[] = [];
+  const [dimensionRows, ruleRows, groupRows] = await Promise.all([
+    db.select().from(detectionDimensions).where(and(
+      inArray(detectionDimensions.id, dimensionIds),
+      eq(detectionDimensions.enabled, true),
+      scopePredicate(detectionDimensions, scope),
+    )),
+    db.select().from(detectionRules).where(and(
+      inArray(detectionRules.dimensionId, dimensionIds),
+      eq(detectionRules.enabled, true),
+      scopePredicate(detectionRules, scope),
+    )),
+    db.select().from(ruleGroups).where(and(
+      inArray(ruleGroups.dimensionId, dimensionIds),
+      eq(ruleGroups.enabled, true),
+      scopePredicate(ruleGroups, scope),
+    )),
+  ]);
+  const dimensions = dimensionRows.map(mapDimension);
   const rules = new Map<string, DetectionRule[]>();
   const ruleGroupsMap = new Map<string, RuleGroup[]>();
-
   for (const dimId of dimensionIds) {
-    const dimData = await db
-      .select()
-      .from(detectionDimensions)
-      .where(eq(detectionDimensions.id, dimId))
-      .limit(1);
-
-    if (dimData && dimData.length > 0) {
-      const dim = dimData[0];
-      
-      // 检查维度本身是否启用
-      if (!dim.enabled) {
-        continue; // 跳过禁用的维度
-      }
-      
-      dimensions.push({
-        id: dim.id,
-        code: dim.code,
-        name: dim.name,
-        description: dim.description || undefined,
-        category: dim.category || undefined,
-        weight: parseFloat(dim.weight) || 1.0,
-        priority: dim.priority,
-        enabled: dim.enabled,
-        isSystem: dim.isSystem,
-        config: (dim.config as Record<string, unknown>) || {},
-      });
-
-      // 获取该维度的规则
-      const ruleData = await db
-        .select()
-        .from(detectionRules)
-        .where(
-          and(
-            eq(detectionRules.dimensionId, dimId),
-            eq(detectionRules.enabled, true)
-          )
-        );
-
-      rules.set(dimId, ruleData.map(r => ({
-        id: r.id,
-        dimensionId: r.dimensionId,
-        groupId: r.groupId || undefined,
-        name: r.name,
-        type: r.type as 'keyword' | 'regex' | 'semantic' | 'llm',
-        pattern: r.pattern || undefined,
-        matchType: r.matchType as 'exact' | 'contains' | 'prefix' | 'suffix' | 'regex',
-        caseSensitive: r.caseSensitive,
-        score: parseFloat(r.score) || 50,
-        confidence: parseFloat(r.confidence) || 0.8,
-        priority: r.priority,
-        enabled: r.enabled,
-        description: r.description || undefined,
-        config: (r.config as Record<string, unknown>) || {},
-      })));
-
-      // 获取规则组
-      const groupData = await db
-        .select()
-        .from(ruleGroups)
-        .where(
-          and(
-            eq(ruleGroups.dimensionId, dimId),
-            eq(ruleGroups.enabled, true)
-          )
-        );
-
-      ruleGroupsMap.set(dimId, groupData.map(g => ({
-        id: g.id,
-        dimensionId: g.dimensionId,
-        name: g.name,
-        description: g.description || undefined,
-        logic: g.logic as 'OR' | 'AND',
-        score: parseFloat(g.score) || 50,
-        priority: g.priority,
-        enabled: g.enabled,
-      })));
-    }
+    rules.set(dimId, ruleRows.filter((row) => row.dimensionId === dimId).map(mapRule));
+    ruleGroupsMap.set(
+      dimId,
+      groupRows.filter((row) => row.dimensionId === dimId).map(mapRuleGroup),
+    );
   }
 
   // 获取白名单
-  const whitelistData = await getWhitelistRules(policyId);
+  const whitelistData = await getWhitelistRules(policyId, scope);
 
   const config: CachedPolicyConfig = {
     policyId,
@@ -503,14 +444,16 @@ async function buildConfigFromDimensionConfig(
     cachedAt: Date.now(),
   };
 
-  policyCache.set(policyId, config);
+  validatePolicyPatterns(config);
+  policyCache.set(policyCacheKey(scope, policyId), config);
   return config;
 }
 
 // 从policy_rules表构建配置
 async function buildConfigFromPolicyRules(
   policyId: string,
-  policyRulesData: typeof policyRules.$inferSelect[]
+  policyRulesData: typeof policyRules.$inferSelect[],
+  scope: TenantScope,
 ): Promise<CachedPolicyConfig | null> {
   const dimensions: DetectionDimension[] = [];
   const rulesMap = new Map<string, DetectionRule[]>();
@@ -519,35 +462,36 @@ async function buildConfigFromPolicyRules(
 
   // 只处理启用的维度
   const enabledRules = policyRulesData.filter(r => r.enabled);
+  const dimensionCodes = [...new Set(enabledRules.map((rule) => rule.dimension))];
+  const dimensionRows = dimensionCodes.length > 0
+    ? await db.select().from(detectionDimensions).where(and(
+        inArray(detectionDimensions.code, dimensionCodes),
+        eq(detectionDimensions.enabled, true),
+        scopePredicate(detectionDimensions, scope),
+      ))
+    : [];
+  const dimensionIds = dimensionRows.map((dimension) => dimension.id);
+  const [ruleRows, groupRows] = dimensionIds.length > 0
+    ? await Promise.all([
+        db.select().from(detectionRules).where(and(
+          inArray(detectionRules.dimensionId, dimensionIds),
+          eq(detectionRules.enabled, true),
+          scopePredicate(detectionRules, scope),
+        )),
+        db.select().from(ruleGroups).where(and(
+          inArray(ruleGroups.dimensionId, dimensionIds),
+          eq(ruleGroups.enabled, true),
+          scopePredicate(ruleGroups, scope),
+        )),
+      ])
+    : [[], []];
+  const addedDimensionIds = new Set<string>();
 
   for (const rule of enabledRules) {
-    // 根据dimension code查找维度
-    const dimData = await db
-      .select()
-      .from(detectionDimensions)
-      .where(eq(detectionDimensions.code, rule.dimension))
-      .limit(1);
-
-    if (dimData && dimData.length > 0) {
-      const dim = dimData[0];
-
-      // 检查维度本身是否启用
-      if (!dim.enabled) {
-        continue; // 跳过已禁用的维度
-      }
-
-      dimensions.push({
-        id: dim.id,
-        code: dim.code,
-        name: dim.name,
-        description: dim.description || undefined,
-        category: dim.category || undefined,
-        weight: parseFloat(dim.weight) || 1.0,
-        priority: dim.priority,
-        enabled: dim.enabled,
-        isSystem: dim.isSystem,
-        config: (dim.config as Record<string, unknown>) || {},
-      });
+    const dim = dimensionRows.find((dimension) => dimension.code === rule.dimension);
+    if (dim && !addedDimensionIds.has(dim.id)) {
+      addedDimensionIds.add(dim.id);
+      dimensions.push(mapDimension(dim));
 
       // 构建维度配置
       dimensionConfigs.push({
@@ -565,60 +509,19 @@ async function buildConfigFromPolicyRules(
         actionConfig: {},
       });
 
-      // 获取该维度的规则
-      const ruleData = await db
-        .select()
-        .from(detectionRules)
-        .where(
-          and(
-            eq(detectionRules.dimensionId, dim.id),
-            eq(detectionRules.enabled, true)
-          )
-        );
-
-      rulesMap.set(dim.id, ruleData.map(r => ({
-        id: r.id,
-        dimensionId: r.dimensionId,
-        groupId: r.groupId || undefined,
-        name: r.name,
-        type: r.type as 'keyword' | 'regex' | 'semantic' | 'llm',
-        pattern: r.pattern || undefined,
-        matchType: r.matchType as 'exact' | 'contains' | 'prefix' | 'suffix' | 'regex',
-        caseSensitive: r.caseSensitive,
-        score: parseFloat(r.score) || 50,
-        confidence: parseFloat(r.confidence) || 0.8,
-        priority: r.priority,
-        enabled: r.enabled,
-        description: r.description || undefined,
-        config: (r.config as Record<string, unknown>) || {},
-      })));
-
-      // 获取规则组
-      const groupData = await db
-        .select()
-        .from(ruleGroups)
-        .where(
-          and(
-            eq(ruleGroups.dimensionId, dim.id),
-            eq(ruleGroups.enabled, true)
-          )
-        );
-
-      ruleGroupsMap.set(dim.id, groupData.map(g => ({
-        id: g.id,
-        dimensionId: g.dimensionId,
-        name: g.name,
-        description: g.description || undefined,
-        logic: g.logic as 'OR' | 'AND',
-        score: parseFloat(g.score) || 50,
-        priority: g.priority,
-        enabled: g.enabled,
-      })));
+      rulesMap.set(
+        dim.id,
+        ruleRows.filter((row) => row.dimensionId === dim.id).map(mapRule),
+      );
+      ruleGroupsMap.set(
+        dim.id,
+        groupRows.filter((row) => row.dimensionId === dim.id).map(mapRuleGroup),
+      );
     }
   }
 
   // 获取白名单
-  const whitelistData = await getWhitelistRules(policyId);
+  const whitelistData = await getWhitelistRules(policyId, scope);
 
   const config: CachedPolicyConfig = {
     policyId,
@@ -631,21 +534,31 @@ async function buildConfigFromPolicyRules(
     cachedAt: Date.now(),
   };
 
-  policyCache.set(policyId, config);
+  validatePolicyPatterns(config);
+  policyCache.set(policyCacheKey(scope, policyId), config);
   return config;
 }
 
 // 获取白名单规则（新版：支持策略范围和维度范围）
-async function getWhitelistRules(policyId: string): Promise<WhitelistRule[]> {
+async function getWhitelistRules(
+  policyId: string,
+  scope: TenantScope,
+): Promise<WhitelistRule[]> {
   try {
     // 获取所有启用的白名单规则
     const allWhitelists = await db
       .select()
       .from(whitelistRules)
-      .where(eq(whitelistRules.enabled, true));
+      .where(and(
+        eq(whitelistRules.enabled, true),
+        scopePredicate(whitelistRules, scope),
+      ));
 
     // 获取策略绑定
-    const policyBindings = await db.select().from(whitelistRulePolicies);
+    const policyBindings = await db
+      .select()
+      .from(whitelistRulePolicies)
+      .where(scopePredicate(whitelistRulePolicies, scope));
 
     // 过滤出对当前策略生效的白名单
     const applicableWhitelists = allWhitelists.filter(w => {
@@ -675,9 +588,8 @@ async function getWhitelistRules(policyId: string): Promise<WhitelistRule[]> {
       dimensionId: w.dimensionId || undefined,
     }));
   } catch (error) {
-    console.error('获取白名单规则失败:', error);
-    // whitelist_rules表可能不存在
-    return [];
+    if (isUndefinedTableError(error)) return [];
+    throw error;
   }
 }
 
@@ -685,23 +597,23 @@ async function getWhitelistRules(policyId: string): Promise<WhitelistRule[]> {
 export async function detectWithDynamicRules(
   text: string,
   policyId: string,
-  direction: 'input' | 'output' = 'input'
+  scope: TenantScope,
+  direction: 'input' | 'output' = 'input',
+  signal?: AbortSignal,
 ): Promise<DetectionResult> {
   const startTime = Date.now();
   
   // 获取策略配置
-  const config = await getPolicyConfig(policyId);
+  const config = await getPolicyConfig(policyId, scope);
   if (!config) {
-    return {
-      overallScore: 0,
-      action: 'allow',
-      findings: [],
-      summary: '未找到策略配置，请检查数据库是否已初始化',
-    };
+    throw new DetectionPolicyError(
+      'POLICY_NOT_AVAILABLE',
+      'The requested policy is missing or has no enabled detection configuration',
+    );
   }
 
   // 获取所有维度信息，用于返回跳过的维度名称
-  const allDimensions = await getAllDimensions();
+  const allDimensions = await getAllDimensions(scope);
   const dimensionNameMap = new Map(allDimensions.map(d => [d.code, d.name]));
 
   // 按 priority 从高到低排序白名单
@@ -709,40 +621,36 @@ export async function detectWithDynamicRules(
     (b.priority || 100) - (a.priority || 100)
   );
 
-  // 先检查 dimensionScope = 'all' 的全局白名单
-  for (const whitelist of sortedWhitelists.filter(w => w.dimensionScope === 'all')) {
-    if (matchWhitelist(text, whitelist)) {
-      // 命中全局白名单，跳过所有检测
-      return {
-        overallScore: 0,
-        action: 'allow',
-        findings: [],
-        summary: `命中全局白名单「${whitelist.name || '未命名'}」，已跳过所有风险检测`,
-        latencyMs: Date.now() - startTime,
-        whitelistMatched: {
-          id: whitelist.id,
-          name: whitelist.name || '未命名白名单',
-          policyScope: whitelist.policyScope,
-          dimensionScope: whitelist.dimensionScope,
-          dimensionCodes: [],
-          pattern: whitelist.pattern,
-          matchType: whitelist.matchType,
-          effect: 'skip_all_detection',
-        },
-        skippedDimensions: allDimensions.map(d => ({
-          dimensionCode: d.code,
-          dimensionName: d.name,
-          whitelistId: whitelist.id,
-          whitelistName: whitelist.name || '未命名白名单',
-          effect: 'skip_dimension_detection' as const,
-        })),
-      };
-    }
-  }
-
-  // 记录被跳过的维度
   const skippedDimensions: SkippedDimension[] = [];
   const skippedDimensionCodes = new Set<string>();
+  let whitelistMatched: WhitelistMatched | undefined;
+
+  // 全局白名单仅跳过可豁免规则；mandatory deny 仍会执行。
+  for (const whitelist of sortedWhitelists.filter(w => w.dimensionScope === 'all')) {
+    if (matchWhitelist(text, whitelist)) {
+      whitelistMatched = {
+        id: whitelist.id,
+        name: whitelist.name || '未命名白名单',
+        policyScope: whitelist.policyScope,
+        dimensionScope: whitelist.dimensionScope,
+        dimensionCodes: allDimensions.map((dimension) => dimension.code),
+        pattern: whitelist.pattern,
+        matchType: whitelist.matchType,
+        effect: 'skip_selected_dimensions',
+      };
+      for (const dimension of allDimensions) {
+        skippedDimensionCodes.add(dimension.code);
+        skippedDimensions.push({
+          dimensionCode: dimension.code,
+          dimensionName: dimension.name,
+          whitelistId: whitelist.id,
+          whitelistName: whitelist.name || '未命名白名单',
+          effect: 'skip_dimension_detection',
+        });
+      }
+      break;
+    }
+  }
 
   // 检查维度白名单
   for (const whitelist of sortedWhitelists.filter(w => w.dimensionScope === 'specific')) {
@@ -765,17 +673,12 @@ export async function detectWithDynamicRules(
 
   const findings: DetectionFinding[] = [];
   let maxScore = 0;
-  let finalAction: 'allow' | 'warn' | 'block' | 'mask' | 'rewrite' = 'allow';
+  let finalAction: RiskAction = 'allow';
 
   // 遍历每个维度进行检测
   for (const dimension of config.dimensions) {
     const dimConfig = config.dimensionConfigs.find(dc => dc.dimensionId === dimension.id);
     if (!dimConfig || !dimConfig.enabled) continue;
-
-    // 检查该维度是否被白名单跳过
-    if (skippedDimensionCodes.has(dimension.code)) {
-      continue; // 跳过该维度检测
-    }
 
     // 获取该维度的规则
     const dimRules = config.rules.get(dimension.id) || [];
@@ -785,6 +688,8 @@ export async function detectWithDynamicRules(
       // 只处理关键词和正则类型规则
       if (rule.type !== 'keyword' && rule.type !== 'regex') continue;
       if (!rule.pattern) continue;
+      const mandatoryDeny = isMandatoryDenyRule(rule);
+      if (exceptionSkipsRule(skippedDimensionCodes.has(dimension.code), rule)) continue;
 
       // 获取所有匹配
       const allMatches = matchRuleAll(text, rule);
@@ -800,8 +705,10 @@ export async function detectWithDynamicRules(
         const score = Math.min(Math.max(ruleScore, 0), 100);
 
         // 确定动作
-        let ruleAction: 'allow' | 'warn' | 'block' = 'allow';
-        if (score >= dimConfig.blockThreshold && dimConfig.blockEnabled) {
+        let ruleAction: RiskAction = 'allow';
+        if (mandatoryDeny) {
+          ruleAction = 'block';
+        } else if (score >= dimConfig.blockThreshold && dimConfig.blockEnabled) {
           ruleAction = 'block';
         } else if (score >= dimConfig.warnThreshold && dimConfig.warnEnabled) {
           ruleAction = 'warn';
@@ -825,14 +732,8 @@ export async function detectWithDynamicRules(
           suggestion: rule.suggestion || '', // 从规则中获取建议
         });
 
-        if (score > maxScore) {
-          maxScore = score;
-          if (ruleAction === 'block') {
-            finalAction = 'block';
-          } else if (ruleAction === 'warn' && finalAction !== 'block') {
-            finalAction = 'warn';
-          }
-        }
+        maxScore = Math.max(maxScore, score);
+        finalAction = strictestRiskAction(finalAction, ruleAction);
       }
     }
   }
@@ -882,70 +783,65 @@ export async function detectWithDynamicRules(
   let finalOverallScore = Math.round(maxScore);
   let finalFinalAction = finalAction;
 
-  try {
-    // 获取裁判模型配置
-    const judgeConfig = await getJudgeConfig(policyId);
-
-    // 判断是否需要调用裁判模型
-    if (judgeConfig && shouldInvokeJudge(judgeConfig, direction, maxScore, findings, text)) {
-      // 执行裁判模型检测
+  const judgeConfig = await getJudgeConfig(policyId, scope);
+  if (judgeConfig && shouldInvokeJudge(judgeConfig, direction, maxScore, findings, text)) {
+    try {
       judgeModelResult = await executeJudgeDetection(
         text,
         direction,
         findings,
         maxScore,
-        judgeConfig
-      );
-
-      // 获取第一个维度的阈值配置（用于融合决策）
-      const firstDimConfig = config.dimensionConfigs[0];
-      const warnThreshold = firstDimConfig?.warnThreshold || 50;
-      const blockThreshold = firstDimConfig?.blockThreshold || 80;
-
-      // 融合规则检测和裁判模型结果
-      decisionTrace = fuseResults(
-        maxScore,
-        finalAction,
-        judgeModelResult,
         judgeConfig,
-        warnThreshold,
-        blockThreshold
+        scope,
+        undefined,
+        signal,
       );
 
-      // 更新最终结果
-      finalOverallScore = decisionTrace.finalScore;
-      finalFinalAction = decisionTrace.finalAction;
+    } catch {
+      judgeModelResult = {
+        used: true,
+        error: 'JUDGE_EXECUTION_FAILED',
+        fallbackUsed: true,
+      };
     }
-  } catch (error) {
-    console.error('裁判模型检测失败:', error);
-    // 记录更多错误信息
-    if (error instanceof Error) {
-      console.error('裁判模型错误详情:', error.message, error.stack?.substring(0, 200));
-    }
-    // 裁判模型失败时继续使用规则检测结果
+    const dominantFinding = findings.reduce<DetectionFinding | undefined>(
+      (current, finding) => (!current || finding.score > current.score ? finding : current),
+      undefined,
+    );
+    const dominantDimension = dominantFinding
+      ? config.dimensions.find((dimension) => dimension.code === dominantFinding.dimension)
+      : undefined;
+    const dominantConfig = dominantDimension
+      ? config.dimensionConfigs.find((item) => item.dimensionId === dominantDimension.id)
+      : undefined;
+    decisionTrace = fuseResults(
+      maxScore,
+      finalAction,
+      judgeModelResult,
+      judgeConfig,
+      dominantConfig?.warnThreshold ?? 50,
+      dominantConfig?.blockThreshold ?? 80,
+    );
+    finalOverallScore = decisionTrace.finalScore;
+    finalFinalAction = strictestRiskAction(finalAction, decisionTrace.finalAction);
   }
 
-  // 生成摘要（考虑裁判模型结果）
-  let summary = generateSummary(findings, finalFinalAction, processingAction, skippedDimensions);
+  const action = terminalAction(finalFinalAction, processingAction);
+  let summary = generateSummary(findings, action, skippedDimensions);
   if (decisionTrace) {
     summary = `${summary}；${decisionTrace.reasoning}`;
   }
 
-  // 计算 effectiveAction：组合 action 和 processingAction
-  // 当 processingAction 有值且不为 none 时，effectiveAction = processingAction
-  // 否则 effectiveAction = action
-  const effectiveAction = processingAction && processingAction !== 'none'
-    ? processingAction
-    : finalFinalAction;
-
   return {
     overallScore: finalOverallScore,
-    action: finalFinalAction,
-    processingAction, // 新增：处理动作（mask/rewrite/none）
-    effectiveAction, // 新增：有效动作（便于前端判断）
+    confidence: calculateResultConfidence(config, findings, judgeModelResult),
+    action,
     findings,
     summary,
     latencyMs: Date.now() - startTime,
+    policyVersion: config.version,
+    degradationReasons: judgeModelResult?.error ? [judgeModelResult.error] : undefined,
+    whitelistMatched,
     skippedDimensions: skippedDimensions.length > 0 ? skippedDimensions : undefined,
     judgeModelResult: judgeModelResult ? {
       used: judgeModelResult.used,
@@ -955,6 +851,8 @@ export async function detectWithDynamicRules(
       reason: judgeModelResult.reason,
       latencyMs: judgeModelResult.latencyMs,
       error: judgeModelResult.error,
+      parseError: judgeModelResult.parseError,
+      fallbackUsed: judgeModelResult.fallbackUsed,
     } : undefined,
     decisionTrace,
   };
@@ -964,7 +862,6 @@ export async function detectWithDynamicRules(
 function generateSummary(
   findings: DetectionFinding[],
   action: string,
-  processingAction?: 'none' | 'mask' | 'rewrite',
   skippedDimensions?: SkippedDimension[]
 ): string {
   const parts: string[] = [];
@@ -1001,24 +898,40 @@ function generateSummary(
     rewrite: '已改写',
   };
 
-  // 显示决策动作和处理动作
-  let actionDesc = actionText[action] || action;
-  if (processingAction && processingAction !== 'none' && action !== 'block') {
-    const processingText = processingAction === 'mask' ? '已脱敏' : '已改写';
-    actionDesc = `${actionText[action]}（${processingText}）`;
-  }
-  
-  parts.push(`最终动作: ${actionDesc}`);
+  parts.push(`最终动作: ${actionText[action] || action}`);
 
   return parts.join('；');
 }
 
+function calculateResultConfidence(
+  config: CachedPolicyConfig,
+  findings: DetectionFinding[],
+  judgeResult: JudgeModelResult | undefined,
+): number {
+  const ruleCount = [...config.rules.values()].reduce((total, rules) => total + rules.length, 0);
+  const coverageConfidence = Math.min(0.9, 0.5 + Math.log10(ruleCount + 1) * 0.1);
+  const findingConfidence = findings.reduce((maximum, finding) => {
+    const raw = finding.confidence ?? 0;
+    const normalized = raw > 1 ? raw / 100 : raw;
+    return Math.max(maximum, Math.min(1, Math.max(0, normalized)));
+  }, 0);
+  const ruleConfidence = findingConfidence || coverageConfidence;
+  if (judgeResult?.used && !judgeResult.error && judgeResult.confidence !== undefined) {
+    return Number(((ruleConfidence + judgeResult.confidence) / 2).toFixed(3));
+  }
+  if (judgeResult?.error) return Number(Math.min(ruleConfidence, 0.5).toFixed(3));
+  return Number(ruleConfidence.toFixed(3));
+}
+
 // 获取所有启用的维度
-export async function getAllDimensions(): Promise<DetectionDimension[]> {
+export async function getAllDimensions(scope: TenantScope): Promise<DetectionDimension[]> {
   const dimensions = await db
     .select()
     .from(detectionDimensions)
-    .where(eq(detectionDimensions.enabled, true));
+    .where(and(
+      eq(detectionDimensions.enabled, true),
+      scopePredicate(detectionDimensions, scope),
+    ));
 
   return dimensions.map(d => ({
     id: d.id,

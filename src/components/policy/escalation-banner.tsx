@@ -34,13 +34,13 @@ export function EscalationBanner({
     }
   }, [autoCloseDelay]);
 
-  const handleClose = () => {
+  function handleClose() {
     setIsLeaving(true);
     setTimeout(() => {
       setVisible(false);
       onClose?.();
     }, 300); // 等待动画完成
-  };
+  }
 
   if (!visible) return null;
 

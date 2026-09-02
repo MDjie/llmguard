@@ -5,14 +5,15 @@
  */
 
 import { db } from '@/lib/db';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import {
   documentScanTasks,
   documentScanFindings,
 } from '@/lib/db';
 import { detectWithDynamicRules, clearPolicyCache } from '@/lib/detection/dynamic-engine';
-import type { DetectionResult } from '@/lib/detection/types';
-import type { DocumentChunk, PlainLine, locateEvidenceInDocument } from './parser';
+import type { DetectionResult, SkippedDimension, WhitelistMatched } from '@/lib/detection/types';
+import type { DocumentChunk, PlainLine } from './parser';
+import { scopePredicate, type TenantScope } from '@/lib/tenancy';
 
 export interface DocumentDetectionOptions {
   taskId: string;
@@ -20,6 +21,7 @@ export interface DocumentDetectionOptions {
   policyId: string;
   fileName: string;
   plainLines?: PlainLine[]; // 用于精确定位
+  scope: TenantScope;
 }
 
 export interface DocumentDetectionResult {
@@ -27,8 +29,8 @@ export interface DocumentDetectionResult {
   overallScore: number;
   finalAction: 'allow' | 'warn' | 'block';
   findings: DocumentFinding[];
-  whitelistMatched?: any;
-  skippedDimensions?: any[];
+  whitelistMatched?: WhitelistMatched;
+  skippedDimensions?: SkippedDimension[];
 }
 
 export interface DocumentFinding {
@@ -52,8 +54,8 @@ export interface DocumentFinding {
   maskedEvidence: string[];
   reason: string;
   suggestion: string;
-  whitelistMatched?: any;
-  skippedDimensions?: any[];
+  whitelistMatched?: WhitelistMatched;
+  skippedDimensions?: SkippedDimension[];
 }
 
 /**
@@ -114,13 +116,13 @@ function locateEvidence(
 export async function detectDocument(
   options: DocumentDetectionOptions
 ): Promise<DocumentDetectionResult> {
-  const { taskId, chunks, policyId, fileName, plainLines = [] } = options;
+  const { taskId, chunks, policyId, fileName, plainLines = [], scope } = options;
 
   const allFindings: DocumentFinding[] = [];
   let maxScore = 0;
   let finalAction: 'allow' | 'warn' | 'block' = 'allow';
-  let globalWhitelistMatched: any = null;
-  const allSkippedDimensions: any[] = [];
+  let globalWhitelistMatched: WhitelistMatched | undefined;
+  const allSkippedDimensions: SkippedDimension[] = [];
 
   // 更新任务状态
   await db.update(documentScanTasks)
@@ -129,7 +131,7 @@ export async function detectDocument(
       statusMessage: `正在检测 ${chunks.length} 个文本片段...`,
       updatedAt: new Date(),
     })
-    .where(eq(documentScanTasks.id, taskId));
+    .where(and(eq(documentScanTasks.id, taskId), scopePredicate(documentScanTasks, scope)));
 
   // 对每个分片进行检测
   for (let i = 0; i < chunks.length; i++) {
@@ -140,6 +142,7 @@ export async function detectDocument(
       const result: DetectionResult = await detectWithDynamicRules(
         chunk.content,
         policyId,
+        scope,
         'input' // 文档检测使用 input 方向
       );
 
@@ -232,7 +235,7 @@ export async function detectDocument(
   }
 
   // 保存检测结果到数据库
-  await saveFindings(taskId, allFindings);
+  await saveFindings(taskId, allFindings, scope);
 
   // 更新任务状态
   await db.update(documentScanTasks)
@@ -247,7 +250,7 @@ export async function detectDocument(
       completedAt: new Date(),
       updatedAt: new Date(),
     })
-    .where(eq(documentScanTasks.id, taskId));
+    .where(and(eq(documentScanTasks.id, taskId), scopePredicate(documentScanTasks, scope)));
 
   return {
     taskId,
@@ -262,10 +265,16 @@ export async function detectDocument(
 /**
  * 将检测结果保存到数据库
  */
-async function saveFindings(taskId: string, findings: DocumentFinding[]): Promise<void> {
+async function saveFindings(
+  taskId: string,
+  findings: DocumentFinding[],
+  scope: TenantScope,
+): Promise<void> {
   if (findings.length === 0) return;
 
   const values = findings.map(f => ({
+    tenantId: scope.tenantId,
+    applicationId: scope.applicationId,
     id: f.id,
     taskId: f.taskId,
     chunkIndex: f.chunkIndex,

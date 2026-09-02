@@ -1,4 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
+import {
+  emptyQuerySchema,
+  jsonObjectResponseSchema,
+} from '@/contracts/http/common';
+import {
+  policyParamsSchema,
+  updatePolicyMetadataSchema,
+} from '@/contracts/http/policies';
+import { withLegacyApiSecurity } from '@/lib/api-security';
 import { getDb } from '@/lib/db';
 import { clearPolicyCache } from '@/lib/detection/dynamic-engine';
 
@@ -22,7 +31,7 @@ function toSnakeCase<T>(obj: T): T {
 }
 
 // 获取单个策略详情
-export async function GET(
+async function getPolicy(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -126,7 +135,7 @@ export async function GET(
 }
 
 // 更新策略基本信息
-export async function PUT(
+async function updatePolicyMetadata(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -186,3 +195,39 @@ export async function PUT(
     );
   }
 }
+
+export const GET = withLegacyApiSecurity(
+  {
+    permission: 'policy:read',
+    paramsSchema: policyParamsSchema,
+    querySchema: emptyQuerySchema,
+    responseSchema: jsonObjectResponseSchema,
+    maxBodyBytes: 0,
+    auditEvent: 'policy.read',
+    rateLimitPolicy: {
+      id: 'policy-read',
+      windowMs: 60_000,
+      maxRequests: 120,
+      scope: 'principal',
+    },
+  },
+  getPolicy,
+);
+
+export const PUT = withLegacyApiSecurity(
+  {
+    permission: 'policy:manage',
+    paramsSchema: policyParamsSchema,
+    bodySchema: updatePolicyMetadataSchema,
+    responseSchema: jsonObjectResponseSchema,
+    maxBodyBytes: 64 * 1_024,
+    auditEvent: 'policy.metadata.update',
+    rateLimitPolicy: {
+      id: 'policy-metadata-update',
+      windowMs: 60_000,
+      maxRequests: 30,
+      scope: 'principal',
+    },
+  },
+  updatePolicyMetadata,
+);

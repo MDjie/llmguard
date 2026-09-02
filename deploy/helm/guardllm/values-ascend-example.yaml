@@ -1,0 +1,26 @@
+# Environment overlay example. Replace labels, RuntimeClass and device resource names
+# with values published by the target Ascend/MindIE platform before installation.
+workloads:
+  analyzer:
+    runtimeClassName: ascend
+    nodeSelector:
+      kubernetes.io/arch: arm64
+      guardllm.io/accelerator: ascend-910
+    tolerations:
+      - key: guardllm.io/accelerator
+        operator: Equal
+        value: ascend-910
+        effect: NoSchedule
+    resources:
+      requests:
+        cpu: "2"
+        memory: 4Gi
+        huawei.com/Ascend910: "1"
+      limits:
+        cpu: "8"
+        memory: 16Gi
+        huawei.com/Ascend910: "1"
+
+config:
+  ANALYZER_VISUAL_COMMAND: /models/bin/mindie-visual-classifier
+  ANALYZER_ASR_COMMAND: /models/bin/mindie-asr

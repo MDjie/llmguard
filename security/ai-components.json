@@ -1,0 +1,49 @@
+{
+  "schemaVersion": "1.0",
+  "components": [
+    {
+      "id": "guard-engine-v2",
+      "type": "algorithm",
+      "supplier": "GuardLLM",
+      "version": "1.0",
+      "purpose": "deterministic policy aggregation and mandatory-deny enforcement",
+      "license": "proprietary",
+      "required": true
+    },
+    {
+      "id": "text-classifier",
+      "type": "machine-learning-model",
+      "purpose": "fast harmful-content and attack classification",
+      "required": true,
+      "runtimeResolved": true
+    },
+    {
+      "id": "ocr-engine",
+      "type": "machine-learning-model",
+      "purpose": "OCR extraction from image variants",
+      "required": true,
+      "runtimeResolved": true
+    },
+    {
+      "id": "vision-safety-model",
+      "type": "machine-learning-model",
+      "purpose": "visual harmful-content and perturbation detection",
+      "required": true,
+      "runtimeResolved": true
+    },
+    {
+      "id": "asr-engine",
+      "type": "machine-learning-model",
+      "purpose": "bounded audio transcription and timestamp alignment",
+      "required": true,
+      "runtimeResolved": true
+    },
+    {
+      "id": "embedding-model",
+      "type": "machine-learning-model",
+      "purpose": "RAG retrieval and near-duplicate evaluation",
+      "required": true,
+      "runtimeResolved": true
+    }
+  ]
+}

@@ -13,8 +13,7 @@ export type ProviderType =
   | 'qwen'               // 通义千问
   | 'glm'                // 智谱 GLM
   | 'ollama'             // 本地模型
-  | 'coze'               // Coze Bot/Workflow
-  | 'custom';            // 自定义
+  | 'custom';            // 自定义 OpenAI 兼容端点
 
 export type ProviderUseCase = 'target' | 'judge' | 'both';
 
@@ -45,6 +44,7 @@ export interface LLMChatRequest {
   maxTokens?: number;
   topP?: number;
   stream?: boolean;
+  signal?: AbortSignal;
 }
 
 export interface LLMChatResponse {
@@ -215,7 +215,7 @@ export interface LLMGatewayConfig {
 }
 
 export const DEFAULT_GATEWAY_CONFIG: LLMGatewayConfig = {
-  maxRetries: 3,
+  maxRetries: 1,
   retryDelayMs: 1000,
   timeoutMs: 30000,
   defaultTemperature: 0.3,

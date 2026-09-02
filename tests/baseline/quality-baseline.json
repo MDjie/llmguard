@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "taskId": "TASK-R0-001",
+  "capturedAt": "2026-09-01",
+  "typescript": {
+    "maxErrors": 0,
+    "command": "node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit"
+  },
+  "eslint": {
+    "maxErrors": 0,
+    "command": "node node_modules/eslint/bin/eslint.js . --quiet --format json"
+  }
+}

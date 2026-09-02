@@ -6,6 +6,7 @@
 
 import mammoth from 'mammoth';
 import sanitizeHtml from 'sanitize-html';
+import { convertOfficeDocument } from './converter';
 
 // pdf-parse 使用动态导入
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -61,7 +62,7 @@ export interface OcrResult {
 // 支持的文件类型
 export const SUPPORTED_FILE_TYPES = {
   text: ['txt', 'md', 'json', 'csv', 'xml', 'html', 'css', 'js', 'ts'],
-  document: ['pdf', 'docx'], // doc 暂不支持
+  document: ['pdf', 'docx', 'doc', 'wps', 'ofd', 'odt', 'rtf'],
   image: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp'],
 } as const;
 
@@ -75,14 +76,14 @@ export const ALL_SUPPORTED_TYPES = [
  * 判断文件类型是否需要 OCR
  */
 export function needsOcr(fileType: string): boolean {
-  return SUPPORTED_FILE_TYPES.image.includes(fileType.toLowerCase() as any);
+  return (SUPPORTED_FILE_TYPES.image as readonly string[]).includes(fileType.toLowerCase());
 }
 
 /**
  * 判断文件类型是否支持
  */
 export function isSupported(fileType: string): boolean {
-  return ALL_SUPPORTED_TYPES.includes(fileType.toLowerCase() as any);
+  return (ALL_SUPPORTED_TYPES as readonly string[]).includes(fileType.toLowerCase());
 }
 
 /**
@@ -90,9 +91,9 @@ export function isSupported(fileType: string): boolean {
  */
 export function getFileCategory(fileType: string): 'text' | 'document' | 'image' | 'unknown' {
   const type = fileType.toLowerCase();
-  if (SUPPORTED_FILE_TYPES.text.includes(type as any)) return 'text';
-  if (SUPPORTED_FILE_TYPES.document.includes(type as any)) return 'document';
-  if (SUPPORTED_FILE_TYPES.image.includes(type as any)) return 'image';
+  if ((SUPPORTED_FILE_TYPES.text as readonly string[]).includes(type)) return 'text';
+  if ((SUPPORTED_FILE_TYPES.document as readonly string[]).includes(type)) return 'document';
+  if ((SUPPORTED_FILE_TYPES.image as readonly string[]).includes(type)) return 'image';
   return 'unknown';
 }
 
@@ -227,7 +228,7 @@ async function parseMarkdown(buffer: Buffer): Promise<ParsedDocument> {
   const blocks = buildBlocksFromText(text);
 
   // 简单的 Markdown 转 HTML（保留格式）
-  let html = escapeHtml(text)
+  const html = escapeHtml(text)
     .replace(/^### (.+)$/gm, '<h3>$1</h3>')
     .replace(/^## (.+)$/gm, '<h2>$1</h2>')
     .replace(/^# (.+)$/gm, '<h1>$1</h1>')
@@ -328,6 +329,24 @@ async function parsePdf(buffer: Buffer): Promise<ParsedDocument> {
   }
 }
 
+async function parseConvertedDocument(buffer: Buffer, fileType: string): Promise<ParsedDocument> {
+  const extractedText = await convertOfficeDocument(buffer, fileType);
+  const plainLines = buildPlainLines(extractedText);
+  return {
+    extractedText,
+    previewHtml: `<div class="converted-preview"><pre>${escapeHtml(extractedText)}</pre></div>`,
+    plainLines,
+    blocks: buildBlocksFromText(extractedText),
+    metadata: {
+      charCount: extractedText.length,
+      lineCount: plainLines.length,
+      hasTables: false,
+      hasImages: false,
+      fileType,
+    },
+  };
+}
+
 /**
  * HTML 转义
  */
@@ -346,7 +365,6 @@ function escapeHtml(text: string): string {
 export async function parseDocument(
   buffer: Buffer,
   fileType: string,
-  fileName?: string
 ): Promise<ParsedDocument> {
   const type = fileType.toLowerCase();
 
@@ -369,6 +387,12 @@ export async function parseDocument(
 
     case 'pdf':
       return parsePdf(buffer);
+    case 'doc':
+    case 'wps':
+    case 'ofd':
+    case 'odt':
+    case 'rtf':
+      return parseConvertedDocument(buffer, type);
 
     default:
       // 尝试作为文本解析
@@ -393,12 +417,13 @@ export function createChunks(
   const { maxChunkSize = 1000, overlapSize = 100 } = options;
   const chunks: DocumentChunk[] = [];
 
-  // 按段落分割
-  const paragraphs = text.split(/\n\n+/);
-  let currentChunk: string[] = [];
-  let currentSize = 0;
-  let globalOffset = 0;
-  let chunkIndex = 0;
+  if (maxChunkSize <= 0) {
+    throw new RangeError('maxChunkSize must be greater than zero');
+  }
+  if (overlapSize < 0 || overlapSize >= maxChunkSize) {
+    throw new RangeError('overlapSize must be between zero and maxChunkSize');
+  }
+  if (text.length === 0) return chunks;
 
   // 计算行号
   const lines = text.split('\n');
@@ -419,92 +444,42 @@ export function createChunks(
     return 1;
   };
 
-  for (const paragraph of paragraphs) {
-    const paragraphSize = paragraph.length + 2; // +2 for paragraph break
+  let startOffset = 0;
+  while (startOffset < text.length) {
+    const hardEnd = Math.min(startOffset + maxChunkSize, text.length);
+    let endOffset = hardEnd;
 
-    // 如果单个段落超过最大分片大小，需要进一步分割
-    if (paragraphSize > maxChunkSize) {
-      // 先保存当前 chunk
-      if (currentChunk.length > 0) {
-        const chunkText = currentChunk.join('\n\n');
-        const startOffset = globalOffset - chunkText.length;
-        chunks.push({
-          index: chunkIndex++,
-          content: chunkText,
-          startLine: findLineNumber(startOffset),
-          endLine: findLineNumber(globalOffset),
-          startOffset,
-          endOffset: globalOffset,
-        });
-        currentChunk = [];
-        currentSize = 0;
-      }
+    if (hardEnd < text.length) {
+      const candidate = text.slice(startOffset, hardEnd);
+      const minimumNaturalBoundary = Math.floor(candidate.length / 2);
+      const paragraphBoundary = candidate.lastIndexOf('\n\n');
 
-      // 按句子分割大段落
-      const sentences = paragraph.match(/[^。！？.!?]+[。！？.!?]+/g) || [paragraph];
-      for (const sentence of sentences) {
-        if (currentSize + sentence.length > maxChunkSize && currentChunk.length > 0) {
-          const chunkText = currentChunk.join('\n\n');
-          const startOffset = globalOffset - chunkText.length;
-          chunks.push({
-            index: chunkIndex++,
-            content: chunkText,
-            startLine: findLineNumber(startOffset),
-            endLine: findLineNumber(globalOffset),
-            startOffset,
-            endOffset: globalOffset,
-          });
-          currentChunk = [sentence];
-          currentSize = sentence.length;
-        } else {
-          currentChunk.push(sentence);
-          currentSize += sentence.length;
-        }
-        globalOffset += sentence.length;
-      }
-    } else if (currentSize + paragraphSize > maxChunkSize && currentChunk.length > 0) {
-      // 当前 chunk 满了，保存并开始新 chunk
-      const chunkText = currentChunk.join('\n\n');
-      const startOffset = globalOffset - chunkText.length;
-      chunks.push({
-        index: chunkIndex++,
-        content: chunkText,
-        startLine: findLineNumber(startOffset),
-        endLine: findLineNumber(globalOffset),
-        startOffset,
-        endOffset: globalOffset,
-      });
-
-      // 添加重叠内容
-      if (overlapSize > 0 && currentChunk.length > 0) {
-        const lastParagraph = currentChunk[currentChunk.length - 1];
-        const overlapText = lastParagraph.slice(-overlapSize);
-        currentChunk = [overlapText, paragraph];
-        currentSize = overlapText.length + paragraphSize;
+      if (paragraphBoundary >= minimumNaturalBoundary) {
+        endOffset = startOffset + paragraphBoundary + 2;
       } else {
-        currentChunk = [paragraph];
-        currentSize = paragraphSize;
+        const sentencePattern = /[。！？.!?](?=\s|$)/g;
+        let sentenceBoundary = -1;
+        for (const match of candidate.matchAll(sentencePattern)) {
+          sentenceBoundary = match.index + match[0].length;
+        }
+        if (sentenceBoundary >= minimumNaturalBoundary) {
+          endOffset = startOffset + sentenceBoundary;
+        }
       }
-      globalOffset += paragraphSize;
-    } else {
-      currentChunk.push(paragraph);
-      currentSize += paragraphSize;
-      globalOffset += paragraphSize;
     }
-  }
 
-  // 保存最后一个 chunk
-  if (currentChunk.length > 0) {
-    const chunkText = currentChunk.join('\n\n');
-    const startOffset = globalOffset - chunkText.length;
+    const content = text.slice(startOffset, endOffset);
     chunks.push({
-      index: chunkIndex++,
-      content: chunkText,
+      index: chunks.length,
+      content,
       startLine: findLineNumber(startOffset),
-      endLine: findLineNumber(globalOffset),
+      endLine: findLineNumber(Math.max(startOffset, endOffset - 1)),
       startOffset,
-      endOffset: globalOffset,
+      endOffset,
     });
+
+    if (endOffset >= text.length) break;
+    startOffset = endOffset - overlapSize;
   }
 
   return chunks;

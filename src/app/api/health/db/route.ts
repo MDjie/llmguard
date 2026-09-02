@@ -1,22 +1,41 @@
-import { NextResponse } from 'next/server';
-import { sql, db } from '@/lib/db';
+import { z } from 'zod';
+import { ApiProblem, withApiSecurity } from '@/lib/api-security';
+import { db, sql } from '@/lib/db';
 
-export async function GET() {
-  try {
-    // 执行简单查询测试数据库连接
-    await db.execute(sql`SELECT 1`);
+const responseSchema = z.object({
+  status: z.literal('ready'),
+  timestamp: z.string(),
+});
 
-    return NextResponse.json({
-      connected: true,
-      timestamp: new Date().toISOString()
+export const GET = withApiSecurity(
+  {
+    public: true,
+    responseSchema,
+    maxBodyBytes: 0,
+    auditEvent: 'health.readiness',
+    auditFailureMode: 'open',
+    rateLimitPolicy: {
+      id: 'health-readiness',
+      windowMs: 60_000,
+      maxRequests: 120,
+      scope: 'ip',
+    },
+  },
+  async () => {
+    try {
+      await db.execute(sql`SELECT 1`);
+    } catch {
+      throw new ApiProblem({
+        status: 503,
+        code: 'DATABASE_NOT_READY',
+        title: 'Service unavailable',
+        detail: 'A required service dependency is not ready.',
+      });
+    }
+
+    return Response.json({
+      status: 'ready' as const,
+      timestamp: new Date().toISOString(),
     });
-  } catch (error) {
-    console.error('[DB Health Check] 连接失败:', error);
-
-    return NextResponse.json({
-      connected: false,
-      error: error instanceof Error ? error.message : '数据库连接失败',
-      timestamp: new Date().toISOString()
-    });
-  }
-}
+  },
+);

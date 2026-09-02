@@ -19,16 +19,18 @@ import {
   Edit3,
   Settings
 } from 'lucide-react';
-import { recordDetectionSession, DetectionResultForRecord } from '@/lib/detection/recorder';
-import JudgeModelResultCard from '@/components/judge/JudgeModelResultCard';
+import { recordDetectionSession, type DetectionAction, type DetectionResultForRecord } from '@/lib/detection/recorder';
+import JudgeModelResultCard, { type DecisionTraceData, type JudgeDimensionResultItem, type JudgeModelResultData, type RuleReviewData } from '@/components/judge/JudgeModelResultCard';
 import { usePolicyState, processEscalationInfo } from '@/hooks/use-policy-state';
 import { EscalationBanner } from '@/components/policy/escalation-banner';
+import { csrfHeaders } from '@/lib/auth/csrf-client';
 
 interface Policy {
   id: string;
   name: string;
   description?: string;
   isDefault?: boolean;
+  isActive?: boolean;
 }
 
 interface Provider {
@@ -46,8 +48,30 @@ interface StepResult {
   status: 'pending' | 'running' | 'success' | 'warning' | 'blocked';
   title: string;
   description?: string;
-  data?: any;
+  data?: string | GuardDetectionResult;
   duration?: number;
+}
+
+interface GuardDetectionResult extends DetectionResultForRecord {
+  judgeModelResult?: JudgeModelResultData;
+  decisionTrace?: DecisionTraceData;
+  dimensionResults?: JudgeDimensionResultItem[];
+  ruleReview?: RuleReviewData;
+}
+
+interface GuardApiResponse {
+  success: boolean;
+  data: GuardDetectionResult;
+  error?: string;
+}
+
+interface SimulationResult {
+  action: DetectionAction;
+  reason?: string;
+  originalOutput?: string;
+  finalResponse?: string;
+  inputResult: GuardDetectionResult;
+  outputResult?: GuardDetectionResult;
 }
 
 export default function SimulatePage() {
@@ -64,7 +88,7 @@ export default function SimulatePage() {
     { status: 'pending', title: '输出护栏检测' },
     { status: 'pending', title: '最终响应' },
   ]);
-  const [finalResult, setFinalResult] = useState<any>(null);
+  const [finalResult, setFinalResult] = useState<SimulationResult | null>(null);
 
   // 策略升级提示状态
   const [escalationBanner, setEscalationBanner] = useState<{
@@ -135,10 +159,9 @@ export default function SimulatePage() {
       newSteps[1].status = 'running';
       setSteps([...newSteps]);
 
-      const inputStartTime = Date.now();
       const inputDetectResponse = await fetch('/api/detect', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
         body: JSON.stringify({
           text: userInput,
           direction: 'input',
@@ -148,11 +171,11 @@ export default function SimulatePage() {
         }),
       });
 
-      const inputDetectResult = await inputDetectResponse.json();
+      const inputDetectResult = await inputDetectResponse.json() as GuardApiResponse;
       newSteps[1].status = inputDetectResult.data?.action === 'block' ? 'blocked' :
                           inputDetectResult.data?.action === 'warn' ? 'warning' : 'success';
       newSteps[1].data = inputDetectResult.data;
-      newSteps[1].duration = Date.now() - inputStartTime;
+      newSteps[1].duration = inputDetectResult.data.latencyMs ?? 0;
       setSteps([...newSteps]);
 
       // 处理策略升级提示
@@ -204,8 +227,8 @@ export default function SimulatePage() {
           } else {
             llmResponse = `[模型调用失败] ${chatResult.error}`;
           }
-        } catch (error: any) {
-          llmResponse = `[模型调用异常] ${error.message}`;
+        } catch (error) {
+          llmResponse = `[模型调用异常] ${error instanceof Error ? error.message : '未知错误'}`;
         }
       } else {
         // 使用模拟响应
@@ -223,10 +246,9 @@ export default function SimulatePage() {
       newSteps[3].status = 'running';
       setSteps([...newSteps]);
 
-      const outputStartTime = Date.now();
       const outputDetectResponse = await fetch('/api/detect', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
         body: JSON.stringify({
           text: llmResponse,
           direction: 'output',
@@ -234,11 +256,11 @@ export default function SimulatePage() {
         }),
       });
       
-      const outputDetectResult = await outputDetectResponse.json();
+      const outputDetectResult = await outputDetectResponse.json() as GuardApiResponse;
       newSteps[3].status = outputDetectResult.data?.action === 'block' ? 'blocked' : 
                           outputDetectResult.data?.action === 'warn' ? 'warning' : 'success';
       newSteps[3].data = outputDetectResult.data;
-      newSteps[3].duration = Date.now() - outputStartTime;
+      newSteps[3].duration = outputDetectResult.data.latencyMs ?? 0;
       setSteps([...newSteps]);
 
       // Step 5: 最终响应
@@ -542,7 +564,7 @@ export default function SimulatePage() {
                     <div className="mt-4">
                       <span className="text-sm font-medium text-gray-700">风险维度分析</span>
                       <div className="mt-2 space-y-3">
-                        {finalResult.inputResult.findings.map((finding: any, idx: number) => (
+                        {finalResult.inputResult.findings.map((finding, idx) => (
                           <div key={idx} className="p-3 bg-gray-50 rounded-lg">
                             <div className="flex items-center justify-between mb-2">
                               <div className="flex items-center gap-2">
@@ -650,9 +672,9 @@ export default function SimulatePage() {
                         因白名单跳过的维度
                       </div>
                       <div className="flex flex-wrap gap-2">
-                        {finalResult.inputResult.skippedDimensions.map((skipped: any, idx: number) => (
+                        {finalResult.inputResult.skippedDimensions.map((skipped, idx) => (
                           <div key={idx} className="text-sm bg-green-100 dark:bg-green-800 text-green-700 dark:text-green-300 px-2 py-1 rounded">
-                            {skipped.dimensionName}（因命中"{skipped.whitelistName}"）
+                            {skipped.dimensionName}（因命中&quot;{skipped.whitelistName}&quot;）
                           </div>
                         ))}
                       </div>
@@ -732,7 +754,7 @@ export default function SimulatePage() {
                     <div className="mt-4">
                       <span className="text-sm font-medium text-gray-700">风险维度分析</span>
                       <div className="mt-2 space-y-3">
-                        {finalResult.outputResult.findings.map((finding: any, idx: number) => (
+                        {finalResult.outputResult.findings.map((finding, idx) => (
                           <div key={idx} className="p-3 bg-gray-50 rounded-lg">
                             <div className="flex items-center justify-between mb-2">
                               <div className="flex items-center gap-2">
@@ -859,9 +881,9 @@ export default function SimulatePage() {
                         因白名单跳过的维度
                       </div>
                       <div className="flex flex-wrap gap-2">
-                        {finalResult.outputResult.skippedDimensions.map((skipped: any, idx: number) => (
+                        {finalResult.outputResult.skippedDimensions.map((skipped, idx) => (
                           <div key={idx} className="text-sm bg-green-100 dark:bg-green-800 text-green-700 dark:text-green-300 px-2 py-1 rounded">
-                            {skipped.dimensionName}（因命中"{skipped.whitelistName}"）
+                            {skipped.dimensionName}（因命中&quot;{skipped.whitelistName}&quot;）
                           </div>
                         ))}
                       </div>

@@ -31,11 +31,7 @@ export default function ExportPage() {
   const [stats, setStats] = useState<ExportStats | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchStats();
-  }, [dateRange]);
-
-  const fetchStats = async () => {
+  async function fetchStats() {
     setLoading(true);
     try {
       const params = new URLSearchParams();
@@ -52,7 +48,11 @@ export default function ExportPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }
+
+  useEffect(() => {
+    fetchStats();
+  }, [dateRange]);
 
   const handleExport = async () => {
     setExporting(true);

@@ -51,7 +51,7 @@ async function seed() {
   // 2. 创建策略规则
   console.log('创建策略规则...');
   const dimensions = ['prompt_injection', 'pii_leak', 'malicious_code', 'violence_hate', 'illegal_content'];
-  const rules: any[] = [];
+  const rules: Array<Record<string, unknown>> = [];
 
   for (const policy of insertedPolicies || []) {
     for (const dimension of dimensions) {

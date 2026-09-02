@@ -7,12 +7,11 @@ import type { DetectionFinding } from '@/lib/detection/types';
 import type {
   PolicyJudgeConfig,
   JudgeModelResult,
-  JudgeDimensionResult,
-  RuleReview,
   LLMJudgeResponse,
   DecisionTrace,
-  JudgeMode,
 } from './types';
+import { z } from 'zod';
+import { judgeFailureAction, strictestRiskAction } from '@/lib/detection/decision';
 
 // ============ 触发条件判断 ============
 
@@ -117,7 +116,7 @@ export function prepareTextForJudge(
     if (matches) {
       if (!providerIsPrivate && config.blockExternalForSecrets) {
         blockedExternal = true;
-        processedText = `[文本已脱敏处理，包含密钥类敏感信息]\n规则检测摘要: ${findings.map(f => f.reason).join('; ')}`;
+        processedText = '[REDACTED_SECRET_CONTENT]';
       }
       for (const match of matches) {
         maskedItems.push({ type, original: match.slice(0, 4) + '***', action: blockedExternal ? 'blocked_external' : 'masked' });
@@ -176,16 +175,15 @@ export function fuseResults(
   blockThreshold: number
 ): DecisionTrace {
   if (!judgeResult?.used || judgeResult.error) {
+    const fallbackAction = judgeFailureAction(ruleAction, ruleScore, judgeResult, config) ?? ruleAction;
     return {
       ruleScore,
       ruleAction,
       decisionMode: config.mode,
-      finalScore: ruleScore,
-      finalAction: ruleAction,
+      finalScore: fallbackAction === 'block' ? Math.max(ruleScore, blockThreshold) : ruleScore,
+      finalAction: fallbackAction,
       reasoning: judgeResult?.error
-        ? (judgeResult.error.includes('已关闭')
-          ? `${judgeResult.error}，使用规则检测结果`
-          : `裁判模型调用失败（${judgeResult.error}），使用规则检测结果`)
+        ? `裁判模型失败（${judgeResult.error}），按策略执行 ${fallbackAction}`
         : '未启用裁判模型，使用规则检测结果',
     };
   }
@@ -220,17 +218,17 @@ export function fuseResults(
     const weight = config.weight;
     const finalScore = Math.round(ruleScore * (1 - weight) + (judgeResult.score ?? 0) * weight);
 
-    let finalAction: 'allow' | 'warn' | 'block' = 'allow';
+    let scoreAction: 'allow' | 'warn' | 'block' = 'allow';
     if (finalScore >= blockThreshold) {
-      finalAction = 'block';
+      scoreAction = 'block';
     } else if (finalScore >= warnThreshold) {
-      finalAction = 'warn';
+      scoreAction = 'warn';
     }
-
-    // 裁判判warn/block时，融合结果不应降级
-    if (finalAction === 'allow' && judgeResult.suggestedAction === 'warn') finalAction = 'warn';
-    if (finalAction === 'allow' && judgeResult.suggestedAction === 'block') finalAction = 'block';
-    if (finalAction === 'warn' && judgeResult.suggestedAction === 'block') finalAction = 'block';
+    const finalAction = strictestRiskAction(
+      ruleAction,
+      scoreAction,
+      judgeResult.suggestedAction ?? 'allow',
+    );
 
     return {
       ruleScore, ruleAction,
@@ -389,77 +387,69 @@ export function buildJudgePrompt(
 /**
  * 解析第一阶段响应（yes/no）
  */
-export function parseStage1Response(response: string): boolean {
-  const cleaned = response.trim().toLowerCase();
-  // 检查是否包含yes
-  if (cleaned.includes('yes') || cleaned.includes('是') || cleaned.includes('有风险')) {
-    return true;
-  }
-  return false;
+export function parseStage1Response(response: string): boolean | null {
+  const cleaned = response.trim().toLowerCase().replace(/[.!。！]/g, '');
+  if (cleaned === 'yes' || cleaned === '是' || cleaned === '有风险') return true;
+  if (cleaned === 'no' || cleaned === '否' || cleaned === '无风险') return false;
+  return null;
 }
 
 /**
  * 解析第二阶段响应（详细JSON）
  */
+const compactJudgeResponseSchema = z
+  .object({
+    score: z.number().finite().min(0).max(100),
+    action: z.enum(['allow', 'warn', 'block']),
+    reason: z.string().trim().min(1).max(2_000),
+    dimensions: z
+      .array(z.string().regex(/^[a-z][a-z0-9_]{0,63}$/))
+      .max(20),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    const consistent =
+      (value.action === 'allow' && value.score <= 20) ||
+      (value.action === 'warn' && value.score > 20 && value.score <= 80) ||
+      (value.action === 'block' && value.score > 70);
+    if (!consistent) context.addIssue({ code: 'custom', message: 'Action and score are inconsistent' });
+    if (value.action === 'allow' && value.dimensions.length > 0) {
+      context.addIssue({ code: 'custom', message: 'Allow responses cannot include risk dimensions' });
+    }
+  });
+
 export function parseJudgeResponse(response: string): LLMJudgeResponse | null {
   try {
-    // 去除markdown代码块包裹
     let cleaned = response.trim();
     if (cleaned.startsWith('```')) {
       cleaned = cleaned.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '');
     }
     cleaned = cleaned.trim();
 
-    // 尝试提取 JSON
-    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) return null;
-
-    const parsed = JSON.parse(jsonMatch[0]);
-
-    const score = typeof parsed.score === 'number' ? parsed.score : 0;
-    const action = parsed.action || parsed.suggestedAction || 'allow';
-    const reason = parsed.reason || '';
-    const hasRisk = parsed.hasRisk !== undefined ? parsed.hasRisk : score > 20;
-
-    let dimensionResults: Array<{
-      dimensionCode: string;
-      dimensionName: string;
-      hasRisk: boolean;
-      score: number;
-      confidence: number;
-      reason: string;
-    }> = [];
-
-    if (Array.isArray(parsed.dimensions)) {
-      dimensionResults = parsed.dimensions.map((code: string) => ({
-        dimensionCode: code,
-        dimensionName: code,
-        hasRisk: true,
-        score: Math.round(score / Math.max(parsed.dimensions.length, 1)),
-        confidence: 0.7,
-        reason: `检测到${code}风险`,
-      }));
-    } else if (Array.isArray(parsed.dimensionResults)) {
-      dimensionResults = parsed.dimensionResults.map(
-        (d: Record<string, unknown>) => ({
-          dimensionCode: (d.dimensionCode as string) || '',
-          dimensionName: (d.dimensionName as string) || '',
-          hasRisk: (d.hasRisk as boolean) || false,
-          score: Math.min(100, Math.max(0, (d.score as number) || 0)),
-          confidence: Math.min(1, Math.max(0, (d.confidence as number) || 0.5)),
-          reason: (d.reason as string) || '',
-        })
-      );
-    }
+    const parsed = compactJudgeResponseSchema.safeParse(JSON.parse(cleaned));
+    if (!parsed.success) return null;
+    const { score, action, reason, dimensions } = parsed.data;
+    const confidence = Number(
+      Math.min(0.95, 0.55 + Math.min(Math.abs(score - 50) / 100, 0.25) + (dimensions.length ? 0.1 : 0)).toFixed(3),
+    );
+    const dimensionScore = dimensions.length > 0 ? Math.round(score / dimensions.length) : 0;
+    const dimensionResults = dimensions.map((code) => ({
+      dimensionCode: code,
+      dimensionName: code,
+      hasRisk: action !== 'allow',
+      score: dimensionScore,
+      confidence,
+      reason,
+    }));
 
     return {
-      hasRisk,
-      score: Math.min(100, Math.max(0, score)),
-      confidence: Math.min(1, Math.max(0, parsed.confidence || 0.7)),
-      suggestedAction: ['allow', 'warn', 'block'].includes(action) ? action : 'allow',
+      hasRisk: action !== 'allow',
+      score,
+      confidence,
+      suggestedAction: action,
       reason,
       dimensionResults,
-      ruleReview: parsed.ruleReview || {
+      ruleReview: {
         agreeWithRules: true,
         falsePositiveSuspected: false,
         falseNegativeSuspected: false,
@@ -483,32 +473,10 @@ export async function retrieveSimilarExamples(
   maxExamples: number = 3
 ): Promise<string> {
   // RAG暂时禁用，避免模块依赖问题
+  void text;
+  void dimension;
+  void maxExamples;
   return '';
-}/**
- * 简单中文关键词提取
- */
-function extractKeywords(text: string): string[] {
-  const keywords: string[] = [];
-
-  // 英文词
-  const englishWords = text.match(/[a-zA-Z]{2,}/g) || [];
-  keywords.push(...englishWords);
-
-  // 中文2-4字词（简单滑动窗口）
-  const chineseChars = text.replace(/[^\u4e00-\u9fa5]/g, '');
-  for (let len = 4; len >= 2; len--) {
-    for (let i = 0; i <= chineseChars.length - len; i++) {
-      const word = chineseChars.slice(i, i + len);
-      // 过滤常见停用词
-      const stopWords = ['如何', '怎么', '什么', '这个', '那个', '一个', '可以', '能够', '的话', '如果', '因为', '所以', '但是', '然而'];
-      if (!stopWords.includes(word)) {
-        keywords.push(word);
-      }
-    }
-  }
-
-  // 去重
-  return [...new Set(keywords)].slice(0, 10);
 }
 
 /**

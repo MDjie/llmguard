@@ -578,7 +578,7 @@ export default function PoliciesPage() {
           <DialogHeader>
             <DialogTitle>克隆策略</DialogTitle>
             <DialogDescription>
-              从 "{selectedPolicy?.name}" 创建副本
+              从 &quot;{selectedPolicy?.name}&quot; 创建副本
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -653,7 +653,7 @@ export default function PoliciesPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>确认删除</AlertDialogTitle>
             <AlertDialogDescription>
-              确定要删除策略 "{selectedPolicy?.name}" 吗？此操作不可恢复，相关的规则和关键词配置都将被删除。
+              确定要删除策略 &quot;{selectedPolicy?.name}&quot; 吗？此操作不可恢复，相关的规则和关键词配置都将被删除。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

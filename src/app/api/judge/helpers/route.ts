@@ -1,11 +1,19 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
+import { emptyQuerySchema, jsonObjectResponseSchema } from '@/contracts/http/common';
+import { withLegacyApiSecurity, type AuthenticatedPrincipal } from '@/lib/api-security';
 import { db } from '@/lib/db';
 import { llmProviders, detectionDimensions } from '@/storage/database/shared/schema';
-import { eq, or } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
+import { requireTenantContext, scopePredicate } from '@/lib/tenancy';
 
 // GET: 获取裁判模型配置所需的辅助数据
-export async function GET(request: NextRequest) {
+async function getJudgeHelpers(
+  _request: Request,
+  _routeContext: unknown,
+  apiContext: { principal: AuthenticatedPrincipal | null },
+) {
   try {
+    const scope = requireTenantContext(apiContext.principal);
     // 获取所有 Provider（配置页面需要展示所有可选的，包括关闭的）
     const judgeProviders = await db
       .select({
@@ -18,7 +26,8 @@ export async function GET(request: NextRequest) {
         isDefaultJudge: llmProviders.isDefaultJudge,
         isEnabled: llmProviders.isEnabled,
       })
-      .from(llmProviders);
+      .from(llmProviders)
+      .where(scopePredicate(llmProviders, scope));
 
     // 过滤出可以用作裁判模型的 Provider (useCase 为 'judge' 或 'both')
     const availableProviders = judgeProviders.filter(
@@ -35,7 +44,10 @@ export async function GET(request: NextRequest) {
         description: detectionDimensions.description,
       })
       .from(detectionDimensions)
-      .where(eq(detectionDimensions.enabled, true));
+      .where(and(
+        eq(detectionDimensions.enabled, true),
+        scopePredicate(detectionDimensions, scope),
+      ));
 
     return NextResponse.json({
       success: true,
@@ -65,3 +77,20 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+export const GET = withLegacyApiSecurity(
+  {
+    permission: 'policy:read',
+    querySchema: emptyQuerySchema,
+    responseSchema: jsonObjectResponseSchema,
+    maxBodyBytes: 0,
+    auditEvent: 'judge.helper.read',
+    rateLimitPolicy: {
+      id: 'judge-helper-read',
+      windowMs: 60_000,
+      maxRequests: 60,
+      scope: 'principal',
+    },
+  },
+  getJudgeHelpers,
+);

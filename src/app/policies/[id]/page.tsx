@@ -154,13 +154,8 @@ export default function PolicyDetailPage() {
     }
   };
 
-  useEffect(() => {
-    loadPolicy();
-    loadDimensions();
-  }, [policyId]);
-
   // 加载检测维度
-  const loadDimensions = async () => {
+  async function loadDimensions() {
     try {
       const res = await fetch('/api/dimensions');
       const data = await res.json();
@@ -178,7 +173,12 @@ export default function PolicyDetailPage() {
     } catch (error) {
       console.error('加载维度失败:', error);
     }
-  };
+  }
+
+  useEffect(() => {
+    loadPolicy();
+    loadDimensions();
+  }, [policyId]);
 
   // 保存规则
   const handleSaveRules = async () => {

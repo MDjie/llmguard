@@ -1,8 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { jsonObjectResponseSchema } from '@/contracts/http/common';
+import { withLegacyApiSecurity } from '@/lib/api-security';
 import { getDb } from '@/lib/db';
 
+const querySchema = z
+  .object({
+    days: z.coerce.number().int().min(0).max(3_650).default(30),
+    action: z.enum(['all', 'allow', 'warn', 'block', 'mask', 'rewrite']).optional(),
+  })
+  .strict();
+
 // GET - 获取导出统计信息
-export async function GET(request: NextRequest) {
+async function getExportStats(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const days = parseInt(searchParams.get('days') || '30');
@@ -56,3 +66,20 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+export const GET = withLegacyApiSecurity(
+  {
+    permission: 'audit:export',
+    querySchema,
+    responseSchema: jsonObjectResponseSchema,
+    maxBodyBytes: 0,
+    auditEvent: 'export.statistics.read',
+    rateLimitPolicy: {
+      id: 'export-statistics-read',
+      windowMs: 60_000,
+      maxRequests: 30,
+      scope: 'principal',
+    },
+  },
+  getExportStats,
+);

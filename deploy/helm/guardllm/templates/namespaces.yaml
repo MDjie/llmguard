@@ -1,0 +1,25 @@
+{{- if .Values.namespace.create }}
+{{- $root := . }}
+{{- range $key, $namespace := .Values.namespaces }}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ $namespace }}
+  labels:
+    guardllm.io/managed: "true"
+    guardllm.io/plane: {{ $key | quote }}
+    {{- if $root.Values.serviceMesh.enabled }}
+    {{ $root.Values.serviceMesh.injectionLabel }}: {{ $root.Values.serviceMesh.injectionValue | quote }}
+    {{- end }}
+    {{- if eq $key "dataAccess" }}
+    guardllm.io/data-access: "true"
+    {{- end }}
+    {{- if eq $key "inference" }}
+    guardllm.io/inference: "true"
+    {{- end }}
+    {{- if eq $key "observability" }}
+    guardllm.io/observability: "true"
+    {{- end }}
+{{- end }}
+{{- end }}

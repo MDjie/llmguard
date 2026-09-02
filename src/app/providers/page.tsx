@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { csrfHeaders } from '@/lib/auth/csrf-client';
 import { 
   Plus, 
   Edit2, 
@@ -15,7 +16,6 @@ import {
   CheckCircle2, 
   XCircle, 
   Loader2,
-  Zap,
   Cloud,
   Wifi
 } from 'lucide-react';
@@ -26,7 +26,8 @@ interface LLMProvider {
   displayName: string;
   providerType: string;
   baseUrl: string | null;
-  apiKeyEncrypted: string | null;
+  hasSecret: boolean;
+  requiresSecretMigration: boolean;
   defaultModel: string | null;
   useCase: string;
   isEnabled: boolean;
@@ -51,9 +52,8 @@ const providerTypes = [
   { value: 'kimi', label: 'Kimi (月之暗面)' },
   { value: 'doubao', label: '豆包 (字节跳动)' },
   { value: 'qwen', label: '通义千问 (阿里)' },
-  { value: 'coze', label: 'Coze Bot' },
   { value: 'ollama', label: 'Ollama (本地)' },
-  { value: 'custom', label: '自定义' },
+  { value: 'custom', label: '自定义 OpenAI 兼容端点' },
 ];
 
 const useCases = [
@@ -86,7 +86,7 @@ export default function ProvidersPage() {
     loadProviders();
   }, []);
 
-  const loadProviders = async () => {
+  async function loadProviders() {
     setLoading(true);
     try {
       const response = await fetch('/api/providers');
@@ -100,7 +100,7 @@ export default function ProvidersPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -128,7 +128,7 @@ export default function ProvidersPage() {
 
       const response = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
         body: JSON.stringify(body),
       });
 
@@ -140,7 +140,7 @@ export default function ProvidersPage() {
         setEditingProvider(null);
         loadProviders();
       } else {
-        toast.error(data.error || '操作失败');
+        toast.error(data.detail || data.error || '操作失败');
       }
     } catch (error) {
       console.error('保存失败:', error);
@@ -168,6 +168,7 @@ export default function ProvidersPage() {
     try {
       const response = await fetch(`/api/providers?id=${id}`, {
         method: 'DELETE',
+        headers: csrfHeaders(),
       });
 
       const data = await response.json();
@@ -176,7 +177,7 @@ export default function ProvidersPage() {
         toast.success('供应商已删除');
         loadProviders();
       } else {
-        toast.error(data.error || '删除失败');
+        toast.error(data.detail || data.error || '删除失败');
       }
     } catch (error) {
       console.error('删除失败:', error);
@@ -188,7 +189,7 @@ export default function ProvidersPage() {
     try {
       const response = await fetch(`/api/providers?id=${provider.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
         body: JSON.stringify({ isEnabled: !provider.isEnabled }),
       });
 
@@ -198,7 +199,7 @@ export default function ProvidersPage() {
         toast.success(provider.isEnabled ? '供应商已停用' : '供应商已启用');
         loadProviders();
       } else {
-        toast.error(data.error || '操作失败');
+        toast.error(data.detail || data.error || '操作失败');
       }
     } catch (error) {
       console.error('切换状态失败:', error);
@@ -216,11 +217,12 @@ export default function ProvidersPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...csrfHeaders(),
         },
         body: JSON.stringify({ providerId }),
       });
 
-      let data: { success: boolean; data?: { testSuccess?: boolean; latencyMs?: number; error?: string }; error?: string } | null = null;
+      let data: { success: boolean; data?: { testSuccess?: boolean; latencyMs?: number; error?: string; errorCode?: string }; error?: string; detail?: string } | null = null;
 
       try {
         data = await res.json();
@@ -229,7 +231,7 @@ export default function ProvidersPage() {
       }
 
       if (!res.ok || !data?.success) {
-        throw new Error(data?.error || '测试连接失败');
+        throw new Error(data?.detail || data?.error || '测试连接失败');
       }
 
       const latencyMs = data.data?.latencyMs ?? 0;
@@ -240,7 +242,7 @@ export default function ProvidersPage() {
         [providerId]: {
           success: testSuccess,
           latencyMs,
-          message: testSuccess ? '连接正常' : (data?.data?.error || '测试失败'),
+          message: testSuccess ? '连接正常' : (data?.data?.errorCode || data?.data?.error || '测试失败'),
           testedAt: new Date().toLocaleTimeString(),
         },
       }));
@@ -432,7 +434,7 @@ export default function ProvidersPage() {
         ) : providers.length === 0 ? (
           <div className="col-span-full text-center py-12 text-gray-500">
             <Cloud className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>暂无供应商，点击"新增供应商"添加</p>
+            <p>暂无供应商，点击 &quot;新增供应商&quot; 添加</p>
           </div>
         ) : (
           providers.map((provider) => {

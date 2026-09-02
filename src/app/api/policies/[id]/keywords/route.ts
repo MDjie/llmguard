@@ -1,8 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { jsonObjectResponseSchema } from '@/contracts/http/common';
+import {
+  createKeywordSchema,
+  keywordDeleteQuerySchema,
+  keywordQuerySchema,
+  policyParamsSchema,
+  updateKeywordSchema,
+} from '@/contracts/http/policies';
+import { withLegacyApiSecurity } from '@/lib/api-security';
 import { getDb } from '@/lib/db';
 
 // 获取策略的关键词列表
-export async function GET(
+async function getKeywords(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -63,7 +72,7 @@ export async function GET(
 }
 
 // 添加关键词
-export async function POST(
+async function createKeyword(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -134,7 +143,7 @@ export async function POST(
 }
 
 // 更新关键词
-export async function PUT(
+async function updateKeyword(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -190,7 +199,7 @@ export async function PUT(
 }
 
 // 删除关键词
-export async function DELETE(
+async function deleteKeyword(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -233,3 +242,75 @@ export async function DELETE(
     );
   }
 }
+
+export const GET = withLegacyApiSecurity(
+  {
+    permission: 'policy:read',
+    paramsSchema: policyParamsSchema,
+    querySchema: keywordQuerySchema,
+    responseSchema: jsonObjectResponseSchema,
+    maxBodyBytes: 0,
+    auditEvent: 'keyword.list',
+    rateLimitPolicy: {
+      id: 'keyword-list',
+      windowMs: 60_000,
+      maxRequests: 120,
+      scope: 'principal',
+    },
+  },
+  getKeywords,
+);
+
+export const POST = withLegacyApiSecurity(
+  {
+    permission: 'policy:manage',
+    paramsSchema: policyParamsSchema,
+    bodySchema: createKeywordSchema,
+    responseSchema: jsonObjectResponseSchema,
+    maxBodyBytes: 64 * 1_024,
+    auditEvent: 'keyword.create',
+    rateLimitPolicy: {
+      id: 'keyword-create',
+      windowMs: 60_000,
+      maxRequests: 60,
+      scope: 'principal',
+    },
+  },
+  createKeyword,
+);
+
+export const PUT = withLegacyApiSecurity(
+  {
+    permission: 'policy:manage',
+    paramsSchema: policyParamsSchema,
+    bodySchema: updateKeywordSchema,
+    responseSchema: jsonObjectResponseSchema,
+    maxBodyBytes: 64 * 1_024,
+    auditEvent: 'keyword.update',
+    rateLimitPolicy: {
+      id: 'keyword-update',
+      windowMs: 60_000,
+      maxRequests: 60,
+      scope: 'principal',
+    },
+  },
+  updateKeyword,
+);
+
+export const DELETE = withLegacyApiSecurity(
+  {
+    permission: 'policy:manage',
+    paramsSchema: policyParamsSchema,
+    querySchema: keywordDeleteQuerySchema,
+    responseSchema: jsonObjectResponseSchema,
+    maxBodyBytes: 0,
+    auditEvent: 'keyword.delete',
+    rateLimitPolicy: {
+      id: 'keyword-delete',
+      windowMs: 60_000,
+      maxRequests: 30,
+      scope: 'principal',
+    },
+  },
+  deleteKeyword,
+);

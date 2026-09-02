@@ -27,6 +27,7 @@ import {
   Settings
 } from 'lucide-react';
 import { recordDetectionSession, DetectionResultForRecord } from '@/lib/detection/recorder';
+import { csrfHeaders } from '@/lib/auth/csrf-client';
 
 interface Provider {
   id: string;
@@ -53,6 +54,7 @@ interface Policy {
   id: string;
   name: string;
   isDefault: boolean;
+  isActive: boolean;
 }
 
 interface EvaluationResult {
@@ -84,10 +86,6 @@ export default function ModelEvalPage() {
   const [error, setError] = useState<string | null>(null);
   const resultsContainerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
   const scrollResultsToBottom = useCallback(() => {
     requestAnimationFrame(() => {
       const el = resultsContainerRef.current;
@@ -105,7 +103,7 @@ export default function ModelEvalPage() {
     }
   }, [results, isRunning, scrollResultsToBottom]);
 
-  const loadData = async () => {
+  async function loadData() {
     try {
       const [providersRes, testCasesRes, policiesRes] = await Promise.all([
         fetch('/api/chat'),
@@ -140,7 +138,11 @@ export default function ModelEvalPage() {
       console.error('加载数据失败:', error);
       setError('加载数据失败，请刷新页面重试');
     }
-  };
+  }
+
+  useEffect(() => {
+    loadData();
+  }, []);
 
   const toggleProvider = (id: string) => {
     setSelectedProviders(prev => 
@@ -204,7 +206,7 @@ export default function ModelEvalPage() {
           // 调用检测 API
           const response = await fetch('/api/detect', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
             body: JSON.stringify({
               text: testCase.inputText,
               direction: 'input',

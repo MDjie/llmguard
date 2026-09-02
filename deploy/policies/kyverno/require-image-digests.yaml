@@ -1,0 +1,24 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: guardllm-require-image-digests
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: require-sha256-digest
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+              namespaceSelector:
+                matchLabels: { guardllm.io/managed: "true" }
+      validate:
+        allowExistingViolations: false
+        message: GuardLLM images must be referenced by immutable sha256 digest.
+        pattern:
+          spec:
+            containers:
+              - image: "*@sha256:*"
+            =(initContainers):
+              - image: "*@sha256:*"

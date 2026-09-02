@@ -1,93 +1,98 @@
-/**
- * 策略状态API
- * 用于获取、管理和重置用户策略状态
- */
-
-import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { jsonObjectResponseSchema } from '@/contracts/http/common';
+import { ApiProblem, withApiSecurity } from '@/lib/api-security';
 import {
-	getUserPolicyState,
-	resetSessionPolicyState,
-	getEffectivePolicyId,
+  getUserPolicyState,
+  resetSessionPolicyState,
 } from '@/lib/policy/escalation-service';
+import { requireTenantContext } from '@/lib/tenancy';
 
-/**
- * GET - 获取用户当前策略状态
- */
-export async function GET(request: NextRequest) {
-	try {
-		const { searchParams } = new URL(request.url);
-		const userId = searchParams.get('userId') || 'anonymous';
-		const sessionId = searchParams.get('sessionId');
-		const defaultPolicyId = searchParams.get('defaultPolicyId');
+const querySchema = z
+  .object({
+    userId: z.string().max(128).optional(),
+    sessionId: z.string().min(1).max(128),
+    defaultPolicyId: z.string().min(1).max(36).optional(),
+  })
+  .strict();
 
-		if (!sessionId) {
-			return NextResponse.json(
-				{ success: false, error: '缺少sessionId参数' },
-				{ status: 400 }
-			);
-		}
+const resetSchema = z
+  .object({
+    userId: z.string().max(128).optional(),
+    sessionId: z.string().min(1).max(128),
+    action: z.literal('reset'),
+  })
+  .strict();
 
-		// 获取用户策略状态
-		const state = await getUserPolicyState(userId, sessionId);
+export const GET = withApiSecurity(
+  {
+    permission: 'guard:use',
+    querySchema,
+    responseSchema: jsonObjectResponseSchema,
+    maxBodyBytes: 0,
+    auditEvent: 'policy.state.read',
+    rateLimitPolicy: {
+      id: 'policy-state-read',
+      windowMs: 60_000,
+      maxRequests: 120,
+      scope: 'principal',
+    },
+  },
+  async ({ query, principal }) => {
+    if (!principal) {
+      throw new Error('Authenticated principal missing after authorization');
+    }
 
-		// 获取当前生效策略
-		let effectivePolicyId = defaultPolicyId || '';
-		if (state) {
-			effectivePolicyId = state.currentPolicyId;
-		}
+    const scope = requireTenantContext(principal);
+    const state = await getUserPolicyState(scope, principal.subject, query.sessionId);
+    const effectivePolicyId = state?.currentPolicyId ?? query.defaultPolicyId ?? '';
 
-		return NextResponse.json({
-			success: true,
-			data: {
-				state,
-				effectivePolicyId,
-				hasState: !!state,
-			},
-		});
-	} catch (error: any) {
-		console.error('[策略状态API] GET失败:', error);
-		return NextResponse.json(
-			{ success: false, error: error.message || '获取策略状态失败' },
-			{ status: 500 }
-		);
-	}
-}
+    return Response.json({
+      success: true,
+      data: {
+        state,
+        effectivePolicyId,
+        hasState: Boolean(state),
+      },
+    });
+  },
+);
 
-/**
- * POST - 重置用户策略状态（用于会话结束/刷新页面）
- */
-export async function POST(request: NextRequest) {
-	try {
-		const body = await request.json();
-		const { userId, sessionId, action } = body;
+export const POST = withApiSecurity(
+  {
+    permission: 'guard:use',
+    bodySchema: resetSchema,
+    responseSchema: jsonObjectResponseSchema,
+    maxBodyBytes: 16 * 1_024,
+    auditEvent: 'policy.state.reset',
+    rateLimitPolicy: {
+      id: 'policy-state-reset',
+      windowMs: 60_000,
+      maxRequests: 30,
+      scope: 'principal',
+    },
+  },
+  async ({ body, principal }) => {
+    if (!principal) {
+      throw new Error('Authenticated principal missing after authorization');
+    }
 
-		if (!sessionId) {
-			return NextResponse.json(
-				{ success: false, error: '缺少sessionId参数' },
-				{ status: 400 }
-			);
-		}
+    const result = await resetSessionPolicyState(
+      requireTenantContext(principal),
+      principal.subject,
+      body.sessionId,
+    );
+    if (!result.success) {
+      throw new ApiProblem({
+        status: 409,
+        code: 'POLICY_STATE_RESET_FAILED',
+        title: 'Policy state was not reset',
+        detail: 'The policy state could not be reset in its current state.',
+      });
+    }
 
-		const effectiveUserId = userId || 'anonymous';
-
-		if (action === 'reset') {
-			// 重置会话策略状态
-			const result = await resetSessionPolicyState(effectiveUserId, sessionId);
-			return NextResponse.json({
-				success: result.success,
-				message: result.success ? '策略状态已重置' : '重置失败',
-			});
-		}
-
-		return NextResponse.json(
-			{ success: false, error: '未知操作类型' },
-			{ status: 400 }
-		);
-	} catch (error: any) {
-		console.error('[策略状态API] POST失败:', error);
-		return NextResponse.json(
-			{ success: false, error: error.message || '操作失败' },
-			{ status: 500 }
-		);
-	}
-}
+    return Response.json({
+      success: true,
+      message: '策略状态已重置',
+    });
+  },
+);

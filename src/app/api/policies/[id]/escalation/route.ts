@@ -4,18 +4,30 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import {
+  emptyQuerySchema,
+  jsonObjectResponseSchema,
+} from '@/contracts/http/common';
+import {
+  escalationConfigSchema,
+  policyParamsSchema,
+} from '@/contracts/http/policies';
+import { withLegacyApiSecurity, type AuthenticatedPrincipal } from '@/lib/api-security';
 import { db } from '@/lib/db';
 import { policyProfiles } from '@/storage/database/shared/schema';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
+import { requireTenantContext, scopePredicate } from '@/lib/tenancy';
 
 /**
  * GET - 获取策略升级配置
  */
-export async function GET(
+async function getEscalationConfig(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
+  apiContext: { principal: AuthenticatedPrincipal | null },
 ) {
   try {
+    const scope = requireTenantContext(apiContext.principal);
     const { id: policyId } = await params;
 
     const policies = await db
@@ -27,7 +39,10 @@ export async function GET(
         escalationCooldownMinutes: policyProfiles.escalationCooldownMinutes,
       })
       .from(policyProfiles)
-      .where(eq(policyProfiles.id, policyId))
+      .where(and(
+        eq(policyProfiles.id, policyId),
+        scopePredicate(policyProfiles, scope),
+      ))
       .limit(1);
 
     if (policies.length === 0) {
@@ -41,10 +56,10 @@ export async function GET(
       success: true,
       data: policies[0],
     });
-  } catch (error: any) {
-    console.error('[策略升级配置API] GET失败:', error);
+  } catch {
+    console.error('[策略升级配置API] GET失败');
     return NextResponse.json(
-      { success: false, error: error.message || '获取配置失败' },
+      { success: false, error: '获取配置失败' },
       { status: 500 }
     );
   }
@@ -53,11 +68,13 @@ export async function GET(
 /**
  * PUT - 更新策略升级配置
  */
-export async function PUT(
+async function updateEscalationConfig(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
+  apiContext: { principal: AuthenticatedPrincipal | null },
 ) {
   try {
+    const scope = requireTenantContext(apiContext.principal);
     const { id: policyId } = await params;
     const body = await request.json();
 
@@ -96,7 +113,10 @@ export async function PUT(
       const targetPolicies = await db
         .select()
         .from(policyProfiles)
-        .where(eq(policyProfiles.id, escalationTargetPolicyId))
+        .where(and(
+          eq(policyProfiles.id, escalationTargetPolicyId),
+          scopePredicate(policyProfiles, scope),
+        ))
         .limit(1);
 
       if (targetPolicies.length === 0) {
@@ -126,17 +146,56 @@ export async function PUT(
         escalationCooldownMinutes: escalationCooldownMinutes ?? 30,
         updatedAt: new Date(),
       })
-      .where(eq(policyProfiles.id, policyId));
+      .where(and(
+        eq(policyProfiles.id, policyId),
+        scopePredicate(policyProfiles, scope),
+      ));
 
     return NextResponse.json({
       success: true,
       message: '策略升级配置已更新',
     });
-  } catch (error: any) {
-    console.error('[策略升级配置API] PUT失败:', error);
+  } catch {
+    console.error('[策略升级配置API] PUT失败');
     return NextResponse.json(
-      { success: false, error: error.message || '更新配置失败' },
+      { success: false, error: '更新配置失败' },
       { status: 500 }
     );
   }
 }
+
+export const GET = withLegacyApiSecurity(
+  {
+    permission: 'policy:read',
+    paramsSchema: policyParamsSchema,
+    querySchema: emptyQuerySchema,
+    responseSchema: jsonObjectResponseSchema,
+    maxBodyBytes: 0,
+    auditEvent: 'policy.escalation.read',
+    rateLimitPolicy: {
+      id: 'policy-escalation-read',
+      windowMs: 60_000,
+      maxRequests: 60,
+      scope: 'principal',
+    },
+  },
+  getEscalationConfig,
+);
+
+export const PUT = withLegacyApiSecurity(
+  {
+    permission: 'policy:manage',
+    paramsSchema: policyParamsSchema,
+    bodySchema: escalationConfigSchema,
+    responseSchema: jsonObjectResponseSchema,
+    maxBodyBytes: 16 * 1_024,
+    auditEvent: 'policy.escalation.update',
+    rateLimitPolicy: {
+      id: 'policy-escalation-update',
+      windowMs: 60_000,
+      maxRequests: 30,
+      scope: 'principal',
+    },
+  },
+  updateEscalationConfig,
+);

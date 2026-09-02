@@ -1,0 +1,558 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "GuardLLM Guard API",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/v1/guard/check": {
+      "post": {
+        "operationId": "checkGuardContent",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GuardRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Guard decision",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GuardDecision"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Guard protocol error",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GuardError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Direction": {
+        "type": "string",
+        "enum": [
+          "INPUT",
+          "OUTPUT_COMPLETE",
+          "OUTPUT_CHUNK",
+          "RAG_INGEST",
+          "RAG_CONTEXT",
+          "TOOL_REQUEST",
+          "TOOL_RESULT"
+        ]
+      },
+      "GuardAction": {
+        "type": "string",
+        "enum": [
+          "ALLOW",
+          "WARN",
+          "BLOCK",
+          "MASK",
+          "REWRITE",
+          "SAFE_RESPONSE",
+          "REQUIRE_REVIEW"
+        ]
+      },
+      "RiskLevel": {
+        "type": "string",
+        "enum": [
+          "NONE",
+          "LOW",
+          "MEDIUM",
+          "HIGH",
+          "CRITICAL"
+        ]
+      },
+      "ObservationStatus": {
+        "type": "string",
+        "enum": [
+          "MATCH",
+          "NO_MATCH",
+          "TIMEOUT",
+          "ERROR",
+          "SKIPPED"
+        ]
+      },
+      "ArtifactKind": {
+        "type": "string",
+        "enum": [
+          "TEXT",
+          "IMAGE",
+          "AUDIO",
+          "VIDEO",
+          "DOCUMENT",
+          "TOOL_RESULT",
+          "RAG_CHUNK"
+        ]
+      },
+      "RequestContext": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "traceId",
+          "requestId",
+          "tenantId",
+          "applicationId",
+          "direction",
+          "absoluteDeadlineEpochMs",
+          "policyBundleId"
+        ],
+        "properties": {
+          "traceId": {
+            "type": "string",
+            "minLength": 16,
+            "maxLength": 128
+          },
+          "requestId": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 128
+          },
+          "tenantId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "applicationId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "sessionId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "direction": {
+            "$ref": "#/components/schemas/Direction"
+          },
+          "absoluteDeadlineEpochMs": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "policyBundleId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        }
+      },
+      "ArtifactRef": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "artifactId",
+          "kind",
+          "mediaType",
+          "sizeBytes",
+          "sha256"
+        ],
+        "properties": {
+          "artifactId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "kind": {
+            "$ref": "#/components/schemas/ArtifactKind"
+          },
+          "mediaType": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 3221225472
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "metadata": {
+            "type": "object",
+            "maxProperties": 32,
+            "additionalProperties": {
+              "type": [
+                "string",
+                "number",
+                "integer",
+                "boolean",
+                "null"
+              ]
+            }
+          }
+        }
+      },
+      "GuardContent": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 1048576
+          },
+          "artifacts": {
+            "type": "array",
+            "maxItems": 32,
+            "items": {
+              "$ref": "#/components/schemas/ArtifactRef"
+            }
+          }
+        },
+        "anyOf": [
+          {
+            "required": [
+              "text"
+            ]
+          },
+          {
+            "required": [
+              "artifacts"
+            ]
+          }
+        ]
+      },
+      "GuardRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "contractVersion",
+          "context",
+          "content"
+        ],
+        "properties": {
+          "contractVersion": {
+            "type": "string",
+            "const": "1.0"
+          },
+          "context": {
+            "$ref": "#/components/schemas/RequestContext"
+          },
+          "content": {
+            "$ref": "#/components/schemas/GuardContent"
+          }
+        }
+      },
+      "EvidenceRef": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "viewId",
+          "contentHmac"
+        ],
+        "properties": {
+          "viewId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "start": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "end": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "artifactId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "region": {
+            "type": "array",
+            "minItems": 4,
+            "maxItems": 4,
+            "items": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "timeRangeMs": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "maskedPreview": {
+            "type": "string",
+            "maxLength": 512
+          },
+          "contentHmac": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        }
+      },
+      "Observation": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "detectorId",
+          "detectorVersion",
+          "riskType",
+          "score",
+          "severity",
+          "evidence",
+          "status"
+        ],
+        "properties": {
+          "detectorId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "detectorVersion": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "riskType": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "score": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "severity": {
+            "$ref": "#/components/schemas/RiskLevel"
+          },
+          "evidence": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "$ref": "#/components/schemas/EvidenceRef"
+            }
+          },
+          "status": {
+            "$ref": "#/components/schemas/ObservationStatus"
+          },
+          "reasonCode": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        }
+      },
+      "GuardDecision": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "contractVersion",
+          "decisionId",
+          "traceId",
+          "action",
+          "riskLevel",
+          "observations",
+          "policyPath",
+          "bundleId",
+          "latencyMs",
+          "degradationReasons"
+        ],
+        "properties": {
+          "contractVersion": {
+            "type": "string",
+            "const": "1.0"
+          },
+          "decisionId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "traceId": {
+            "type": "string",
+            "minLength": 16,
+            "maxLength": 128
+          },
+          "action": {
+            "$ref": "#/components/schemas/GuardAction"
+          },
+          "riskLevel": {
+            "$ref": "#/components/schemas/RiskLevel"
+          },
+          "observations": {
+            "type": "array",
+            "maxItems": 1000,
+            "items": {
+              "$ref": "#/components/schemas/Observation"
+            }
+          },
+          "policyPath": {
+            "type": "array",
+            "maxItems": 128,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "bundleId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "latencyMs": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 600000
+          },
+          "degradationReasons": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "transformedText": {
+            "type": "string",
+            "maxLength": 1048576
+          }
+        }
+      },
+      "GuardError": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "contractVersion",
+          "code",
+          "message",
+          "traceId",
+          "retryable"
+        ],
+        "properties": {
+          "contractVersion": {
+            "type": "string",
+            "const": "1.0"
+          },
+          "code": {
+            "type": "string",
+            "pattern": "^GRD_[A-Z0-9_]+$",
+            "maxLength": 128
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          },
+          "traceId": {
+            "type": "string",
+            "minLength": 16,
+            "maxLength": 128
+          },
+          "retryable": {
+            "type": "boolean"
+          },
+          "details": {
+            "type": "object",
+            "maxProperties": 32,
+            "additionalProperties": {
+              "type": [
+                "string",
+                "number",
+                "integer",
+                "boolean",
+                "null"
+              ]
+            }
+          }
+        }
+      },
+      "GuardEvent": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "contractVersion",
+          "eventId",
+          "eventType",
+          "occurredAt",
+          "traceId",
+          "tenantId",
+          "applicationId",
+          "payload"
+        ],
+        "properties": {
+          "contractVersion": {
+            "type": "string",
+            "const": "1.0"
+          },
+          "eventId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "eventType": {
+            "type": "string",
+            "enum": [
+              "GUARD_REQUEST_ACCEPTED",
+              "OBSERVATION_RECORDED",
+              "DECISION_RECORDED",
+              "ARTIFACT_STATE_CHANGED",
+              "POLICY_BUNDLE_ACTIVATED"
+            ]
+          },
+          "occurredAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "traceId": {
+            "type": "string",
+            "minLength": 16,
+            "maxLength": 128
+          },
+          "tenantId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "applicationId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "payload": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/GuardRequest"
+              },
+              {
+                "$ref": "#/components/schemas/Observation"
+              },
+              {
+                "$ref": "#/components/schemas/GuardDecision"
+              },
+              {
+                "$ref": "#/components/schemas/ArtifactRef"
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}

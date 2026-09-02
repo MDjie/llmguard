@@ -80,11 +80,11 @@ export class LLMGateway {
     let lastError: Error | null = null;
     for (let attempt = 1; attempt <= this.config.maxRetries; attempt++) {
       try {
-        // 带超时的调用
-        const response = await this.withTimeout(
-          adapter.chat(request),
-          this.config.timeoutMs
-        );
+        const timeoutSignal = AbortSignal.timeout(this.config.timeoutMs);
+        const signal = request.signal
+          ? AbortSignal.any([request.signal, timeoutSignal])
+          : timeoutSignal;
+        const response = await adapter.chat({ ...request, signal });
         return response;
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
@@ -95,7 +95,7 @@ export class LLMGateway {
         }
 
         // 等待后重试
-        await this.delay(this.config.retryDelayMs * attempt);
+        await this.delay(this.config.retryDelayMs * attempt, request.signal);
       }
     }
 
@@ -139,25 +139,27 @@ export class LLMGateway {
           provider.name,
           provider.baseUrl,
           provider.apiKey || '',
-          provider.defaultModel
+          provider.defaultModel,
+          provider.providerType,
         );
 
-      // TODO: 其他类型的适配器
       case 'ollama':
         return new OpenAICompatibleAdapter(
           provider.name,
           provider.baseUrl || 'http://localhost:11434',
-          '', // Ollama 不需要 API Key
-          provider.defaultModel
+          '',
+          provider.defaultModel,
+          'ollama',
         );
 
-      case 'coze':
-        // TODO: 实现 Coze Adapter
-        throw new Error('Coze adapter not implemented yet');
-
       case 'custom':
-        // TODO: 实现自定义 Adapter
-        throw new Error('Custom adapter not implemented yet');
+        return new OpenAICompatibleAdapter(
+          provider.name,
+          provider.baseUrl,
+          provider.apiKey || '',
+          provider.defaultModel,
+          'custom',
+        );
 
       default:
         throw new Error(`Unknown provider type: ${provider.providerType}`);
@@ -165,31 +167,24 @@ export class LLMGateway {
   }
 
   /**
-   * 带超时的 Promise
-   */
-  private withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
-    return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => {
-        reject(new Error(`Timeout after ${timeoutMs}ms`));
-      }, timeoutMs);
-
-      promise
-        .then(result => {
-          clearTimeout(timer);
-          resolve(result);
-        })
-        .catch(error => {
-          clearTimeout(timer);
-          reject(error);
-        });
-    });
-  }
-
-  /**
    * 延迟函数
    */
-  private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+  private delay(ms: number, signal?: AbortSignal): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (signal?.aborted) {
+        reject(new Error('Provider request was aborted'));
+        return;
+      }
+      const timer = setTimeout(resolve, ms);
+      signal?.addEventListener(
+        'abort',
+        () => {
+          clearTimeout(timer);
+          reject(new Error('Provider request was aborted'));
+        },
+        { once: true },
+      );
+    });
   }
 }
 

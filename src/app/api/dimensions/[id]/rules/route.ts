@@ -1,18 +1,67 @@
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
+import { idOrCodeParamsSchema, jsonObjectResponseSchema } from '@/contracts/http/common';
+import { withLegacyApiSecurity } from '@/lib/api-security';
 import { query, insert } from '@/lib/db';
+import { compileSafeRegex } from '@/lib/detection/safe-regex';
+
+const rulesQuerySchema = z
+  .object({
+    type: z.string().min(1).max(32).optional(),
+    enabled: z.enum(['true', 'false']).optional(),
+  })
+  .strict();
+
+const createRuleSchema = z
+  .object({
+    name: z.string().trim().min(1).max(128),
+    type: z.string().trim().min(1).max(32),
+    pattern: z.string().max(4_096).optional(),
+    matchType: z.enum(['exact', 'contains', 'prefix', 'suffix', 'regex']).optional(),
+    caseSensitive: z.boolean().default(false),
+    score: z.number().int().min(0).max(100).default(50),
+    confidence: z.number().min(0).max(1).default(0.8),
+    priority: z.number().int().min(0).max(10_000).default(100),
+    enabled: z.boolean().default(true),
+    description: z.string().max(2_000).default(''),
+    config: z.record(z.string(), z.unknown()).default({}),
+    groupId: z.string().max(128).optional(),
+    suggestion: z.string().max(2_000).default(''),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if ((value.type === 'keyword' || value.type === 'regex') && !value.pattern) {
+      context.addIssue({
+        code: 'custom',
+        path: ['pattern'],
+        message: 'A pattern is required for keyword and regex rules',
+      });
+    }
+    if (value.type === 'regex' && value.pattern) {
+      try {
+        compileSafeRegex(value.pattern, value.caseSensitive ? '' : 'i');
+      } catch {
+        context.addIssue({
+          code: 'custom',
+          path: ['pattern'],
+          message: 'The regular expression is invalid or unsupported',
+        });
+      }
+    }
+  });
 
 // 辅助函数：根据 UUID 或 code 获取维度 ID
 async function getDimensionIdByIdOrCode(idOrCode: string): Promise<string | null> {
   const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrCode);
 
   if (isUUID) {
-    const result = await query('detection_dimensions', {
+    const result = await query<{ id: string }>('detection_dimensions', {
       filter: { id: idOrCode },
       single: true
     });
     return result.data?.id || null;
   } else {
-    const result = await query('detection_dimensions', {
+    const result = await query<{ id: string }>('detection_dimensions', {
       filter: { code: idOrCode },
       single: true
     });
@@ -21,7 +70,7 @@ async function getDimensionIdByIdOrCode(idOrCode: string): Promise<string | null
 }
 
 // 获取维度的所有规则
-export async function GET(
+async function getRules(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -40,7 +89,7 @@ export async function GET(
       );
     }
 
-    let filter: Record<string, any> = { dimensionId };
+    const filter: Record<string, unknown> = { dimensionId };
     if (type) filter.type = type;
     if (enabled !== null) filter.enabled = enabled === 'true';
 
@@ -49,20 +98,20 @@ export async function GET(
       order: { column: 'priority', ascending: false }
     });
 
-    const rules = rulesResult.data || [];
+    const rules = (rulesResult.data || []) as Array<Record<string, unknown>>;
 
     // 获取规则组信息
     const ruleGroupsResult = await query('rule_groups', {
       filter: { dimensionId }
     });
     
-    const ruleGroups = ruleGroupsResult.data || [];
+    const ruleGroups = (ruleGroupsResult.data || []) as Array<Record<string, unknown>>;
 
     // 为规则添加组信息
-    const rulesWithGroup = rules.map((rule: any) => ({
+    const rulesWithGroup = rules.map((rule) => ({
       ...rule,
       groupName: rule.group_id 
-        ? ruleGroups.find((g: any) => g.id === rule.group_id)?.name 
+        ? ruleGroups.find((group) => group.id === rule.group_id)?.name
         : null
     }));
 
@@ -84,7 +133,7 @@ export async function GET(
 }
 
 // 创建新规则
-export async function POST(
+async function createRule(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -161,3 +210,39 @@ export async function POST(
     );
   }
 }
+
+export const GET = withLegacyApiSecurity(
+  {
+    permission: 'policy:read',
+    paramsSchema: idOrCodeParamsSchema,
+    querySchema: rulesQuerySchema,
+    responseSchema: jsonObjectResponseSchema,
+    maxBodyBytes: 0,
+    auditEvent: 'rule.list',
+    rateLimitPolicy: {
+      id: 'rule-list',
+      windowMs: 60_000,
+      maxRequests: 120,
+      scope: 'principal',
+    },
+  },
+  getRules,
+);
+
+export const POST = withLegacyApiSecurity(
+  {
+    permission: 'policy:manage',
+    paramsSchema: idOrCodeParamsSchema,
+    bodySchema: createRuleSchema,
+    responseSchema: jsonObjectResponseSchema,
+    maxBodyBytes: 64 * 1_024,
+    auditEvent: 'rule.create',
+    rateLimitPolicy: {
+      id: 'rule-create',
+      windowMs: 60_000,
+      maxRequests: 60,
+      scope: 'principal',
+    },
+  },
+  createRule,
+);

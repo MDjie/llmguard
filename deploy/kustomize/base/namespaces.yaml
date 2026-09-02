@@ -1,0 +1,41 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: guard-edge
+  labels: { guardllm.io/managed: "true", guardllm.io/plane: edge, istio-injection: enabled }
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: guard-online
+  labels: { guardllm.io/managed: "true", guardllm.io/plane: online, istio-injection: enabled }
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: guard-inference
+  labels: { guardllm.io/managed: "true", guardllm.io/plane: inference, guardllm.io/inference: "true", istio-injection: enabled }
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: guard-media
+  labels: { guardllm.io/managed: "true", guardllm.io/plane: media, istio-injection: enabled }
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: guard-control
+  labels: { guardllm.io/managed: "true", guardllm.io/plane: control, istio-injection: enabled }
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: guard-data-access
+  labels: { guardllm.io/managed: "true", guardllm.io/plane: dataAccess, guardllm.io/data-access: "true", istio-injection: enabled }
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: guard-observability
+  labels: { guardllm.io/managed: "true", guardllm.io/plane: observability, guardllm.io/observability: "true", istio-injection: enabled }

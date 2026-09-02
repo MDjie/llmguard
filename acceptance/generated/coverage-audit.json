@@ -1,0 +1,2845 @@
+{
+  "schemaVersion": "1.0",
+  "generatedAt": "2026-09-02T05:37:14.497Z",
+  "source": "acceptance/generated/requirements.json",
+  "policy": "Path mapping is not functional acceptance. PASS requires signed target-environment evidence.",
+  "summary": {
+    "requirements": 101,
+    "mapping": {
+      "MAPPING_PATHS_VALID": 101
+    },
+    "conclusions": {
+      "CODE_IMPLEMENTED_ACCEPTANCE_PENDING": 22,
+      "HARNESS_ONLY": 15,
+      "PARTIAL": 64
+    },
+    "accepted": 0,
+    "pendingAcceptance": 101
+  },
+  "requirements": [
+    {
+      "id": "ACC-001",
+      "family": "ACC",
+      "priority": "MUST",
+      "requirement": "支持OpenAI兼容REST API、HTTPS及招标要求的gRPC；兼容流式/非流式响应。",
+      "acceptanceCriteria": "分别完成同步、SSE/流式和gRPC调用，输入输出均产生同一Trace ID。",
+      "upgradeRequirement": "UPG-ACC-001",
+      "designComponent": "API contracts and Java security gateway",
+      "implementationStatus": "IMPLEMENTED_PENDING_TARGET_NETWORK_POC",
+      "implementation": [
+        "packages/contracts",
+        "services/guard-gateway",
+        "src/app/api/v1/guard"
+      ],
+      "tests": [
+        "tests/contracts",
+        "services/guard-gateway/src/test"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/ACC-001",
+      "conclusion": "CODE_IMPLEMENTED_ACCEPTANCE_PENDING",
+      "gap": "代码和本地测试已具备，仍缺真实依赖、数据或目标环境 POC",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "ACC-002",
+      "family": "ACC",
+      "priority": "MUST",
+      "requirement": "支持按模型/应用配置路由前缀、目标节点、权重、请求与响应字段映射、思考字段和WebSocket。",
+      "acceptanceCriteria": "通过控制台接入两种不同接口结构的模型，不修改业务代码即可调用。",
+      "upgradeRequirement": "UPG-ACC-002",
+      "designComponent": "API contracts and Java security gateway",
+      "implementationStatus": "PARTIAL_STATIC_ROUTING_MAPPING_WS_IMPLEMENTED_DYNAMIC_CONSOLE_PENDING",
+      "implementation": [
+        "services/guard-gateway/src/main/java/com/guardllm/gateway/ModelRouteRegistry.java",
+        "services/guard-gateway/src/main/java/com/guardllm/gateway/JsonFieldMapper.java",
+        "services/guard-gateway/src/main/java/com/guardllm/gateway/ChatWebSocketHandler.java"
+      ],
+      "tests": [
+        "services/guard-gateway/src/test/java/com/guardllm/gateway/ModelRouteRegistryTest.java",
+        "services/guard-gateway/src/test/java/com/guardllm/gateway/GatewayWebSocketConfigurationTest.java"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/ACC-002",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "ACC-003",
+      "family": "ACC",
+      "priority": "MUST",
+      "requirement": "API支持mTLS、OAuth2/JWT、API Key等认证方式，并与统一身份平台对接。",
+      "acceptanceCriteria": "未授权、过期、越权凭证被拒绝；认证事件进入审计日志。",
+      "upgradeRequirement": "UPG-ACC-003",
+      "designComponent": "API contracts and Java security gateway",
+      "implementationStatus": "PARTIAL",
+      "implementation": [
+        "packages/contracts",
+        "services/guard-gateway",
+        "src/lib/api-security",
+        "src/lib/stream-gate"
+      ],
+      "tests": [
+        "tests/contracts/guard-contracts.test.mjs",
+        "tests/api-security",
+        "tests/stream-gate"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/ACC-003",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "ACC-004",
+      "family": "ACC",
+      "priority": "MUST",
+      "requirement": "支持租户/应用/用户/API维度限流、并发、Token、输入长度和文件大小控制。",
+      "acceptanceCriteria": "超限请求按策略拒绝或排队，不影响其他租户和核心服务。",
+      "upgradeRequirement": "UPG-ACC-004",
+      "designComponent": "API contracts and Java security gateway",
+      "implementationStatus": "IMPLEMENTED_PENDING_TARGET_REDIS_CONCURRENCY_POC",
+      "implementation": [
+        "services/guard-gateway/src/main/java/com/guardllm/gateway/GatewayRateLimiter.java",
+        "services/guard-gateway/src/main/java/com/guardllm/gateway/ReactiveBulkhead.java",
+        "services/guard-gateway/src/main/java/com/guardllm/gateway/GatewayConcurrencyProperties.java",
+        "services/guard-gateway/src/main/java/com/guardllm/gateway/RedisConcurrencyLeaseBackend.java",
+        "src/lib/artifacts/service.ts"
+      ],
+      "tests": [
+        "services/guard-gateway/src/test/java/com/guardllm/gateway/GatewayRateLimiterTest.java",
+        "services/guard-gateway/src/test/java/com/guardllm/gateway/ReactiveBulkheadTest.java",
+        "tests/artifacts"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/ACC-004",
+      "conclusion": "CODE_IMPLEMENTED_ACCEPTANCE_PENDING",
+      "gap": "代码和本地测试已具备，仍缺真实依赖、数据或目标环境 POC",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "ACC-005",
+      "family": "ACC",
+      "priority": "MUST",
+      "requirement": "支持代理、SDK/组件、旁路审计和批量检测接入；策略可逐应用切换。",
+      "acceptanceCriteria": "至少演示代理、API直检和离线样本三种方式。",
+      "upgradeRequirement": "UPG-ACC-005",
+      "designComponent": "API contracts and Java security gateway",
+      "implementationStatus": "PARTIAL",
+      "implementation": [
+        "packages/contracts",
+        "services/guard-gateway",
+        "src/lib/api-security",
+        "src/lib/stream-gate"
+      ],
+      "tests": [
+        "tests/contracts/guard-contracts.test.mjs",
+        "tests/api-security",
+        "tests/stream-gate"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/ACC-005",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "ACC-006",
+      "family": "ACC",
+      "priority": "MUST",
+      "requirement": "围栏异常时按应用配置fail-close、fail-open-with-alert或安全代答，禁止全局硬编码。",
+      "acceptanceCriteria": "模拟检测引擎故障，三个场景分别执行预期降级并保留审计证据。",
+      "upgradeRequirement": "UPG-ACC-005",
+      "designComponent": "API contracts and Java security gateway",
+      "implementationStatus": "PARTIAL",
+      "implementation": [
+        "packages/contracts",
+        "services/guard-gateway",
+        "src/lib/api-security",
+        "src/lib/stream-gate"
+      ],
+      "tests": [
+        "tests/contracts/guard-contracts.test.mjs",
+        "tests/api-security",
+        "tests/stream-gate"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/ACC-006",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "ACC-007",
+      "family": "ACC",
+      "priority": "SHOULD",
+      "requirement": "提供Java/Python/Go SDK、接口样例、错误码、版本与退役策略。",
+      "acceptanceCriteria": "SDK集成示例可运行，API文档覆盖全部请求/响应字段。",
+      "upgradeRequirement": "UPG-ACC-005",
+      "designComponent": "API contracts and Java security gateway",
+      "implementationStatus": "IMPLEMENTED_PENDING_TARGET_SDK_POC",
+      "implementation": [
+        "packages/sdk-typescript",
+        "packages/sdk-python",
+        "packages/sdk-java",
+        "packages/sdk-go",
+        "packages/contracts",
+        "docs/compatibility"
+      ],
+      "tests": [
+        "tests/sdk/typescript-sdk.test.ts",
+        "packages/sdk-python/tests",
+        "packages/sdk-java/src/test",
+        "packages/sdk-go/client_test.go",
+        "tests/contracts"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/ACC-007",
+      "conclusion": "CODE_IMPLEMENTED_ACCEPTANCE_PENDING",
+      "gap": "代码和本地测试已具备，仍缺真实依赖、数据或目标环境 POC",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "IN-001",
+      "family": "IN",
+      "priority": "MUST",
+      "requirement": "语义识别角色扮演、目标劫持、对立响应、道德绑架、反向诱导、威逼利诱和提示词泄露。",
+      "acceptanceCriteria": "专项攻击集逐类给出召回、误报和处置结果。",
+      "upgradeRequirement": "UPG-DET-001",
+      "designComponent": "GuardEngine normalization and input detectors",
+      "implementationStatus": "PARTIAL",
+      "implementation": [
+        "src/lib/guard-engine-v2",
+        "src/lib/document",
+        "src/lib/data-protection"
+      ],
+      "tests": [
+        "tests/guard-engine-v2",
+        "tests/detection"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/IN-001",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "IN-002",
+      "family": "IN",
+      "priority": "MUST",
+      "requirement": "识别问题切片、长文本稀释、XML/INI/JSON策略伪装、Base64/Unicode/URL编码、字符变体和组合隐藏。",
+      "acceptanceCriteria": "原始及变形攻击均映射到统一归一化内容和攻击类别。",
+      "upgradeRequirement": "UPG-DET-002",
+      "designComponent": "GuardEngine normalization and input detectors",
+      "implementationStatus": "PARTIAL",
+      "implementation": [
+        "src/lib/guard-engine-v2",
+        "src/lib/document",
+        "src/lib/data-protection"
+      ],
+      "tests": [
+        "tests/guard-engine-v2",
+        "tests/detection"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/IN-002",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "IN-003",
+      "family": "IN",
+      "priority": "MUST",
+      "requirement": "支持英语、法语、德语等主流语种、罕见语种/方言及文言文混淆检测。",
+      "acceptanceCriteria": "多语种对抗集检出率达到项目统一阈值，日志记录原语种。",
+      "upgradeRequirement": "UPG-DET-003",
+      "designComponent": "GuardEngine normalization and input detectors",
+      "implementationStatus": "PARTIAL",
+      "implementation": [
+        "src/lib/guard-engine-v2",
+        "src/lib/document",
+        "src/lib/data-protection"
+      ],
+      "tests": [
+        "tests/guard-engine-v2",
+        "tests/detection"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/IN-003",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "IN-004",
+      "family": "IN",
+      "priority": "MUST",
+      "requirement": "检测递归、超长、复杂计算和诱导超长输出等恶意算力消耗攻击，准确率≥90%。",
+      "acceptanceCriteria": "压力场景不触发资源失控；攻击检测准确率达到阈值。",
+      "upgradeRequirement": "UPG-DET-004",
+      "designComponent": "GuardEngine normalization and input detectors",
+      "implementationStatus": "PARTIAL_RESOURCE_ABUSE_BASELINE_IMPLEMENTED_ACCURACY_AND_STRESS_POC_PENDING",
+      "implementation": [
+        "src/lib/guard-engine-v2/builtin-detectors.ts",
+        "src/lib/guard-engine-v2/from-policy-bundle.ts",
+        "services/guard-gateway/src/main/java/com/guardllm/gateway/GatewayRateLimiter.java",
+        "services/guard-gateway/src/main/java/com/guardllm/gateway/ReactiveBulkhead.java"
+      ],
+      "tests": [
+        "tests/guard-engine-v2/builtin-detectors.test.ts",
+        "services/guard-gateway/src/test/java/com/guardllm/gateway/GatewayRateLimiterTest.java",
+        "services/guard-gateway/src/test/java/com/guardllm/gateway/ReactiveBulkheadTest.java",
+        "tests/performance/requirements.test.mjs",
+        "acceptance/poc-manifest.json"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/IN-004",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "IN-005",
+      "family": "IN",
+      "priority": "MUST",
+      "requirement": "支持跨轮递进诱导，默认至少关联6轮，检测与样本工具支持至少10轮并可配置扩展。",
+      "acceptanceCriteria": "多轮攻击在最终有害意图形成前或形成时被识别，展示风险累积轨迹。",
+      "upgradeRequirement": "UPG-DET-005",
+      "designComponent": "GuardEngine normalization and input detectors",
+      "implementationStatus": "PARTIAL",
+      "implementation": [
+        "src/lib/guard-engine-v2",
+        "src/lib/document",
+        "src/lib/data-protection"
+      ],
+      "tests": [
+        "tests/guard-engine-v2",
+        "tests/detection"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/IN-005",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "IN-006",
+      "family": "IN",
+      "priority": "MUST",
+      "requirement": "识别上传文本、Office/WPS、PDF/OFD、图片及常用压缩文件内容，校验真实文件类型和伪造后缀。",
+      "acceptanceCriteria": "混合文件集、后缀伪装和嵌套压缩样本均有解析结果；加密文件进入受控处置。",
+      "upgradeRequirement": "UPG-DET-006",
+      "designComponent": "GuardEngine normalization and input detectors",
+      "implementationStatus": "PARTIAL",
+      "implementation": [
+        "src/lib/guard-engine-v2",
+        "src/lib/document",
+        "src/lib/data-protection"
+      ],
+      "tests": [
+        "tests/guard-engine-v2",
+        "tests/detection"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/IN-006",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "IN-007",
+      "family": "IN",
+      "priority": "MUST",
+      "requirement": "检测客户隐私、保单/健康信息、内部制度、源代码、凭证和商业秘密，进入模型前脱敏或阻断。",
+      "acceptanceCriteria": "敏感字段测试集逐类型验证掩码、阻断和审计。",
+      "upgradeRequirement": "UPG-DET-007",
+      "designComponent": "GuardEngine normalization and input detectors",
+      "implementationStatus": "PARTIAL",
+      "implementation": [
+        "src/lib/guard-engine-v2",
+        "src/lib/document",
+        "src/lib/data-protection"
+      ],
+      "tests": [
+        "tests/guard-engine-v2",
+        "tests/detection"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/IN-007",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "MM-001",
+      "family": "MM",
+      "priority": "MUST",
+      "requirement": "文本模态覆盖所有输入/输出攻击手法和有害内容类型，提供毫秒级同步检测。",
+      "acceptanceCriteria": "文本POC满足攻击和白样本目标。",
+      "upgradeRequirement": "UPG-MM-001",
+      "designComponent": "Artifact, multimodal/media workers and built-in Analyzer",
+      "implementationStatus": "PARTIAL_BUILTIN_ANALYZER_TARGET_MODELS_PENDING",
+      "implementation": [
+        "src/lib/artifacts",
+        "src/lib/multimodal",
+        "src/lib/media",
+        "services/media-analyzer"
+      ],
+      "tests": [
+        "tests/artifacts",
+        "tests/multimodal",
+        "tests/media",
+        "tests/media-analyzer"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/MM-001",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "MM-002",
+      "family": "MM",
+      "priority": "MUST",
+      "requirement": "图片同时采用OCR文本安全检测和视觉模型内容判别，覆盖截图及无文字有害图片。",
+      "acceptanceCriteria": "OCR命中文字风险与视觉风险分别展示并联合决策。",
+      "upgradeRequirement": "UPG-MM-002",
+      "designComponent": "Artifact, multimodal/media workers and built-in Analyzer",
+      "implementationStatus": "PARTIAL_BUILTIN_ANALYZER_TARGET_MODELS_PENDING",
+      "implementation": [
+        "src/lib/artifacts",
+        "src/lib/multimodal",
+        "src/lib/media",
+        "services/media-analyzer"
+      ],
+      "tests": [
+        "tests/artifacts",
+        "tests/multimodal",
+        "tests/media",
+        "tests/media-analyzer"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/MM-002",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "MM-003",
+      "family": "MM",
+      "priority": "MUST",
+      "requirement": "识别图片拆分重排、遮挡、旋转、马赛克、压缩、噪声点和对抗扰动。",
+      "acceptanceCriteria": "同一风险图片经多种扰动后仍达到约定检出阈值。",
+      "upgradeRequirement": "UPG-MM-003",
+      "designComponent": "Artifact, multimodal/media workers and built-in Analyzer",
+      "implementationStatus": "PARTIAL_BUILTIN_ANALYZER_TARGET_MODELS_PENDING",
+      "implementation": [
+        "src/lib/artifacts",
+        "src/lib/multimodal",
+        "src/lib/media",
+        "services/media-analyzer"
+      ],
+      "tests": [
+        "tests/artifacts",
+        "tests/multimodal",
+        "tests/media",
+        "tests/media-analyzer"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/MM-003",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "MM-004",
+      "family": "MM",
+      "priority": "MUST",
+      "requirement": "采用跨模态融合分析图文协同攻击，能够识别单模态无害但组合有害的请求。",
+      "acceptanceCriteria": "构造图文拆分样本，单模态低风险、联合输入正确升级并拦截。",
+      "upgradeRequirement": "UPG-MM-004",
+      "designComponent": "Artifact, multimodal/media workers and built-in Analyzer",
+      "implementationStatus": "PARTIAL_BUILTIN_ANALYZER_TARGET_MODELS_PENDING",
+      "implementation": [
+        "src/lib/artifacts",
+        "src/lib/multimodal",
+        "src/lib/media",
+        "services/media-analyzer"
+      ],
+      "tests": [
+        "tests/artifacts",
+        "tests/multimodal",
+        "tests/media",
+        "tests/media-analyzer"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/MM-004",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "MM-005",
+      "family": "MM",
+      "priority": "MUST",
+      "requirement": "音频支持MP3、WAV、AAC、FLAC、WMA，单文件支持至500MB；结合ASR和音频分类检测。",
+      "acceptanceCriteria": "各格式可解析；有害语音和音频指令正确识别并定位时间段。",
+      "upgradeRequirement": "UPG-MM-005",
+      "designComponent": "Artifact, multimodal/media workers and built-in Analyzer",
+      "implementationStatus": "PARTIAL_BUILTIN_ANALYZER_TARGET_MODELS_PENDING",
+      "implementation": [
+        "src/lib/artifacts",
+        "src/lib/multimodal",
+        "src/lib/media",
+        "services/media-analyzer"
+      ],
+      "tests": [
+        "tests/artifacts",
+        "tests/multimodal",
+        "tests/media",
+        "tests/media-analyzer"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/MM-005",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "MM-006",
+      "family": "MM",
+      "priority": "MUST",
+      "requirement": "视频支持MP4、AVI、MOV、WMV，单文件支持至3GB；执行抽帧/关键帧、OCR/视觉和音轨ASR联合检测。",
+      "acceptanceCriteria": "画面、字幕、音轨分别出具风险及时间戳，形成统一结论。",
+      "upgradeRequirement": "UPG-MM-006",
+      "designComponent": "Artifact, multimodal/media workers and built-in Analyzer",
+      "implementationStatus": "PARTIAL_BUILTIN_ANALYZER_TARGET_MODELS_PENDING",
+      "implementation": [
+        "src/lib/artifacts",
+        "src/lib/multimodal",
+        "src/lib/media",
+        "services/media-analyzer"
+      ],
+      "tests": [
+        "tests/artifacts",
+        "tests/multimodal",
+        "tests/media",
+        "tests/media-analyzer"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/MM-006",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "MM-007",
+      "family": "MM",
+      "priority": "SHOULD",
+      "requirement": "多模态模型支持批次、抽帧间隔、置信度和高风险复核策略配置。",
+      "acceptanceCriteria": "不同业务策略下检测成本、时延和召回变化可评测。",
+      "upgradeRequirement": "UPG-MM-007",
+      "designComponent": "Artifact, multimodal/media workers and built-in Analyzer",
+      "implementationStatus": "PARTIAL_BUILTIN_ANALYZER_TARGET_MODELS_PENDING",
+      "implementation": [
+        "src/lib/artifacts",
+        "src/lib/multimodal",
+        "src/lib/media",
+        "services/media-analyzer"
+      ],
+      "tests": [
+        "tests/artifacts",
+        "tests/multimodal",
+        "tests/media",
+        "tests/media-analyzer"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/MM-007",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "AGT-001",
+      "family": "AGT",
+      "priority": "MUST",
+      "requirement": "检测网页、文档、邮件、工具返回结果中的间接提示注入和操作诱导。",
+      "acceptanceCriteria": "RAG文档注入样本被识别，恶意内容不得升级为系统指令。",
+      "upgradeRequirement": "UPG-AGT-001",
+      "designComponent": "Five-stage RAG guard and Tool/MCP policy enforcement point",
+      "implementationStatus": "IMPLEMENTED_PENDING_POC",
+      "implementation": [
+        "src/lib/rag",
+        "src/lib/tools",
+        "src/app/api/v1/guard/rag",
+        "src/app/api/v1/guard/tools"
+      ],
+      "tests": [
+        "tests/rag",
+        "tests/tools"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/AGT-001",
+      "conclusion": "CODE_IMPLEMENTED_ACCEPTANCE_PENDING",
+      "gap": "代码和本地测试已具备，仍缺真实依赖、数据或目标环境 POC",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "AGT-002",
+      "family": "AGT",
+      "priority": "MUST",
+      "requirement": "知识入库前执行来源可信度、内容安全、敏感数据和注入扫描，记录来源和版本。",
+      "acceptanceCriteria": "不可信文档被隔离；检索结果可回溯到原文档、片段和扫描结论。",
+      "upgradeRequirement": "UPG-AGT-002",
+      "designComponent": "Five-stage RAG guard and Tool/MCP policy enforcement point",
+      "implementationStatus": "IMPLEMENTED_PENDING_POC",
+      "implementation": [
+        "src/lib/rag",
+        "src/lib/tools",
+        "src/app/api/v1/guard/rag",
+        "src/app/api/v1/guard/tools"
+      ],
+      "tests": [
+        "tests/rag",
+        "tests/tools"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/AGT-002",
+      "conclusion": "CODE_IMPLEMENTED_ACCEPTANCE_PENDING",
+      "gap": "代码和本地测试已具备，仍缺真实依赖、数据或目标环境 POC",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "AGT-003",
+      "family": "AGT",
+      "priority": "MUST",
+      "requirement": "区分系统指令、用户输入、检索上下文和工具返回的信任边界，禁止低信任内容覆盖高优先级指令。",
+      "acceptanceCriteria": "优先级冲突测试中系统安全策略不可被检索内容改写。",
+      "upgradeRequirement": "UPG-AGT-003",
+      "designComponent": "Five-stage RAG guard and Tool/MCP policy enforcement point",
+      "implementationStatus": "IMPLEMENTED_PENDING_POC",
+      "implementation": [
+        "src/lib/rag",
+        "src/lib/tools",
+        "src/app/api/v1/guard/rag",
+        "src/app/api/v1/guard/tools"
+      ],
+      "tests": [
+        "tests/rag",
+        "tests/tools"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/AGT-003",
+      "conclusion": "CODE_IMPLEMENTED_ACCEPTANCE_PENDING",
+      "gap": "代码和本地测试已具备，仍缺真实依赖、数据或目标环境 POC",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "AGT-004",
+      "family": "AGT",
+      "priority": "MUST",
+      "requirement": "工具调用实施工具白名单、参数Schema、资源范围、频率和最小权限校验。",
+      "acceptanceCriteria": "越权工具、非法参数、跨租户对象和超频调用均被阻断。",
+      "upgradeRequirement": "UPG-AGT-004",
+      "designComponent": "Five-stage RAG guard and Tool/MCP policy enforcement point",
+      "implementationStatus": "IMPLEMENTED_PENDING_POC",
+      "implementation": [
+        "src/lib/rag",
+        "src/lib/tools",
+        "src/app/api/v1/guard/rag",
+        "src/app/api/v1/guard/tools"
+      ],
+      "tests": [
+        "tests/rag",
+        "tests/tools"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/AGT-004",
+      "conclusion": "CODE_IMPLEMENTED_ACCEPTANCE_PENDING",
+      "gap": "代码和本地测试已具备，仍缺真实依赖、数据或目标环境 POC",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "AGT-005",
+      "family": "AGT",
+      "priority": "MUST",
+      "requirement": "高风险操作支持人机确认、双人复核或工作流审批，检测数据外传和提示词/密钥泄露。",
+      "acceptanceCriteria": "转账、外发、删除等模拟高风险动作未经批准不得执行。",
+      "upgradeRequirement": "UPG-AGT-005",
+      "designComponent": "Five-stage RAG guard and Tool/MCP policy enforcement point",
+      "implementationStatus": "IMPLEMENTED_PENDING_POC",
+      "implementation": [
+        "src/lib/rag",
+        "src/lib/tools",
+        "src/app/api/v1/guard/rag",
+        "src/app/api/v1/guard/tools"
+      ],
+      "tests": [
+        "tests/rag",
+        "tests/tools"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/AGT-005",
+      "conclusion": "CODE_IMPLEMENTED_ACCEPTANCE_PENDING",
+      "gap": "代码和本地测试已具备，仍缺真实依赖、数据或目标环境 POC",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "AGT-006",
+      "family": "AGT",
+      "priority": "MUST",
+      "requirement": "会话记忆、向量空间、工具凭证和执行结果按租户/用户隔离。",
+      "acceptanceCriteria": "跨用户记忆探测与向量检索不能获得其他主体数据。",
+      "upgradeRequirement": "UPG-AGT-005",
+      "designComponent": "Five-stage RAG guard and Tool/MCP policy enforcement point",
+      "implementationStatus": "IMPLEMENTED_PENDING_POC",
+      "implementation": [
+        "src/lib/rag",
+        "src/lib/tools",
+        "src/app/api/v1/guard/rag",
+        "src/app/api/v1/guard/tools"
+      ],
+      "tests": [
+        "tests/rag",
+        "tests/tools"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/AGT-006",
+      "conclusion": "CODE_IMPLEMENTED_ACCEPTANCE_PENDING",
+      "gap": "代码和本地测试已具备，仍缺真实依赖、数据或目标环境 POC",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "AGT-007",
+      "family": "AGT",
+      "priority": "SHOULD",
+      "requirement": "对复杂推理链按步骤累计风险，避免看似无害的分步问题推导出有害结论。",
+      "acceptanceCriteria": "多步骤推理攻击显示每步证据、累计分和最终阻断点。",
+      "upgradeRequirement": "UPG-AGT-005",
+      "designComponent": "Five-stage RAG guard and Tool/MCP policy enforcement point",
+      "implementationStatus": "IMPLEMENTED_PENDING_POC",
+      "implementation": [
+        "src/lib/rag",
+        "src/lib/tools",
+        "src/app/api/v1/guard/rag",
+        "src/app/api/v1/guard/tools"
+      ],
+      "tests": [
+        "tests/rag",
+        "tests/tools"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/AGT-007",
+      "conclusion": "CODE_IMPLEMENTED_ACCEPTANCE_PENDING",
+      "gap": "代码和本地测试已具备，仍缺真实依赖、数据或目标环境 POC",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "OUT-001",
+      "family": "OUT",
+      "priority": "MUST",
+      "requirement": "覆盖31类生成内容风险：核心价值观8类、歧视9类、商业违法5类、权益侵害7类、特定服务2类。",
+      "acceptanceCriteria": "标准题库覆盖完整，生成内容抽样合格率≥95%。",
+      "upgradeRequirement": "UPG-OUT-001",
+      "designComponent": "Output guard, decision state machine and stream commit gate",
+      "implementationStatus": "PARTIAL",
+      "implementation": [
+        "src/lib/guard-engine-v2",
+        "src/lib/stream-gate",
+        "src/lib/detection"
+      ],
+      "tests": [
+        "tests/guard-engine-v2",
+        "tests/stream-gate",
+        "tests/detection"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/OUT-001",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "OUT-002",
+      "family": "OUT",
+      "priority": "MUST",
+      "requirement": "增加保险行业销售误导、收益夸大、投资诱导、条款误读、虚假承诺、违规营销话术等专项规则。",
+      "acceptanceCriteria": "保险行业独立题库逐类测试并提供判定依据。",
+      "upgradeRequirement": "UPG-OUT-002",
+      "designComponent": "Output guard, decision state machine and stream commit gate",
+      "implementationStatus": "PARTIAL_INSURANCE_RULE_BASELINE_IMPLEMENTED_INDUSTRY_DATASET_AND_MODEL_CALIBRATION_PENDING",
+      "implementation": [
+        "src/lib/guard-engine-v2/builtin-detectors.ts",
+        "src/lib/guard-engine-v2/from-policy-bundle.ts",
+        "src/lib/policy-bundle"
+      ],
+      "tests": [
+        "tests/guard-engine-v2/builtin-detectors.test.ts",
+        "tests/policy-bundle"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/OUT-002",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "OUT-003",
+      "family": "OUT",
+      "priority": "MUST",
+      "requirement": "自动识别客户隐私、健康、保单、财产、内部涉密和商业秘密，支持掩码、部分隐藏和整体阻断。",
+      "acceptanceCriteria": "敏感字段分类准确，脱敏结果不可逆还原且保留最小审计证据。",
+      "upgradeRequirement": "UPG-OUT-003",
+      "designComponent": "Output guard, decision state machine and stream commit gate",
+      "implementationStatus": "PARTIAL",
+      "implementation": [
+        "src/lib/guard-engine-v2",
+        "src/lib/stream-gate",
+        "src/lib/detection"
+      ],
+      "tests": [
+        "tests/guard-engine-v2",
+        "tests/stream-gate",
+        "tests/detection"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/OUT-003",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "OUT-004",
+      "family": "OUT",
+      "priority": "MUST",
+      "requirement": "高风险金融回答支持依据/来源核验、置信度、冲突检测和转人工，降低幻觉与错误建议。",
+      "acceptanceCriteria": "无依据或来源冲突的高风险回答不得直接作为确定性结论输出。",
+      "upgradeRequirement": "UPG-OUT-004",
+      "designComponent": "Output guard, decision state machine and stream commit gate",
+      "implementationStatus": "PARTIAL",
+      "implementation": [
+        "src/lib/guard-engine-v2",
+        "src/lib/stream-gate",
+        "src/lib/detection"
+      ],
+      "tests": [
+        "tests/guard-engine-v2",
+        "tests/stream-gate",
+        "tests/detection"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/OUT-004",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "OUT-005",
+      "family": "OUT",
+      "priority": "MUST",
+      "requirement": "支持标准拒答、风险类型代答、正向引导及转人工；按应用配置语气和品牌表达。",
+      "acceptanceCriteria": "应拒答题库拒答率≥95%，非拒答题库拒答率≤5%。",
+      "upgradeRequirement": "UPG-OUT-005",
+      "designComponent": "Output guard, decision state machine and stream commit gate",
+      "implementationStatus": "PARTIAL",
+      "implementation": [
+        "src/lib/guard-engine-v2",
+        "src/lib/stream-gate",
+        "src/lib/detection"
+      ],
+      "tests": [
+        "tests/guard-engine-v2",
+        "tests/stream-gate",
+        "tests/detection"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/OUT-005",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "OUT-006",
+      "family": "OUT",
+      "priority": "MUST",
+      "requirement": "处置动作至少包含放行、记录、告警、脱敏、替换、阻断、代答和人工复核。",
+      "acceptanceCriteria": "每种动作可由策略触发，并记录动作前后内容摘要。",
+      "upgradeRequirement": "UPG-OUT-006",
+      "designComponent": "Output guard, decision state machine and stream commit gate",
+      "implementationStatus": "PARTIAL",
+      "implementation": [
+        "src/lib/guard-engine-v2",
+        "src/lib/stream-gate",
+        "src/lib/detection"
+      ],
+      "tests": [
+        "tests/guard-engine-v2",
+        "tests/stream-gate",
+        "tests/detection"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/OUT-006",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "OUT-007",
+      "family": "OUT",
+      "priority": "MUST",
+      "requirement": "支持完整输出后检测、逐Token/分片检测和并行检测；补充只审计不阻断模式作为第四模式候选。",
+      "acceptanceCriteria": "三种招标明确模式全部演示；第四模式经需求澄清后固化。",
+      "upgradeRequirement": "UPG-OUT-006",
+      "designComponent": "Output guard, decision state machine and stream commit gate",
+      "implementationStatus": "PARTIAL",
+      "implementation": [
+        "src/lib/guard-engine-v2",
+        "src/lib/stream-gate",
+        "src/lib/detection"
+      ],
+      "tests": [
+        "tests/guard-engine-v2",
+        "tests/stream-gate",
+        "tests/detection"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/OUT-007",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "OUT-008",
+      "family": "OUT",
+      "priority": "MUST",
+      "requirement": "按GB 45438和标识办法对适用的文本、图片、音频、视频生成内容添加显式和元数据隐式标识。",
+      "acceptanceCriteria": "不同模态通过标识一致性与元数据检查；内部豁免场景有适用性记录。",
+      "upgradeRequirement": "UPG-OUT-006",
+      "designComponent": "Output guard, decision state machine and stream commit gate",
+      "implementationStatus": "IMPLEMENTED_PENDING_TARGET_MEDIA_POC",
+      "implementation": [
+        "src/lib/content-marking",
+        "src/app/api/v1/content-marks",
+        "services/media-analyzer/src/media-marking.ts",
+        "drizzle/0025_generated_content_derivatives.sql"
+      ],
+      "tests": [
+        "tests/content-marking",
+        "tests/media-analyzer/media-marking.test.ts",
+        "scripts/integration/run-database-tests.mjs"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/OUT-008",
+      "conclusion": "CODE_IMPLEMENTED_ACCEPTANCE_PENDING",
+      "gap": "代码和本地测试已具备，仍缺真实依赖、数据或目标环境 POC",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "POL-001",
+      "family": "POL",
+      "priority": "MUST",
+      "requirement": "内置国家通用、31类风险、保险行业和攻击手法库，支持新增、编辑、启停、导入导出和版本。",
+      "acceptanceCriteria": "各库可追溯来源、版本、生效范围和变更人。",
+      "upgradeRequirement": "UPG-POL-001",
+      "designComponent": "Signed policy bundle lifecycle",
+      "implementationStatus": "PARTIAL",
+      "implementation": [
+        "src/lib/policy-bundle",
+        "src/app/api/policy-bundles",
+        "src/app/api/policies"
+      ],
+      "tests": [
+        "tests/policy-bundle",
+        "tests/detection"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/POL-001",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "POL-002",
+      "family": "POL",
+      "priority": "MUST",
+      "requirement": "自定义检测库支持关键字、正则表达式，请求+回复/仅请求/仅回复方向及联动动作。",
+      "acceptanceCriteria": "POC自定义规则配置后实时生效并命中。",
+      "upgradeRequirement": "UPG-POL-002",
+      "designComponent": "Signed policy bundle lifecycle",
+      "implementationStatus": "PARTIAL",
+      "implementation": [
+        "src/lib/policy-bundle",
+        "src/app/api/policy-bundles",
+        "src/app/api/policies"
+      ],
+      "tests": [
+        "tests/policy-bundle",
+        "tests/detection"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/POL-002",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "POL-003",
+      "family": "POL",
+      "priority": "MUST",
+      "requirement": "支持用自然语言定义语义话题规则，自动生成测试样例并允许人工确认。",
+      "acceptanceCriteria": "对未出现固定关键词的同义表达稳定检出。",
+      "upgradeRequirement": "UPG-POL-003",
+      "designComponent": "Signed policy bundle lifecycle",
+      "implementationStatus": "PARTIAL",
+      "implementation": [
+        "src/lib/policy-bundle",
+        "src/app/api/policy-bundles",
+        "src/app/api/policies"
+      ],
+      "tests": [
+        "tests/policy-bundle",
+        "tests/detection"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/POL-003",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "POL-004",
+      "family": "POL",
+      "priority": "MUST",
+      "requirement": "白名单支持词、实体、语义样本和业务上下文，避免仅凭字符串全局放行。",
+      "acceptanceCriteria": "反洗钱等正常业务被放行，但恶意上下文中的同词仍可拦截。",
+      "upgradeRequirement": "UPG-POL-003",
+      "designComponent": "Signed policy bundle lifecycle",
+      "implementationStatus": "PARTIAL",
+      "implementation": [
+        "src/lib/policy-bundle",
+        "src/app/api/policy-bundles",
+        "src/app/api/policies"
+      ],
+      "tests": [
+        "tests/policy-bundle",
+        "tests/detection"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/POL-004",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "POL-005",
+      "family": "POL",
+      "priority": "MUST",
+      "requirement": "策略生命周期包含草稿、测试、审批、灰度、发布、监控、回滚和归档。",
+      "acceptanceCriteria": "高风险策略未经审批不得发布；可一键回滚到指定稳定版本。",
+      "upgradeRequirement": "UPG-POL-003",
+      "designComponent": "Signed policy bundle lifecycle",
+      "implementationStatus": "IMPLEMENTED_PENDING_TARGET_DATABASE_POC",
+      "implementation": [
+        "src/lib/policy-bundle/lifecycle.ts",
+        "src/lib/policy-bundle/service.ts",
+        "src/app/api/policy-bundles",
+        "src/app/policy-releases/page.tsx",
+        "src/app/evaluation-runs/page.tsx",
+        "drizzle/0023_policy_bundle_lifecycle.sql"
+      ],
+      "tests": [
+        "tests/policy-bundle",
+        "tests/evaluation",
+        "scripts/integration/run-database-tests.mjs"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/POL-005",
+      "conclusion": "CODE_IMPLEMENTED_ACCEPTANCE_PENDING",
+      "gap": "代码和本地测试已具备，仍缺真实依赖、数据或目标环境 POC",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "POL-006",
+      "family": "POL",
+      "priority": "MUST",
+      "requirement": "支持按租户、部门、AI应用、模型、用户群和业务场景继承/覆盖策略。",
+      "acceptanceCriteria": "多个应用同一请求产生符合各自策略的差异化处置。",
+      "upgradeRequirement": "UPG-POL-003",
+      "designComponent": "Signed policy bundle lifecycle",
+      "implementationStatus": "PARTIAL",
+      "implementation": [
+        "src/lib/policy-bundle",
+        "src/app/api/policy-bundles",
+        "src/app/api/policies"
+      ],
+      "tests": [
+        "tests/policy-bundle",
+        "tests/detection"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/POL-006",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "POL-007",
+      "family": "POL",
+      "priority": "MUST",
+      "requirement": "阻断提示和代答库支持文本/图片、风险类型、业务场景、版本、预览和恢复默认。",
+      "acceptanceCriteria": "不同应用命中同类风险返回各自配置的合规代答。",
+      "upgradeRequirement": "UPG-POL-003",
+      "designComponent": "Signed policy bundle lifecycle",
+      "implementationStatus": "PARTIAL",
+      "implementation": [
+        "src/lib/policy-bundle",
+        "src/app/api/policy-bundles",
+        "src/app/api/policies"
+      ],
+      "tests": [
+        "tests/policy-bundle",
+        "tests/detection"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/POL-007",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "POL-008",
+      "family": "POL",
+      "priority": "SHOULD",
+      "requirement": "提供阈值校准、A/B测试、影子模式和策略影响分析。",
+      "acceptanceCriteria": "发布前可量化比较召回、误报、时延和业务影响。",
+      "upgradeRequirement": "UPG-POL-003",
+      "designComponent": "Signed policy bundle lifecycle",
+      "implementationStatus": "PARTIAL",
+      "implementation": [
+        "src/lib/policy-bundle",
+        "src/app/api/policy-bundles",
+        "src/app/api/policies"
+      ],
+      "tests": [
+        "tests/policy-bundle",
+        "tests/detection"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/POL-008",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "EVAL-001",
+      "family": "EVAL",
+      "priority": "MUST",
+      "requirement": "建设不少于2000题的生成内容标准题库，覆盖31类风险；A.1/A.2每类≥50题，其余每类≥20题。",
+      "acceptanceCriteria": "题库覆盖、数量、来源、版本和月度更新记录完整。",
+      "upgradeRequirement": "UPG-EVAL-001",
+      "designComponent": "Asynchronous production-parity evaluation",
+      "implementationStatus": "PARTIAL",
+      "implementation": [
+        "src/lib/evaluation",
+        "src/app/api/evaluation-runs",
+        "scripts/evaluation-worker.ts"
+      ],
+      "tests": [
+        "tests/evaluation"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/EVAL-001",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "EVAL-002",
+      "family": "EVAL",
+      "priority": "MUST",
+      "requirement": "应拒答题库≥500题、覆盖17类风险且每类≥20题；非拒答题库≥500题并覆盖规定正向/中立主题。",
+      "acceptanceCriteria": "题库抽查满足分类和数量要求。",
+      "upgradeRequirement": "UPG-EVAL-002",
+      "designComponent": "Asynchronous production-parity evaluation",
+      "implementationStatus": "PARTIAL",
+      "implementation": [
+        "src/lib/evaluation",
+        "src/app/api/evaluation-runs",
+        "scripts/evaluation-worker.ts"
+      ],
+      "tests": [
+        "tests/evaluation"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/EVAL-002",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "EVAL-003",
+      "family": "EVAL",
+      "priority": "MUST",
+      "requirement": "扩展攻击题库覆盖目标劫持、反面诱导、角色扮演、隐含不安全观点、前缀、提示泄露、不安全主题、拒绝词限制、Payload拆分和混淆。",
+      "acceptanceCriteria": "抽测≥300条，攻击成功率≤10%；另含RAG/Agent/多模态专项。",
+      "upgradeRequirement": "UPG-EVAL-003",
+      "designComponent": "Asynchronous production-parity evaluation",
+      "implementationStatus": "PARTIAL",
+      "implementation": [
+        "src/lib/evaluation",
+        "src/app/api/evaluation-runs",
+        "scripts/evaluation-worker.ts"
+      ],
+      "tests": [
+        "tests/evaluation"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/EVAL-003",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "EVAL-004",
+      "family": "EVAL",
+      "priority": "MUST",
+      "requirement": "支持对话、纯文本、批量文件三种样本检测；对话至少10轮并支持图片。",
+      "acceptanceCriteria": "样本仅进入围栏检测，不转发招标方业务大模型。",
+      "upgradeRequirement": "UPG-EVAL-004",
+      "designComponent": "Asynchronous production-parity evaluation",
+      "implementationStatus": "PARTIAL",
+      "implementation": [
+        "src/lib/evaluation",
+        "src/app/api/evaluation-runs",
+        "scripts/evaluation-worker.ts"
+      ],
+      "tests": [
+        "tests/evaluation"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/EVAL-004",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "EVAL-005",
+      "family": "EVAL",
+      "priority": "MUST",
+      "requirement": "自动评估模型与人工专家交叉研判，支持盲测、复核、争议仲裁和badcase。",
+      "acceptanceCriteria": "抽样复核记录含人员、结论、理由和一致性指标。",
+      "upgradeRequirement": "UPG-EVAL-004",
+      "designComponent": "Asynchronous production-parity evaluation",
+      "implementationStatus": "PARTIAL",
+      "implementation": [
+        "src/lib/evaluation",
+        "src/app/api/evaluation-runs",
+        "scripts/evaluation-worker.ts"
+      ],
+      "tests": [
+        "tests/evaluation"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/EVAL-005",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "EVAL-006",
+      "family": "EVAL",
+      "priority": "MUST",
+      "requirement": "计算召回率、精准率、误报率、合格率、拒答率、负责率、攻击成功率、时延和资源指标。",
+      "acceptanceCriteria": "公式、分母、无效样本处理和置信区间在报告中明确。",
+      "upgradeRequirement": "UPG-EVAL-004",
+      "designComponent": "Asynchronous production-parity evaluation",
+      "implementationStatus": "PARTIAL",
+      "implementation": [
+        "src/lib/evaluation",
+        "src/app/api/evaluation-runs",
+        "scripts/evaluation-worker.ts"
+      ],
+      "tests": [
+        "tests/evaluation"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/EVAL-006",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "EVAL-007",
+      "family": "EVAL",
+      "priority": "MUST",
+      "requirement": "每次模型/规则重要更新执行回归测试和发布门禁；题库至少每月更新。",
+      "acceptanceCriteria": "未达到门禁指标的版本不得进入全量生产。",
+      "upgradeRequirement": "UPG-EVAL-004",
+      "designComponent": "Asynchronous production-parity evaluation",
+      "implementationStatus": "PARTIAL",
+      "implementation": [
+        "src/lib/evaluation",
+        "src/app/api/evaluation-runs",
+        "scripts/evaluation-worker.ts"
+      ],
+      "tests": [
+        "tests/evaluation"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/EVAL-007",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "EVAL-008",
+      "family": "EVAL",
+      "priority": "MUST",
+      "requirement": "生成标准化测评报告，包含基本信息、样本分布、指标、结论、横纵向对比、badcase和优化建议。",
+      "acceptanceCriteria": "报告可导出并关联策略/模型版本和原始测试记录。",
+      "upgradeRequirement": "UPG-EVAL-004",
+      "designComponent": "Asynchronous production-parity evaluation",
+      "implementationStatus": "PARTIAL",
+      "implementation": [
+        "src/lib/evaluation",
+        "src/app/api/evaluation-runs",
+        "scripts/evaluation-worker.ts"
+      ],
+      "tests": [
+        "tests/evaluation"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/EVAL-008",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "AUD-001",
+      "family": "AUD",
+      "priority": "MUST",
+      "requirement": "全量记录请求ID、账号、租户、应用、会话、输入/输出、检测节点、模型/规则版本、风险、置信度、动作、时间和操作人。",
+      "acceptanceCriteria": "任一请求可按Trace ID重建完整检测链。",
+      "upgradeRequirement": "UPG-AUD-001",
+      "designComponent": "Scoped audit, retention and controlled export",
+      "implementationStatus": "PARTIAL",
+      "implementation": [
+        "src/lib/audit",
+        "src/lib/api-security/database-auditor.ts",
+        "src/lib/data-protection",
+        "src/app/api/audit",
+        "src/app/api/history",
+        "src/app/api/export"
+      ],
+      "tests": [
+        "tests/audit",
+        "tests/api-security",
+        "tests/data-protection",
+        "tests/observability"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/AUD-001",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "AUD-002",
+      "family": "AUD",
+      "priority": "MUST",
+      "requirement": "普通交互与告警至少保留180天，金融业务及审计日志至少1年；支持生命周期和归档策略。",
+      "acceptanceCriteria": "查询180天记录；验证1年配置、归档和恢复。",
+      "upgradeRequirement": "UPG-AUD-002",
+      "designComponent": "Scoped audit, retention and controlled export",
+      "implementationStatus": "PARTIAL",
+      "implementation": [
+        "src/lib/audit",
+        "src/lib/api-security/database-auditor.ts",
+        "src/lib/data-protection",
+        "src/app/api/audit",
+        "src/app/api/history",
+        "src/app/api/export"
+      ],
+      "tests": [
+        "tests/audit",
+        "tests/api-security",
+        "tests/data-protection",
+        "tests/observability"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/AUD-002",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "AUD-003",
+      "family": "AUD",
+      "priority": "MUST",
+      "requirement": "审计日志采用追加写、防删除、防篡改、哈希校验/可信时间和权限隔离。",
+      "acceptanceCriteria": "篡改模拟可被检测；管理员不能直接删除审计记录。",
+      "upgradeRequirement": "UPG-AUD-002",
+      "designComponent": "Scoped audit, retention and controlled export",
+      "implementationStatus": "IMPLEMENTED_PENDING_ENTERPRISE_TSA_POC",
+      "implementation": [
+        "src/lib/audit/chain.ts",
+        "src/lib/audit/repository.ts",
+        "src/lib/audit/trusted-timestamp.ts",
+        "src/lib/audit/timestamp-worker.ts",
+        "scripts/verify-audit-chain.ts",
+        "scripts/audit-timestamp-worker.ts",
+        "drizzle/0017_tamper_evident_audit.sql",
+        "drizzle/0026_audit_trusted_timestamp.sql"
+      ],
+      "tests": [
+        "tests/audit/chain.test.ts",
+        "tests/audit/trusted-timestamp.test.ts",
+        "scripts/integration/run-database-tests.mjs"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/AUD-003",
+      "conclusion": "CODE_IMPLEMENTED_ACCEPTANCE_PENDING",
+      "gap": "代码和本地测试已具备，仍缺真实依赖、数据或目标环境 POC",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "AUD-004",
+      "family": "AUD",
+      "priority": "MUST",
+      "requirement": "按账号、时间、风险、应用、内容、ID、处置和研判结果组合检索并导出。",
+      "acceptanceCriteria": "POC在规定时间内完成近180天模拟数据检索。",
+      "upgradeRequirement": "UPG-AUD-002",
+      "designComponent": "Scoped audit, retention and controlled export",
+      "implementationStatus": "PARTIAL_METADATA_SEARCH_IMPLEMENTED_RAW_CONTENT_RESTRICTED",
+      "implementation": [
+        "src/lib/audit/reporting.ts",
+        "src/app/api/audit/events",
+        "src/app/api/export"
+      ],
+      "tests": [
+        "tests/audit/reporting.test.ts",
+        "tests/data-protection/export-approval.test.ts"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/AUD-004",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "AUD-005",
+      "family": "AUD",
+      "priority": "MUST",
+      "requirement": "还原AI应用、模型、RAG和工具调用时序链路，高危节点高亮并提供证据解释。",
+      "acceptanceCriteria": "告警详情展示命中敏感词/语义证据和上下游调用。",
+      "upgradeRequirement": "UPG-AUD-002",
+      "designComponent": "Scoped audit, retention and controlled export",
+      "implementationStatus": "PARTIAL",
+      "implementation": [
+        "src/lib/audit",
+        "src/lib/api-security/database-auditor.ts",
+        "src/lib/data-protection",
+        "src/app/api/audit",
+        "src/app/api/history",
+        "src/app/api/export"
+      ],
+      "tests": [
+        "tests/audit",
+        "tests/api-security",
+        "tests/data-protection",
+        "tests/observability"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/AUD-005",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "AUD-006",
+      "family": "AUD",
+      "priority": "MUST",
+      "requirement": "按日/周/月/季度生成平台运行、风险拦截、合规和异常事件报告。",
+      "acceptanceCriteria": "报表可定时生成、下载，并保留生成参数。",
+      "upgradeRequirement": "UPG-AUD-002",
+      "designComponent": "Scoped audit, retention and controlled export",
+      "implementationStatus": "IMPLEMENTED_PENDING_TARGET_DATABASE_POC",
+      "implementation": [
+        "src/lib/audit/reporting.ts",
+        "src/app/api/audit/reports"
+      ],
+      "tests": [
+        "tests/audit/reporting.test.ts"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/AUD-006",
+      "conclusion": "CODE_IMPLEMENTED_ACCEPTANCE_PENDING",
+      "gap": "代码和本地测试已具备，仍缺真实依赖、数据或目标环境 POC",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "AUD-007",
+      "family": "AUD",
+      "priority": "MUST",
+      "requirement": "通过Syslog、Kafka向安全运营/日志平台外发，支持级别、类型过滤和失败重试。",
+      "acceptanceCriteria": "断链后不丢失，恢复后按序补发；字段映射可配置。",
+      "upgradeRequirement": "UPG-AUD-002",
+      "designComponent": "Scoped audit, retention and controlled export",
+      "implementationStatus": "IMPLEMENTED_PENDING_SOC_INTEGRATION_POC",
+      "implementation": [
+        "src/lib/audit/dispatcher.ts",
+        "src/lib/audit/exporters.ts",
+        "scripts/audit-export-worker.ts",
+        "drizzle/0022_audit_export_outbox.sql"
+      ],
+      "tests": [
+        "tests/audit/export.test.ts"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/AUD-007",
+      "conclusion": "CODE_IMPLEMENTED_ACCEPTANCE_PENDING",
+      "gap": "代码和本地测试已具备，仍缺真实依赖、数据或目标环境 POC",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "OPS-001",
+      "family": "OPS",
+      "priority": "MUST",
+      "requirement": "大屏展示检测、告警、阻断、放行、趋势、风险分布、业务分布和高危事件。",
+      "acceptanceCriteria": "支持24小时、7/30/180天及自定义时间范围。",
+      "upgradeRequirement": "UPG-OPS-001",
+      "designComponent": "Operations console and event workflow",
+      "implementationStatus": "PARTIAL",
+      "implementation": [
+        "src/app",
+        "src/lib/incidents",
+        "src/app/api/incidents",
+        "src/app/api/stats",
+        "src/app/api/history"
+      ],
+      "tests": [
+        "tests/incidents",
+        "tests/api-security/route-inventory.test.mjs"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/OPS-001",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "OPS-002",
+      "family": "OPS",
+      "priority": "MUST",
+      "requirement": "告警研判包含事件分析、攻击手法、攻击危害和回答举证四个模块。",
+      "acceptanceCriteria": "单条告警自动生成四部分并支持人工修订。",
+      "upgradeRequirement": "UPG-OPS-001",
+      "designComponent": "Operations console and event workflow",
+      "implementationStatus": "IMPLEMENTED_PENDING_TARGET_DATABASE_POC",
+      "implementation": [
+        "src/lib/incidents",
+        "src/app/api/incidents",
+        "src/app/incidents/page.tsx",
+        "src/app/api/detection-sessions/route.ts"
+      ],
+      "tests": [
+        "tests/incidents/state-machine.test.ts",
+        "tests/incidents/console-structure.test.mjs"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/OPS-002",
+      "conclusion": "CODE_IMPLEMENTED_ACCEPTANCE_PENDING",
+      "gap": "代码和本地测试已具备，仍缺真实依赖、数据或目标环境 POC",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "OPS-003",
+      "family": "OPS",
+      "priority": "MUST",
+      "requirement": "误报标记进入白样本库，支持向量泛化、检索、取消和回归验证。",
+      "acceptanceCriteria": "误报优化不得全局静默真实攻击，发布前有影响评估。",
+      "upgradeRequirement": "UPG-OPS-001",
+      "designComponent": "Operations console and event workflow",
+      "implementationStatus": "PARTIAL",
+      "implementation": [
+        "src/app",
+        "src/lib/incidents",
+        "src/app/api/incidents",
+        "src/app/api/stats",
+        "src/app/api/history"
+      ],
+      "tests": [
+        "tests/incidents",
+        "tests/api-security/route-inventory.test.mjs"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/OPS-003",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "OPS-004",
+      "family": "OPS",
+      "priority": "MUST",
+      "requirement": "事件状态支持待研判、处理中、误报、已阻断、已整改、已关闭及责任人/SLA。",
+      "acceptanceCriteria": "告警可形成完整处置闭环并统计超时。",
+      "upgradeRequirement": "UPG-OPS-001",
+      "designComponent": "Operations console and event workflow",
+      "implementationStatus": "IMPLEMENTED_PENDING_TARGET_DATABASE_POC",
+      "implementation": [
+        "src/lib/incidents",
+        "src/app/api/incidents",
+        "src/app/incidents/page.tsx",
+        "drizzle/0020_incident_workflow.sql"
+      ],
+      "tests": [
+        "tests/incidents/state-machine.test.ts",
+        "tests/incidents/console-structure.test.mjs",
+        "scripts/integration/run-database-tests.mjs"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/OPS-004",
+      "conclusion": "CODE_IMPLEMENTED_ACCEPTANCE_PENDING",
+      "gap": "代码和本地测试已具备，仍缺真实依赖、数据或目标环境 POC",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "IAM-001",
+      "family": "IAM",
+      "priority": "MUST",
+      "requirement": "采用RBAC并支持系统管理员、安全管理员、审计管理员三员分立，以及分析、处置、查询等角色。",
+      "acceptanceCriteria": "三类管理员互不越权；审计管理员独立查看管理操作。",
+      "upgradeRequirement": "UPG-IAM-001",
+      "designComponent": "Authentication, three-role separation and tenant scope",
+      "implementationStatus": "PARTIAL_EXTERNAL_SSO",
+      "implementation": [
+        "src/lib/auth",
+        "src/lib/tenancy",
+        "src/app/api/users"
+      ],
+      "tests": [
+        "tests/auth",
+        "tests/tenancy",
+        "tests/integration/tenancy-isolation.sql"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/IAM-001",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "IAM-002",
+      "family": "IAM",
+      "priority": "MUST",
+      "requirement": "生产环境不设置可绕过三员分立的常用超级账号；仅保留受封存、双人授权、全审计的应急账号。",
+      "acceptanceCriteria": "常规管理员无法获得全权限；应急启用产生告警与审批记录。",
+      "upgradeRequirement": "UPG-IAM-002",
+      "designComponent": "Authentication, three-role separation and tenant scope",
+      "implementationStatus": "PARTIAL_EXTERNAL_SSO",
+      "implementation": [
+        "src/lib/auth",
+        "src/lib/tenancy",
+        "src/app/api/users"
+      ],
+      "tests": [
+        "tests/auth",
+        "tests/tenancy",
+        "tests/integration/tenancy-isolation.sql"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/IAM-002",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "IAM-003",
+      "family": "IAM",
+      "priority": "MUST",
+      "requirement": "按总公司、分公司、子公司、部门、业务线和应用实施数据分权与页面权限。",
+      "acceptanceCriteria": "不同范围用户只能查看和处置授权数据。",
+      "upgradeRequirement": "UPG-IAM-002",
+      "designComponent": "Authentication, three-role separation and tenant scope",
+      "implementationStatus": "PARTIAL_EXTERNAL_SSO",
+      "implementation": [
+        "src/lib/auth",
+        "src/lib/tenancy",
+        "src/app/api/users"
+      ],
+      "tests": [
+        "tests/auth",
+        "tests/tenancy",
+        "tests/integration/tenancy-isolation.sql"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/IAM-003",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "IAM-004",
+      "family": "IAM",
+      "priority": "MUST",
+      "requirement": "本地密码策略至少支持8位、90天、5次失败锁定5分钟，并可按公司标准加严。",
+      "acceptanceCriteria": "策略参数可配置并验证锁定、过期和历史密码限制。",
+      "upgradeRequirement": "UPG-IAM-002",
+      "designComponent": "Authentication, three-role separation and tenant scope",
+      "implementationStatus": "IMPLEMENTED_PENDING_ENTERPRISE_POLICY_POC",
+      "implementation": [
+        "src/lib/auth",
+        "src/app/api/auth/change-password",
+        "drizzle/0018_password_lifecycle.sql"
+      ],
+      "tests": [
+        "tests/auth"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/IAM-004",
+      "conclusion": "CODE_IMPLEMENTED_ACCEPTANCE_PENDING",
+      "gap": "代码和本地测试已具备，仍缺真实依赖、数据或目标环境 POC",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "IAM-005",
+      "family": "IAM",
+      "priority": "MUST",
+      "requirement": "支持统一登录、双因素认证、唯一身份检查、闲置超时、远程登录限制和离职账号锁定。",
+      "acceptanceCriteria": "SSO/2FA和账号生命周期联调通过。",
+      "upgradeRequirement": "UPG-IAM-002",
+      "designComponent": "Authentication, three-role separation and tenant scope",
+      "implementationStatus": "PARTIAL_EXTERNAL_SSO",
+      "implementation": [
+        "src/lib/auth",
+        "src/lib/tenancy",
+        "src/app/api/users"
+      ],
+      "tests": [
+        "tests/auth",
+        "tests/tenancy",
+        "tests/integration/tenancy-isolation.sql"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/IAM-005",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "IAM-006",
+      "family": "IAM",
+      "priority": "MUST",
+      "requirement": "租户间计算、存储、网络、向量库、密钥和日志隔离。",
+      "acceptanceCriteria": "执行跨租户越权与侧信道测试，无数据泄露。",
+      "upgradeRequirement": "UPG-IAM-002",
+      "designComponent": "Authentication, three-role separation and tenant scope",
+      "implementationStatus": "PARTIAL_EXTERNAL_SSO",
+      "implementation": [
+        "src/lib/auth",
+        "src/lib/tenancy",
+        "src/app/api/users"
+      ],
+      "tests": [
+        "tests/auth",
+        "tests/tenancy",
+        "tests/integration/tenancy-isolation.sql"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/IAM-006",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "IAM-007",
+      "family": "IAM",
+      "priority": "MUST",
+      "requirement": "所有控制面操作记录操作者、IP、时间、对象、前后值和结果。",
+      "acceptanceCriteria": "策略、账号、模型和系统配置变更均可审计回滚。",
+      "upgradeRequirement": "UPG-IAM-002",
+      "designComponent": "Authentication, three-role separation and tenant scope",
+      "implementationStatus": "PARTIAL_EXTERNAL_SSO",
+      "implementation": [
+        "src/lib/auth",
+        "src/lib/tenancy",
+        "src/app/api/users"
+      ],
+      "tests": [
+        "tests/auth",
+        "tests/tenancy",
+        "tests/integration/tenancy-isolation.sql"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/IAM-007",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "DAT-001",
+      "family": "DAT",
+      "priority": "MUST",
+      "requirement": "按GB/T 43697和JR/T 0197建立数据分类分级，覆盖客户、保单、健康、财产、模型、提示词、日志和密钥。",
+      "acceptanceCriteria": "数据目录包含分类、级别、责任人、保留期和控制策略。",
+      "upgradeRequirement": "UPG-DAT-001",
+      "designComponent": "Data minimization, encryption, provenance and lifecycle",
+      "implementationStatus": "IMPLEMENTED_PENDING_CATALOG_DATA_ONBOARDING",
+      "implementation": [
+        "src/lib/data-catalog",
+        "src/app/api/data-catalog",
+        "drizzle/0021_data_catalog.sql"
+      ],
+      "tests": [
+        "tests/data-catalog",
+        "scripts/integration/run-database-tests.mjs"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/DAT-001",
+      "conclusion": "CODE_IMPLEMENTED_ACCEPTANCE_PENDING",
+      "gap": "代码和本地测试已具备，仍缺真实依赖、数据或目标环境 POC",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "DAT-002",
+      "family": "DAT",
+      "priority": "MUST",
+      "requirement": "传输采用TLS 1.2及以上；存储支持SM4或AES-256，敏感字段可列级加密/令牌化。",
+      "acceptanceCriteria": "协议扫描和数据库抽查证明加密生效。",
+      "upgradeRequirement": "UPG-DAT-002",
+      "designComponent": "Data minimization, encryption, provenance and lifecycle",
+      "implementationStatus": "PARTIAL",
+      "implementation": [
+        "src/lib/data-catalog",
+        "src/lib/content-marking",
+        "src/lib/data-protection",
+        "src/lib/secrets",
+        "src/lib/rag/provenance.ts"
+      ],
+      "tests": [
+        "tests/data-catalog",
+        "tests/content-marking",
+        "tests/data-protection",
+        "tests/security/secrets.test.ts",
+        "tests/rag"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/DAT-002",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "DAT-003",
+      "family": "DAT",
+      "priority": "MUST",
+      "requirement": "密钥集中管理、分权使用、定期轮换、备份恢复和访问审计，禁止明文写入配置/镜像。",
+      "acceptanceCriteria": "密钥轮换不影响业务；仓库和镜像扫描无明文密钥。",
+      "upgradeRequirement": "UPG-DAT-002",
+      "designComponent": "Data minimization, encryption, provenance and lifecycle",
+      "implementationStatus": "PARTIAL",
+      "implementation": [
+        "src/lib/data-catalog",
+        "src/lib/content-marking",
+        "src/lib/data-protection",
+        "src/lib/secrets",
+        "src/lib/rag/provenance.ts"
+      ],
+      "tests": [
+        "tests/data-catalog",
+        "tests/content-marking",
+        "tests/data-protection",
+        "tests/security/secrets.test.ts",
+        "tests/rag"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/DAT-003",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "DAT-004",
+      "family": "DAT",
+      "priority": "MUST",
+      "requirement": "原始敏感数据不出域，传给业务大模型前完成脱敏；外部检测器不得留存客户原文。",
+      "acceptanceCriteria": "数据流和网络抓包验证无未经授权外传。",
+      "upgradeRequirement": "UPG-DAT-002",
+      "designComponent": "Data minimization, encryption, provenance and lifecycle",
+      "implementationStatus": "PARTIAL",
+      "implementation": [
+        "src/lib/data-catalog",
+        "src/lib/content-marking",
+        "src/lib/data-protection",
+        "src/lib/secrets",
+        "src/lib/rag/provenance.ts"
+      ],
+      "tests": [
+        "tests/data-catalog",
+        "tests/content-marking",
+        "tests/data-protection",
+        "tests/security/secrets.test.ts",
+        "tests/rag"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/DAT-004",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "DAT-005",
+      "family": "DAT",
+      "priority": "MUST",
+      "requirement": "支持采集、存储、使用、共享、归档、逻辑删除、物理销毁和备份副本处理策略。",
+      "acceptanceCriteria": "删除请求能定位生产、日志和备份中的处理结果。",
+      "upgradeRequirement": "UPG-DAT-002",
+      "designComponent": "Data minimization, encryption, provenance and lifecycle",
+      "implementationStatus": "PARTIAL_DATABASE_PURGE_PROOF_IMPLEMENTED_EXTERNAL_STORES_PENDING",
+      "implementation": [
+        "src/lib/data-protection/retention.ts",
+        "src/lib/data-protection/lineage.ts",
+        "drizzle/0027_data_lineage_deletion_proofs.sql"
+      ],
+      "tests": [
+        "tests/data-protection/retention.test.ts",
+        "tests/data-protection/lineage.test.ts",
+        "tests/integration/data-lineage.sql"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/DAT-005",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "DAT-006",
+      "family": "DAT",
+      "priority": "MUST",
+      "requirement": "训练/评测数据具备来源、许可、去重、质量、敏感检测、标注和版本谱系。",
+      "acceptanceCriteria": "任一样本可追溯来源、加工、标签和使用模型。",
+      "upgradeRequirement": "UPG-DAT-002",
+      "designComponent": "Data minimization, encryption, provenance and lifecycle",
+      "implementationStatus": "PARTIAL_RUNTIME_LINEAGE_IMPLEMENTED_DATASET_LICENSE_LABEL_MODEL_USE_PENDING",
+      "implementation": [
+        "src/lib/data-protection/lineage.ts",
+        "src/lib/rag/ingest-worker.ts",
+        "src/lib/multimodal/document-image-worker.ts",
+        "drizzle/0027_data_lineage_deletion_proofs.sql"
+      ],
+      "tests": [
+        "tests/data-protection/lineage.test.ts",
+        "tests/integration/data-lineage.sql"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/DAT-006",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "DAT-007",
+      "family": "DAT",
+      "priority": "MUST",
+      "requirement": "生成内容标识服务与输出检测协同，支持显式标识、文件元数据、标识校验和传播场景策略。",
+      "acceptanceCriteria": "按GB 45438测试文本、图像、音频、视频标识。",
+      "upgradeRequirement": "UPG-DAT-002",
+      "designComponent": "Data minimization, encryption, provenance and lifecycle",
+      "implementationStatus": "IMPLEMENTED_PENDING_TARGET_MEDIA_POC",
+      "implementation": [
+        "src/lib/content-marking",
+        "src/app/api/v1/content-marks",
+        "services/media-analyzer/src/media-marking.ts",
+        "drizzle/0019_generated_content_marks.sql",
+        "drizzle/0025_generated_content_derivatives.sql"
+      ],
+      "tests": [
+        "tests/content-marking",
+        "tests/media-analyzer/media-marking.test.ts",
+        "scripts/integration/run-database-tests.mjs"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/DAT-007",
+      "conclusion": "CODE_IMPLEMENTED_ACCEPTANCE_PENDING",
+      "gap": "代码和本地测试已具备，仍缺真实依赖、数据或目标环境 POC",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "INT-001",
+      "family": "INT",
+      "priority": "MUST",
+      "requirement": "与AI中台/AI网关集成，统一纳管模型API、应用和Agent调用。",
+      "acceptanceCriteria": "至少完成两类模型、一个RAG和一个Agent端到端联调。",
+      "upgradeRequirement": "UPG-INT-001",
+      "designComponent": "Versioned integration contracts and governed adapters",
+      "implementationStatus": "PARTIAL_EXTERNAL_INTEGRATION",
+      "implementation": [
+        "packages/contracts",
+        "src/lib/platform-adapters",
+        "services/guard-gateway"
+      ],
+      "tests": [
+        "tests/contracts",
+        "tests/platform-adapters"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/INT-001",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "INT-002",
+      "family": "INT",
+      "priority": "MUST",
+      "requirement": "与统一身份、短信/邮件、日志平台、监控告警和安全运营中心对接。",
+      "acceptanceCriteria": "接口联调清单全部通过并提供失败补偿测试。",
+      "upgradeRequirement": "UPG-INT-002",
+      "designComponent": "Versioned integration contracts and governed adapters",
+      "implementationStatus": "PARTIAL_EXTERNAL_INTEGRATION",
+      "implementation": [
+        "packages/contracts",
+        "src/lib/platform-adapters",
+        "services/guard-gateway"
+      ],
+      "tests": [
+        "tests/contracts",
+        "tests/platform-adapters"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/INT-002",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "INT-003",
+      "family": "INT",
+      "priority": "MUST",
+      "requirement": "API全生命周期执行设计、认证、版本、文档、兼容、监控和退役管理。",
+      "acceptanceCriteria": "旧版本在约定窗口可用，退役有通知和迁移证据。",
+      "upgradeRequirement": "UPG-INT-002",
+      "designComponent": "Versioned integration contracts and governed adapters",
+      "implementationStatus": "PARTIAL_EXTERNAL_INTEGRATION",
+      "implementation": [
+        "packages/contracts",
+        "src/lib/platform-adapters",
+        "services/guard-gateway"
+      ],
+      "tests": [
+        "tests/contracts",
+        "tests/platform-adapters"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/INT-003",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "INT-004",
+      "family": "INT",
+      "priority": "MUST",
+      "requirement": "支持关系、向量、对象和文档存储；支持去重、分词、标准化和向量化。",
+      "acceptanceCriteria": "不同数据类型按架构落库并验证权限与备份。",
+      "upgradeRequirement": "UPG-INT-002",
+      "designComponent": "Versioned integration contracts and governed adapters",
+      "implementationStatus": "PARTIAL_EXTERNAL_INTEGRATION",
+      "implementation": [
+        "packages/contracts",
+        "src/lib/platform-adapters",
+        "services/guard-gateway"
+      ],
+      "tests": [
+        "tests/contracts",
+        "tests/platform-adapters"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/INT-004",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "INT-005",
+      "family": "INT",
+      "priority": "SHOULD",
+      "requirement": "提供策略、告警、审计、评测和报表开放API，避免控制台锁定。",
+      "acceptanceCriteria": "外部系统可自动创建测试、查询结果和拉取报表。",
+      "upgradeRequirement": "UPG-INT-002",
+      "designComponent": "Versioned integration contracts and governed adapters",
+      "implementationStatus": "PARTIAL_EXTERNAL_INTEGRATION",
+      "implementation": [
+        "packages/contracts",
+        "src/lib/platform-adapters",
+        "services/guard-gateway"
+      ],
+      "tests": [
+        "tests/contracts",
+        "tests/platform-adapters"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/INT-005",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "PER-001",
+      "family": "PER",
+      "priority": "MUST",
+      "requirement": "黑样本召回率≥95%、精准率≥95%；POC 2000条文本攻击拦截率按≥99%验收。",
+      "acceptanceCriteria": "独立盲测；2000条中漏拦≤20条。",
+      "upgradeRequirement": "UPG-OBS-001",
+      "designComponent": "Performance and effect acceptance harness",
+      "implementationStatus": "HARNESS_READY_EXTERNAL_RUN_REQUIRED",
+      "implementation": [
+        "tests/performance",
+        "scripts/acceptance"
+      ],
+      "tests": [
+        "acceptance/poc-manifest.json"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/PER-001",
+      "conclusion": "HARNESS_ONLY",
+      "gap": "仅具备自动化框架，必须在目标环境执行并提交签名结果",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "PER-002",
+      "family": "PER",
+      "priority": "MUST",
+      "requirement": "2000条白样本误拦截率≤1%。",
+      "acceptanceCriteria": "独立盲测；误拦≤20条，报告分业务和类别结果。",
+      "upgradeRequirement": "UPG-OBS-001",
+      "designComponent": "Performance and effect acceptance harness",
+      "implementationStatus": "HARNESS_READY_EXTERNAL_RUN_REQUIRED",
+      "implementation": [
+        "tests/performance",
+        "scripts/acceptance"
+      ],
+      "tests": [
+        "acceptance/poc-manifest.json"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/PER-002",
+      "conclusion": "HARNESS_ONLY",
+      "gap": "仅具备自动化框架，必须在目标环境执行并提交签名结果",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "PER-003",
+      "family": "PER",
+      "priority": "MUST",
+      "requirement": "快速分类模型响应≤200ms、准确率≥98%；主链路P99≤300ms（不含大模型推理）。",
+      "acceptanceCriteria": "全量检测配置、目标信创环境压测。",
+      "upgradeRequirement": "UPG-OBS-001",
+      "designComponent": "Performance and effect acceptance harness",
+      "implementationStatus": "HARNESS_READY_EXTERNAL_RUN_REQUIRED",
+      "implementation": [
+        "tests/performance",
+        "scripts/acceptance"
+      ],
+      "tests": [
+        "acceptance/poc-manifest.json"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/PER-003",
+      "conclusion": "HARNESS_ONLY",
+      "gap": "仅具备自动化框架，必须在目标环境执行并提交签名结果",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "PER-004",
+      "family": "PER",
+      "priority": "MUST",
+      "requirement": "单节点≥20QPS，集群≥200QPS；支持弹性扩容且不中断在线业务。",
+      "acceptanceCriteria": "持续30分钟稳定压测，无错误率或资源超限。",
+      "upgradeRequirement": "UPG-OBS-001",
+      "designComponent": "Performance and effect acceptance harness",
+      "implementationStatus": "HARNESS_READY_EXTERNAL_RUN_REQUIRED",
+      "implementation": [
+        "tests/performance",
+        "scripts/acceptance"
+      ],
+      "tests": [
+        "acceptance/poc-manifest.json"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/PER-004",
+      "conclusion": "HARNESS_ONLY",
+      "gap": "仅具备自动化框架，必须在目标环境执行并提交签名结果",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "PER-005",
+      "family": "PER",
+      "priority": "MUST",
+      "requirement": "支持≥3000并发会话和≥300管理控制台在线用户。",
+      "acceptanceCriteria": "并发测试无明显UI卡顿、功能错误或会话串扰。",
+      "upgradeRequirement": "UPG-OBS-001",
+      "designComponent": "Performance and effect acceptance harness",
+      "implementationStatus": "HARNESS_READY_EXTERNAL_RUN_REQUIRED",
+      "implementation": [
+        "tests/performance",
+        "scripts/acceptance"
+      ],
+      "tests": [
+        "acceptance/poc-manifest.json"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/PER-005",
+      "conclusion": "HARNESS_ONLY",
+      "gap": "仅具备自动化框架，必须在目标环境执行并提交签名结果",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "PER-006",
+      "family": "PER",
+      "priority": "MUST",
+      "requirement": "设计容量下CPU峰值≤80%、内存≤75%，资源可实时监控和回溯。",
+      "acceptanceCriteria": "压测报告提供CPU、内存、GPU/NPU、磁盘、网络曲线。",
+      "upgradeRequirement": "UPG-OBS-001",
+      "designComponent": "Performance and effect acceptance harness",
+      "implementationStatus": "HARNESS_READY_EXTERNAL_RUN_REQUIRED",
+      "implementation": [
+        "tests/performance",
+        "scripts/acceptance"
+      ],
+      "tests": [
+        "acceptance/poc-manifest.json"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/PER-006",
+      "conclusion": "HARNESS_ONLY",
+      "gap": "仅具备自动化框架，必须在目标环境执行并提交签名结果",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "AVA-001",
+      "family": "AVA",
+      "priority": "MUST",
+      "requirement": "7×24运行，全年整体可用性≥99.99%。",
+      "acceptanceCriteria": "可用性统计口径、排除项和监控证据纳入SLA。",
+      "upgradeRequirement": "UPG-ACC-005",
+      "designComponent": "Kubernetes HA and disaster recovery",
+      "implementationStatus": "HARNESS_READY_EXTERNAL_RUN_REQUIRED",
+      "implementation": [
+        "deploy/helm/guardllm",
+        "deploy/ha",
+        "docs/runbooks"
+      ],
+      "tests": [
+        "scripts/dr/record-drill.mjs",
+        "acceptance/poc-manifest.json"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/AVA-001",
+      "conclusion": "HARNESS_ONLY",
+      "gap": "仅具备自动化框架，必须在目标环境执行并提交签名结果",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "AVA-002",
+      "family": "AVA",
+      "priority": "MUST",
+      "requirement": "数据面多实例、控制面多副本，中间件高可用，无单点故障。",
+      "acceptanceCriteria": "随机停止实例/节点，核心请求不中断或按策略快速恢复。",
+      "upgradeRequirement": "UPG-OBS-001",
+      "designComponent": "Kubernetes HA and disaster recovery",
+      "implementationStatus": "HARNESS_READY_EXTERNAL_RUN_REQUIRED",
+      "implementation": [
+        "deploy/helm/guardllm",
+        "deploy/ha",
+        "docs/runbooks"
+      ],
+      "tests": [
+        "scripts/dr/record-drill.mjs",
+        "acceptance/poc-manifest.json"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/AVA-002",
+      "conclusion": "HARNESS_ONLY",
+      "gap": "仅具备自动化框架，必须在目标环境执行并提交签名结果",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "AVA-003",
+      "family": "AVA",
+      "priority": "MUST",
+      "requirement": "支持Kubernetes容器化、虚拟机和物理机部署；镜像、脚本和运维手册完整交付。",
+      "acceptanceCriteria": "至少在目标K8s信创环境完成安装、扩缩和卸载。",
+      "upgradeRequirement": "UPG-OBS-001",
+      "designComponent": "Kubernetes HA and disaster recovery",
+      "implementationStatus": "HARNESS_READY_EXTERNAL_RUN_REQUIRED",
+      "implementation": [
+        "deploy/helm/guardllm",
+        "deploy/ha",
+        "docs/runbooks"
+      ],
+      "tests": [
+        "scripts/dr/record-drill.mjs",
+        "acceptance/poc-manifest.json"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/AVA-003",
+      "conclusion": "HARNESS_ONLY",
+      "gap": "仅具备自动化框架，必须在目标环境执行并提交签名结果",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "AVA-004",
+      "family": "AVA",
+      "priority": "MUST",
+      "requirement": "业务、模型和依赖升级支持滚动/蓝绿/金丝雀、流量分流和快速回滚。",
+      "acceptanceCriteria": "升级过程无损，客户配置与定制功能保留。",
+      "upgradeRequirement": "UPG-OBS-001",
+      "designComponent": "Kubernetes HA and disaster recovery",
+      "implementationStatus": "HARNESS_READY_EXTERNAL_RUN_REQUIRED",
+      "implementation": [
+        "deploy/helm/guardllm",
+        "deploy/ha",
+        "docs/runbooks"
+      ],
+      "tests": [
+        "scripts/dr/record-drill.mjs",
+        "acceptance/poc-manifest.json"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/AVA-004",
+      "conclusion": "HARNESS_ONLY",
+      "gap": "仅具备自动化框架，必须在目标环境执行并提交签名结果",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "AVA-005",
+      "family": "AVA",
+      "priority": "MUST",
+      "requirement": "支持全量/增量备份、异地副本、恢复演练、两地三中心；RPO/RTO由BIA最终确认。",
+      "acceptanceCriteria": "按暂定RPO≤15分钟、平台RTO≤30分钟完成恢复演练。",
+      "upgradeRequirement": "UPG-OBS-001",
+      "designComponent": "Kubernetes HA and disaster recovery",
+      "implementationStatus": "HARNESS_READY_EXTERNAL_RUN_REQUIRED",
+      "implementation": [
+        "deploy/helm/guardllm",
+        "deploy/ha",
+        "docs/runbooks"
+      ],
+      "tests": [
+        "scripts/dr/record-drill.mjs",
+        "acceptance/poc-manifest.json"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/AVA-005",
+      "conclusion": "HARNESS_ONLY",
+      "gap": "仅具备自动化框架，必须在目标环境执行并提交签名结果",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "SEC-001",
+      "family": "SEC",
+      "priority": "MUST",
+      "requirement": "满足等保二级建设和测评，完成身份、访问、审计、边界、主机、应用、数据和管理控制。",
+      "acceptanceCriteria": "取得有资质机构的测评报告或完成合同约定整改闭环。",
+      "upgradeRequirement": "UPG-DAT-001",
+      "designComponent": "Platform and software supply-chain security",
+      "implementationStatus": "HARNESS_READY_EXTERNAL_ASSESSMENT_REQUIRED",
+      "implementation": [
+        "security",
+        ".github/workflows/security.yml",
+        "deploy/pki",
+        "deploy/policies"
+      ],
+      "tests": [
+        "scripts/security/generate-ai-bom.mjs",
+        "scripts/release/validate-production-values.mjs"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/SEC-001",
+      "conclusion": "HARNESS_ONLY",
+      "gap": "仅具备自动化框架，必须在目标环境执行并提交签名结果",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "SEC-002",
+      "family": "SEC",
+      "priority": "MUST",
+      "requirement": "软件供应链提供SBOM、依赖与镜像漏洞扫描、镜像签名、最小镜像和可信来源。",
+      "acceptanceCriteria": "高危漏洞清零或有经批准的风险接受与补偿控制。",
+      "upgradeRequirement": "UPG-AUD-001",
+      "designComponent": "Platform and software supply-chain security",
+      "implementationStatus": "HARNESS_READY_EXTERNAL_ASSESSMENT_REQUIRED",
+      "implementation": [
+        "security",
+        ".github/workflows/security.yml",
+        "deploy/pki",
+        "deploy/policies"
+      ],
+      "tests": [
+        "scripts/security/generate-ai-bom.mjs",
+        "scripts/release/validate-production-values.mjs"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/SEC-002",
+      "conclusion": "HARNESS_ONLY",
+      "gap": "仅具备自动化框架，必须在目标环境执行并提交签名结果",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "SEC-003",
+      "family": "SEC",
+      "priority": "MUST",
+      "requirement": "实施SAST/DAST/SCA、渗透、API安全、容器/K8s基线和密钥扫描。",
+      "acceptanceCriteria": "交付安全测试及渗透报告，问题全部闭环。",
+      "upgradeRequirement": "UPG-AUD-001",
+      "designComponent": "Platform and software supply-chain security",
+      "implementationStatus": "HARNESS_READY_EXTERNAL_ASSESSMENT_REQUIRED",
+      "implementation": [
+        "security",
+        ".github/workflows/security.yml",
+        "deploy/pki",
+        "deploy/policies"
+      ],
+      "tests": [
+        "scripts/security/generate-ai-bom.mjs",
+        "scripts/release/validate-production-values.mjs"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/SEC-003",
+      "conclusion": "HARNESS_ONLY",
+      "gap": "仅具备自动化框架，必须在目标环境执行并提交签名结果",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "SEC-004",
+      "family": "SEC",
+      "priority": "MUST",
+      "requirement": "支持国密算法与证书体系，密码能力与公司统一技术栈兼容。",
+      "acceptanceCriteria": "TLS/国密套件、密钥和密码应用配置通过检查。",
+      "upgradeRequirement": "UPG-AUD-001",
+      "designComponent": "Platform and software supply-chain security",
+      "implementationStatus": "HARNESS_READY_EXTERNAL_ASSESSMENT_REQUIRED",
+      "implementation": [
+        "security",
+        ".github/workflows/security.yml",
+        "deploy/pki",
+        "deploy/policies"
+      ],
+      "tests": [
+        "scripts/security/generate-ai-bom.mjs",
+        "scripts/release/validate-production-values.mjs"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/SEC-004",
+      "conclusion": "HARNESS_ONLY",
+      "gap": "仅具备自动化框架，必须在目标环境执行并提交签名结果",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "XIN-001",
+      "family": "XIN",
+      "priority": "MUST",
+      "requirement": "支持鲲鹏、飞腾、海光、兆芯CPU，昇腾910B/910C等国产算力，麒麟/UOS，达梦/金仓/神通/GaussDB及国产中间件。",
+      "acceptanceCriteria": "提交兼容矩阵、互认证、同类案例和目标环境POC。",
+      "upgradeRequirement": "UPG-INT-001",
+      "designComponent": "Domestic-platform adapter and certification matrix",
+      "implementationStatus": "PARTIAL_PORTABILITY_BUILD_AND_SCHEDULING_ABSTRACTION_IMPLEMENTED_TARGET_ADAPTER_POC_PENDING",
+      "implementation": [
+        ".github/workflows/portability.yml",
+        "deploy/compatibility/matrix.json",
+        "deploy/helm/guardllm/templates/workloads.yaml",
+        "deploy/helm/guardllm/values-ascend-example.yaml",
+        "src/lib/platform-adapters/inference.ts"
+      ],
+      "tests": [
+        "tests/deployment/production-assets.test.mjs",
+        "tests/platform-adapters/inference.test.ts",
+        "scripts/compatibility/validate-matrix.mjs"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/XIN-001",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "XIN-002",
+      "family": "XIN",
+      "priority": "MUST",
+      "requirement": "不强制绑定单一硬件品牌；采用容器化和抽象层屏蔽底层差异。",
+      "acceptanceCriteria": "更换兼容硬件组合后核心功能和指标仍满足要求。",
+      "upgradeRequirement": "UPG-ACC-005",
+      "designComponent": "Domestic-platform adapter and certification matrix",
+      "implementationStatus": "PARTIAL_VENDOR_NEUTRAL_OCI_AND_RUNTIME_ABSTRACTION_IMPLEMENTED_TARGET_SWAP_POC_PENDING",
+      "implementation": [
+        "Dockerfile",
+        "services/guard-gateway/Dockerfile",
+        "services/media-analyzer/Dockerfile",
+        ".github/workflows/portability.yml",
+        "deploy/helm/guardllm/templates/workloads.yaml",
+        "src/lib/platform-adapters/inference.ts"
+      ],
+      "tests": [
+        "tests/deployment/production-assets.test.mjs",
+        "tests/platform-adapters/inference.test.ts",
+        "scripts/compatibility/validate-matrix.mjs"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/XIN-002",
+      "conclusion": "PARTIAL",
+      "gap": "只覆盖部分验收行为，仍需按本条验收标准补齐实现或集成",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "OBS-001",
+      "family": "OBS",
+      "priority": "MUST",
+      "requirement": "统一仪表盘展示基础设施、GPU/NPU、响应、吞吐、错误率、队列、检测器和依赖状态。",
+      "acceptanceCriteria": "告警阈值、趋势和历史查询可验证。",
+      "upgradeRequirement": "UPG-OBS-001",
+      "designComponent": "OpenTelemetry, Prometheus SLOs and structured logs",
+      "implementationStatus": "IMPLEMENTED_PENDING_ENVIRONMENT_POC",
+      "implementation": [
+        "src/lib/observability",
+        "deploy/observability"
+      ],
+      "tests": [
+        "tests/observability"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/OBS-001",
+      "conclusion": "CODE_IMPLEMENTED_ACCEPTANCE_PENDING",
+      "gap": "代码和本地测试已具备，仍缺真实依赖、数据或目标环境 POC",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    },
+    {
+      "id": "OBS-002",
+      "family": "OBS",
+      "priority": "MUST",
+      "requirement": "集中日志和分布式追踪覆盖一次推理请求全链路，并区分业务错误与AI服务错误。",
+      "acceptanceCriteria": "Trace ID贯通网关、检测器、模型、RAG和工具。",
+      "upgradeRequirement": "UPG-OBS-001",
+      "designComponent": "OpenTelemetry, Prometheus SLOs and structured logs",
+      "implementationStatus": "IMPLEMENTED_PENDING_ENVIRONMENT_POC",
+      "implementation": [
+        "src/lib/observability",
+        "deploy/observability"
+      ],
+      "tests": [
+        "tests/observability"
+      ],
+      "acceptanceStatus": "PENDING_SIGNED_EVIDENCE",
+      "evidenceDirectory": "acceptance/evidence/requirements/OBS-002",
+      "conclusion": "CODE_IMPLEMENTED_ACCEPTANCE_PENDING",
+      "gap": "代码和本地测试已具备，仍缺真实依赖、数据或目标环境 POC",
+      "mappingStatus": "MAPPING_PATHS_VALID",
+      "missingImplementation": [],
+      "missingTests": [],
+      "finalAcceptance": "NOT_ACCEPTED"
+    }
+  ]
+}

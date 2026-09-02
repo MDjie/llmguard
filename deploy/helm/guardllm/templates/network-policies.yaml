@@ -1,0 +1,144 @@
+{{- if .Values.networkPolicy.enabled }}
+{{- $root := . -}}
+{{- range $key, $namespace := .Values.namespaces }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: guardllm-default-deny
+  namespace: {{ $namespace }}
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: guardllm-allow-dns
+  namespace: {{ $namespace }}
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              {{- toYaml $root.Values.networkPolicy.dnsNamespaceLabel | nindent 14 }}
+          podSelector:
+            matchLabels:
+              {{- toYaml $root.Values.networkPolicy.dnsPodLabel | nindent 14 }}
+      ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: guardllm-allow-managed-egress
+  namespace: {{ $namespace }}
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              guardllm.io/managed: "true"
+{{- end }}
+{{- if .Values.trustedTimestampEgress.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: audit-timestamp-to-enterprise-tsa
+  namespace: {{ .Values.namespaces.control }}
+spec:
+  podSelector:
+    matchLabels: { guardllm.io/component: audit-timestamp }
+  policyTypes: [Egress]
+  egress:
+    - to:
+        {{- range .Values.trustedTimestampEgress.cidrs }}
+        - ipBlock: { cidr: {{ . | quote }} }
+        {{- end }}
+      ports:
+        - { protocol: TCP, port: {{ .Values.trustedTimestampEgress.port }} }
+{{- end }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: gateway-from-ingress
+  namespace: {{ .Values.namespaces.edge }}
+spec:
+  podSelector:
+    matchLabels: { guardllm.io/component: gateway }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              {{- toYaml .Values.networkPolicy.ingressNamespaceLabel | nindent 14 }}
+      ports:
+        - { protocol: TCP, port: 8080 }
+        {{- if .Values.gatewayGrpc.enabled }}
+        - { protocol: TCP, port: {{ .Values.gatewayGrpc.port }} }
+        {{- end }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: analyzer-from-media-workers
+  namespace: {{ .Values.namespaces.media }}
+spec:
+  podSelector:
+    matchLabels: { guardllm.io/component: analyzer }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - key: guardllm.io/component
+                operator: In
+                values: [multimodal, media, marking]
+      ports:
+        - { protocol: TCP, port: 8090 }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: app-from-gateway
+  namespace: {{ .Values.namespaces.online }}
+spec:
+  podSelector:
+    matchLabels: { guardllm.io/component: app }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: { guardllm.io/plane: edge }
+          podSelector:
+            matchLabels: { guardllm.io/component: gateway }
+      ports:
+        - { protocol: TCP, port: 5000 }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: inference-only-from-gateway
+  namespace: {{ .Values.namespaces.inference }}
+spec:
+  podSelector:
+    matchLabels: { guardllm.io/role: model-serving }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: { guardllm.io/plane: edge }
+          podSelector:
+            matchLabels: { guardllm.io/component: gateway }
+      ports:
+        {{- range .Values.networkPolicy.inferencePorts }}
+        - { protocol: TCP, port: {{ . }} }
+        {{- end }}
+{{- end }}

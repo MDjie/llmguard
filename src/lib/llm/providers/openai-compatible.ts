@@ -11,6 +11,9 @@
  * - 其他 OpenAI-Compatible API
  */
 
+import { z } from 'zod';
+import { safeFetchJson } from '@/lib/egress';
+
 import type {
   IProviderAdapter,
   ProviderType,
@@ -21,7 +24,7 @@ import type {
 
 export class OpenAICompatibleAdapter implements IProviderAdapter {
   readonly name: string;
-  readonly providerType: ProviderType = 'openai_compatible';
+  readonly providerType: ProviderType;
   
   private baseUrl: string;
   private apiKey: string;
@@ -31,9 +34,11 @@ export class OpenAICompatibleAdapter implements IProviderAdapter {
     name: string,
     baseUrl: string,
     apiKey: string,
-    defaultModel: string
+    defaultModel: string,
+    providerType: ProviderType = 'openai_compatible',
   ) {
     this.name = name;
+    this.providerType = providerType;
     this.baseUrl = baseUrl.replace(/\/$/, ''); // 移除末尾的斜杠
     this.apiKey = apiKey;
     this.defaultModel = defaultModel;
@@ -47,9 +52,9 @@ export class OpenAICompatibleAdapter implements IProviderAdapter {
 
     // 构建请求 URL - Ollama用 /v1/chat/completions，其他用 /v1/chat/completions
     // 如果baseUrl已经包含/v1就直接加 /chat/completions，否则加 /v1/chat/completions
-    const url = this.baseUrl.includes('/v1') 
-      ? `${this.baseUrl}/chat/completions` 
-      : `${this.baseUrl}/v1/chat/completions`;
+    const path = this.baseUrl.includes('/v1') || this.baseUrl.includes('/api/v')
+      ? 'chat/completions'
+      : 'v1/chat/completions';
 
     // 构建请求体
     const body = {
@@ -71,21 +76,29 @@ export class OpenAICompatibleAdapter implements IProviderAdapter {
       headers['Authorization'] = `Bearer ${this.apiKey}`;
     }
 
-    // 发送请求
-    const response = await fetch(url, {
-      method: 'POST',
+    const payload = await safeFetchJson({
+      baseUrl: this.baseUrl,
+      path,
+      providerType: this.providerType,
+      body,
       headers,
-      body: JSON.stringify(body),
+      signal: request.signal,
     });
-
-    // 检查响应状态
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`LLM API call failed: ${response.status} - ${errorText}`);
-    }
-
-    // 解析响应
-    const data = await response.json();
+    const parsed = z
+      .object({
+        id: z.string().optional(),
+        choices: z.array(z.object({ message: z.object({ content: z.string() }) })).min(1),
+        usage: z
+          .object({
+            prompt_tokens: z.number().optional(),
+            completion_tokens: z.number().optional(),
+            total_tokens: z.number().optional(),
+          })
+          .optional(),
+      })
+      .safeParse(payload);
+    if (!parsed.success) throw new Error('LLM provider response schema is invalid');
+    const data = parsed.data;
 
     // 提取响应内容
     const content = data.choices?.[0]?.message?.content || '';
@@ -105,7 +118,6 @@ export class OpenAICompatibleAdapter implements IProviderAdapter {
             totalTokens: usage.total_tokens || 0,
           }
         : undefined,
-      raw: data,
     };
   }
 

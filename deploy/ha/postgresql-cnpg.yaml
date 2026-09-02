@@ -1,0 +1,61 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: guardllm-postgresql
+  namespace: guard-data-access
+spec:
+  instances: 3
+  primaryUpdateStrategy: unsupervised
+  storage:
+    size: 500Gi
+    storageClass: encrypted-block
+  walStorage:
+    size: 100Gi
+    storageClass: encrypted-block
+  postgresql:
+    parameters:
+      max_connections: "500"
+      wal_level: logical
+      archive_timeout: 300s
+      ssl_min_protocol_version: TLSv1.2
+      log_connections: "on"
+      log_disconnections: "on"
+  bootstrap:
+    initdb:
+      database: guardllm
+      owner: guardllm
+      secret:
+        name: guardllm-postgresql-owner
+  backup:
+    retentionPolicy: 30d
+    barmanObjectStore:
+      destinationPath: s3://guardllm-dr/postgresql
+      endpointURL: https://object-dr.example.internal
+      serverName: guardllm-primary
+      s3Credentials:
+        accessKeyId:
+          name: guardllm-postgresql-backup
+          key: access-key-id
+        secretAccessKey:
+          name: guardllm-postgresql-backup
+          key: secret-access-key
+      wal:
+        compression: gzip
+        maxParallel: 4
+      data:
+        compression: gzip
+        jobs: 4
+  monitoring:
+    enablePodMonitor: true
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: ScheduledBackup
+metadata:
+  name: guardllm-postgresql-daily
+  namespace: guard-data-access
+spec:
+  schedule: "0 0 2 * * *"
+  backupOwnerReference: self
+  cluster:
+    name: guardllm-postgresql
+  immediate: true

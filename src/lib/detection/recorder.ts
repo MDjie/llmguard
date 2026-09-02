@@ -115,11 +115,11 @@ export async function recordDetectionSession(
         error: data.error || '记录失败',
       };
     }
-  } catch (error: any) {
+  } catch (error) {
     console.error('记录检测会话失败:', error);
     return {
       success: false,
-      error: error.message || '记录失败',
+      error: error instanceof Error ? error.message : '记录失败',
     };
   }
 }

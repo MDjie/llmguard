@@ -1,0 +1,51 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: guardllm-slo
+  namespace: guard-observability
+spec:
+  groups:
+    - name: guardllm.recording
+      interval: 30s
+      rules:
+        - record: guardllm:http_availability:ratio_5m
+          expr: 1 - (sum(rate(guardllm_http_requests_total{status_class="5xx"}[5m])) / clamp_min(sum(rate(guardllm_http_requests_total[5m])), 1))
+        - record: guardllm:guard_p99_ms:5m
+          expr: histogram_quantile(0.99, sum by (le) (rate(guardllm_guard_decision_duration_ms_bucket[5m])))
+    - name: guardllm.alerts
+      rules:
+        - alert: GuardLLMFastPathP99Exceeded
+          expr: guardllm:guard_p99_ms:5m > 300
+          for: 10m
+          labels: { severity: critical, slo: latency }
+          annotations:
+            summary: Guard decision P99 exceeds 300 ms
+        - alert: GuardLLMAvailabilityErrorBudgetBurn
+          expr: guardllm:http_availability:ratio_5m < 0.9999
+          for: 5m
+          labels: { severity: critical, slo: availability }
+          annotations:
+            summary: GuardLLM is burning the 99.99 percent availability error budget
+        - alert: GuardLLMRequiredDetectorUnavailable
+          expr: increase(guardllm_required_detector_failures_total[5m]) > 0
+          for: 1m
+          labels: { severity: critical, control: fail-closed }
+          annotations:
+            summary: A mandatory detector is unavailable
+        - alert: GuardLLMJobQueueBacklog
+          expr: sum by (job_type) (guardllm_guard_jobs_pending{status=~"pending|retrying"}) > 1000
+          for: 10m
+          labels: { severity: warning }
+          annotations:
+            summary: Guard job queue backlog is above the approved threshold
+        - alert: GuardLLMPodRestartLoop
+          expr: increase(kube_pod_container_status_restarts_total{namespace=~"guard-.*"}[15m]) > 3
+          labels: { severity: warning }
+          annotations:
+            summary: A GuardLLM container is restarting repeatedly
+        - alert: GuardLLMGpuSaturation
+          expr: avg by (namespace, pod) (DCGM_FI_DEV_GPU_UTIL{namespace=~"guard-(inference|media)"}) > 95
+          for: 15m
+          labels: { severity: warning }
+          annotations:
+            summary: GuardLLM GPU utilization remains above 95 percent

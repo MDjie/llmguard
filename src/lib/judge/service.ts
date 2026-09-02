@@ -5,7 +5,7 @@
 
 import { db } from '@/lib/db';
 import { llmProviders, judgeModelInvocations } from '@/storage/database/shared/schema';
-import { eq, and } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import type { DetectionFinding } from '@/lib/detection/types';
 import type {
   PolicyJudgeConfig,
@@ -17,86 +17,109 @@ import {
   parseStage1Response,
   parseJudgeResponse,
   prepareTextForJudge,
-  generateTextHash,
 } from './engine';
+import { callProviderChat } from '@/lib/providers';
+import { logger } from '@/lib/observability/logger';
+import { z } from 'zod';
+import { scopePredicate, type TenantScope } from '@/lib/tenancy';
 
-/**
- * 获取Provider的聊天功能
- */
-async function getProviderChat(providerId: string): Promise<{
+const judgeConfigSchema = z.object({
+  id: z.string().min(1),
+  policyId: z.string().min(1),
+  enabled: z.boolean(),
+  providerId: z.string().min(1).optional(),
+  mode: z.enum(['conservative', 'balanced', 'review_only']),
+  triggerMode: z.enum(['risk_only', 'risk_or_semantic', 'always']),
+  triggerThreshold: z.number().int().min(0).max(100),
+  judgeThreshold: z.number().int().min(0).max(100),
+  weight: z.number().min(0).max(1),
+  applyToInput: z.boolean(),
+  applyToOutput: z.boolean(),
+  enabledDimensions: z.array(z.string().min(1).max(64)).max(100),
+  semanticDimensions: z.array(z.string().min(1).max(64)).max(100),
+  timeoutMs: z.number().int().min(100).max(60_000),
+  fallbackAction: z.enum(['rule', 'allow', 'block']),
+  failClosedForHighRisk: z.boolean(),
+  maxTextLength: z.number().int().min(1).max(32_768),
+  maskPiiBeforeJudge: z.boolean(),
+  blockExternalForSecrets: z.boolean(),
+});
+
+export interface JudgeChatProvider {
   name: string;
   chat: (request: {
     model: string;
     messages: Array<{ role: string; content: string }>;
     temperature?: number;
     maxTokens?: number;
+    timeoutMs?: number;
+    signal?: AbortSignal;
   }) => Promise<{ content: string; latencyMs: number }>;
   defaultModel: string;
   isPrivate: boolean;
-} | null> {
+  disabled: boolean;
+}
+
+export interface JudgeServiceDependencies {
+  loadProvider?: (providerId: string) => Promise<JudgeChatProvider | null>;
+  recordInvocation?: typeof recordInvocation;
+}
+
+/**
+ * 获取Provider的聊天功能
+ */
+async function getProviderChat(
+  providerId: string,
+  scope: TenantScope,
+): Promise<JudgeChatProvider | null> {
   try {
     const allProviders = await db
       .select()
       .from(llmProviders)
-      .where(eq(llmProviders.id, providerId))
+      .where(and(eq(llmProviders.id, providerId), scopePredicate(llmProviders, scope)))
       .limit(1);
 
-    if (allProviders.length === 0) return { _disabled: false } as any;
+    if (allProviders.length === 0) return null;
 
     if (!allProviders[0].isEnabled) {
-      return { _disabled: true, _displayName: allProviders[0].displayName } as any;
+      return {
+        name: allProviders[0].displayName,
+        chat: async () => {
+          throw new Error('Provider is disabled');
+        },
+        defaultModel: allProviders[0].defaultModel || '',
+        isPrivate: allProviders[0].providerType === 'ollama',
+        disabled: true,
+      };
     }
 
     const provider = allProviders[0];
 
-    const isPrivate = provider.providerType === 'ollama' ||
-                      provider.baseUrl?.includes('localhost') ||
-                      provider.baseUrl?.includes('127.0.0.1') ||
-                      provider.baseUrl?.includes('internal');
+    const isPrivate = provider.providerType === 'ollama';
 
     const chat = async (request: {
       model: string;
       messages: Array<{ role: string; content: string }>;
       temperature?: number;
       maxTokens?: number;
+      timeoutMs?: number;
+      signal?: AbortSignal;
     }) => {
-      const startTime = Date.now();
-
-      const baseUrl = provider.baseUrl || '';
-      const apiKey = provider.apiKeyEncrypted;
-
-      const isOllama = provider.providerType === 'ollama';
-      const endpoint = isOllama
-        ? `${baseUrl}/v1/chat/completions`
-        : `${baseUrl}/chat/completions`;
-
-      const requestBody = {
-        model: request.model || provider.defaultModel,
-        messages: request.messages,
-        temperature: request.temperature ?? 0.1,
-        max_tokens: request.maxTokens ?? 1024,
-      };
-
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(apiKey ? { 'Authorization': `Bearer ${apiKey}` } : {}),
+      return callProviderChat(
+        provider,
+        request.messages.map((message) => ({
+          role:
+            message.role === 'system' || message.role === 'assistant' ? message.role : 'user',
+          content: message.content,
+        })),
+        {
+          model: request.model || provider.defaultModel || undefined,
+          temperature: request.temperature ?? 0.1,
+          maxTokens: request.maxTokens ?? 1_024,
+          timeoutMs: request.timeoutMs,
+          signal: request.signal,
         },
-        body: JSON.stringify(requestBody),
-      });
-
-      if (!response.ok) {
-        throw new Error(`LLM API error: ${response.status}`);
-      }
-
-      const data = await response.json();
-      const content = data.choices?.[0]?.message?.content || data.message?.content || '';
-
-      return {
-        content,
-        latencyMs: Date.now() - startTime,
-      };
+      );
     };
 
     return {
@@ -104,9 +127,10 @@ async function getProviderChat(providerId: string): Promise<{
       chat,
       defaultModel: provider.defaultModel || '',
       isPrivate: isPrivate ?? false,
+      disabled: false,
     };
-  } catch (error) {
-    console.error('获取Provider失败:', error);
+  } catch {
+    console.error('获取 Provider 失败');
     return null;
   }
 }
@@ -120,33 +144,37 @@ export async function executeJudgeDetection(
   ruleFindings: DetectionFinding[],
   ruleScore: number,
   config: PolicyJudgeConfig,
-  sessionId?: string
+  scope: TenantScope,
+  sessionId?: string,
+  signal?: AbortSignal,
+  dependencies: JudgeServiceDependencies = {},
 ): Promise<JudgeModelResult> {
   const startTime = Date.now();
 
   if (!config.providerId) {
-    return { used: false, error: '未配置裁判模型Provider' };
+    return { used: false, error: 'JUDGE_PROVIDER_NOT_CONFIGURED' };
   }
 
-  const provider = await getProviderChat(config.providerId);
+  const provider = await (
+    dependencies.loadProvider ?? ((providerId) => getProviderChat(providerId, scope))
+  )(config.providerId);
   if (!provider) {
-    return { used: false, error: '裁判模型Provider不可用' };
+    return { used: false, error: 'JUDGE_PROVIDER_UNAVAILABLE' };
   }
 
-  if ((provider as any)._disabled) {
-    const displayName = (provider as any)._displayName || '裁判模型';
-    return { used: false, error: `${displayName}已关闭` };
+  if (provider.disabled) {
+    return { used: false, error: 'JUDGE_PROVIDER_DISABLED' };
   }
 
   // 准备发送给裁判模型的文本
-  const { processedText, maskedItems, blockedExternal } = prepareTextForJudge(
+  const { processedText, blockedExternal } = prepareTextForJudge(
     text, ruleFindings, config, provider.isPrivate
   );
-
-  // 推断可能的维度（用于RAG检索）
-  const likelyDimension = ruleFindings.length > 0
-    ? ruleFindings[0].dimension
-    : inferDimensionFromText(text);
+  if (blockedExternal) {
+    return { used: false, error: 'JUDGE_EXTERNAL_SECRET_BLOCKED', fallbackUsed: true };
+  }
+  const timeoutSignal = AbortSignal.timeout(config.timeoutMs);
+  const deadlineSignal = signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal;
 
   try {
     // 构建所有prompt（第一阶段 + 第二阶段）
@@ -163,9 +191,20 @@ export async function executeJudgeDetection(
       ],
       temperature: 0.1,
       maxTokens: 32,
+      timeoutMs: config.timeoutMs,
+      signal: deadlineSignal,
     });
 
     const stage1HasRisk = parseStage1Response(stage1Response.content);
+    if (stage1HasRisk === null) {
+      return {
+        used: true,
+        error: 'JUDGE_STAGE1_RESPONSE_INVALID',
+        parseError: 'JUDGE_STAGE1_RESPONSE_INVALID',
+        fallbackUsed: true,
+        latencyMs: Date.now() - startTime,
+      };
+    }
 
     // 规则引擎有命中 + 第一阶段判no → 仍然走第二阶段做二次确认
     // 纯粹靠规则引擎触发的case，裁判应该独立给出自己的意见
@@ -177,7 +216,6 @@ export async function executeJudgeDetection(
         used: true,
         hasRisk: false,
         score: 0,
-        confidence: 0.8,
         suggestedAction: 'allow',
         reason: '两阶段裁判：第一阶段判定无风险',
         dimensionResults: [],
@@ -202,6 +240,8 @@ export async function executeJudgeDetection(
       ],
       temperature: 0.1,
       maxTokens: 512,
+      timeoutMs: config.timeoutMs,
+      signal: deadlineSignal,
     });
 
     const parsed = parseJudgeResponse(stage2Response.content);
@@ -209,33 +249,21 @@ export async function executeJudgeDetection(
     if (!parsed) {
       // JSON解析失败，但第一阶段已确认有风险，返回默认中风险
       const latencyMs = Date.now() - startTime;
-      await recordInvocation({
+      await (dependencies.recordInvocation ?? recordInvocation)({
+        scope,
         sessionId, policyId: config.policyId, providerId: config.providerId,
         direction, modelName: provider.defaultModel,
         textLength: text.length, ruleScore,
         ruleAction: getActionFromScore(ruleScore, config.judgeThreshold),
         ruleFindings,
-        rawResponse: `阶段1:${stage1Response.content} | 阶段2:${stage2Response.content}`,
-        parseError: '第二阶段JSON解析失败',
+        parseError: 'JUDGE_STAGE2_RESPONSE_INVALID',
         latencyMs,
       });
 
-      // 降级：第一阶段确认有风险，给一个保守的中风险评分
       return {
         used: true,
-        hasRisk: true,
-        score: 55,
-        confidence: 0.5,
-        suggestedAction: 'warn',
-        reason: '裁判模型检测到风险（详细评分解析失败，使用降级评分）',
-        dimensionResults: ruleFindings.map(f => ({
-          dimensionCode: f.dimension,
-          dimensionName: f.dimensionName,
-          hasRisk: true,
-          score: 55,
-          confidence: 0.5,
-          reason: f.reason,
-        })),
+        error: 'JUDGE_STAGE2_RESPONSE_INVALID',
+        parseError: 'JUDGE_STAGE2_RESPONSE_INVALID',
         latencyMs,
         fallbackUsed: true,
       };
@@ -243,7 +271,8 @@ export async function executeJudgeDetection(
 
     const latencyMs = Date.now() - startTime;
 
-    await recordInvocation({
+    await (dependencies.recordInvocation ?? recordInvocation)({
+      scope,
       sessionId, policyId: config.policyId, providerId: config.providerId,
       direction, modelName: provider.defaultModel,
       textLength: text.length, ruleScore,
@@ -270,45 +299,28 @@ export async function executeJudgeDetection(
       latencyMs,
     };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : '未知错误';
-    await recordInvocation({
+    const errorCode =
+      deadlineSignal.aborted || (error instanceof Error && error.name === 'AbortError')
+        ? 'JUDGE_TIMEOUT'
+        : 'JUDGE_CALL_FAILED';
+    await (dependencies.recordInvocation ?? recordInvocation)({
+      scope,
       sessionId, policyId: config.policyId, providerId: config.providerId,
       direction, modelName: provider.defaultModel,
       textLength: text.length, ruleScore,
       ruleAction: getActionFromScore(ruleScore, config.judgeThreshold),
       ruleFindings,
-      errorMessage,
+      errorMessage: errorCode,
       latencyMs: Date.now() - startTime,
     });
 
     return {
       used: true,
-      error: errorMessage,
+      error: errorCode,
       latencyMs: Date.now() - startTime,
       fallbackUsed: true,
     };
   }
-}
-
-/**
- * 从文本推断可能的维度
- */
-function inferDimensionFromText(text: string): string {
-  const dimPatterns: Record<string, RegExp[]> = {
-    prompt_injection: [/扮演/, /忽略.*指令/, /越狱/, /绕过.*限制/, /假装/],
-    pii_leak: [/获取.*信息/, /了解.*行踪/, /监控/, /跟踪/, /聊天记录/],
-    malicious_code: [/木马/, /病毒/, /后门/, /恶意.*代码/, /攻击.*工具/],
-    violence_hate: [/暴力/, /仇恨/, /攻击/, /杀/, /伤害/],
-    illegal_content: [/违法/, /赌博/, /毒品/, /黑产/, /洗钱/],
-    fraud_scam: [/诈骗/, /钓鱼/, /欺诈/, /骗/],
-  };
-
-  for (const [dim, patterns] of Object.entries(dimPatterns)) {
-    for (const p of patterns) {
-      if (p.test(text)) return dim;
-    }
-  }
-  return 'prompt_injection'; // 默认维度
 }
 
 function getActionFromScore(score: number, threshold: number): 'allow' | 'warn' | 'block' {
@@ -318,6 +330,7 @@ function getActionFromScore(score: number, threshold: number): 'allow' | 'warn' 
 }
 
 async function recordInvocation(params: {
+  scope: TenantScope;
   sessionId?: string;
   policyId: string;
   providerId: string;
@@ -333,7 +346,6 @@ async function recordInvocation(params: {
   judgeReason?: string;
   judgeDimensions?: LLMJudgeResponse['dimensionResults'];
   ruleReview?: LLMJudgeResponse['ruleReview'];
-  rawResponse?: string;
   parseError?: string;
   errorMessage?: string;
   latencyMs: number;
@@ -342,6 +354,8 @@ async function recordInvocation(params: {
     const [inserted] = await db
       .insert(judgeModelInvocations)
       .values({
+        tenantId: params.scope.tenantId,
+        applicationId: params.scope.applicationId,
         sessionId: params.sessionId,
         policyId: params.policyId,
         providerId: params.providerId,
@@ -364,7 +378,7 @@ async function recordInvocation(params: {
         judgeReason: params.judgeReason,
         judgeDimensions: params.judgeDimensions,
         ruleReview: params.ruleReview,
-        rawResponse: params.rawResponse ? { content: params.rawResponse } : undefined,
+        rawResponse: undefined,
         parseError: params.parseError,
         errorMessage: params.errorMessage,
         latencyMs: params.latencyMs,
@@ -374,31 +388,37 @@ async function recordInvocation(params: {
 
     return inserted.id;
   } catch (error) {
-    console.error('记录裁判模型调用失败:', error);
+    logger.error('judge.invocation.record.failed', { error });
     return '';
   }
 }
 
-export async function getJudgeConfig(policyId: string): Promise<PolicyJudgeConfig | null> {
+export async function getJudgeConfig(
+  policyId: string,
+  scope: TenantScope,
+): Promise<PolicyJudgeConfig | null> {
   try {
     const { policyJudgeConfigs } = await import('@/storage/database/shared/schema');
 
     const configs = await db
       .select()
       .from(policyJudgeConfigs)
-      .where(eq(policyJudgeConfigs.policyId, policyId))
+      .where(and(
+        eq(policyJudgeConfigs.policyId, policyId),
+        scopePredicate(policyJudgeConfigs, scope),
+      ))
       .limit(1);
 
     if (configs.length === 0) return null;
 
     const config = configs[0];
-    return {
+    return judgeConfigSchema.parse({
       id: config.id,
       policyId: config.policyId,
       enabled: config.enabled,
       providerId: config.providerId || undefined,
-      mode: config.mode as 'conservative' | 'balanced' | 'review_only',
-      triggerMode: config.triggerMode as 'risk_only' | 'risk_or_semantic' | 'always',
+      mode: config.mode,
+      triggerMode: config.triggerMode,
       triggerThreshold: config.triggerThreshold,
       judgeThreshold: config.judgeThreshold,
       weight: parseFloat(config.weight || '0.5'),
@@ -407,14 +427,21 @@ export async function getJudgeConfig(policyId: string): Promise<PolicyJudgeConfi
       enabledDimensions: (Array.isArray(config.enabledDimensions) ? config.enabledDimensions : []) as string[],
       semanticDimensions: (Array.isArray(config.semanticDimensions) ? config.semanticDimensions : []) as string[],
       timeoutMs: config.timeoutMs,
-      fallbackAction: config.fallbackAction as 'rule' | 'allow' | 'block',
+      fallbackAction: config.fallbackAction,
       failClosedForHighRisk: config.failClosedForHighRisk,
       maxTextLength: config.maxTextLength,
       maskPiiBeforeJudge: config.maskPiiBeforeJudge,
       blockExternalForSecrets: config.blockExternalForSecrets,
-    };
+    });
   } catch (error) {
-    console.error('获取裁判模型配置失败:', error);
-    return null;
+    if (
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      (error as { code?: unknown }).code === '42P01'
+    ) {
+      return null;
+    }
+    throw error;
   }
 }

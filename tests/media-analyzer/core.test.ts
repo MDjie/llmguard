@@ -1,0 +1,43 @@
+import { describe, expect, it } from 'vitest';
+import { documentImageRequestSchema } from '../../services/media-analyzer/src/contracts';
+import { parseTesseractTsv } from '../../services/media-analyzer/src/ocr';
+
+describe('media analyzer core', () => {
+  it('parses bounded OCR regions from Tesseract TSV', () => {
+    const tsv = [
+      'level\tpage_num\tblock_num\tpar_num\tline_num\tword_num\tleft\ttop\twidth\theight\tconf\ttext',
+      '5\t1\t1\t1\t1\t1\t10\t20\t30\t40\t95\tdanger',
+      '5\t1\t1\t1\t1\t2\t0\t0\t1\t1\t-1\tignored',
+    ].join('\n');
+    expect(parseTesseractTsv(tsv, 'original', 100, 200)).toEqual([{
+      viewId: 'original',
+      text: 'danger',
+      confidence: 0.95,
+      region: [0.1, 0.1, 0.4, 0.3],
+    }]);
+  });
+
+  it('rejects active-content relaxation and malformed part manifests at the contract boundary', () => {
+    const result = documentImageRequestSchema.safeParse({
+      contractVersion: '1.0',
+      context: { tenantId: 'tenant-1', applicationId: 'app-1' },
+      artifact: {
+        id: 'artifact-1', kind: 'IMAGE', mediaType: 'image/png',
+        sizeBytes: 1, sha256: 'a'.repeat(64),
+        parts: [{
+          partNumber: 1, sizeBytes: 1, sha256: 'b'.repeat(64),
+          url: 'https://objects.example/part',
+        }],
+      },
+      limits: {
+        maxPixels: 1_000_000, maxPages: 1, maxFrames: 1, maxDecodeSeconds: 30,
+        disableExternalReferences: true, disableActiveContent: false,
+      },
+      views: [{
+        id: 'original', transform: 'decode_exif', parameters: {},
+        coordinateMapping: 'identity',
+      }],
+    });
+    expect(result.success).toBe(false);
+  });
+});

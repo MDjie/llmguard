@@ -1,47 +1,49 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { jsonObjectResponseSchema } from '@/contracts/http/common';
+import { withApiSecurity } from '@/lib/api-security';
 import { handlePolicyEscalationOnce } from '@/lib/policy/escalation-service';
+import { requireTenantContext } from '@/lib/tenancy';
 
-/**
- * 策略升级汇总 API
- * 一次请求（输入+输出）只算一次警告
- */
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const {
-      userId,
-      sessionId,
-      policyId,
-      inputHasRisk,
-      outputHasRisk
-    } = body;
+const bodySchema = z
+  .object({
+    userId: z.string().max(128).optional(),
+    sessionId: z.string().min(1).max(128),
+    policyId: z.string().min(1).max(36),
+    inputHasRisk: z.boolean().default(false),
+    outputHasRisk: z.boolean().default(false),
+  })
+  .strict();
 
-    if (!sessionId || !policyId) {
-      return NextResponse.json(
-        { success: false, error: '缺少必要参数' },
-        { status: 400 }
-      );
+export const POST = withApiSecurity(
+  {
+    permission: 'guard:use',
+    bodySchema,
+    responseSchema: jsonObjectResponseSchema,
+    maxBodyBytes: 16 * 1_024,
+    auditEvent: 'policy.escalation.evaluate',
+    rateLimitPolicy: {
+      id: 'policy-escalation-evaluate',
+      windowMs: 60_000,
+      maxRequests: 120,
+      scope: 'principal',
+    },
+  },
+  async ({ body, principal }) => {
+    if (!principal) {
+      throw new Error('Authenticated principal missing after authorization');
     }
 
-    // 输入或输出有风险，就触发一次警告计数
-    const hasRisk = inputHasRisk || outputHasRisk;
-
     const result = await handlePolicyEscalationOnce(
-      userId || 'anonymous',
-      sessionId,
-      hasRisk,
-      policyId
+      requireTenantContext(principal),
+      principal.subject,
+      body.sessionId,
+      body.inputHasRisk || body.outputHasRisk,
+      body.policyId,
     );
 
-    return NextResponse.json({
+    return Response.json({
       success: true,
       data: result,
     });
-  } catch (error: any) {
-    console.error('[策略升级汇总] 处理失败:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || '处理失败' },
-      { status: 500 }
-    );
-  }
-}
+  },
+);

@@ -1,21 +1,80 @@
 import { NextRequest, NextResponse } from 'next/server';
+import type { z } from 'zod';
+import { emptyQuerySchema, jsonObjectResponseSchema } from '@/contracts/http/common';
+import {
+  createPolicySchema,
+  policyDimensionRuleSchema,
+  policyDeleteQuerySchema,
+  updatePolicySchema,
+} from '@/contracts/http/policies';
+import { withLegacyApiSecurity } from '@/lib/api-security';
 import { getDb } from '@/lib/db';
 import { clearPolicyCache } from '@/lib/detection/dynamic-engine';
 
+type CreatePolicyInput = z.infer<typeof createPolicySchema>;
+type PolicyDimensionRuleInput = z.infer<typeof policyDimensionRuleSchema>;
+type UpdatePolicyInput = z.infer<typeof updatePolicySchema>;
+
+interface CloneRuleRow {
+  dimension: string;
+  enabled?: boolean;
+  warn_enabled?: boolean;
+  block_enabled?: boolean;
+  warn_threshold?: number;
+  block_threshold?: number;
+  auto_mask?: boolean;
+  auto_rewrite?: boolean;
+}
+
+interface CloneCategoryRow {
+  id: string;
+  name: string;
+  dimension: string;
+  description?: string;
+  priority?: number;
+  enabled?: boolean;
+}
+
+interface CloneKeywordRow {
+  category_id?: string | null;
+  dimension: string;
+  keyword: string;
+  score?: number;
+  match_type?: string;
+  case_sensitive?: boolean;
+  enabled?: boolean;
+  description?: string;
+  tags?: string[];
+}
+
+interface PolicyProfileRow {
+  readonly id: string;
+  readonly name: string;
+  readonly description?: string | null;
+  readonly is_default: boolean;
+  readonly is_active: boolean;
+  readonly version: number;
+  readonly tags?: readonly string[] | null;
+  readonly metadata?: Readonly<Record<string, unknown>> | null;
+  readonly created_by?: string | null;
+  readonly created_at?: Date | string;
+  readonly updated_at?: Date | string;
+}
+
 // 获取所有策略列表
-export async function GET() {
+async function getPolicies() {
   try {
     const client = getDb();
 
     // 获取所有策略配置和检测维度总数
     const { data: profiles, error } = await client
-      .from('policy_profiles')
+      .from<PolicyProfileRow>('policy_profiles')
       .select()
       .order('created_at', { ascending: false });
 
     // 获取启用的检测维度总数
     const { data: dimensions } = await client
-      .from('detection_dimensions')
+      .from<{ code: string }>('detection_dimensions')
       .select('code')
       .eq('enabled', true);
 
@@ -29,26 +88,26 @@ export async function GET() {
     }
 
     // 转换字段名从 snake_case 到 camelCase
-    const transformPolicy = (p: Record<string, unknown>) => ({
+    const transformPolicy = (p: PolicyProfileRow) => ({
       id: p.id,
       name: p.name,
       description: p.description,
       // Drizzle 返回 camelCase，兼容两种格式
-      isDefault: p.isDefault ?? p.is_default,
-      isActive: p.isActive ?? p.is_active,
+      isDefault: p.is_default,
+      isActive: p.is_active,
       version: p.version,
       tags: p.tags,
       metadata: p.metadata,
-      createdBy: p.createdBy ?? p.created_by,
-      createdAt: p.createdAt ?? p.created_at,
-      updatedAt: p.updatedAt ?? p.updated_at,
+      createdBy: p.created_by,
+      createdAt: p.created_at,
+      updatedAt: p.updated_at,
     });
 
     // 为每个策略获取规则和统计信息
     const policiesWithDetails = await Promise.all(
       (profiles || []).map(async (profile) => {
         const [rulesResult, keywordsResult, categoriesResult] = await Promise.all([
-          client.from('policy_rules').select().eq('policy_id', profile.id),
+          client.from<CloneRuleRow>('policy_rules').select().eq('policy_id', profile.id),
           client.from('keyword_rules').select('id', { count: 'exact', head: true }).eq('policy_id', profile.id),
           client.from('keyword_categories').select('id', { count: 'exact', head: true }).eq('policy_id', profile.id),
         ]);
@@ -81,9 +140,9 @@ export async function GET() {
 }
 
 // 创建新策略
-export async function POST(request: NextRequest) {
+async function createPolicy(request: NextRequest) {
   try {
-    const body = await request.json();
+    const body = (await request.json()) as CreatePolicyInput;
     const { name, description, tags, cloneFrom } = body;
 
     if (!name || typeof name !== 'string' || name.trim() === '') {
@@ -97,7 +156,7 @@ export async function POST(request: NextRequest) {
 
     // 检查名称是否已存在
     const { data: existing } = await client
-      .from('policy_profiles')
+      .from<{ id: string }>('policy_profiles')
       .select('id')
       .eq('name', name.trim())
       .single();
@@ -109,25 +168,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    let rulesToClone: any[] = [];
-    let keywordsToClone: any[] = [];
-    let categoriesToClone: any[] = [];
+    let rulesToClone: CloneRuleRow[] = [];
+    let keywordsToClone: CloneKeywordRow[] = [];
+    let categoriesToClone: CloneCategoryRow[] = [];
 
     // 如果是从现有策略克隆
     if (cloneFrom) {
       const [rulesResult, keywordsResult, categoriesResult] = await Promise.all([
-        client.from('policy_rules').select().eq('policy_id', cloneFrom),
-        client.from('keyword_rules').select().eq('policy_id', cloneFrom),
-        client.from('keyword_categories').select().eq('policy_id', cloneFrom),
+        client.from<CloneRuleRow>('policy_rules').select().eq('policy_id', cloneFrom),
+        client.from<CloneKeywordRow>('keyword_rules').select().eq('policy_id', cloneFrom),
+        client.from<CloneCategoryRow>('keyword_categories').select().eq('policy_id', cloneFrom),
       ]);
-      rulesToClone = rulesResult.data || [];
-      keywordsToClone = keywordsResult.data || [];
-      categoriesToClone = categoriesResult.data || [];
+      rulesToClone = rulesResult.data ?? [];
+      keywordsToClone = keywordsResult.data ?? [];
+      categoriesToClone = categoriesResult.data ?? [];
     }
 
     // 创建策略配置
     const { data: profile, error: profileError } = await client
-      .from('policy_profiles')
+      .from<PolicyProfileRow>('policy_profiles')
       .insert({
         name: name.trim(),
         description: description || '',
@@ -139,9 +198,9 @@ export async function POST(request: NextRequest) {
       .select()
       .single();
 
-    if (profileError) {
+    if (profileError || !profile) {
       return NextResponse.json(
-        { success: false, error: profileError.message || 'Failed to create policy' },
+        { success: false, error: profileError?.message || 'Failed to create policy' },
         { status: 500 }
       );
     }
@@ -164,14 +223,14 @@ export async function POST(request: NextRequest) {
     } else {
       // 从数据库获取所有启用的检测维度
       const { data: dimensions } = await client
-        .from('detection_dimensions')
+        .from<{ code: string }>('detection_dimensions')
         .select('code')
         .eq('enabled', true);
 
       if (dimensions && dimensions.length > 0) {
         // 为每个维度创建默认规则配置
         await client.from('policy_rules').insert(
-          dimensions.map((dim: { code: string }) => ({
+          dimensions.map((dim) => ({
             policy_id: profile.id,
             dimension: dim.code,
             enabled: true,
@@ -192,7 +251,7 @@ export async function POST(request: NextRequest) {
 
       for (const cat of categoriesToClone) {
         const { data: newCat } = await client
-          .from('keyword_categories')
+          .from<{ id: string }>('keyword_categories')
           .insert({
             policy_id: profile.id,
             name: cat.name,
@@ -230,7 +289,7 @@ export async function POST(request: NextRequest) {
 
     // 创建初始版本快照
     const { data: newRules } = await client
-      .from('policy_rules')
+      .from<CloneRuleRow>('policy_rules')
       .select()
       .eq('policy_id', profile.id);
 
@@ -261,9 +320,9 @@ export async function POST(request: NextRequest) {
 }
 
 // 更新策略（基本信息或规则）
-export async function PUT(request: NextRequest) {
+async function updatePolicy(request: NextRequest) {
   try {
-    const body = await request.json();
+    const body = (await request.json()) as UpdatePolicyInput;
     const { policyId, name, description, tags, isActive, rules } = body;
 
     if (!policyId) {
@@ -277,7 +336,7 @@ export async function PUT(request: NextRequest) {
 
     // 获取当前策略信息
     const { data: currentPolicy } = await client
-      .from('policy_profiles')
+      .from<PolicyProfileRow>('policy_profiles')
       .select()
       .eq('id', policyId)
       .single();
@@ -314,10 +373,10 @@ export async function PUT(request: NextRequest) {
 
     // 更新规则（支持新增和更新）
     if (rules && Array.isArray(rules)) {
-      const newRules: any[] = [];
-      const updateRules: any[] = [];
+      const newRules: Array<Record<string, unknown>> = [];
+      const updateRules: PolicyDimensionRuleInput[] = [];
 
-      rules.forEach((rule: any) => {
+      rules.forEach((rule) => {
         if (!rule.id || rule.is_new) {
           // 新规则（新增维度）需要插入
           newRules.push({
@@ -347,7 +406,7 @@ export async function PUT(request: NextRequest) {
 
       // 更新已有规则
       await Promise.all(
-        updateRules.map(async (rule: any) => {
+        updateRules.map(async (rule) => {
           const { error } = await client
             .from('policy_rules')
             .update({
@@ -380,7 +439,7 @@ export async function PUT(request: NextRequest) {
     ]);
 
     const { data: updatedPolicy } = await client
-      .from('policy_profiles')
+      .from<PolicyProfileRow>('policy_profiles')
       .select()
       .eq('id', policyId)
       .single();
@@ -400,7 +459,7 @@ export async function PUT(request: NextRequest) {
 
     // 更新版本号
     await client
-      .from('policy_profiles')
+      .from<{ is_default: boolean; name: string }>('policy_profiles')
       .update({ version: newVersion })
       .eq('id', policyId);
 
@@ -418,7 +477,7 @@ export async function PUT(request: NextRequest) {
 }
 
 // 删除策略
-export async function DELETE(request: NextRequest) {
+async function deletePolicy(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
@@ -471,3 +530,71 @@ export async function DELETE(request: NextRequest) {
     );
   }
 }
+
+export const GET = withLegacyApiSecurity(
+  {
+    permission: 'policy:read',
+    querySchema: emptyQuerySchema,
+    responseSchema: jsonObjectResponseSchema,
+    maxBodyBytes: 0,
+    auditEvent: 'policy.list',
+    rateLimitPolicy: {
+      id: 'policy-list',
+      windowMs: 60_000,
+      maxRequests: 120,
+      scope: 'principal',
+    },
+  },
+  getPolicies,
+);
+
+export const POST = withLegacyApiSecurity(
+  {
+    permission: 'policy:manage',
+    bodySchema: createPolicySchema,
+    responseSchema: jsonObjectResponseSchema,
+    maxBodyBytes: 64 * 1_024,
+    auditEvent: 'policy.create',
+    rateLimitPolicy: {
+      id: 'policy-create',
+      windowMs: 60_000,
+      maxRequests: 20,
+      scope: 'principal',
+    },
+  },
+  createPolicy,
+);
+
+export const PUT = withLegacyApiSecurity(
+  {
+    permission: 'policy:manage',
+    bodySchema: updatePolicySchema,
+    responseSchema: jsonObjectResponseSchema,
+    maxBodyBytes: 512 * 1_024,
+    auditEvent: 'policy.update',
+    rateLimitPolicy: {
+      id: 'policy-update',
+      windowMs: 60_000,
+      maxRequests: 30,
+      scope: 'principal',
+    },
+  },
+  updatePolicy,
+);
+
+export const DELETE = withLegacyApiSecurity(
+  {
+    permission: 'policy:manage',
+    querySchema: policyDeleteQuerySchema,
+    responseSchema: jsonObjectResponseSchema,
+    maxBodyBytes: 0,
+    auditEvent: 'policy.delete',
+    rateLimitPolicy: {
+      id: 'policy-delete',
+      windowMs: 60_000,
+      maxRequests: 10,
+      scope: 'principal',
+    },
+  },
+  deletePolicy,
+);

@@ -1,98 +1,45 @@
-/**
- * 重新检测 API
- * POST: 使用已保存的文档内容重新执行检测
- */
+import { and, eq } from 'drizzle-orm';
+import { NextResponse } from 'next/server';
+import { emptyQuerySchema, jsonObjectResponseSchema } from '@/contracts/http/common';
+import { documentTaskParamsSchema } from '@/contracts/http/documents';
+import { withApiSecurity } from '@/lib/api-security';
+import { ApiProblem } from '@/lib/api-security/problem';
+import { db, documentScanTasks } from '@/lib/db';
+import { DocumentRescanError, rescanDocumentTask } from '@/lib/document/rescan-service';
+import { requireTenantContext, scopePredicate } from '@/lib/tenancy';
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { documentScanTasks, documentScanFindings } from '@/lib/db';
-import { eq } from 'drizzle-orm';
-import { detectDocument } from '@/lib/document/detector';
-import type { DocumentChunk } from '@/lib/document/parser';
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params;
-
-    // 获取任务详情
-    const [task] = await db.select()
-      .from(documentScanTasks)
-      .where(eq(documentScanTasks.id, id));
-
+export const POST = withApiSecurity(
+  {
+    permission: 'security:operate',
+    paramsSchema: documentTaskParamsSchema,
+    querySchema: emptyQuerySchema,
+    responseSchema: jsonObjectResponseSchema,
+    rateLimitPolicy: { id: 'document-retry', windowMs: 60_000, maxRequests: 10, scope: 'principal' },
+    maxBodyBytes: 0,
+    auditEvent: 'document.scan.retry',
+  },
+  async ({ routeContext, principal }) => {
+    const { id } = await (routeContext as { params: Promise<{ id: string }> }).params;
+    const scope = requireTenantContext(principal);
+    const [task] = await db.select().from(documentScanTasks).where(and(
+      eq(documentScanTasks.id, id),
+      eq(documentScanTasks.ownerId, principal!.subject),
+      scopePredicate(documentScanTasks, scope),
+    )).limit(1);
     if (!task) {
-      return NextResponse.json(
-        { success: false, error: '任务不存在' },
-        { status: 404 }
-      );
+      throw new ApiProblem({ status: 404, code: 'DOCUMENT_TASK_NOT_FOUND', title: 'Not found', detail: 'The document task was not found.' });
     }
-
-    // 检查是否有解析后的内容
-    if (!task.extractedText && (!task.parsedChunks || task.parsedChunks.length === 0)) {
-      return NextResponse.json(
-        { success: false, error: '没有可用的文档内容，请重新上传文件' },
-        { status: 400 }
-      );
+    try {
+      const result = await rescanDocumentTask(task);
+      return NextResponse.json({ success: true, data: result, message: '重新检测完成' });
+    } catch (error) {
+      if (error instanceof DocumentRescanError) {
+        throw new ApiProblem({ status: 409, code: error.code, title: 'Document retry rejected', detail: error.message });
+      }
+      throw error;
     }
-
-    // 删除旧的检测结果
-    await db.delete(documentScanFindings)
-      .where(eq(documentScanFindings.taskId, id));
-
-    // 重置任务状态
-    await db.update(documentScanTasks)
-      .set({
-        status: 'detecting',
-        statusMessage: '正在重新检测...',
-        overallScore: null,
-        finalAction: null,
-        findingsCount: 0,
-        errorMessage: null,
-        updatedAt: new Date(),
-      })
-      .where(eq(documentScanTasks.id, id));
-
-    // 使用已保存的 chunks 重新检测
-    const chunks: DocumentChunk[] = task.parsedChunks && task.parsedChunks.length > 0 
-      ? task.parsedChunks.map(chunk => ({
-          index: chunk.index,
-          content: chunk.content || '',
-          startLine: chunk.startLine,
-          endLine: chunk.endLine,
-          startOffset: chunk.startOffset,
-          endOffset: chunk.endOffset,
-        }))
-      : [{ index: 0, content: task.extractedText || '', startLine: 1, endLine: 1, startOffset: 0, endOffset: task.extractedText?.length || 0 }];
-
-    // 异步执行检测
-    detectDocument({
-      taskId: id,
-      chunks,
-      policyId: task.policyId,
-      fileName: task.fileName,
-    }).catch(error => {
-      console.error('重新检测失败:', error);
-      db.update(documentScanTasks)
-        .set({
-          status: 'failed',
-          errorMessage: error.message || '检测失败',
-          statusMessage: '检测失败',
-          updatedAt: new Date(),
-        })
-        .where(eq(documentScanTasks.id, id));
-    });
-
-    return NextResponse.json({
-      success: true,
-      message: '已开始重新检测',
-    });
-  } catch (error) {
-    console.error('重新检测失败:', error);
-    return NextResponse.json(
-      { success: false, error: '重新检测失败' },
-      { status: 500 }
-    );
-  }
-}
+  },
+);

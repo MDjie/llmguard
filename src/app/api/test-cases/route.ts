@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { emptyQuerySchema, jsonObjectResponseSchema } from '@/contracts/http/common';
+import {
+  createTestCaseSchema,
+  testCaseDeleteQuerySchema,
+  updateTestCaseSchema,
+} from '@/contracts/http/test-cases';
+import { withLegacyApiSecurity } from '@/lib/api-security';
 import { getDb } from '@/lib/db';
 
-export async function GET() {
+async function getTestCases() {
   try {
     const client = getDb();
     
@@ -30,7 +37,7 @@ export async function GET() {
   }
 }
 
-export async function POST(request: NextRequest) {
+async function createTestCase(request: NextRequest) {
   try {
     const body = await request.json();
     const { title, description, category, inputText, outputText, expectedAction, expectedDimensions, severity, enabled } = body;
@@ -78,7 +85,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function PUT(request: NextRequest) {
+async function updateTestCase(request: NextRequest) {
   try {
     const body = await request.json();
     const { id, title, description, category, inputText, outputText, expectedAction, expectedDimensions, severity, enabled } = body;
@@ -127,7 +134,7 @@ export async function PUT(request: NextRequest) {
   }
 }
 
-export async function DELETE(request: NextRequest) {
+async function deleteTestCase(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
@@ -165,3 +172,71 @@ export async function DELETE(request: NextRequest) {
     );
   }
 }
+
+export const GET = withLegacyApiSecurity(
+  {
+    permission: 'policy:read',
+    querySchema: emptyQuerySchema,
+    responseSchema: jsonObjectResponseSchema,
+    maxBodyBytes: 0,
+    auditEvent: 'test-case.list',
+    rateLimitPolicy: {
+      id: 'test-case-list',
+      windowMs: 60_000,
+      maxRequests: 60,
+      scope: 'principal',
+    },
+  },
+  getTestCases,
+);
+
+export const POST = withLegacyApiSecurity(
+  {
+    permission: 'policy:manage',
+    bodySchema: createTestCaseSchema,
+    responseSchema: jsonObjectResponseSchema,
+    maxBodyBytes: 128 * 1_024,
+    auditEvent: 'test-case.create',
+    rateLimitPolicy: {
+      id: 'test-case-create',
+      windowMs: 60_000,
+      maxRequests: 30,
+      scope: 'principal',
+    },
+  },
+  createTestCase,
+);
+
+export const PUT = withLegacyApiSecurity(
+  {
+    permission: 'policy:manage',
+    bodySchema: updateTestCaseSchema,
+    responseSchema: jsonObjectResponseSchema,
+    maxBodyBytes: 128 * 1_024,
+    auditEvent: 'test-case.update',
+    rateLimitPolicy: {
+      id: 'test-case-update',
+      windowMs: 60_000,
+      maxRequests: 30,
+      scope: 'principal',
+    },
+  },
+  updateTestCase,
+);
+
+export const DELETE = withLegacyApiSecurity(
+  {
+    permission: 'policy:manage',
+    querySchema: testCaseDeleteQuerySchema,
+    responseSchema: jsonObjectResponseSchema,
+    maxBodyBytes: 0,
+    auditEvent: 'test-case.delete',
+    rateLimitPolicy: {
+      id: 'test-case-delete',
+      windowMs: 60_000,
+      maxRequests: 20,
+      scope: 'principal',
+    },
+  },
+  deleteTestCase,
+);

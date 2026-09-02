@@ -19,7 +19,8 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@guardllm/contracts": ["./packages/contracts/generated/typescript/guard-v1.ts"]
     }
   },
   "include": [

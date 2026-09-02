@@ -234,7 +234,7 @@ export function JudgeConfigPanel({ policyId }: JudgeConfigPanelProps) {
             </Select>
             {providers.length === 0 && (
               <p className="text-sm text-amber-600">
-                暂无可用的裁判模型，请先在模型管理中添加用途为"裁判模型"或"两者都可"的模型
+                暂无可用的裁判模型，请先在模型管理中添加用途为&quot;裁判模型&quot;或&quot;两者都可&quot;的模型
               </p>
             )}
           </div>

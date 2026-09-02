@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "status", "environment", "startedAt", "completedAt", "artifacts", "approvers"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^(POC-[0-9]{2}|[A-Z]+-[0-9]{3})$" },
+    "status": { "const": "PASS" },
+    "environment": {
+      "type": "object",
+      "required": ["name", "os", "cpu", "orchestrator", "policyBundleId", "deploymentDigests"],
+      "additionalProperties": true
+    },
+    "startedAt": { "type": "string", "format": "date-time" },
+    "completedAt": { "type": "string", "format": "date-time" },
+    "metrics": { "type": "object" },
+    "artifacts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "sha256"],
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "sha256": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+        }
+      }
+    },
+    "approvers": {
+      "type": "array",
+      "minItems": 2,
+      "items": { "type": "string", "minLength": 2 },
+      "uniqueItems": true
+    },
+    "notes": { "type": "string" }
+  }
+}

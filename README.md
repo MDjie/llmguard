@@ -354,7 +354,7 @@ pnpm build
 
 ```bash
 # 安装 PM2
-npm install -g pm2
+pnpm add --global pm2
 
 # 启动服务
 pm2 start pnpm --name "guardllm" -- start
@@ -390,7 +390,7 @@ server {
 
 ```bash
 # 安装 Vercel CLI
-npm i -g vercel
+pnpm add --global vercel
 
 # 部署
 vercel --prod

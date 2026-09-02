@@ -1,76 +1,85 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { ApiProblem, withApiSecurity } from '@/lib/api-security';
 import { detectWithDynamicRules } from '@/lib/detection/dynamic-engine';
+import { DetectionPolicyError } from '@/lib/detection/errors';
+import { requireTenantContext } from '@/lib/tenancy';
 
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { policyAId, policyBId, text, direction = 'input' } = body;
+const bodySchema = z
+  .object({
+    policyAId: z.string().min(1).max(36),
+    policyBId: z.string().min(1).max(36),
+    text: z.string().min(1).max(32_768),
+    direction: z.enum(['input', 'output']).default('input'),
+  })
+  .strict()
+  .refine(({ policyAId, policyBId }) => policyAId !== policyBId, {
+    message: 'Policies must be different',
+    path: ['policyBId'],
+  });
 
-    // 参数校验
-    if (!policyAId || !policyBId) {
-      return NextResponse.json(
-        { success: false, error: '缺少必要参数: policyAId, policyBId' },
-        { status: 400 }
-      );
+const responseSchema = z.object({
+  success: z.literal(true),
+  resultA: z.record(z.string(), z.unknown()),
+  resultB: z.record(z.string(), z.unknown()),
+  diff: z.record(z.string(), z.unknown()),
+});
+
+export const POST = withApiSecurity(
+  {
+    permission: 'policy:read',
+    bodySchema,
+    responseSchema,
+    maxBodyBytes: 256 * 1_024,
+    auditEvent: 'policy.compare',
+    rateLimitPolicy: {
+      id: 'policy-compare',
+      windowMs: 60_000,
+      maxRequests: 30,
+      scope: 'principal',
+    },
+  },
+  async ({ body, request, principal }) => {
+    try {
+      const { policyAId, policyBId, text, direction } = body;
+      const scope = requireTenantContext(principal);
+      const [resultA, resultB] = await Promise.all([
+        detectWithDynamicRules(text, policyAId, scope, direction, request.signal),
+        detectWithDynamicRules(text, policyBId, scope, direction, request.signal),
+      ]);
+
+      const processedResultA = buildProcessedResult(text, resultA);
+      const processedResultB = buildProcessedResult(text, resultB);
+      const scoreDiff = Math.abs(resultA.overallScore - resultB.overallScore);
+      const actionDiff = getActionDiff(resultA.action, resultB.action);
+      const strategyASeverity = getStrategySeverity(resultA.overallScore, resultA.action);
+      const strategyBSeverity = getStrategySeverity(resultB.overallScore, resultB.action);
+      const conclusion = generateConclusion(resultA, resultB, scoreDiff);
+
+      return Response.json({
+        success: true as const,
+        resultA: processedResultA,
+        resultB: processedResultB,
+        diff: {
+          scoreDiff,
+          actionDiff,
+          strategyASeverity,
+          strategyBSeverity,
+          conclusion,
+        },
+      });
+    } catch (error) {
+      if (error instanceof DetectionPolicyError) {
+        throw new ApiProblem({
+          status: 503,
+          code: error.code,
+          title: '检测策略不可用',
+          detail: '至少一个待比较策略不存在或当前不可安全执行。',
+        });
+      }
+      throw error;
     }
-
-    if (!text) {
-      return NextResponse.json(
-        { success: false, error: '缺少必要参数: text' },
-        { status: 400 }
-      );
-    }
-
-    if (policyAId === policyBId) {
-      return NextResponse.json(
-        { success: false, error: '请选择两个不同的策略进行对比' },
-        { status: 400 }
-      );
-    }
-
-    // 并行执行两个策略的检测
-    const [resultA, resultB] = await Promise.all([
-      detectWithDynamicRules(text, policyAId, direction),
-      detectWithDynamicRules(text, policyBId, direction),
-    ]);
-
-    // 构建策略A的结果
-    const processedResultA = buildProcessedResult(text, resultA);
-    
-    // 构建策略B的结果
-    const processedResultB = buildProcessedResult(text, resultB);
-
-    // 计算差异
-    const scoreDiff = Math.abs(resultA.overallScore - resultB.overallScore);
-    const actionDiff = getActionDiff(resultA.action, resultB.action);
-    
-    // 判断策略严格程度
-    const strategyASeverity = getStrategySeverity(resultA.overallScore, resultA.action);
-    const strategyBSeverity = getStrategySeverity(resultB.overallScore, resultB.action);
-    
-    // 生成结论
-    const conclusion = generateConclusion(resultA, resultB, scoreDiff, actionDiff);
-
-    return NextResponse.json({
-      success: true,
-      resultA: processedResultA,
-      resultB: processedResultB,
-      diff: {
-        scoreDiff,
-        actionDiff,
-        strategyASeverity,
-        strategyBSeverity,
-        conclusion,
-      },
-    });
-  } catch (error) {
-    console.error('A/B 对比检测失败:', error);
-    return NextResponse.json(
-      { success: false, error: '对比检测失败: ' + (error instanceof Error ? error.message : '未知错误') },
-      { status: 500 }
-    );
-  }
-}
+  },
+);
 
 function buildProcessedResult(text: string, result: ReturnType<typeof detectWithDynamicRules> extends Promise<infer T> ? T : never) {
   const baseResult = {
@@ -88,8 +97,7 @@ function buildProcessedResult(text: string, result: ReturnType<typeof detectWith
     processedText: text,
   };
 
-  // 处理脱敏 - 当 processingAction 是 mask 时
-  if (result.processingAction === 'mask') {
+  if (result.action === 'mask') {
     let maskedText = text;
     for (const finding of result.findings) {
       if (finding.evidence && finding.evidence.length > 0) {
@@ -104,8 +112,7 @@ function buildProcessedResult(text: string, result: ReturnType<typeof detectWith
     return { ...baseResult, processedText: maskedText, maskedText };
   }
 
-  // 处理改写 - 当 processingAction 是 rewrite 时
-  if (result.processingAction === 'rewrite') {
+  if (result.action === 'rewrite') {
     let rewrittenText = text;
     for (const finding of result.findings) {
       if (finding.dimension === 'pii_leak' && finding.evidence) {
@@ -166,7 +173,6 @@ function generateConclusion(
   resultA: { action: string; overallScore: number },
   resultB: { action: string; overallScore: number },
   scoreDiff: number,
-  actionDiff: string
 ): string {
   if (resultA.action === resultB.action && resultA.overallScore === resultB.overallScore) {
     return '两个策略对该内容的处理结果完全一致';

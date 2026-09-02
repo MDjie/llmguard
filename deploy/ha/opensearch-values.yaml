@@ -1,0 +1,23 @@
+clusterName: guardllm-search
+nodeGroup: master-data
+replicas: 3
+roles: [master, ingest, data]
+opensearchJavaOpts: -Xms4g -Xmx4g
+resources:
+  requests: { cpu: "2", memory: 8Gi }
+  limits: { cpu: "4", memory: 8Gi }
+persistence:
+  enabled: true
+  storageClass: encrypted-block
+  size: 500Gi
+antiAffinity: hard
+protocol: https
+extraEnvs:
+  - name: DISABLE_INSTALL_DEMO_CONFIG
+    value: "true"
+  - name: DISABLE_SECURITY_PLUGIN
+    value: "false"
+secretMounts:
+  - name: guardllm-search-tls
+    secretName: guardllm-search-tls
+    path: /usr/share/opensearch/config/tls

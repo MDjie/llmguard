@@ -1,22 +1,51 @@
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
+import {
+  emptyQuerySchema,
+  idOrCodeParamsSchema,
+  jsonObjectResponseSchema,
+} from '@/contracts/http/common';
+import { withLegacyApiSecurity } from '@/lib/api-security';
 import { query, update, remove, getDb } from '@/lib/db';
 import { clearPolicyCache } from '@/lib/detection/dynamic-engine';
+
+interface DimensionRow {
+  readonly id: string;
+  readonly code: string;
+  readonly is_system: boolean;
+  readonly [key: string]: unknown;
+}
+
+const updateDimensionSchema = z
+  .object({
+    name: z.string().trim().min(1).max(128).optional(),
+    description: z.string().max(2_000).optional(),
+    category: z.string().trim().min(1).max(64).optional(),
+    weight: z.number().positive().max(10).optional(),
+    priority: z.number().int().min(0).max(10_000).optional(),
+    enabled: z.boolean().optional(),
+    config: z.record(z.string(), z.unknown()).optional(),
+  })
+  .strict()
+  .refine((value) => Object.keys(value).length > 0, {
+    message: 'At least one field is required',
+  });
 
 // 辅助函数：根据 ID 或 code 获取维度
 // 策略：先尝试精确ID查询，再尝试code查询
 async function getDimensionByIdOrCode(idOrCode: string) {
   // 先尝试用 id 精确查询
-  const idResult = await query('detection_dimensions', {
+  const idResult = await query<DimensionRow>('detection_dimensions', {
     filter: { id: idOrCode },
     single: true
   });
   
-  if (idResult.data && !Array.isArray(idResult.data)) {
+  if (idResult.data) {
     return idResult;
   }
   
   // id没找到，尝试用 code 查询
-  const codeResult = await query('detection_dimensions', {
+  const codeResult = await query<DimensionRow>('detection_dimensions', {
     filter: { code: idOrCode },
     single: true
   });
@@ -25,7 +54,7 @@ async function getDimensionByIdOrCode(idOrCode: string) {
 }
 
 // 获取单个维度详情
-export async function GET(
+async function getDimension(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -34,7 +63,7 @@ export async function GET(
 
     const dimensionResult = await getDimensionByIdOrCode(id);
 
-    if (dimensionResult.error || !dimensionResult.data || (Array.isArray(dimensionResult.data) && dimensionResult.data.length === 0)) {
+    if (dimensionResult.error || !dimensionResult.data) {
       return NextResponse.json(
         { success: false, error: '维度不存在' },
         { status: 404 }
@@ -78,7 +107,7 @@ export async function GET(
 }
 
 // 更新维度
-export async function PUT(
+async function updateDimension(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -90,7 +119,7 @@ export async function PUT(
     // 检查维度是否存在
     const existingResult = await getDimensionByIdOrCode(id);
 
-    if (existingResult.error || !existingResult.data || (Array.isArray(existingResult.data) && existingResult.data.length === 0)) {
+    if (existingResult.error || !existingResult.data) {
       return NextResponse.json(
         { success: false, error: '维度不存在' },
         { status: 404 }
@@ -101,7 +130,7 @@ export async function PUT(
     const dimensionId = dimension.id;
 
     // 构建更新数据
-    const updateData: Record<string, any> = {};
+    const updateData: Record<string, unknown> = {};
 
     if (name !== undefined) updateData.name = name;
     if (description !== undefined) updateData.description = description;
@@ -134,7 +163,7 @@ export async function PUT(
 }
 
 // 删除维度
-export async function DELETE(
+async function deleteDimension(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -144,7 +173,7 @@ export async function DELETE(
     // 检查维度是否存在
     const existingResult = await getDimensionByIdOrCode(id);
 
-    if (existingResult.error || !existingResult.data || (Array.isArray(existingResult.data) && existingResult.data.length === 0)) {
+    if (existingResult.error || !existingResult.data) {
       return NextResponse.json(
         { success: false, error: '维度不存在' },
         { status: 404 }
@@ -156,7 +185,7 @@ export async function DELETE(
     const dimensionCode = dimension.code;
 
     // 系统内置维度不能删除
-    if (dimension.isSystem) {
+    if (dimension.is_system) {
       return NextResponse.json(
         { success: false, error: '系统内置维度不能删除' },
         { status: 400 }
@@ -166,7 +195,7 @@ export async function DELETE(
     // 删除关联的 policy_rules（因为没有外键约束）
     const client = getDb();
     const rulesResult = await client
-      .from('policy_rules')
+      .from<{ id: string }>('policy_rules')
       .select('id')
       .eq('dimension', dimensionCode);
 
@@ -190,3 +219,57 @@ export async function DELETE(
     );
   }
 }
+
+export const GET = withLegacyApiSecurity(
+  {
+    permission: 'policy:read',
+    paramsSchema: idOrCodeParamsSchema,
+    querySchema: emptyQuerySchema,
+    responseSchema: jsonObjectResponseSchema,
+    maxBodyBytes: 0,
+    auditEvent: 'dimension.read',
+    rateLimitPolicy: {
+      id: 'dimension-read',
+      windowMs: 60_000,
+      maxRequests: 120,
+      scope: 'principal',
+    },
+  },
+  getDimension,
+);
+
+export const PUT = withLegacyApiSecurity(
+  {
+    permission: 'policy:manage',
+    paramsSchema: idOrCodeParamsSchema,
+    bodySchema: updateDimensionSchema,
+    responseSchema: jsonObjectResponseSchema,
+    maxBodyBytes: 64 * 1_024,
+    auditEvent: 'dimension.update',
+    rateLimitPolicy: {
+      id: 'dimension-update',
+      windowMs: 60_000,
+      maxRequests: 30,
+      scope: 'principal',
+    },
+  },
+  updateDimension,
+);
+
+export const DELETE = withLegacyApiSecurity(
+  {
+    permission: 'policy:manage',
+    paramsSchema: idOrCodeParamsSchema,
+    querySchema: emptyQuerySchema,
+    responseSchema: jsonObjectResponseSchema,
+    maxBodyBytes: 0,
+    auditEvent: 'dimension.delete',
+    rateLimitPolicy: {
+      id: 'dimension-delete',
+      windowMs: 60_000,
+      maxRequests: 10,
+      scope: 'principal',
+    },
+  },
+  deleteDimension,
+);

@@ -1,137 +1,138 @@
-/**
- * 文档扫描任务详情 API
- * GET: 获取任务详情
- * DELETE: 删除任务
- */
+import { and, desc, eq } from 'drizzle-orm';
+import { NextResponse } from 'next/server';
+import { emptyQuerySchema, jsonObjectResponseSchema } from '@/contracts/http/common';
+import { documentTaskParamsSchema } from '@/contracts/http/documents';
+import { withApiSecurity } from '@/lib/api-security';
+import { ApiProblem } from '@/lib/api-security/problem';
+import { db, documentScanFindings, documentScanTasks } from '@/lib/db';
+import { mayReadRawContent } from '@/lib/data-protection/content';
+import { requireTenantContext, scopePredicate, type TenantScope } from '@/lib/tenancy';
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { documentScanTasks, documentScanFindings } from '@/lib/db';
-import { eq, desc, and } from 'drizzle-orm';
-
-// Node.js 运行时配置（必须）
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params;
+const TASK_RATE_LIMIT = {
+  id: 'document-task',
+  windowMs: 60_000,
+  maxRequests: 60,
+  scope: 'principal' as const,
+};
 
-    // 获取任务详情
-    const [task] = await db.select()
-      .from(documentScanTasks)
-      .where(eq(documentScanTasks.id, id));
+async function ownedTask(id: string, ownerId: string, scope: TenantScope) {
+  const [task] = await db.select().from(documentScanTasks).where(and(
+    eq(documentScanTasks.id, id),
+    eq(documentScanTasks.ownerId, ownerId),
+    scopePredicate(documentScanTasks, scope),
+  )).limit(1);
+  if (!task) {
+    throw new ApiProblem({
+      status: 404,
+      code: 'DOCUMENT_TASK_NOT_FOUND',
+      title: 'Not found',
+      detail: 'The document task was not found.',
+    });
+  }
+  return task;
+}
 
-    if (!task) {
-      return NextResponse.json(
-        { success: false, error: '任务不存在' },
-        { status: 404 }
-      );
-    }
-
-    // 获取风险发现列表
-    const findings = await db.select()
-      .from(documentScanFindings)
-      .where(eq(documentScanFindings.taskId, id))
+export const GET = withApiSecurity(
+  {
+    permission: 'security:operate',
+    paramsSchema: documentTaskParamsSchema,
+    querySchema: emptyQuerySchema,
+    responseSchema: jsonObjectResponseSchema,
+    rateLimitPolicy: TASK_RATE_LIMIT,
+    maxBodyBytes: 0,
+    auditEvent: 'document.scan.read',
+  },
+  async ({ routeContext, principal }) => {
+    const { id } = await (routeContext as { params: Promise<{ id: string }> }).params;
+    const scope = requireTenantContext(principal);
+    const task = await ownedTask(id, principal!.subject, scope);
+    const findings = await db.select().from(documentScanFindings)
+      .where(and(
+        eq(documentScanFindings.taskId, id),
+        scopePredicate(documentScanFindings, scope),
+      ))
       .orderBy(desc(documentScanFindings.score));
 
-    // 统计信息
     const stats = {
       totalFindings: findings.length,
       bySeverity: {
-        critical: findings.filter(f => f.severity === 'critical').length,
-        high: findings.filter(f => f.severity === 'high').length,
-        medium: findings.filter(f => f.severity === 'medium').length,
-        low: findings.filter(f => f.severity === 'low').length,
+        critical: findings.filter((item) => item.severity === 'critical').length,
+        high: findings.filter((item) => item.severity === 'high').length,
+        medium: findings.filter((item) => item.severity === 'medium').length,
+        low: findings.filter((item) => item.severity === 'low').length,
       },
       byStatus: {
-        open: findings.filter(f => f.status === 'open').length,
-        accepted: findings.filter(f => f.status === 'accepted').length,
-        ignored: findings.filter(f => f.status === 'ignored').length,
+        open: findings.filter((item) => item.status === 'open').length,
+        accepted: findings.filter((item) => item.status === 'accepted').length,
+        ignored: findings.filter((item) => item.status === 'ignored').length,
       },
       byAction: {
-        allow: findings.filter(f => f.action === 'allow').length,
-        warn: findings.filter(f => f.action === 'warn').length,
-        mask: findings.filter(f => f.action === 'mask').length,
-        rewrite: findings.filter(f => f.action === 'rewrite').length,
-        block: findings.filter(f => f.action === 'block').length,
+        allow: findings.filter((item) => item.action === 'allow').length,
+        warn: findings.filter((item) => item.action === 'warn').length,
+        mask: findings.filter((item) => item.action === 'mask').length,
+        rewrite: findings.filter((item) => item.action === 'rewrite').length,
+        block: findings.filter((item) => item.action === 'block').length,
       },
       byDimension: {} as Record<string, { count: number; dimensionName: string; maxScore: number }>,
     };
-
-    // 按维度统计
     for (const finding of findings) {
       const code = finding.dimensionCode || 'unknown';
-      if (!stats.byDimension[code]) {
-        stats.byDimension[code] = {
-          count: 0,
-          dimensionName: finding.dimensionName || '未知维度',
-          maxScore: 0,
-        };
-      }
-      stats.byDimension[code].count++;
-      if (finding.score > stats.byDimension[code].maxScore) {
-        stats.byDimension[code].maxScore = finding.score;
-      }
+      const dimension = stats.byDimension[code] ?? {
+        count: 0,
+        dimensionName: finding.dimensionName || '未知维度',
+        maxScore: 0,
+      };
+      dimension.count += 1;
+      dimension.maxScore = Math.max(dimension.maxScore, finding.score);
+      stats.byDimension[code] = dimension;
     }
 
+    const canReadRaw = mayReadRawContent(principal!);
+    const visibleTask = canReadRaw ? task : {
+      ...task,
+      extractedText: null,
+      previewHtml: null,
+      parsedChunks: [],
+      plainLines: [],
+      ocrResults: [],
+    };
+    const visibleFindings = canReadRaw ? findings : findings.map((finding) => ({
+      ...finding,
+      evidence: [],
+      maskedEvidence: [],
+      reason: null,
+      suggestion: null,
+      ignoreNote: null,
+    }));
     return NextResponse.json({
       success: true,
-      data: {
-        task,
-        findings,
-        stats,
-      },
+      data: { task: visibleTask, findings: visibleFindings, stats },
     });
-  } catch (error) {
-    console.error('获取任务详情失败:', error);
-    return NextResponse.json(
-      { success: false, error: '获取任务详情失败' },
-      { status: 500 }
-    );
-  }
-}
+  },
+);
 
-// 删除任务
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params;
-
-    // 先检查任务是否存在
-    const [task] = await db.select()
-      .from(documentScanTasks)
-      .where(eq(documentScanTasks.id, id));
-
-    if (!task) {
-      return NextResponse.json(
-        { success: false, error: '任务不存在' },
-        { status: 404 }
-      );
-    }
-
-    // 删除关联的风险发现
-    await db.delete(documentScanFindings)
-      .where(eq(documentScanFindings.taskId, id));
-
-    // 删除任务
-    await db.delete(documentScanTasks)
-      .where(eq(documentScanTasks.id, id));
-
-    return NextResponse.json({
-      success: true,
-      message: '任务已删除',
-    });
-  } catch (error) {
-    console.error('删除任务失败:', error);
-    return NextResponse.json(
-      { success: false, error: '删除任务失败' },
-      { status: 500 }
-    );
-  }
-}
+export const DELETE = withApiSecurity(
+  {
+    permission: 'security:operate',
+    paramsSchema: documentTaskParamsSchema,
+    querySchema: emptyQuerySchema,
+    responseSchema: jsonObjectResponseSchema,
+    rateLimitPolicy: TASK_RATE_LIMIT,
+    maxBodyBytes: 0,
+    auditEvent: 'document.scan.delete',
+  },
+  async ({ routeContext, principal }) => {
+    const { id } = await (routeContext as { params: Promise<{ id: string }> }).params;
+    const scope = requireTenantContext(principal);
+    await ownedTask(id, principal!.subject, scope);
+    await db.delete(documentScanTasks).where(and(
+      eq(documentScanTasks.id, id),
+      eq(documentScanTasks.ownerId, principal!.subject),
+      scopePredicate(documentScanTasks, scope),
+    ));
+    return NextResponse.json({ success: true, message: '任务已删除' });
+  },
+);

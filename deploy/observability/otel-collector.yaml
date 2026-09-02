@@ -1,0 +1,65 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: guardllm-otel-collector
+  namespace: guard-observability
+data:
+  collector.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc: { endpoint: 0.0.0.0:4317 }
+          http: { endpoint: 0.0.0.0:4318 }
+      prometheus:
+        config:
+          scrape_configs:
+            - job_name: otel-collector
+              static_configs:
+                - targets: [127.0.0.1:8888]
+    processors:
+      memory_limiter:
+        check_interval: 1s
+        limit_mib: 1024
+        spike_limit_mib: 256
+      k8sattributes:
+        auth_type: serviceAccount
+        extract:
+          metadata: [k8s.namespace.name, k8s.deployment.name, k8s.pod.name, k8s.node.name]
+      transform/redact:
+        error_mode: ignore
+        trace_statements:
+          - context: span
+            statements:
+              - delete_key(attributes, "http.request.header.authorization")
+              - delete_key(attributes, "http.request.header.cookie")
+              - delete_key(attributes, "gen_ai.prompt")
+              - delete_key(attributes, "gen_ai.completion")
+      batch:
+        send_batch_size: 8192
+        timeout: 5s
+    exporters:
+      otlphttp/traces:
+        endpoint: https://telemetry.example.internal/v1/traces
+        auth:
+          authenticator: bearertokenauth
+      prometheus:
+        endpoint: 0.0.0.0:8889
+        resource_to_telemetry_conversion: { enabled: true }
+    extensions:
+      bearertokenauth:
+        filename: /var/run/secrets/guardllm/otel-token
+      health_check: { endpoint: 0.0.0.0:13133 }
+    service:
+      extensions: [bearertokenauth, health_check]
+      telemetry:
+        logs: { level: info }
+        metrics: { address: 0.0.0.0:8888 }
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [memory_limiter, k8sattributes, transform/redact, batch]
+          exporters: [otlphttp/traces]
+        metrics:
+          receivers: [otlp, prometheus]
+          processors: [memory_limiter, k8sattributes, batch]
+          exporters: [prometheus]

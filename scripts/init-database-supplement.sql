@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS users (
   login_count INTEGER DEFAULT 0,
   failed_login_count INTEGER DEFAULT 0,
   locked_until TIMESTAMPTZ,
+  token_version INTEGER NOT NULL DEFAULT 0,
   password_changed_at TIMESTAMPTZ,
   must_change_password BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
@@ -36,17 +37,9 @@ CREATE INDEX IF NOT EXISTS users_email_idx ON users(email);
 CREATE INDEX IF NOT EXISTS users_role_idx ON users(role);
 CREATE INDEX IF NOT EXISTS users_status_idx ON users(status);
 
--- 插入默认管理员账户 (密码: admin123)
-INSERT INTO users (id, username, nickname, email, password, role, status)
-VALUES ('admin-001', 'admin', '系统管理员', 'admin@guardllm.com', '$2b$10$VhhtVy2fQx/yQxMrs3Ym7ey6aJDuL8ifRpokKCJIahASQKUhv6xAO', 'admin', 'active')
-ON CONFLICT (username) DO NOTHING;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS token_version INTEGER NOT NULL DEFAULT 0;
 
--- 插入测试用户 (密码: user123)
-INSERT INTO users (id, username, nickname, email, password, role, status)
-VALUES
-  ('user-001', 'user1', '测试用户1', 'user1@guardllm.com', '$2b$10$VhhtVy2fQx/yQxMrs3Ym7ey6aJDuL8ifRpokKCJIahASQKUhv6xAO', 'user', 'active'),
-  ('user-002', 'user2', '测试用户2', 'user2@guardllm.com', '$2b$10$VhhtVy2fQx/yQxMrs3Ym7ey6aJDuL8ifRpokKCJIahASQKUhv6xAO', 'user', 'active')
-ON CONFLICT (username) DO NOTHING;
+-- 不创建共享默认密码账户。首次管理员必须通过 pnpm auth:bootstrap 显式创建。
 
 -- =====================================================
 -- 2. 用户策略状态表 (user_policy_states)

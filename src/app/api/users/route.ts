@@ -1,285 +1,316 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getDb } from '@/lib/db';
+import { z } from 'zod';
+import { ApiProblem, withApiSecurity } from '@/lib/api-security';
+import {
+  createManagedUser,
+  deleteManagedUser,
+  findUserByEmail,
+  findUserById,
+  findUserByUsername,
+  hashPassword,
+  listUsers,
+  normalizePlatformRole,
+  updateManagedUser,
+  validatePasswordPolicy,
+} from '@/lib/auth';
+import type { UserRecord } from '@/lib/auth/repository';
 
-// 获取用户列表
-export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get('page') || '1');
-    const pageSize = parseInt(searchParams.get('pageSize') || '20');
-    const keyword = searchParams.get('keyword') || '';
-    const role = searchParams.get('role') || '';
-    const status = searchParams.get('status') || '';
+const platformRoleSchema = z.enum([
+  'SYSTEM_ADMIN',
+  'SECURITY_ADMIN',
+  'AUDIT_ADMIN',
+  'BUSINESS_OPERATOR',
+  'APP_DEVELOPER',
+  'READ_ONLY',
+]);
+const statusSchema = z.enum(['active', 'disabled', 'locked']);
+const optionalText = (max: number) => z.string().trim().max(max).nullable().optional();
 
-    const client = getDb();
+const publicUserSchema = z.object({
+  id: z.string(),
+  username: z.string(),
+  nickname: z.string().nullable(),
+  email: z.string().nullable(),
+  phone: z.string().nullable(),
+  avatar: z.string().nullable(),
+  role: z.string(),
+  status: z.string(),
+  department: z.string().nullable(),
+  description: z.string().nullable(),
+  lastLoginAt: z.string().nullable(),
+  loginCount: z.number().int(),
+  failedLoginCount: z.number().int(),
+  lockedUntil: z.string().nullable(),
+  passwordChangedAt: z.string().nullable(),
+  mustChangePassword: z.boolean(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  createdBy: z.string().nullable(),
+});
 
-    // 查询所有用户（select * 然后过滤掉密码）
-    let query = client.from('users').select('*', { count: 'exact' });
+const listQuerySchema = z
+  .object({
+    page: z.coerce.number().int().min(1).default(1),
+    pageSize: z.coerce.number().int().min(1).max(100).default(20),
+    keyword: z.string().trim().max(100).optional(),
+    role: platformRoleSchema.optional(),
+    status: statusSchema.optional(),
+  })
+  .strict();
 
-    if (role) {
-      query = query.eq('role', role);
-    }
-    if (status) {
-      query = query.eq('status', status);
-    }
+const createBodySchema = z
+  .object({
+    username: z.string().trim().min(3).max(50).regex(/^[A-Za-z0-9._-]+$/),
+    password: z.string().min(1).max(128),
+    nickname: optionalText(100),
+    email: z.email().max(255).nullable().optional(),
+    phone: optionalText(20),
+    role: platformRoleSchema.default('BUSINESS_OPERATOR'),
+    department: optionalText(100),
+    description: optionalText(1_000),
+  })
+  .strict();
 
-    const offset = (page - 1) * pageSize;
-    const { data, error, count } = await query
-      .order('created_at', { ascending: false })
-      .range(offset, offset + pageSize - 1);
+const updateBodySchema = z
+  .object({
+    id: z.string().min(1).max(36),
+    nickname: optionalText(100),
+    email: z.email().max(255).nullable().optional(),
+    phone: optionalText(20),
+    role: platformRoleSchema.optional(),
+    status: statusSchema.optional(),
+    department: optionalText(100),
+    description: optionalText(1_000),
+    password: z.string().min(1).max(128).optional(),
+  })
+  .strict()
+  .refine((body) => Object.keys(body).some((key) => key !== 'id'), {
+    message: 'At least one update field is required',
+  });
 
-    if (error) {
-      return NextResponse.json({ success: false, error: '查询失败' }, { status: 500 });
-    }
+const deleteQuerySchema = z.object({ id: z.string().min(1).max(36) }).strict();
 
-    // 过滤关键字
-    let items = data || [];
-    if (keyword) {
-      items = items.filter((u: any) =>
-        u.username?.toLowerCase().includes(keyword.toLowerCase()) ||
-        u.nickname?.toLowerCase().includes(keyword.toLowerCase()) ||
-        u.email?.toLowerCase().includes(keyword.toLowerCase())
-      );
-    }
+type PublicUserRecord = Omit<UserRecord, 'password' | 'lastLoginIp' | 'tokenVersion'>;
 
-    // 移除密码字段
-    items = items.map((u: any) => {
-      const { password, ...userWithoutPassword } = u;
-      return userWithoutPassword;
-    });
+function serializeUser(user: PublicUserRecord) {
+  return {
+    id: user.id,
+    username: user.username,
+    nickname: user.nickname,
+    email: user.email,
+    phone: user.phone,
+    avatar: user.avatar,
+    role: normalizePlatformRole(user.role) ?? user.role,
+    status: user.status,
+    department: user.department,
+    description: user.description,
+    lastLoginAt: user.lastLoginAt?.toISOString() ?? null,
+    loginCount: user.loginCount ?? 0,
+    failedLoginCount: user.failedLoginCount ?? 0,
+    lockedUntil: user.lockedUntil?.toISOString() ?? null,
+    passwordChangedAt: user.passwordChangedAt?.toISOString() ?? null,
+    mustChangePassword: Boolean(user.mustChangePassword),
+    createdAt: user.createdAt.toISOString(),
+    updatedAt: user.updatedAt.toISOString(),
+    createdBy: user.createdBy,
+  };
+}
 
-    return NextResponse.json({
-      success: true,
+const userListResponseSchema = z.object({
+  success: z.literal(true),
+  data: z.object({
+    items: z.array(publicUserSchema),
+    total: z.number().int().nonnegative(),
+    page: z.number().int().positive(),
+    pageSize: z.number().int().positive(),
+  }),
+});
+const userResponseSchema = z.object({ success: z.literal(true), data: publicUserSchema });
+const successResponseSchema = z.object({ success: z.literal(true) });
+
+export const GET = withApiSecurity(
+  {
+    permission: 'iam:users:read',
+    querySchema: listQuerySchema,
+    responseSchema: userListResponseSchema,
+    maxBodyBytes: 0,
+    auditEvent: 'iam.users.list',
+    rateLimitPolicy: { id: 'iam-users-list', windowMs: 60_000, maxRequests: 60, scope: 'principal' },
+  },
+  async ({ query }) => {
+    const result = await listUsers(query);
+    return Response.json({
+      success: true as const,
       data: {
-        items,
-        total: count || 0,
-        page,
-        pageSize,
+        items: result.items.map(serializeUser),
+        total: result.total,
+        page: query.page,
+        pageSize: query.pageSize,
       },
     });
-  } catch (error) {
-    console.error('获取用户列表失败:', error);
-    return NextResponse.json({ success: false, error: '获取用户列表失败' }, { status: 500 });
-  }
-}
+  },
+);
 
-// 创建用户
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { username, password, nickname, email, phone, role, department, description } = body;
-
-    if (!username || !password) {
-      return NextResponse.json(
-        { success: false, error: '用户名和密码不能为空' },
-        { status: 400 }
-      );
+export const POST = withApiSecurity(
+  {
+    permission: 'iam:users:manage',
+    bodySchema: createBodySchema,
+    responseSchema: userResponseSchema,
+    maxBodyBytes: 16_384,
+    auditEvent: 'iam.users.create',
+    rateLimitPolicy: { id: 'iam-users-create', windowMs: 60_000, maxRequests: 20, scope: 'principal' },
+  },
+  async ({ body, principal }) => {
+    if (!principal) throw new Error('Authenticated principal missing after authorization');
+    const passwordPolicy = validatePasswordPolicy(body.password, [body.username, body.email ?? '']);
+    if (!passwordPolicy.valid) {
+      throw new ApiProblem({
+        status: 400,
+        code: 'PASSWORD_POLICY_FAILED',
+        title: '密码不符合要求',
+        detail: `密码策略未通过：${passwordPolicy.violations.join(', ')}`,
+      });
+    }
+    if (await findUserByUsername(body.username)) {
+      throw new ApiProblem({
+        status: 409,
+        code: 'USERNAME_CONFLICT',
+        title: '用户名已存在',
+        detail: '该用户名已被使用。',
+      });
+    }
+    if (body.email && (await findUserByEmail(body.email))) {
+      throw new ApiProblem({
+        status: 409,
+        code: 'EMAIL_CONFLICT',
+        title: '邮箱已存在',
+        detail: '该邮箱已被使用。',
+      });
     }
 
-    if (username.length < 3 || username.length > 50) {
-      return NextResponse.json(
-        { success: false, error: '用户名长度应在3-50个字符之间' },
-        { status: 400 }
-      );
+    const user = await createManagedUser({
+      username: body.username,
+      passwordHash: await hashPassword(body.password),
+      nickname: body.nickname ?? body.username,
+      email: body.email ?? null,
+      phone: body.phone ?? null,
+      role: body.role,
+      department: body.department ?? null,
+      description: body.description ?? null,
+      createdBy: principal.subject,
+      now: new Date(),
+    });
+    return Response.json({ success: true as const, data: serializeUser(user) }, { status: 201 });
+  },
+);
+
+export const PUT = withApiSecurity(
+  {
+    permission: 'iam:users:manage',
+    bodySchema: updateBodySchema,
+    responseSchema: userResponseSchema,
+    maxBodyBytes: 16_384,
+    auditEvent: 'iam.users.update',
+    rateLimitPolicy: { id: 'iam-users-update', windowMs: 60_000, maxRequests: 30, scope: 'principal' },
+  },
+  async ({ body, principal }) => {
+    if (!principal) throw new Error('Authenticated principal missing after authorization');
+    const existing = await findUserById(body.id);
+    if (!existing) {
+      throw new ApiProblem({
+        status: 404,
+        code: 'USER_NOT_FOUND',
+        title: '用户不存在',
+        detail: '未找到指定用户。',
+      });
     }
-
-    if (password.length < 6) {
-      return NextResponse.json(
-        { success: false, error: '密码长度至少6个字符' },
-        { status: 400 }
-      );
+    if (principal.subject === body.id && (body.role || (body.status && body.status !== 'active'))) {
+      throw new ApiProblem({
+        status: 403,
+        code: 'SELF_PRIVILEGE_CHANGE_REJECTED',
+        title: '操作被拒绝',
+        detail: '不能修改自己的角色或禁用自己的账户。',
+      });
     }
-
-    const client = getDb();
-
-    // 检查用户名是否已存在
-    const { data: existing } = await client
-      .from('users')
-      .select('id')
-      .eq('username', username)
-      .limit(1);
-
-    if (existing && existing.length > 0) {
-      return NextResponse.json(
-        { success: false, error: '用户名已存在' },
-        { status: 400 }
-      );
-    }
-
-    // 检查邮箱是否已存在
-    if (email) {
-      const { data: existingEmail } = await client
-        .from('users')
-        .select('id')
-        .eq('email', email)
-        .limit(1);
-
-      if (existingEmail && existingEmail.length > 0) {
-        return NextResponse.json(
-          { success: false, error: '邮箱已被使用' },
-          { status: 400 }
-        );
+    if (body.email) {
+      const emailOwner = await findUserByEmail(body.email);
+      if (emailOwner && emailOwner.id !== body.id) {
+        throw new ApiProblem({
+          status: 409,
+          code: 'EMAIL_CONFLICT',
+          title: '邮箱已存在',
+          detail: '该邮箱已被使用。',
+        });
       }
     }
 
-    // 创建用户（生产环境应使用 bcrypt 加密密码）
-    const { data, error } = await client
-      .from('users')
-      .insert({
-        username,
-        password, // TODO: 使用 bcrypt 加密
-        nickname: nickname || username,
-        email,
-        phone,
-        role: role || 'user',
-        department,
-        description,
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error('创建用户失败:', error);
-      return NextResponse.json({ success: false, error: '创建用户失败' }, { status: 500 });
-    }
-
-    // 返回用户信息（不包含密码）
-    const { password: _, ...userWithoutPassword } = data;
-
-    return NextResponse.json({
-      success: true,
-      data: userWithoutPassword,
-    });
-  } catch (error) {
-    console.error('创建用户失败:', error);
-    return NextResponse.json({ success: false, error: '创建用户失败' }, { status: 500 });
-  }
-}
-
-// 更新用户
-export async function PUT(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { id, nickname, email, phone, role, status, department, description, password } = body;
-
-    if (!id) {
-      return NextResponse.json(
-        { success: false, error: '用户ID不能为空' },
-        { status: 400 }
-      );
-    }
-
-    const client = getDb();
-
-    // 检查用户是否存在
-    const { data: existing } = await client
-      .from('users')
-      .select()
-      .eq('id', id)
-      .single();
-
-    if (!existing) {
-      return NextResponse.json(
-        { success: false, error: '用户不存在' },
-        { status: 404 }
-      );
-    }
-
-    // 构建更新数据
-    const updateData: any = { updated_at: new Date().toISOString() };
-    if (nickname !== undefined) updateData.nickname = nickname;
-    if (email !== undefined) updateData.email = email;
-    if (phone !== undefined) updateData.phone = phone;
-    if (role !== undefined) updateData.role = role;
-    if (status !== undefined) updateData.status = status;
-    if (department !== undefined) updateData.department = department;
-    if (description !== undefined) updateData.description = description;
-    if (password) {
-      if (password.length < 6) {
-        return NextResponse.json(
-          { success: false, error: '密码长度至少6个字符' },
-          { status: 400 }
-        );
+    let passwordHash: string | undefined;
+    if (body.password) {
+      const passwordPolicy = validatePasswordPolicy(body.password, [existing.username, body.email ?? existing.email ?? '']);
+      if (!passwordPolicy.valid) {
+        throw new ApiProblem({
+          status: 400,
+          code: 'PASSWORD_POLICY_FAILED',
+          title: '密码不符合要求',
+          detail: `密码策略未通过：${passwordPolicy.violations.join(', ')}`,
+        });
       }
-      updateData.password = password; // TODO: 使用 bcrypt 加密
-      updateData.password_changed_at = new Date().toISOString();
+      passwordHash = await hashPassword(body.password);
     }
 
-    const { data, error } = await client
-      .from('users')
-      .update(updateData)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('更新用户失败:', error);
-      return NextResponse.json({ success: false, error: '更新用户失败' }, { status: 500 });
-    }
-
-    // 返回用户信息（不包含密码）
-    const { password: _, ...userWithoutPassword } = data;
-
-    return NextResponse.json({
-      success: true,
-      data: userWithoutPassword,
+    const updated = await updateManagedUser(body.id, {
+      ...(body.nickname !== undefined ? { nickname: body.nickname } : {}),
+      ...(body.email !== undefined ? { email: body.email } : {}),
+      ...(body.phone !== undefined ? { phone: body.phone } : {}),
+      ...(body.role !== undefined ? { role: body.role } : {}),
+      ...(body.status !== undefined ? { status: body.status } : {}),
+      ...(body.department !== undefined ? { department: body.department } : {}),
+      ...(body.description !== undefined ? { description: body.description } : {}),
+      ...(passwordHash ? { passwordHash, mustChangePassword: true } : {}),
+      revokeSessions: Boolean(passwordHash || body.role || body.status),
+      now: new Date(),
     });
-  } catch (error) {
-    console.error('更新用户失败:', error);
-    return NextResponse.json({ success: false, error: '更新用户失败' }, { status: 500 });
-  }
-}
+    if (!updated) throw new Error('User disappeared during update');
+    return Response.json({ success: true as const, data: serializeUser(updated) });
+  },
+);
 
-// 删除用户
-export async function DELETE(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
-
-    if (!id) {
-      return NextResponse.json(
-        { success: false, error: '用户ID不能为空' },
-        { status: 400 }
-      );
+export const DELETE = withApiSecurity(
+  {
+    permission: 'iam:users:manage',
+    querySchema: deleteQuerySchema,
+    responseSchema: successResponseSchema,
+    maxBodyBytes: 0,
+    auditEvent: 'iam.users.delete',
+    rateLimitPolicy: { id: 'iam-users-delete', windowMs: 60_000, maxRequests: 10, scope: 'principal' },
+  },
+  async ({ query, principal }) => {
+    if (!principal) throw new Error('Authenticated principal missing after authorization');
+    if (principal.subject === query.id) {
+      throw new ApiProblem({
+        status: 403,
+        code: 'SELF_DELETE_REJECTED',
+        title: '操作被拒绝',
+        detail: '不能删除自己的账户。',
+      });
     }
-
-    const client = getDb();
-
-    // 检查用户是否存在
-    const { data: existing } = await client
-      .from('users')
-      .select()
-      .eq('id', id)
-      .single();
-
+    const existing = await findUserById(query.id);
     if (!existing) {
-      return NextResponse.json(
-        { success: false, error: '用户不存在' },
-        { status: 404 }
-      );
+      throw new ApiProblem({
+        status: 404,
+        code: 'USER_NOT_FOUND',
+        title: '用户不存在',
+        detail: '未找到指定用户。',
+      });
     }
-
-    // 不允许删除默认管理员
     if (existing.username === 'admin') {
-      return NextResponse.json(
-        { success: false, error: '不能删除默认管理员账号' },
-        { status: 400 }
-      );
+      throw new ApiProblem({
+        status: 403,
+        code: 'BOOTSTRAP_ADMIN_DELETE_REJECTED',
+        title: '操作被拒绝',
+        detail: '引导管理员账户不能通过普通接口删除。',
+      });
     }
-
-    const { error } = await client
-      .from('users')
-      .delete()
-      .eq('id', id);
-
-    if (error) {
-      console.error('删除用户失败:', error);
-      return NextResponse.json({ success: false, error: '删除用户失败' }, { status: 500 });
-    }
-
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error('删除用户失败:', error);
-    return NextResponse.json({ success: false, error: '删除用户失败' }, { status: 500 });
-  }
-}
+    if (!(await deleteManagedUser(query.id))) throw new Error('User delete returned no row');
+    return Response.json({ success: true as const });
+  },
+);

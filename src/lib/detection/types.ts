@@ -138,15 +138,15 @@ export interface DetectionFinding {
 
 export interface DetectionResult {
   overallScore: number;
-  action: 'allow' | 'warn' | 'block'; // 决策动作：放行、警告、阻断
-  processingAction?: 'none' | 'mask' | 'rewrite'; // 处理动作（用于 warn 时的脱敏/改写）
+  confidence: number;
+  action: 'allow' | 'warn' | 'block' | 'mask' | 'rewrite';
   findings: DetectionFinding[];
   maskedText?: string;
   rewrittenText?: string;
   summary?: string;
   latencyMs?: number;
-  // 便于前端使用的组合动作（action + processingAction）
-  effectiveAction?: 'allow' | 'warn' | 'block' | 'mask' | 'rewrite';
+  policyVersion?: number;
+  degradationReasons?: string[];
   // 白名单命中信息
   whitelistMatched?: WhitelistMatched;
   skippedDimensions?: SkippedDimension[];
@@ -159,6 +159,8 @@ export interface DetectionResult {
     reason?: string;
     latencyMs?: number;
     error?: string;
+    parseError?: string;
+    fallbackUsed?: boolean;
   };
   decisionTrace?: {
     ruleScore: number;

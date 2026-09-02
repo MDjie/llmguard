@@ -27,6 +27,7 @@ import {
 import JudgeModelResultCard from '@/components/judge/JudgeModelResultCard';
 import { recordDetectionSession, DetectionResultForRecord } from '@/lib/detection/recorder';
 import { usePolicyState } from '@/hooks/use-policy-state';
+import { csrfHeaders } from '@/lib/auth/csrf-client';
 
 interface Message {
   id: string;
@@ -100,6 +101,7 @@ interface Policy {
   name: string;
   description: string;
   isDefault: boolean;
+  isActive: boolean;
 }
 
 interface LLMProvider {
@@ -121,15 +123,11 @@ export default function HomePage() {
   const [originalOutputContent, setOriginalOutputContent] = useState<string | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [showRightPanel, setShowRightPanel] = useState(true);
+  const [showRightPanel, setShowRightPanel] = useState(false);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   // 策略状态管理
   const { sessionId, isInitialized } = usePolicyState();
-
-  useEffect(() => {
-    loadData();
-  }, []);
 
   // 只滚动聊天容器，不影响整个页面
   const scrollChatToBottom = useCallback(() => {
@@ -151,7 +149,7 @@ export default function HomePage() {
     }
   }, [messages, isLoading, scrollChatToBottom]);
 
-  const loadData = async () => {
+  async function loadData() {
     setDataLoading(true);
     setLoadError(null);
     try {
@@ -188,7 +186,11 @@ export default function HomePage() {
     } finally {
       setDataLoading(false);
     }
-  };
+  }
+
+  useEffect(() => {
+    loadData();
+  }, []);
 
   // 输入检测 - fail-closed 策略
   const detectInput = async (text: string): Promise<DetectionResult> => {
@@ -205,7 +207,7 @@ export default function HomePage() {
 
       const response = await fetch('/api/detect', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
         body: JSON.stringify({
           text,
           direction: 'input',
@@ -256,7 +258,7 @@ export default function HomePage() {
 
       const response = await fetch('/api/detect', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
         body: JSON.stringify({
           text,
           direction: 'output',
@@ -332,7 +334,7 @@ export default function HomePage() {
 
           await fetch('/api/escalation-summary', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
             body: JSON.stringify({
               userId: 'anonymous',
               sessionId,
@@ -400,7 +402,6 @@ export default function HomePage() {
     if (safeUserContent !== userMessage.content) {
       userMessage.originalContent = userMessage.content;  // 保存原始内容
       userMessage.content = safeUserContent;  // 显示安全处理后的内容
-      console.log(`[安全处理] 原始: "${userMessage.originalContent}" -> 处理后: "${safeUserContent}"`);
     }
 
     // 构建历史消息（使用安全内容）
@@ -420,7 +421,7 @@ export default function HomePage() {
       // 调用 LLM API
       const response = await fetch('/api/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
         body: JSON.stringify({
           providerId: selectedProvider,
           messages: chatMessages,
@@ -485,7 +486,7 @@ export default function HomePage() {
 
             const escalationResponse = await fetch('/api/escalation-summary', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
               body: JSON.stringify({
                 userId: 'anonymous',
                 sessionId,
@@ -833,14 +834,16 @@ export default function HomePage() {
       <button
         onClick={() => setShowRightPanel(!showRightPanel)}
         className="fixed right-0 top-1/2 -translate-y-1/2 z-50 bg-primary text-primary-foreground p-2 rounded-l-lg shadow-lg lg:hidden"
+        aria-label={showRightPanel ? '收起检测结果' : '展开检测结果'}
+        aria-expanded={showRightPanel}
       >
         {showRightPanel ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
       </button>
 
       {/* 右侧面板 */}
       <div className={`
-        w-96 min-h-0 flex flex-col gap-4 flex-shrink-0
-        fixed lg:relative right-0 top-0 h-full lg:h-auto z-40
+        w-[min(24rem,100vw)] min-h-0 flex flex-col gap-4 flex-shrink-0
+        fixed lg:relative right-0 top-16 h-[calc(100%-4rem)] lg:top-auto lg:h-auto z-40
         bg-background border-l lg:border-0 p-4 lg:p-0
         transition-transform duration-300
         ${showRightPanel ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}

@@ -1,0 +1,10 @@
+{
+  "environment": "replace-with-target-environment",
+  "components": {
+    "text-classifier": { "supplier": "", "name": "", "version": "", "sha256": "", "license": "", "source": "" },
+    "ocr-engine": { "supplier": "", "name": "", "version": "", "sha256": "", "license": "", "source": "" },
+    "vision-safety-model": { "supplier": "", "name": "", "version": "", "sha256": "", "license": "", "source": "" },
+    "asr-engine": { "supplier": "", "name": "", "version": "", "sha256": "", "license": "", "source": "" },
+    "embedding-model": { "supplier": "", "name": "", "version": "", "sha256": "", "license": "", "source": "" }
+  }
+}

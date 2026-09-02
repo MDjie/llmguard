@@ -1,0 +1,153 @@
+// Generated from model/guard-v1.schema.json. Do not edit.
+// Source SHA-256: 4de68b95fb3b68b2116a5e2bdfde666a49e00baf2e1ac0716d03bc315bf4e3a5
+syntax = "proto3";
+
+package guardllm.contracts.v1;
+
+import "google/protobuf/struct.proto";
+
+option java_package = "io.guardllm.contracts.v1.proto";
+option java_multiple_files = true;
+
+enum Direction {
+  DIRECTION_UNSPECIFIED = 0;
+  DIRECTION_INPUT = 1;
+  DIRECTION_OUTPUT_COMPLETE = 2;
+  DIRECTION_OUTPUT_CHUNK = 3;
+  DIRECTION_RAG_INGEST = 4;
+  DIRECTION_RAG_CONTEXT = 5;
+  DIRECTION_TOOL_REQUEST = 6;
+  DIRECTION_TOOL_RESULT = 7;
+}
+
+enum GuardAction {
+  GUARD_ACTION_UNSPECIFIED = 0;
+  GUARD_ACTION_ALLOW = 1;
+  GUARD_ACTION_WARN = 2;
+  GUARD_ACTION_BLOCK = 3;
+  GUARD_ACTION_MASK = 4;
+  GUARD_ACTION_REWRITE = 5;
+  GUARD_ACTION_SAFE_RESPONSE = 6;
+  GUARD_ACTION_REQUIRE_REVIEW = 7;
+}
+
+enum RiskLevel {
+  RISK_LEVEL_UNSPECIFIED = 0;
+  RISK_LEVEL_NONE = 1;
+  RISK_LEVEL_LOW = 2;
+  RISK_LEVEL_MEDIUM = 3;
+  RISK_LEVEL_HIGH = 4;
+  RISK_LEVEL_CRITICAL = 5;
+}
+
+enum ObservationStatus {
+  OBSERVATION_STATUS_UNSPECIFIED = 0;
+  OBSERVATION_STATUS_MATCH = 1;
+  OBSERVATION_STATUS_NO_MATCH = 2;
+  OBSERVATION_STATUS_TIMEOUT = 3;
+  OBSERVATION_STATUS_ERROR = 4;
+  OBSERVATION_STATUS_SKIPPED = 5;
+}
+
+enum ArtifactKind {
+  ARTIFACT_KIND_UNSPECIFIED = 0;
+  ARTIFACT_KIND_TEXT = 1;
+  ARTIFACT_KIND_IMAGE = 2;
+  ARTIFACT_KIND_AUDIO = 3;
+  ARTIFACT_KIND_VIDEO = 4;
+  ARTIFACT_KIND_DOCUMENT = 5;
+  ARTIFACT_KIND_TOOL_RESULT = 6;
+  ARTIFACT_KIND_RAG_CHUNK = 7;
+}
+
+message RequestContext {
+  string trace_id = 1;
+  string request_id = 2;
+  string tenant_id = 3;
+  string application_id = 4;
+  optional string session_id = 5;
+  Direction direction = 6;
+  int64 absolute_deadline_epoch_ms = 7;
+  string policy_bundle_id = 8;
+}
+
+message ArtifactRef {
+  string artifact_id = 1;
+  ArtifactKind kind = 2;
+  string media_type = 3;
+  int64 size_bytes = 4;
+  string sha256 = 5;
+  optional google.protobuf.Value metadata = 6;
+}
+
+message GuardContent {
+  optional string text = 1;
+  repeated ArtifactRef artifacts = 2;
+}
+
+message GuardRequest {
+  string contract_version = 1;
+  RequestContext context = 2;
+  GuardContent content = 3;
+}
+
+message EvidenceRef {
+  string view_id = 1;
+  optional int64 start = 2;
+  optional int64 end = 3;
+  optional string artifact_id = 4;
+  repeated double region = 5;
+  repeated int64 time_range_ms = 6;
+  optional string masked_preview = 7;
+  string content_hmac = 8;
+}
+
+message Observation {
+  string detector_id = 1;
+  string detector_version = 2;
+  string risk_type = 3;
+  double score = 4;
+  RiskLevel severity = 5;
+  repeated EvidenceRef evidence = 6;
+  ObservationStatus status = 7;
+  optional string reason_code = 8;
+}
+
+message GuardDecision {
+  string contract_version = 1;
+  string decision_id = 2;
+  string trace_id = 3;
+  GuardAction action = 4;
+  RiskLevel risk_level = 5;
+  repeated Observation observations = 6;
+  repeated string policy_path = 7;
+  string bundle_id = 8;
+  int64 latency_ms = 9;
+  repeated string degradation_reasons = 10;
+  optional string transformed_text = 11;
+}
+
+message GuardError {
+  string contract_version = 1;
+  string code = 2;
+  string message = 3;
+  string trace_id = 4;
+  bool retryable = 5;
+  optional google.protobuf.Value details = 6;
+}
+
+message GuardEvent {
+  string contract_version = 1;
+  string event_id = 2;
+  string event_type = 3;
+  string occurred_at = 4;
+  string trace_id = 5;
+  string tenant_id = 6;
+  string application_id = 7;
+  google.protobuf.Value payload = 8;
+}
+
+service GuardService {
+  rpc Evaluate(GuardRequest) returns (GuardDecision);
+  rpc EvaluateStream(stream GuardRequest) returns (stream GuardDecision);
+}

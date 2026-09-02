@@ -1,0 +1,107 @@
+{
+  "ACC-001": {
+    "implementationStatus": "IMPLEMENTED_PENDING_TARGET_NETWORK_POC",
+    "implementation": ["packages/contracts", "services/guard-gateway", "src/app/api/v1/guard"],
+    "tests": ["tests/contracts", "services/guard-gateway/src/test"]
+  },
+  "ACC-002": {
+    "implementationStatus": "PARTIAL_STATIC_ROUTING_MAPPING_WS_IMPLEMENTED_DYNAMIC_CONSOLE_PENDING",
+    "implementation": ["services/guard-gateway/src/main/java/com/guardllm/gateway/ModelRouteRegistry.java", "services/guard-gateway/src/main/java/com/guardllm/gateway/JsonFieldMapper.java", "services/guard-gateway/src/main/java/com/guardllm/gateway/ChatWebSocketHandler.java"],
+    "tests": ["services/guard-gateway/src/test/java/com/guardllm/gateway/ModelRouteRegistryTest.java", "services/guard-gateway/src/test/java/com/guardllm/gateway/GatewayWebSocketConfigurationTest.java"]
+  },
+  "ACC-004": {
+    "implementationStatus": "IMPLEMENTED_PENDING_TARGET_REDIS_CONCURRENCY_POC",
+    "implementation": ["services/guard-gateway/src/main/java/com/guardllm/gateway/GatewayRateLimiter.java", "services/guard-gateway/src/main/java/com/guardllm/gateway/ReactiveBulkhead.java", "services/guard-gateway/src/main/java/com/guardllm/gateway/GatewayConcurrencyProperties.java", "services/guard-gateway/src/main/java/com/guardllm/gateway/RedisConcurrencyLeaseBackend.java", "src/lib/artifacts/service.ts"],
+    "tests": ["services/guard-gateway/src/test/java/com/guardllm/gateway/GatewayRateLimiterTest.java", "services/guard-gateway/src/test/java/com/guardllm/gateway/ReactiveBulkheadTest.java", "tests/artifacts"]
+  },
+  "XIN-001": {
+    "implementationStatus": "PARTIAL_PORTABILITY_BUILD_AND_SCHEDULING_ABSTRACTION_IMPLEMENTED_TARGET_ADAPTER_POC_PENDING",
+    "implementation": [".github/workflows/portability.yml", "deploy/compatibility/matrix.json", "deploy/helm/guardllm/templates/workloads.yaml", "deploy/helm/guardllm/values-ascend-example.yaml", "src/lib/platform-adapters/inference.ts"],
+    "tests": ["tests/deployment/production-assets.test.mjs", "tests/platform-adapters/inference.test.ts", "scripts/compatibility/validate-matrix.mjs"]
+  },
+  "XIN-002": {
+    "implementationStatus": "PARTIAL_VENDOR_NEUTRAL_OCI_AND_RUNTIME_ABSTRACTION_IMPLEMENTED_TARGET_SWAP_POC_PENDING",
+    "implementation": ["Dockerfile", "services/guard-gateway/Dockerfile", "services/media-analyzer/Dockerfile", ".github/workflows/portability.yml", "deploy/helm/guardllm/templates/workloads.yaml", "src/lib/platform-adapters/inference.ts"],
+    "tests": ["tests/deployment/production-assets.test.mjs", "tests/platform-adapters/inference.test.ts", "scripts/compatibility/validate-matrix.mjs"]
+  },
+  "ACC-007": {
+    "implementationStatus": "IMPLEMENTED_PENDING_TARGET_SDK_POC",
+    "implementation": ["packages/sdk-typescript", "packages/sdk-python", "packages/sdk-java", "packages/sdk-go", "packages/contracts", "docs/compatibility"],
+    "tests": ["tests/sdk/typescript-sdk.test.ts", "packages/sdk-python/tests", "packages/sdk-java/src/test", "packages/sdk-go/client_test.go", "tests/contracts"]
+  },
+  "IN-004": {
+    "implementationStatus": "PARTIAL_RESOURCE_ABUSE_BASELINE_IMPLEMENTED_ACCURACY_AND_STRESS_POC_PENDING",
+    "implementation": ["src/lib/guard-engine-v2/builtin-detectors.ts", "src/lib/guard-engine-v2/from-policy-bundle.ts", "services/guard-gateway/src/main/java/com/guardllm/gateway/GatewayRateLimiter.java", "services/guard-gateway/src/main/java/com/guardllm/gateway/ReactiveBulkhead.java"],
+    "tests": ["tests/guard-engine-v2/builtin-detectors.test.ts", "services/guard-gateway/src/test/java/com/guardllm/gateway/GatewayRateLimiterTest.java", "services/guard-gateway/src/test/java/com/guardllm/gateway/ReactiveBulkheadTest.java", "tests/performance/requirements.test.mjs", "acceptance/poc-manifest.json"]
+  },
+  "OUT-002": {
+    "implementationStatus": "PARTIAL_INSURANCE_RULE_BASELINE_IMPLEMENTED_INDUSTRY_DATASET_AND_MODEL_CALIBRATION_PENDING",
+    "implementation": ["src/lib/guard-engine-v2/builtin-detectors.ts", "src/lib/guard-engine-v2/from-policy-bundle.ts", "src/lib/policy-bundle"],
+    "tests": ["tests/guard-engine-v2/builtin-detectors.test.ts", "tests/policy-bundle"]
+  },
+  "OUT-008": {
+    "implementationStatus": "IMPLEMENTED_PENDING_TARGET_MEDIA_POC",
+    "implementation": ["src/lib/content-marking", "src/app/api/v1/content-marks", "services/media-analyzer/src/media-marking.ts", "drizzle/0025_generated_content_derivatives.sql"],
+    "tests": ["tests/content-marking", "tests/media-analyzer/media-marking.test.ts", "scripts/integration/run-database-tests.mjs"]
+  },
+  "POL-005": {
+    "implementationStatus": "IMPLEMENTED_PENDING_TARGET_DATABASE_POC",
+    "implementation": ["src/lib/policy-bundle/lifecycle.ts", "src/lib/policy-bundle/service.ts", "src/app/api/policy-bundles", "src/app/policy-releases/page.tsx", "src/app/evaluation-runs/page.tsx", "drizzle/0023_policy_bundle_lifecycle.sql"],
+    "tests": ["tests/policy-bundle", "tests/evaluation", "scripts/integration/run-database-tests.mjs"]
+  },
+  "AUD-003": {
+    "implementationStatus": "IMPLEMENTED_PENDING_ENTERPRISE_TSA_POC",
+    "implementation": ["src/lib/audit/chain.ts", "src/lib/audit/repository.ts", "src/lib/audit/trusted-timestamp.ts", "src/lib/audit/timestamp-worker.ts", "scripts/verify-audit-chain.ts", "scripts/audit-timestamp-worker.ts", "drizzle/0017_tamper_evident_audit.sql", "drizzle/0026_audit_trusted_timestamp.sql"],
+    "tests": ["tests/audit/chain.test.ts", "tests/audit/trusted-timestamp.test.ts", "scripts/integration/run-database-tests.mjs"]
+  },
+  "AUD-004": {
+    "implementationStatus": "PARTIAL_METADATA_SEARCH_IMPLEMENTED_RAW_CONTENT_RESTRICTED",
+    "implementation": ["src/lib/audit/reporting.ts", "src/app/api/audit/events", "src/app/api/export"],
+    "tests": ["tests/audit/reporting.test.ts", "tests/data-protection/export-approval.test.ts"]
+  },
+  "AUD-006": {
+    "implementationStatus": "IMPLEMENTED_PENDING_TARGET_DATABASE_POC",
+    "implementation": ["src/lib/audit/reporting.ts", "src/app/api/audit/reports"],
+    "tests": ["tests/audit/reporting.test.ts"]
+  },
+  "AUD-007": {
+    "implementationStatus": "IMPLEMENTED_PENDING_SOC_INTEGRATION_POC",
+    "implementation": ["src/lib/audit/dispatcher.ts", "src/lib/audit/exporters.ts", "scripts/audit-export-worker.ts", "drizzle/0022_audit_export_outbox.sql"],
+    "tests": ["tests/audit/export.test.ts"]
+  },
+  "OPS-002": {
+    "implementationStatus": "IMPLEMENTED_PENDING_TARGET_DATABASE_POC",
+    "implementation": ["src/lib/incidents", "src/app/api/incidents", "src/app/incidents/page.tsx", "src/app/api/detection-sessions/route.ts"],
+    "tests": ["tests/incidents/state-machine.test.ts", "tests/incidents/console-structure.test.mjs"]
+  },
+  "OPS-004": {
+    "implementationStatus": "IMPLEMENTED_PENDING_TARGET_DATABASE_POC",
+    "implementation": ["src/lib/incidents", "src/app/api/incidents", "src/app/incidents/page.tsx", "drizzle/0020_incident_workflow.sql"],
+    "tests": ["tests/incidents/state-machine.test.ts", "tests/incidents/console-structure.test.mjs", "scripts/integration/run-database-tests.mjs"]
+  },
+  "IAM-004": {
+    "implementationStatus": "IMPLEMENTED_PENDING_ENTERPRISE_POLICY_POC",
+    "implementation": ["src/lib/auth", "src/app/api/auth/change-password", "drizzle/0018_password_lifecycle.sql"],
+    "tests": ["tests/auth"]
+  },
+  "DAT-001": {
+    "implementationStatus": "IMPLEMENTED_PENDING_CATALOG_DATA_ONBOARDING",
+    "implementation": ["src/lib/data-catalog", "src/app/api/data-catalog", "drizzle/0021_data_catalog.sql"],
+    "tests": ["tests/data-catalog", "scripts/integration/run-database-tests.mjs"]
+  },
+  "DAT-005": {
+    "implementationStatus": "PARTIAL_DATABASE_PURGE_PROOF_IMPLEMENTED_EXTERNAL_STORES_PENDING",
+    "implementation": ["src/lib/data-protection/retention.ts", "src/lib/data-protection/lineage.ts", "drizzle/0027_data_lineage_deletion_proofs.sql"],
+    "tests": ["tests/data-protection/retention.test.ts", "tests/data-protection/lineage.test.ts", "tests/integration/data-lineage.sql"]
+  },
+  "DAT-006": {
+    "implementationStatus": "PARTIAL_RUNTIME_LINEAGE_IMPLEMENTED_DATASET_LICENSE_LABEL_MODEL_USE_PENDING",
+    "implementation": ["src/lib/data-protection/lineage.ts", "src/lib/rag/ingest-worker.ts", "src/lib/multimodal/document-image-worker.ts", "drizzle/0027_data_lineage_deletion_proofs.sql"],
+    "tests": ["tests/data-protection/lineage.test.ts", "tests/integration/data-lineage.sql"]
+  },
+  "DAT-007": {
+    "implementationStatus": "IMPLEMENTED_PENDING_TARGET_MEDIA_POC",
+    "implementation": ["src/lib/content-marking", "src/app/api/v1/content-marks", "services/media-analyzer/src/media-marking.ts", "drizzle/0019_generated_content_marks.sql", "drizzle/0025_generated_content_derivatives.sql"],
+    "tests": ["tests/content-marking", "tests/media-analyzer/media-marking.test.ts", "scripts/integration/run-database-tests.mjs"]
+  }
+}

@@ -1,0 +1,100 @@
+name: Quality and Security
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16.10-alpine
+        env:
+          POSTGRES_USER: guardllm
+          POSTGRES_PASSWORD: integration-only
+          POSTGRES_DB: guardllm_integration_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U guardllm -d guardllm_integration_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6.5.0
+        with:
+          node-version: '24.20.0'
+          package-manager-cache: false
+
+      - name: Set up Python SDK runtime
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+
+      - name: Set up Java SDK runtime
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Set up Go SDK runtime
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.24.x'
+          cache-dependency-path: packages/sdk-go/go.mod
+
+      - name: Enable pinned pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.19.0 --activate
+          pnpm --version
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check generated contracts and compatibility
+        run: pnpm contracts:check
+
+      - name: Validate platform compatibility matrix
+        run: pnpm compatibility:check
+
+      - name: Enforce zero-error quality gate
+        run: pnpm quality:full
+
+      - name: Run unit tests
+        run: pnpm test:unit --run
+
+      - name: Run contract tests
+        run: pnpm test:contract --run
+
+      - name: Run Python SDK tests
+        run: pnpm test:sdk-python
+
+      - name: Run Java SDK tests
+        run: mvn -B -ntp -f packages/sdk-java/pom.xml test
+
+      - name: Run Go SDK tests
+        run: pnpm test:sdk-go
+
+      - name: Run database migrations and isolation tests
+        env:
+          INTEGRATION_DATABASE_URL: postgres://guardllm:integration-only@127.0.0.1:5432/guardllm_integration_ci
+          INTEGRATION_APPLY_SCHEMA: 'true'
+        run: pnpm test:integration
+
+      - name: Audit production dependencies
+        run: pnpm audit --prod --audit-level high --registry=https://registry.npmjs.org/
+
+      - name: Build application
+        run: pnpm build

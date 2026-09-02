@@ -1,0 +1,75 @@
+server:
+  port: ${SERVER_PORT:8080}
+  shutdown: graceful
+spring:
+  application:
+    name: guard-gateway
+  codec:
+    max-in-memory-size: 2MB
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+  data:
+    redis:
+      url: ${GUARD_REDIS_URI:redis://127.0.0.1:6379}
+      connect-timeout: ${GUARD_REDIS_CONNECT_TIMEOUT:1s}
+      timeout: ${GUARD_REDIS_COMMAND_TIMEOUT:1s}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  tracing:
+    sampling:
+      probability: ${OTEL_SAMPLING_PROBABILITY:0.1}
+guard:
+  gateway:
+    context-hmac-secret: ${GATEWAY_CONTEXT_HMAC_SECRET}
+    guard-base-url: ${GUARD_BASE_URL}
+    guard-app-key: ${GUARD_APP_KEY}
+    model-base-url: ${MODEL_BASE_URL}
+    model-bearer-token: ${MODEL_BEARER_TOKEN:}
+    active-bundle-id: ${GUARD_ACTIVE_BUNDLE_ID}
+    canary-bundle-id: ${GUARD_CANARY_BUNDLE_ID:}
+    canary-percent: ${GUARD_CANARY_PERCENT:0}
+    shadow-bundle-id: ${GUARD_SHADOW_BUNDLE_ID:}
+    request-timeout: ${GUARD_REQUEST_TIMEOUT:20s}
+    max-in-flight: ${GUARD_MAX_IN_FLIGHT:200}
+    concurrency:
+      enabled: ${GUARD_CONCURRENCY_ENABLED:true}
+      tenant-max-in-flight: ${GUARD_TENANT_MAX_IN_FLIGHT:200}
+      application-max-in-flight: ${GUARD_APPLICATION_MAX_IN_FLIGHT:100}
+      principal-max-in-flight: ${GUARD_PRINCIPAL_MAX_IN_FLIGHT:20}
+      credential-max-in-flight: ${GUARD_CREDENTIAL_MAX_IN_FLIGHT:50}
+      api-max-in-flight: ${GUARD_API_MAX_IN_FLIGHT:200}
+      max-tracked-scopes: ${GUARD_CONCURRENCY_MAX_TRACKED_SCOPES:10000}
+      distributed:
+        enabled: ${GUARD_DISTRIBUTED_CONCURRENCY_ENABLED:true}
+        fail-closed: ${GUARD_DISTRIBUTED_CONCURRENCY_FAIL_CLOSED:true}
+        lease-ttl: ${GUARD_DISTRIBUTED_CONCURRENCY_LEASE_TTL:30s}
+    model-routing:
+      routes-json: ${GUARD_MODEL_ROUTES_JSON:}
+    rate-limit:
+      enabled: ${GUARD_RATE_LIMIT_ENABLED:true}
+      fail-closed: ${GUARD_RATE_LIMIT_FAIL_CLOSED:true}
+      requests-per-minute: ${GUARD_RATE_LIMIT_REQUESTS_PER_MINUTE:600}
+      text-chars-per-minute: ${GUARD_RATE_LIMIT_TEXT_CHARS_PER_MINUTE:10000000}
+      estimated-tokens-per-minute: ${GUARD_RATE_LIMIT_ESTIMATED_TOKENS_PER_MINUTE:2500000}
+      max-text-chars-per-request: ${GUARD_RATE_LIMIT_MAX_TEXT_CHARS_PER_REQUEST:1000000}
+    grpc:
+      enabled: ${GUARD_GRPC_ENABLED:true}
+      port: ${GUARD_GRPC_PORT:9090}
+      tls-required: ${GUARD_GRPC_MTLS_REQUIRED:true}
+      trust-certificate: ${GUARD_GRPC_TRUST_CERTIFICATE:}
+      server-certificate: ${GUARD_GRPC_SERVER_CERTIFICATE:}
+      server-private-key: ${GUARD_GRPC_SERVER_PRIVATE_KEY:}
+      max-inbound-message-bytes: ${GUARD_GRPC_MAX_INBOUND_MESSAGE_BYTES:2097152}
+      max-buffered-requests: ${GUARD_GRPC_MAX_BUFFERED_REQUESTS:64}
+    tls:
+      required: ${GATEWAY_MTLS_REQUIRED:true}
+      trust-certificate: ${GATEWAY_TRUST_CERTIFICATE:}
+      client-certificate: ${GATEWAY_CLIENT_CERTIFICATE:}
+      client-private-key: ${GATEWAY_CLIENT_PRIVATE_KEY:}

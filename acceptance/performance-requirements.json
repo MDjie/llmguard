@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "1.0",
+  "policy": "Performance PASS requires an immutable report from the target full-policy environment; code-mode fixtures are never acceptance evidence.",
+  "requirements": ["PER-001", "PER-002", "PER-003", "PER-004", "PER-005", "PER-006"],
+  "thresholds": {
+    "attackBlockRateMin": 0.99,
+    "recallMin": 0.95,
+    "precisionMin": 0.95,
+    "benignFalseBlockRateMax": 0.01,
+    "classifierAccuracyMin": 0.98,
+    "classifierP99MsMax": 200,
+    "mainPathP99MsMax": 300,
+    "singleNodeQpsMin": 20,
+    "clusterQpsMin": 200,
+    "durationSecondsMin": 1800,
+    "errorRateMax": 0.001,
+    "sessionsMin": 3000,
+    "consoleUsersMin": 300,
+    "cpuPeakPercentMax": 80,
+    "memoryPeakPercentMax": 75
+  },
+  "scripts": {
+    "fastPath": "tests/performance/guard-fast-path.js",
+    "sessions": "tests/performance/concurrent-sessions.js",
+    "console": "tests/performance/console-concurrency.js"
+  }
+}

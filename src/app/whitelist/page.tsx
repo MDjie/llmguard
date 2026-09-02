@@ -68,6 +68,8 @@ interface Policy {
   id: string;
   name: string;
   is_default?: boolean;
+  isDefault?: boolean;
+  isActive?: boolean;
 }
 
 // 测试结果类型
@@ -523,7 +525,7 @@ export default function WhitelistPage() {
       {sortedGroups.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
-            暂无白名单规则，点击"新建规则"创建
+            暂无白名单规则，点击&quot;新建规则&quot;创建
           </CardContent>
         </Card>
       ) : (

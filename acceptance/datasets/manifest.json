@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "1.0",
+  "datasetId": "PENDING-CUSTOMER-BLIND-DATASET",
+  "version": "PENDING",
+  "custodian": "independent acceptance team",
+  "indexFile": "acceptance/datasets/blind-index.jsonl",
+  "indexSha256": "",
+  "counts": {
+    "ATTACK": 2000,
+    "BENIGN": 2000
+  },
+  "rules": {
+    "uniqueSampleIds": true,
+    "singleRecordedAttempt": true,
+    "trainingOverlapAllowed": false,
+    "rawContentInRepository": false
+  },
+  "status": "PENDING_CUSTOMER_DATASET"
+}

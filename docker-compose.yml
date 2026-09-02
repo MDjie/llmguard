@@ -1,73 +1,105 @@
-version: '3.8'
-
 services:
-  # PostgreSQL 数据库
   postgres:
-    image: postgres:16-alpine
-    container_name: guardllm-db
+    image: postgres:16.10-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${DB_USER:-guardllm}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-guardllm_secret_2024}
+      POSTGRES_PASSWORD: "${DB_PASSWORD:?DB_PASSWORD is required}"
       POSTGRES_DB: ${DB_NAME:-guardllm}
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+      - ./scripts/init-database-new.sql:/docker-entrypoint-initdb.d/00-schema.sql:ro
+      - ./scripts/init-database-supplement.sql:/docker-entrypoint-initdb.d/01-supplement.sql:ro
+      - ./drizzle/0001_auth_hardening.sql:/docker-entrypoint-initdb.d/10-auth.sql:ro
+      - ./drizzle/0002_provider_secrets.sql:/docker-entrypoint-initdb.d/11-provider-secrets.sql:ro
+      - ./drizzle/0003_data_minimization.sql:/docker-entrypoint-initdb.d/12-data-minimization.sql:ro
+      - ./drizzle/0004_document_owner_and_retention.sql:/docker-entrypoint-initdb.d/13-document-retention.sql:ro
+      - ./drizzle/0005_security_audit.sql:/docker-entrypoint-initdb.d/14-security-audit.sql:ro
+      - ./drizzle/0006_export_approvals.sql:/docker-entrypoint-initdb.d/15-export-approvals.sql:ro
+      - ./drizzle/0007_tenancy_and_applications.sql:/docker-entrypoint-initdb.d/16-tenancy.sql:ro
+      - ./drizzle/0008_policy_bundles_and_evaluation_results.sql:/docker-entrypoint-initdb.d/17-policy-bundles.sql:ro
+      - ./drizzle/0009_async_evaluation.sql:/docker-entrypoint-initdb.d/18-async-evaluation.sql:ro
+      - ./drizzle/0010_gateway_cutover.sql:/docker-entrypoint-initdb.d/19-gateway-cutover.sql:ro
+      - ./drizzle/0011_artifacts_and_guard_jobs.sql:/docker-entrypoint-initdb.d/20-artifacts.sql:ro
+      - ./drizzle/0012_multimodal_fusion.sql:/docker-entrypoint-initdb.d/21-multimodal-fusion.sql:ro
+      - ./drizzle/0013_audio_video_timeline.sql:/docker-entrypoint-initdb.d/22-media-timeline.sql:ro
+      - ./drizzle/0014_rag_security.sql:/docker-entrypoint-initdb.d/23-rag-security.sql:ro
+      - ./drizzle/0015_tool_mcp_gateway.sql:/docker-entrypoint-initdb.d/24-tool-mcp.sql:ro
+      - ./drizzle/0016_callback_delivery.sql:/docker-entrypoint-initdb.d/25-callback-delivery.sql:ro
+      - ./drizzle/0017_tamper_evident_audit.sql:/docker-entrypoint-initdb.d/26-tamper-evident-audit.sql:ro
+      - ./drizzle/0018_password_lifecycle.sql:/docker-entrypoint-initdb.d/27-password-lifecycle.sql:ro
+      - ./drizzle/0019_generated_content_marks.sql:/docker-entrypoint-initdb.d/28-content-marks.sql:ro
+      - ./drizzle/0020_incident_workflow.sql:/docker-entrypoint-initdb.d/29-incident-workflow.sql:ro
+      - ./drizzle/0021_data_catalog.sql:/docker-entrypoint-initdb.d/30-data-catalog.sql:ro
+      - ./drizzle/0022_audit_export_outbox.sql:/docker-entrypoint-initdb.d/31-audit-export-outbox.sql:ro
+      - ./drizzle/0023_policy_bundle_lifecycle.sql:/docker-entrypoint-initdb.d/32-policy-bundle-lifecycle.sql:ro
+      - ./drizzle/0024_guard_session_risk_state.sql:/docker-entrypoint-initdb.d/33-guard-session-risk-state.sql:ro
+      - ./drizzle/0025_generated_content_derivatives.sql:/docker-entrypoint-initdb.d/34-generated-content-derivatives.sql:ro
+      - ./drizzle/0026_audit_trusted_timestamp.sql:/docker-entrypoint-initdb.d/35-audit-trusted-timestamp.sql:ro
+      - ./drizzle/0027_data_lineage_deletion_proofs.sql:/docker-entrypoint-initdb.d/36-data-lineage-deletion-proofs.sql:ro
     ports:
-      - "${DB_PORT:-5434}:5432"
+      - "127.0.0.1:${DB_PORT:-5434}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-guardllm} -d ${DB_NAME:-guardllm}"]
       interval: 10s
       timeout: 5s
-      retries: 5
-    networks:
-      - guardllm-network
+      retries: 10
+      start_period: 10s
+    networks: [guardllm-network]
+    security_opt: [no-new-privileges:true]
 
-  # GuardLLM 应用
   app:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: guardllm-app
     restart: unless-stopped
+    init: true
     depends_on:
       postgres:
         condition: service_healthy
     environment:
-      # 数据库配置
-      DATABASE_URL: postgres://${DB_USER:-guardllm}:${DB_PASSWORD:-guardllm_secret_2024}@postgres:5432/${DB_NAME:-guardllm}
-      # 应用端口
+      DATABASE_URL: "postgres://${DB_USER:-guardllm}:${DB_PASSWORD:?DB_PASSWORD is required}@postgres:5432/${DB_NAME:-guardllm}"
       PORT: 5000
       NODE_ENV: production
-      # LLM API 配置（运行时设置）
-      LLM_API_KEY: ${LLM_API_KEY:-}
-      LLM_BASE_URL: ${LLM_BASE_URL:-}
-      LLM_MODEL_NAME: ${LLM_MODEL_NAME:-}
-      # 安全密钥
-      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-guardllm-encryption-key-change-in-production}
-      # Supabase兼容配置
-      COZE_SUPABASE_URL: http://postgres:5432
-      COZE_SUPABASE_ANON_KEY: dummy
-      COZE_SUPABASE_DB_URL: postgres://${DB_USER:-guardllm}:${DB_PASSWORD:-guardllm_secret_2024}@postgres:5432/${DB_NAME:-guardllm}
-      # Ollama本地模型
-      OLLAMA_BASE_URL: http://host.docker.internal:11434
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      JWT_SECRET: "${JWT_SECRET:?JWT_SECRET is required}"
+      SECRET_MASTER_KEY: "${SECRET_MASTER_KEY:?SECRET_MASTER_KEY is required}"
+      SECRET_MASTER_KEY_ID: "${SECRET_MASTER_KEY_ID:-local-v1}"
+      CONTENT_HASH_KEY: "${CONTENT_HASH_KEY:?CONTENT_HASH_KEY is required}"
+      AUDIT_CHAIN_KEY: "${AUDIT_CHAIN_KEY:?AUDIT_CHAIN_KEY is required}"
+      AUDIT_CHAIN_KEY_ID: "${AUDIT_CHAIN_KEY_ID:-audit-hmac-v1}"
+      PASSWORD_MAX_AGE_DAYS: "${PASSWORD_MAX_AGE_DAYS:-90}"
+      CONTENT_MARKING_KEY: "${CONTENT_MARKING_KEY:?CONTENT_MARKING_KEY is required}"
+      CONTENT_MARKING_KEY_ID: "${CONTENT_MARKING_KEY_ID:-content-mark-hmac-v1}"
+      CONTENT_MARKING_PROVIDER_CODE: "${CONTENT_MARKING_PROVIDER_CODE:?CONTENT_MARKING_PROVIDER_CODE is required}"
+      METRICS_BEARER_TOKEN: "${METRICS_BEARER_TOKEN:?METRICS_BEARER_TOKEN is required}"
+      EXPORT_APPROVAL_REQUIRED: "${EXPORT_APPROVAL_REQUIRED:-true}"
+      RAW_CONTENT_STORAGE_ENABLED: "${RAW_CONTENT_STORAGE_ENABLED:-false}"
+      RAW_CONTENT_RETENTION_DAYS: "${RAW_CONTENT_RETENTION_DAYS:-7}"
+      PROVIDER_ALLOWED_HOSTS: "${PROVIDER_ALLOWED_HOSTS:-}"
+      PROVIDER_ALLOWED_PRIVATE_HOSTS: "${PROVIDER_ALLOWED_PRIVATE_HOSTS:-}"
     ports:
       - "${APP_PORT:-58082}:5000"
-    networks:
-      - guardllm-network
+    networks: [guardllm-network]
+    read_only: true
+    tmpfs:
+      - /tmp:size=256m,mode=1777
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:5000/api/health/live').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
       interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    stop_grace_period: 30s
 
 volumes:
   postgres_data:
-    driver: local
 
 networks:
   guardllm-network:

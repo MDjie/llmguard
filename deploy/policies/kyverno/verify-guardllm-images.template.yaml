@@ -1,0 +1,27 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: guardllm-verify-image-signatures
+spec:
+  validationFailureAction: Enforce
+  webhookTimeoutSeconds: 30
+  failurePolicy: Fail
+  rules:
+    - name: verify-cosign-key-signatures
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+              namespaceSelector:
+                matchLabels: { guardllm.io/managed: "true" }
+      verifyImages:
+        - imageReferences:
+            - "${GUARDLLM_IMAGE_REGISTRY}/*"
+          mutateDigest: false
+          verifyDigest: true
+          required: true
+          attestors:
+            - entries:
+                - keys:
+                    publicKeys: |-
+                      ${COSIGN_PUBLIC_KEY_PEM}

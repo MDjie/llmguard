@@ -77,6 +77,20 @@ interface Rule {
   suggestion?: string | null;
 }
 
+interface MatchedTestRule {
+  id: string;
+  name: string;
+  matches: string[];
+  score: number;
+}
+
+interface DimensionTestResult {
+  score: number;
+  matchedCount: number;
+  totalRules: number;
+  matchedRules: MatchedTestRule[];
+}
+
 export default function DimensionDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -90,7 +104,7 @@ export default function DimensionDetailPage() {
   const [editingRule, setEditingRule] = useState<Rule | null>(null);
   const [testDialogOpen, setTestDialogOpen] = useState(false);
   const [testText, setTestText] = useState('');
-  const [testResult, setTestResult] = useState<any>(null);
+  const [testResult, setTestResult] = useState<DimensionTestResult | null>(null);
   const [testing, setTesting] = useState(false);
 
   const [ruleForm, setRuleForm] = useState({
@@ -793,7 +807,7 @@ export default function DimensionDetailPage() {
                   <div className="space-y-2">
                     <Label>命中的规则</Label>
                     <div className="space-y-2">
-                      {testResult.matchedRules.map((rule: any) => (
+                      {testResult.matchedRules.map((rule) => (
                         <div key={rule.id} className="flex items-center justify-between p-2 bg-muted rounded">
                           <div>
                             <p className="font-medium">{rule.name}</p>

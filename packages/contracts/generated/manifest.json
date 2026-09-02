@@ -1,0 +1,13 @@
+{
+  "contractVersion": "1.0",
+  "source": "model/guard-v1.schema.json",
+  "sourceSha256": "4de68b95fb3b68b2116a5e2bdfde666a49e00baf2e1ac0716d03bc315bf4e3a5",
+  "outputs": {
+    "generated/typescript/guard-v1.ts": "93c244f322117e436da0bc0c5504ba456af9ceca905c2cd8bb48e1eae6cc14bf",
+    "generated/java/io/guardllm/contracts/v1/GuardContracts.java": "8b97baee796a59ad7e97c1c9413997035740bd54454fb7bb20ffb5eedec79711",
+    "generated/python/guard_contracts_v1.py": "e605e4f37f0396ea6793b5ff9c082d2bfc58a21222d037117228cd5eac6cf48c",
+    "openapi/guard-v1.openapi.json": "971906501b93d4737a6298abf67f580f1dad1e1014536a263b481c146ff90316",
+    "proto/guard/v1/guard.proto": "0088b1d52818bc250e3611eac2b19154e439f03502df55cc9c2ae3cb8b958ac6",
+    "../../services/guard-gateway/src/main/proto/guard/v1/guard.proto": "0088b1d52818bc250e3611eac2b19154e439f03502df55cc9c2ae3cb8b958ac6"
+  }
+}

@@ -1,48 +1,57 @@
+import { and, desc, eq, sql } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
-import { getDb } from '@/lib/db';
+import { z } from 'zod';
+import { jsonObjectResponseSchema } from '@/contracts/http/common';
+import { withApiSecurity } from '@/lib/api-security';
+import { db, agentTraces } from '@/lib/db';
+import { requireTenantContext, scopePredicate } from '@/lib/tenancy';
 
-export async function GET(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get('page') || '1');
-    const pageSize = parseInt(searchParams.get('pageSize') || '20');
-    const workflowType = searchParams.get('workflowType');
-    const sessionId = searchParams.get('sessionId');
+const querySchema = z.object({
+  page: z.coerce.number().int().min(1).max(100_000).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(20),
+  workflowType: z.string().max(64).optional(),
+  sessionId: z.string().max(128).optional(),
+}).strict();
 
-    const supabase = getDb();
-    const offset = (page - 1) * pageSize;
-
-    let query = supabase
-      .from('agent_traces')
-      .select('*', { count: 'exact' })
-      .order('created_at', { ascending: false })
-      .range(offset, offset + pageSize - 1);
-
-    if (workflowType) {
-      query = query.eq('workflow_name', workflowType);
-    }
-    if (sessionId) {
-      query = query.eq('record_id', sessionId);
-    }
-
-    const { data, error, count } = await query;
-
-    if (error) {
-      return NextResponse.json({ success: false, error: '获取日志失败' }, { status: 500 });
-    }
-
+export const GET = withApiSecurity(
+  {
+    permission: 'audit:read',
+    querySchema,
+    responseSchema: jsonObjectResponseSchema,
+    maxBodyBytes: 0,
+    auditEvent: 'agent-log.list',
+    rateLimitPolicy: { id: 'agent-log-list', windowMs: 60_000, maxRequests: 60, scope: 'principal' },
+  },
+  async ({ query, principal }) => {
+    const scope = requireTenantContext(principal);
+    const conditions = [scopePredicate(agentTraces, scope)];
+    if (query.workflowType) conditions.push(eq(agentTraces.workflowName, query.workflowType));
+    if (query.sessionId) conditions.push(eq(agentTraces.recordId, query.sessionId));
+    const where = and(...conditions);
+    const offset = (query.page - 1) * query.pageSize;
+    const [items, countRows] = await Promise.all([
+      db.select({
+        id: agentTraces.id,
+        recordId: agentTraces.recordId,
+        providerId: agentTraces.providerId,
+        workflowName: agentTraces.workflowName,
+        latencyMs: agentTraces.latencyMs,
+        success: agentTraces.success,
+        createdAt: agentTraces.createdAt,
+      }).from(agentTraces).where(where).orderBy(desc(agentTraces.createdAt))
+        .limit(query.pageSize).offset(offset),
+      db.select({ count: sql<number>`count(*)::int` }).from(agentTraces).where(where),
+    ]);
+    const total = Number(countRows[0]?.count ?? 0);
     return NextResponse.json({
       success: true,
       data: {
-        items: data || [],
-        total: count || 0,
-        page,
-        pageSize,
-        totalPages: Math.ceil((count || 0) / pageSize),
+        items,
+        total,
+        page: query.page,
+        pageSize: query.pageSize,
+        totalPages: Math.ceil(total / query.pageSize),
       },
     });
-  } catch (error) {
-    console.error('获取Agent日志失败:', error);
-    return NextResponse.json({ success: false, error: '获取日志失败' }, { status: 500 });
-  }
-}
+  },
+);

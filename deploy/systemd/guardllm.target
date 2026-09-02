@@ -1,0 +1,7 @@
+[Unit]
+Description=GuardLLM safety perimeter
+Wants=guardllm-app.service guardllm-gateway.service
+After=network-online.target
+
+[Install]
+WantedBy=multi-user.target

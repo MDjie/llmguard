@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["images", "workloads", "namespaces", "gatewayGrpc"],
+  "properties": {
+    "images": {
+      "type": "object",
+      "required": ["app", "gateway", "worker", "analyzer"],
+      "properties": {
+        "app": { "$ref": "#/$defs/image" },
+        "gateway": { "$ref": "#/$defs/image" },
+        "worker": { "$ref": "#/$defs/image" },
+        "analyzer": { "$ref": "#/$defs/image" }
+      }
+    },
+    "workloads": { "type": "object", "minProperties": 2 },
+    "namespaces": { "type": "object", "minProperties": 7 },
+    "gatewayGrpc": {
+      "type": "object",
+      "required": ["enabled", "port", "tlsRequired", "secretName", "mountPath"],
+      "properties": {
+        "enabled": { "const": true },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "tlsRequired": { "const": true },
+        "secretName": { "type": "string", "minLength": 1 },
+        "mountPath": { "type": "string", "pattern": "^/" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "$defs": {
+    "image": {
+      "type": "object",
+      "required": ["repository", "digest"],
+      "properties": {
+        "repository": { "type": "string", "minLength": 1 },
+        "digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+      }
+    }
+  }
+}

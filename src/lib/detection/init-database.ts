@@ -6,7 +6,8 @@
 import { getSupabaseClient } from '@/storage/database/supabase-client';
 import { db } from '@/lib/db';
 import { policyProfiles, policyDimensionConfig, detectionDimensions } from '@/lib/db';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
+import { scopePredicate, type TenantScope } from '@/lib/tenancy';
 
 // 延迟初始化 Supabase 客户端，避免构建时环境变量缺失
 let _client: ReturnType<typeof getSupabaseClient> | null = null;
@@ -623,13 +624,18 @@ export async function initializeDatabase(): Promise<{
 }
 
 // 初始化默认策略
-export async function initDefaultPolicy(): Promise<{ success: boolean; policyId?: string; error?: string }> {
+export async function initDefaultPolicy(
+  scope: TenantScope,
+): Promise<{ success: boolean; policyId?: string; error?: string }> {
   try {
     // 检查是否已有默认策略
     const existingPolicies = await db
       .select()
       .from(policyProfiles)
-      .where(eq(policyProfiles.isDefault, true))
+      .where(and(
+        eq(policyProfiles.isDefault, true),
+        scopePredicate(policyProfiles, scope),
+      ))
       .limit(1);
 
     if (existingPolicies.length > 0) {
@@ -639,6 +645,7 @@ export async function initDefaultPolicy(): Promise<{ success: boolean; policyId?
     // 创建默认策略
     const defaultPolicyId = 'policy-default-001';
     await db.insert(policyProfiles).values({
+      ...scope,
       id: defaultPolicyId,
       name: '默认策略',
       description: '系统默认安全策略',
@@ -651,7 +658,10 @@ export async function initDefaultPolicy(): Promise<{ success: boolean; policyId?
     const dimensions = await db
       .select()
       .from(detectionDimensions)
-      .where(eq(detectionDimensions.enabled, true));
+      .where(and(
+        eq(detectionDimensions.enabled, true),
+        scopePredicate(detectionDimensions, scope),
+      ));
 
     // 为每个维度创建策略配置
     const thresholdConfig: Record<string, { warn: number; block: number }> = {
@@ -676,6 +686,7 @@ export async function initDefaultPolicy(): Promise<{ success: boolean; policyId?
     for (const dim of dimensions) {
       const thresholds = thresholdConfig[dim.code] || { warn: 50, block: 80 };
       await db.insert(policyDimensionConfig).values({
+        ...scope,
         id: `pdc-${dim.id}`,
         policyId: defaultPolicyId,
         dimensionId: dim.id,

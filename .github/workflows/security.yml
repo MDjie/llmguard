@@ -1,0 +1,139 @@
+name: Supply Chain and Security
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    tags: ['v*']
+  schedule:
+    - cron: '17 2 * * 1'
+
+permissions:
+  contents: read
+  security-events: write
+  packages: write
+  id-token: write
+
+jobs:
+  codeql:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [javascript-typescript, java-kotlin]
+    steps:
+      - uses: actions/checkout@v6.0.2
+      - uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+      - uses: github/codeql-action/autobuild@v4
+      - uses: github/codeql-action/analyze@v4
+
+  supply-chain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6.0.2
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v6.5.0
+        with: { node-version: '24.20.0', package-manager-cache: false }
+      - name: Enable pinned pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.19.0 --activate
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm audit --prod --audit-level high
+      - name: Secret scan
+        uses: gitleaks/gitleaks-action@v2.3.9
+      - name: Filesystem, dependency and IaC scan
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,secret,misconfig
+          severity: HIGH,CRITICAL
+          exit-code: '1'
+      - name: Build application images
+        run: |
+          docker build --target runner -t guardllm-app:ci .
+          docker build --target worker -t guardllm-worker:ci .
+          docker build -t guardllm-gateway:ci services/guard-gateway
+      - name: Image scan
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          image-ref: guardllm-app:ci
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+      - name: Gateway image scan
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          image-ref: guardllm-gateway:ci
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+      - name: Generate SPDX SBOM
+        uses: anchore/sbom-action@v0.20.6
+        with:
+          image: guardllm-app:ci
+          format: spdx-json
+          output-file: guardllm-app.spdx.json
+      - name: Generate gateway SPDX SBOM
+        uses: anchore/sbom-action@v0.20.6
+        with:
+          image: guardllm-gateway:ci
+          format: spdx-json
+          output-file: guardllm-gateway.spdx.json
+      - name: Validate AI BOM completeness
+        run: node scripts/security/generate-ai-bom.mjs security/ai-runtime.example.json ai-bom.cdx.json development
+      - uses: actions/upload-artifact@v7.0.0
+        with:
+          name: security-boms
+          path: |
+            guardllm-app.spdx.json
+            guardllm-gateway.spdx.json
+            ai-bom.cdx.json
+
+  sign-release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [codeql, supply-chain]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: sigstore/cosign-installer@v4.1.0
+      - name: Sign immutable release image
+        env:
+          IMAGE: ${{ vars.RELEASE_IMAGE_BY_DIGEST }}
+        run: |
+          test -n "$IMAGE"
+          cosign sign --yes "$IMAGE"
+
+  dast:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6.0.2
+      - uses: actions/setup-node@v6.5.0
+        with: { node-version: '24.20.0', package-manager-cache: false }
+      - name: Build and start isolated target
+        env:
+          JWT_SECRET: ci-only-jwt-secret-with-more-than-32-bytes
+          CONTENT_HASH_KEY: ci-only-content-key-with-more-than-32-bytes
+          SECRET_MASTER_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+          SECRET_MASTER_KEY_ID: ci
+          POLICY_SIGNING_PUBLIC_KEY: ci-scan-does-not-publish-bundles
+          METRICS_BEARER_TOKEN: ci-only-metrics-token-with-more-than-32-bytes
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.19.0 --activate
+          pnpm install --frozen-lockfile
+          pnpm build
+          pnpm start > /tmp/guardllm.log 2>&1 &
+          for i in {1..60}; do curl -fsS http://127.0.0.1:5000/api/health/live && exit 0; sleep 2; done
+          cat /tmp/guardllm.log
+          exit 1
+      - name: OWASP ZAP unauthenticated and API boundary baseline
+        uses: zaproxy/action-baseline@v0.15.0
+        with:
+          target: http://127.0.0.1:5000
+          rules_file_name: security/zap-baseline.conf
+          cmd_options: -a -j
+          fail_action: true

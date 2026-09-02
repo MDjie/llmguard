@@ -1,0 +1,58 @@
+apiVersion: kafka.strimzi.io/v1
+kind: Kafka
+metadata:
+  name: guardllm-kafka
+  namespace: guard-data-access
+spec:
+  kafka:
+    version: 4.1.0
+    metadataVersion: "4.1-IV1"
+    listeners:
+      - name: tls
+        port: 9093
+        type: internal
+        tls: true
+        authentication: { type: tls }
+    config:
+      default.replication.factor: 3
+      min.insync.replicas: 2
+      offsets.topic.replication.factor: 3
+      transaction.state.log.replication.factor: 3
+      transaction.state.log.min.isr: 2
+      unclean.leader.election.enable: false
+    authorization:
+      type: simple
+      superUsers: [CN=guardllm-platform]
+  entityOperator:
+    topicOperator: {}
+    userOperator: {}
+---
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaNodePool
+metadata:
+  name: controller
+  namespace: guard-data-access
+  labels: { strimzi.io/cluster: guardllm-kafka }
+spec:
+  replicas: 3
+  roles: [controller]
+  storage:
+    type: persistent-claim
+    size: 100Gi
+    class: encrypted-block
+    deleteClaim: false
+---
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaNodePool
+metadata:
+  name: broker
+  namespace: guard-data-access
+  labels: { strimzi.io/cluster: guardllm-kafka }
+spec:
+  replicas: 3
+  roles: [broker]
+  storage:
+    type: persistent-claim
+    size: 1Ti
+    class: encrypted-block
+    deleteClaim: false

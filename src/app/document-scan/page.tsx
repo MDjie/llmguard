@@ -70,6 +70,8 @@ import { cn } from '@/lib/utils';
 interface Policy {
   id: string;
   name: string;
+  isActive: boolean;
+  isDefault: boolean;
 }
 
 interface OcrModel {
@@ -222,10 +224,10 @@ export default function DocumentScanPage() {
       const data = await response.json();
       if (data.success) {
         // 只显示启用的策略
-        const activePolicies = (data.data || []).filter((p: any) => p.isActive);
+        const activePolicies = (data.data as Policy[] || []).filter((policy) => policy.isActive);
         setPolicies(activePolicies);
         if (activePolicies.length > 0) {
-          const defaultPolicy = activePolicies.find((p: any) => p.isDefault) || activePolicies[0];
+          const defaultPolicy = activePolicies.find((policy) => policy.isDefault) || activePolicies[0];
           setSelectedPolicyId(defaultPolicy.id);
         }
       }
@@ -698,7 +700,7 @@ export default function DocumentScanPage() {
             <FileText className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
             <h3 className="text-lg font-medium mb-2">暂无检测任务</h3>
             <p className="text-muted-foreground mb-4">
-              点击右上角"上传文档"按钮开始检测
+              点击右上角&quot;上传文档&quot;按钮开始检测
             </p>
           </CardContent>
         </Card>

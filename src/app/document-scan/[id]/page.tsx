@@ -76,7 +76,7 @@ interface Finding {
   status: string;
   ignoreReason: string | null;
   ignoreNote: string | null;
-  whitelistMatched?: any;
+  whitelistMatched?: ({ name?: string } & Record<string, unknown>) | null;
 }
 
 interface Task {
@@ -97,12 +97,12 @@ interface Task {
     totalLines?: number;
     totalChars?: number;
   };
-  parsedChunks: any[];
+  parsedChunks: Array<Record<string, unknown>>;
   overallScore: number | null;
   finalAction: string | null;
   findingsCount: number;
-  whitelistMatched: any;
-  skippedDimensions: any[];
+  whitelistMatched: Record<string, unknown> | null;
+  skippedDimensions: Array<Record<string, unknown>>;
   createdAt: string;
   completedAt: string | null;
 }
@@ -839,7 +839,7 @@ export default function DocumentScanDetailPage() {
       for (const evidence of evidences) {
         if (!evidence) continue;
         // 尝试在行中查找证据
-        let index = result.toLowerCase().indexOf(evidence.toLowerCase());
+        const index = result.toLowerCase().indexOf(evidence.toLowerCase());
         if (index >= 0) {
           highlights.push({
             start: index,

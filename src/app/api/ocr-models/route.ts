@@ -1,14 +1,22 @@
 import { NextResponse } from 'next/server';
+import { emptyQuerySchema, jsonObjectResponseSchema } from '@/contracts/http/common';
+import { withLegacyApiSecurity, type AuthenticatedPrincipal } from '@/lib/api-security';
 import { db } from '@/lib/db';
 import { llmProviders } from '@/lib/db';
 import { and, eq } from 'drizzle-orm';
+import { requireTenantContext, scopePredicate } from '@/lib/tenancy';
 
 /**
  * 获取支持 OCR 的模型列表
  * 从模型供应商管理中获取 useCase='ocr' 的模型
  */
-export async function GET() {
+async function getOcrModels(
+  _request: Request,
+  _routeContext: unknown,
+  apiContext: { principal: AuthenticatedPrincipal | null },
+) {
   try {
+    const scope = requireTenantContext(apiContext.principal);
     // 从数据库获取 useCase='ocr' 且已启用的模型
     const ocrProviders = await db
       .select()
@@ -16,7 +24,8 @@ export async function GET() {
       .where(
         and(
           eq(llmProviders.useCase, 'ocr'),
-          eq(llmProviders.isEnabled, true)
+          eq(llmProviders.isEnabled, true),
+          scopePredicate(llmProviders, scope),
         )
       );
 
@@ -46,3 +55,20 @@ export async function GET() {
     );
   }
 }
+
+export const GET = withLegacyApiSecurity(
+  {
+    permission: 'provider:read',
+    querySchema: emptyQuerySchema,
+    responseSchema: jsonObjectResponseSchema,
+    maxBodyBytes: 0,
+    auditEvent: 'ocr-model.list',
+    rateLimitPolicy: {
+      id: 'ocr-model-list',
+      windowMs: 60_000,
+      maxRequests: 60,
+      scope: 'principal',
+    },
+  },
+  getOcrModels,
+);

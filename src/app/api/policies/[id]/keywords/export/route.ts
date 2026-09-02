@@ -1,8 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
+import type { z } from 'zod';
+import { jsonObjectResponseSchema } from '@/contracts/http/common';
+import {
+  importKeywordSchema,
+  keywordExportQuerySchema,
+  policyParamsSchema,
+} from '@/contracts/http/policies';
+import { withLegacyApiSecurity } from '@/lib/api-security';
 import { getDb } from '@/lib/db';
 
+type ImportKeywordInput = z.infer<typeof importKeywordSchema>;
+
+interface ExportKeywordRow {
+  keyword: string;
+  dimension: string;
+  score?: number;
+  match_type?: string;
+  case_sensitive?: boolean;
+  description?: string;
+}
+
 // 导出关键词
-export async function GET(
+async function exportKeywords(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -14,7 +33,7 @@ export async function GET(
     const client = getDb();
 
     const { data, error } = await client
-      .from('keyword_rules')
+      .from<ExportKeywordRow>('keyword_rules')
       .select()
       .eq('policy_id', policyId)
       .eq('enabled', true);
@@ -56,13 +75,13 @@ export async function GET(
 }
 
 // 导入关键词
-export async function POST(
+async function importKeywords(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id: policyId } = await params;
-    const body = await request.json();
+    const body = (await request.json()) as ImportKeywordInput;
     const { keywords, categoryId, dimension, mode } = body; // mode: 'merge' | 'replace'
 
     if (!keywords || !Array.isArray(keywords)) {
@@ -77,7 +96,7 @@ export async function POST(
     // 替换模式：先删除现有关键词
     if (mode === 'replace') {
       await client
-        .from('keyword_rules')
+        .from<{ keyword: string }>('keyword_rules')
         .delete()
         .eq('policy_id', policyId);
     }
@@ -87,11 +106,13 @@ export async function POST(
     if (mode !== 'replace') {
       const keywordValues = keywords.map((k) => k.keyword);
       const { data: existing } = await client
-        .from('keyword_rules')
+        .from<{ keyword: string }>('keyword_rules')
         .select('keyword')
         .eq('policy_id', policyId)
         .in('keyword', keywordValues);
-      existingSet = new Set((existing || []).map((k) => k.keyword));
+      existingSet = new Set(
+        (existing || []).map((row) => row.keyword),
+      );
     }
 
     // 插入新关键词
@@ -130,3 +151,40 @@ export async function POST(
     );
   }
 }
+
+export const GET = withLegacyApiSecurity(
+  {
+    permission: 'audit:export',
+    paramsSchema: policyParamsSchema,
+    querySchema: keywordExportQuerySchema,
+    responseSchema: jsonObjectResponseSchema,
+    allowedResponseMediaTypes: ['text/csv'],
+    maxBodyBytes: 0,
+    auditEvent: 'keyword.export',
+    rateLimitPolicy: {
+      id: 'keyword-export',
+      windowMs: 60_000,
+      maxRequests: 10,
+      scope: 'principal',
+    },
+  },
+  exportKeywords,
+);
+
+export const POST = withLegacyApiSecurity(
+  {
+    permission: 'policy:manage',
+    paramsSchema: policyParamsSchema,
+    bodySchema: importKeywordSchema,
+    responseSchema: jsonObjectResponseSchema,
+    maxBodyBytes: 4 * 1_024 * 1_024,
+    auditEvent: 'keyword.import',
+    rateLimitPolicy: {
+      id: 'keyword-import',
+      windowMs: 60_000,
+      maxRequests: 5,
+      scope: 'principal',
+    },
+  },
+  importKeywords,
+);

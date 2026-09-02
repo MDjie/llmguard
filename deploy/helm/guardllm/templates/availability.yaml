@@ -1,0 +1,47 @@
+{{- $root := . -}}
+{{- range $name, $workload := .Values.workloads }}
+{{- if $workload.enabled }}
+{{- $namespace := index $root.Values.namespaces $workload.namespaceKey }}
+{{- if and $root.Values.podDisruptionBudget.enabled (gt (int $workload.replicas) 1) }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "guardllm.fullname" $root }}-{{ $name }}
+  namespace: {{ $namespace }}
+spec:
+  minAvailable: {{ $root.Values.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ $root.Release.Name }}
+      guardllm.io/component: {{ $name }}
+{{- end }}
+{{- if $workload.autoscaling.enabled }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "guardllm.fullname" $root }}-{{ $name }}
+  namespace: {{ $namespace }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "guardllm.fullname" $root }}-{{ $name }}
+  minReplicas: {{ $workload.autoscaling.minReplicas }}
+  maxReplicas: {{ $workload.autoscaling.maxReplicas }}
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+    scaleUp:
+      stabilizationWindowSeconds: 30
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ $workload.autoscaling.cpuUtilization }}
+{{- end }}
+{{- end }}
+{{- end }}

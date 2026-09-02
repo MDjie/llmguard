@@ -1,68 +1,78 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { ApiProblem, withApiSecurity } from '@/lib/api-security';
 import { detectWithDynamicRules, getDefaultPolicyId } from '@/lib/detection/dynamic-engine';
-import { initDefaultPolicy } from '@/lib/detection/init-database';
+import { DetectionPolicyError } from '@/lib/detection/errors';
 import { getEffectivePolicyId } from '@/lib/policy/escalation-service';
+import { requireTenantContext } from '@/lib/tenancy';
 
-export async function POST(request: NextRequest) {
+const bodySchema = z
+  .object({
+    text: z.string().min(1).max(32_768),
+    policyId: z.string().min(1).max(36).optional(),
+    direction: z.enum(['input', 'output']).default('input'),
+    sessionId: z.string().min(1).max(128).optional(),
+    userId: z.string().max(128).optional(),
+  })
+  .strict();
+const responseSchema = z.object({
+  success: z.literal(true),
+  data: z.record(z.string(), z.unknown()),
+});
+
+export const POST = withApiSecurity(
+  {
+    permission: 'guard:use',
+    bodySchema,
+    responseSchema,
+    maxBodyBytes: 256 * 1_024,
+    auditEvent: 'guard.detect',
+    rateLimitPolicy: { id: 'guard-detect', windowMs: 60_000, maxRequests: 60, scope: 'principal' },
+  },
+  async ({ body, principal, request }) => {
   try {
-    const body = await request.json();
-    const { text, policyId, direction = 'input', userId, sessionId } = body;
-
-    if (!text) {
-      return NextResponse.json(
-        { success: false, error: '缺少必要参数: text' },
-        { status: 400 }
-      );
-    }
+    const { text, policyId, direction, sessionId } = body;
+    const scope = requireTenantContext(principal);
 
     // 获取策略ID
-    let targetPolicyId = policyId;
+    let targetPolicyId: string | null | undefined = policyId;
     if (!targetPolicyId) {
-      targetPolicyId = await getDefaultPolicyId();
-    }
-
-    // 如果没有策略，尝试初始化默认策略
-    if (!targetPolicyId) {
-      console.log('未找到默认策略，尝试初始化...');
-      await initDefaultPolicy();
-      targetPolicyId = await getDefaultPolicyId();
+      targetPolicyId = await getDefaultPolicyId(scope);
     }
 
     if (!targetPolicyId) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: '未找到策略配置。请先访问 /api/init-database 初始化数据库，或在检测维度管理页面配置检测规则。'
-        },
-        { status: 404 }
-      );
+      throw new DetectionPolicyError('POLICY_NOT_AVAILABLE', 'No default detection policy is active');
     }
 
     // 策略升级逻辑：如果提供了sessionId，检查是否有升级后的策略
     let effectivePolicyId = targetPolicyId;
-    const effectiveUserId = userId || 'anonymous';
+    if (!principal) throw new Error('Authenticated principal missing after authorization');
+    const effectiveUserId = principal.subject;
 
     if (sessionId) {
       // 获取当前生效策略（输入和输出都使用升级后的策略）
-      effectivePolicyId = await getEffectivePolicyId(effectiveUserId, sessionId, targetPolicyId);
-      console.log(`[检测API] sessionId=${sessionId}, 原策略=${targetPolicyId}, 生效策略=${effectivePolicyId}`);
+      effectivePolicyId = await getEffectivePolicyId(scope, effectiveUserId, sessionId, targetPolicyId);
     }
 
     // 执行检测（不再在这里处理策略升级，由前端汇总调用 /api/escalation-summary）
-    const result = await detectWithDynamicRules(text, effectivePolicyId, direction);
+    const result = await detectWithDynamicRules(
+      text,
+      effectivePolicyId,
+      scope,
+      direction,
+      request.signal,
+    );
 
     // 构建响应数据
     const responseData: Record<string, unknown> = {
-      text,
       direction,
       overallScore: result.overallScore,
-      confidence: 0.85,
+      confidence: result.confidence,
       action: result.action,
       findings: result.findings.map(f => ({
         dimension: f.dimension,
         dimensionName: f.dimensionName,
         score: f.score,
-        confidence: 0.85,
+        confidence: f.confidence ?? result.confidence,
         severity: f.score >= 80 ? 'high' : f.score >= 50 ? 'medium' : 'low',
         matchedRules: f.matchedRules,
         evidence: f.evidence,
@@ -71,8 +81,6 @@ export async function POST(request: NextRequest) {
       })),
       summary: result.summary,
       latencyMs: result.latencyMs,
-      originalText: text,
-      processedText: text,
       // 裁判模型结果
       judgeModel: result.judgeModelResult || null,
       decisionTrace: result.decisionTrace || null,
@@ -82,8 +90,7 @@ export async function POST(request: NextRequest) {
     };
 
     // 添加脱敏处理 - 根据检测到的风险内容进行精确脱敏
-    // 当 processingAction 是 mask 时执行脱敏
-    if (result.processingAction === 'mask') {
+    if (result.action === 'mask') {
       let maskedText = text;
       const maskDetails: { original: string; masked: string; type: string }[] = [];
       
@@ -142,8 +149,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 添加安全改写处理 - 对敏感内容进行安全化处理
-    // 当 processingAction 是 rewrite 时执行改写
-    if (result.processingAction === 'rewrite') {
+    if (result.action === 'rewrite') {
       let rewrittenText = text;
       const rewriteDetails: { dimension: string; action: string }[] = [];
       
@@ -228,15 +234,17 @@ export async function POST(request: NextRequest) {
       responseData.processingActions = ['安全改写'];
     }
 
-    return NextResponse.json({ success: true, data: responseData });
+    return Response.json({ success: true as const, data: responseData });
   } catch (error) {
-    console.error('检测失败:', error);
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: '检测服务异常，请检查数据库连接或联系管理员' 
-      },
-      { status: 500 }
-    );
+    if (error instanceof DetectionPolicyError) {
+      throw new ApiProblem({
+        status: 503,
+        code: error.code,
+        title: '检测策略不可用',
+        detail: '当前没有可安全执行的检测策略，请联系安全管理员。',
+      });
+    }
+    throw error;
   }
-}
+  },
+);

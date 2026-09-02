@@ -1,0 +1,243 @@
+{{- $root := . -}}
+{{- range $name, $workload := .Values.workloads }}
+{{- if $workload.enabled }}
+{{- $namespace := index $root.Values.namespaces $workload.namespaceKey }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "guardllm.fullname" $root }}-{{ $name }}
+  namespace: {{ $namespace }}
+  labels:
+    {{- include "guardllm.labels" $root | nindent 4 }}
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "guardllm.fullname" $root }}-{{ $name }}-config
+  namespace: {{ $namespace }}
+data:
+  {{- range $key, $value := $root.Values.config }}
+  {{ $key }}: {{ $value | quote }}
+  {{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "guardllm.fullname" $root }}-{{ $name }}
+  namespace: {{ $namespace }}
+  labels:
+    {{- include "guardllm.labels" $root | nindent 4 }}
+    guardllm.io/component: {{ $name }}
+spec:
+  replicas: {{ $workload.replicas }}
+  revisionHistoryLimit: 5
+  strategy:
+    rollingUpdate: { maxSurge: 1, maxUnavailable: 0 }
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ $root.Release.Name }}
+      guardllm.io/component: {{ $name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "guardllm.name" $root }}
+        app.kubernetes.io/instance: {{ $root.Release.Name }}
+        guardllm.io/component: {{ $name }}
+      annotations:
+        checksum/config: {{ toJson $root.Values.config | sha256sum }}
+    spec:
+      serviceAccountName: {{ include "guardllm.fullname" $root }}-{{ $name }}
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 45
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: { type: RuntimeDefault }
+      {{- with $root.Values.images.pullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $workload.runtimeClassName }}
+      runtimeClassName: {{ . | quote }}
+      {{- end }}
+      {{- with $workload.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $workload.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $workload.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/instance: {{ $root.Release.Name }}
+              guardllm.io/component: {{ $name }}
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/instance: {{ $root.Release.Name }}
+              guardllm.io/component: {{ $name }}
+      containers:
+        - name: {{ $name }}
+          image: {{ include "guardllm.image" (list $root $workload.imageKey) | quote }}
+          imagePullPolicy: {{ $root.Values.images.pullPolicy }}
+          {{- with $workload.command }}
+          {{- if gt (len .) 0 }}
+          command: {{ toJson . }}
+          {{- end }}
+          {{- end }}
+          {{- with $workload.args }}
+          {{- if gt (len .) 0 }}
+          args: {{ toJson . }}
+          {{- end }}
+          {{- end }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "guardllm.fullname" $root }}-{{ $name }}-config
+            - secretRef:
+                name: {{ $root.Values.secretRef }}
+          {{- if and (eq $name "gateway") $root.Values.gatewayDirectTls.enabled }}
+          env:
+            - { name: GATEWAY_MTLS_REQUIRED, value: "true" }
+            - { name: GATEWAY_TRUST_CERTIFICATE, value: "{{ $root.Values.gatewayDirectTls.mountPath }}/ca.crt" }
+            - { name: GATEWAY_CLIENT_CERTIFICATE, value: "{{ $root.Values.gatewayDirectTls.mountPath }}/tls.crt" }
+            - { name: GATEWAY_CLIENT_PRIVATE_KEY, value: "{{ $root.Values.gatewayDirectTls.mountPath }}/tls.key" }
+            {{- if $root.Values.gatewayGrpc.enabled }}
+            - { name: GUARD_GRPC_ENABLED, value: "true" }
+            - { name: GUARD_GRPC_PORT, value: {{ $root.Values.gatewayGrpc.port | quote }} }
+            - { name: GUARD_GRPC_MTLS_REQUIRED, value: {{ $root.Values.gatewayGrpc.tlsRequired | quote }} }
+            - { name: GUARD_GRPC_TRUST_CERTIFICATE, value: "{{ $root.Values.gatewayGrpc.mountPath }}/ca.crt" }
+            - { name: GUARD_GRPC_SERVER_CERTIFICATE, value: "{{ $root.Values.gatewayGrpc.mountPath }}/tls.crt" }
+            - { name: GUARD_GRPC_SERVER_PRIVATE_KEY, value: "{{ $root.Values.gatewayGrpc.mountPath }}/tls.key" }
+            {{- end }}
+          {{- else if and (eq $name "gateway") $root.Values.gatewayGrpc.enabled }}
+          env:
+            - { name: GUARD_GRPC_ENABLED, value: "true" }
+            - { name: GUARD_GRPC_PORT, value: {{ $root.Values.gatewayGrpc.port | quote }} }
+            - { name: GUARD_GRPC_MTLS_REQUIRED, value: {{ $root.Values.gatewayGrpc.tlsRequired | quote }} }
+            - { name: GUARD_GRPC_TRUST_CERTIFICATE, value: "{{ $root.Values.gatewayGrpc.mountPath }}/ca.crt" }
+            - { name: GUARD_GRPC_SERVER_CERTIFICATE, value: "{{ $root.Values.gatewayGrpc.mountPath }}/tls.crt" }
+            - { name: GUARD_GRPC_SERVER_PRIVATE_KEY, value: "{{ $root.Values.gatewayGrpc.mountPath }}/tls.key" }
+          {{- else if eq $name "multimodal" }}
+          env:
+            - name: MULTIMODAL_ANALYZER_BASE_URL
+              value: "http://{{ include "guardllm.fullname" $root }}-analyzer.{{ $root.Values.namespaces.media }}.svc.cluster.local:8090"
+            - name: MULTIMODAL_ANALYZER_ALLOWED_PRIVATE_HOSTS
+              value: "{{ include "guardllm.fullname" $root }}-analyzer.{{ $root.Values.namespaces.media }}.svc.cluster.local"
+          {{- else if or (eq $name "media") (eq $name "marking") }}
+          env:
+            - name: MEDIA_ANALYZER_BASE_URL
+              value: "http://{{ include "guardllm.fullname" $root }}-analyzer.{{ $root.Values.namespaces.media }}.svc.cluster.local:8090"
+            - name: MEDIA_ANALYZER_ALLOWED_PRIVATE_HOSTS
+              value: "{{ include "guardllm.fullname" $root }}-analyzer.{{ $root.Values.namespaces.media }}.svc.cluster.local"
+          {{- end }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }
+            readOnlyRootFilesystem: true
+          {{- if $workload.port }}
+          ports:
+            - name: http
+              containerPort: {{ $workload.port }}
+            {{- if and (eq $name "gateway") $root.Values.gatewayGrpc.enabled }}
+            - name: grpc
+              containerPort: {{ $root.Values.gatewayGrpc.port }}
+              protocol: TCP
+            {{- end }}
+          readinessProbe:
+            httpGet: { path: {{ $workload.healthPath }}, port: http }
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 6
+          livenessProbe:
+            httpGet: { path: {{ $workload.healthPath }}, port: http }
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          {{- end }}
+          resources:
+            {{- toYaml $workload.resources | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: next-cache
+              mountPath: /app/.next/cache
+            {{- if and (eq $name "gateway") $root.Values.gatewayDirectTls.enabled }}
+            - name: gateway-mtls
+              mountPath: {{ $root.Values.gatewayDirectTls.mountPath }}
+              readOnly: true
+            {{- end }}
+            {{- if and (eq $name "gateway") $root.Values.gatewayGrpc.enabled }}
+            - name: gateway-grpc-mtls
+              mountPath: {{ $root.Values.gatewayGrpc.mountPath }}
+              readOnly: true
+            {{- end }}
+            {{- if eq $name "analyzer" }}
+            - name: analyzer-models
+              mountPath: {{ $root.Values.analyzerModels.mountPath }}
+              readOnly: true
+            {{- end }}
+      volumes:
+        - name: tmp
+          emptyDir: { sizeLimit: 1Gi }
+        - name: next-cache
+          emptyDir: { sizeLimit: 512Mi }
+        {{- if and (eq $name "gateway") $root.Values.gatewayDirectTls.enabled }}
+        - name: gateway-mtls
+          secret:
+            secretName: {{ $root.Values.gatewayDirectTls.secretName }}
+            defaultMode: 0400
+        {{- end }}
+        {{- if and (eq $name "gateway") $root.Values.gatewayGrpc.enabled }}
+        - name: gateway-grpc-mtls
+          secret:
+            secretName: {{ $root.Values.gatewayGrpc.secretName }}
+            defaultMode: 0400
+        {{- end }}
+        {{- if eq $name "analyzer" }}
+        - name: analyzer-models
+          persistentVolumeClaim:
+            claimName: {{ $root.Values.analyzerModels.claimName }}
+            readOnly: true
+        {{- end }}
+{{- if $workload.service }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "guardllm.fullname" $root }}-{{ $name }}
+  namespace: {{ $namespace }}
+  labels:
+    {{- include "guardllm.labels" $root | nindent 4 }}
+    guardllm.io/component: {{ $name }}
+spec:
+  selector:
+    app.kubernetes.io/instance: {{ $root.Release.Name }}
+    guardllm.io/component: {{ $name }}
+  ports:
+    - name: http
+      port: {{ $workload.port }}
+      targetPort: http
+    {{- if and (eq $name "gateway") $root.Values.gatewayGrpc.enabled }}
+    - name: grpc
+      port: {{ $root.Values.gatewayGrpc.port }}
+      targetPort: grpc
+      appProtocol: grpc
+    {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

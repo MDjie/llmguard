@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { emptyQuerySchema, jsonObjectResponseSchema } from '@/contracts/http/common';
+import {
+  testCaseParamsSchema,
+  updateTestCaseByIdSchema,
+} from '@/contracts/http/test-cases';
+import { withLegacyApiSecurity } from '@/lib/api-security';
 import { getDb } from '@/lib/db';
 
-export async function GET(
+async function getTestCase(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -35,7 +41,7 @@ export async function GET(
   }
 }
 
-export async function PUT(
+async function updateTestCase(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -85,7 +91,7 @@ export async function PUT(
   }
 }
 
-export async function DELETE(
+async function deleteTestCase(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -117,3 +123,57 @@ export async function DELETE(
     );
   }
 }
+
+export const GET = withLegacyApiSecurity(
+  {
+    permission: 'policy:read',
+    paramsSchema: testCaseParamsSchema,
+    querySchema: emptyQuerySchema,
+    responseSchema: jsonObjectResponseSchema,
+    maxBodyBytes: 0,
+    auditEvent: 'test-case.read',
+    rateLimitPolicy: {
+      id: 'test-case-read',
+      windowMs: 60_000,
+      maxRequests: 60,
+      scope: 'principal',
+    },
+  },
+  getTestCase,
+);
+
+export const PUT = withLegacyApiSecurity(
+  {
+    permission: 'policy:manage',
+    paramsSchema: testCaseParamsSchema,
+    bodySchema: updateTestCaseByIdSchema,
+    responseSchema: jsonObjectResponseSchema,
+    maxBodyBytes: 128 * 1_024,
+    auditEvent: 'test-case.update-by-id',
+    rateLimitPolicy: {
+      id: 'test-case-update-by-id',
+      windowMs: 60_000,
+      maxRequests: 30,
+      scope: 'principal',
+    },
+  },
+  updateTestCase,
+);
+
+export const DELETE = withLegacyApiSecurity(
+  {
+    permission: 'policy:manage',
+    paramsSchema: testCaseParamsSchema,
+    querySchema: emptyQuerySchema,
+    responseSchema: jsonObjectResponseSchema,
+    maxBodyBytes: 0,
+    auditEvent: 'test-case.delete-by-id',
+    rateLimitPolicy: {
+      id: 'test-case-delete-by-id',
+      windowMs: 60_000,
+      maxRequests: 20,
+      scope: 'principal',
+    },
+  },
+  deleteTestCase,
+);

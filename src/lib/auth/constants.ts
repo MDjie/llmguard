@@ -1,0 +1,13 @@
+export const AUTH_COOKIE_NAME = 'auth-token';
+export const CSRF_COOKIE_NAME = 'csrf-token';
+export const CSRF_HEADER_NAME = 'x-csrf-token';
+export const SCOPE_COOKIE_NAME = 'guard-scope';
+export const SCOPE_SESSION_AUDIENCE = 'guardllm-scope';
+export const SESSION_ISSUER = 'guardllm';
+export const SESSION_AUDIENCE = 'guardllm-console';
+export const DEFAULT_SESSION_SECONDS = 8 * 60 * 60;
+export const REMEMBERED_SESSION_SECONDS = 7 * 24 * 60 * 60;
+export const LOGIN_FAILURE_THRESHOLD = 5;
+export const LOGIN_LOCK_DURATION_MS = 15 * 60 * 1_000;
+export const DEFAULT_PASSWORD_MAX_AGE_DAYS = 90;
+export const PASSWORD_HISTORY_DEPTH = 5;

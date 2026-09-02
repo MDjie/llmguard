@@ -31,6 +31,7 @@ export default function LoginPage() {
       code += chars.charAt(Math.floor(Math.random() * chars.length));
     }
     setCaptchaCode(code);
+    setCaptcha('');
   }, []);
 
   // 页面加载时生成验证码
@@ -57,7 +58,6 @@ export default function LoginPage() {
     if (captcha.toUpperCase() !== captchaCode) {
       toast.error('验证码错误');
       generateCaptcha();
-      setCaptcha('');
       return;
     }
 
@@ -70,7 +70,7 @@ export default function LoginPage() {
         body: JSON.stringify({ username, password, rememberMe }),
       });
 
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
 
       if (response.ok && data.success) {
         toast.success('登录成功');
@@ -78,15 +78,21 @@ export default function LoginPage() {
         if (rememberMe) {
           localStorage.setItem('rememberedUsername', username);
         }
-        // 跳转到首页
-        router.push('/');
+        router.push(data.user?.mustChangePassword ? '/change-password' : '/');
       } else {
-        toast.error(data.error || `登录失败 (${response.status})`);
-        generateCaptcha();
+        const message = response.status >= 500
+          ? '认证服务暂不可用，请稍后重试'
+          : data.detail || data.error || `登录失败 (${response.status})`;
+        toast.error(message);
+
+        // Only consume the client-side challenge when credentials were evaluated.
+        // Infrastructure and rate-limit failures should not force another captcha.
+        if (response.status === 401 || response.status === 403) {
+          generateCaptcha();
+        }
       }
-    } catch (error) {
+    } catch {
       toast.error('网络错误，请稍后重试');
-      generateCaptcha();
     } finally {
       setIsLoading(false);
     }

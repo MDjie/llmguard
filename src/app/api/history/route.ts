@@ -1,9 +1,23 @@
 import { NextResponse } from 'next/server';
+import { jsonObjectResponseSchema } from '@/contracts/http/common';
+import {
+  historyDeleteQuerySchema,
+  historyQuerySchema,
+} from '@/contracts/http/history';
+import {
+  withApiSecurity,
+  type AuthenticatedPrincipal,
+} from '@/lib/api-security';
 import { db } from '@/lib/db';
 import { detectionSessions, detectionRecords, riskFindings } from '@/lib/db';
 import { sql, eq, desc, inArray, and, gte, lte } from 'drizzle-orm';
+import { requireTenantContext, scopePredicate, type TenantScope } from '@/lib/tenancy';
 
-export async function GET(request: Request) {
+async function getHistory(
+  request: Request,
+  principal: AuthenticatedPrincipal,
+  scope: TenantScope,
+) {
   try {
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1', 10);
@@ -17,7 +31,10 @@ export async function GET(request: Request) {
     const offset = (page - 1) * limit;
 
     // 构建查询条件
-    const conditions = [];
+    const conditions = [scopePredicate(detectionSessions, scope)];
+    if (!principal.permissions.includes('audit:read')) {
+      conditions.push(eq(detectionSessions.userId, principal.subject));
+    }
     if (startDate) {
       conditions.push(gte(detectionSessions.createdAt, new Date(startDate)));
     }
@@ -32,7 +49,7 @@ export async function GET(request: Request) {
     const countResult = await db
       .select({ count: sql<number>`count(*)` })
       .from(detectionSessions)
-      .where(conditions.length > 0 ? and(...conditions) : undefined);
+      .where(and(...conditions));
 
     const total = Number(countResult[0]?.count || 0);
 
@@ -40,7 +57,7 @@ export async function GET(request: Request) {
     let sessions = await db
       .select()
       .from(detectionSessions)
-      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .where(and(...conditions))
       .orderBy(desc(detectionSessions.createdAt))
       .limit(limit)
       .offset(offset);
@@ -52,9 +69,8 @@ export async function GET(request: Request) {
 
     // 搜索过滤
     if (search) {
-      sessions = sessions.filter(s => 
-        s.userPrompt?.toLowerCase().includes(search.toLowerCase()) ||
-        s.finalResponse?.toLowerCase().includes(search.toLowerCase())
+      sessions = sessions.filter((session) =>
+        session.id.toLowerCase().includes(search.toLowerCase()),
       );
     }
 
@@ -67,7 +83,10 @@ export async function GET(request: Request) {
       records = await db
         .select()
         .from(detectionRecords)
-        .where(inArray(detectionRecords.sessionId, sessionIds));
+        .where(and(
+          inArray(detectionRecords.sessionId, sessionIds),
+          scopePredicate(detectionRecords, scope),
+        ));
     }
 
     // 获取所有记录ID
@@ -79,11 +98,13 @@ export async function GET(request: Request) {
       findings = await db
         .select()
         .from(riskFindings)
-        .where(inArray(riskFindings.recordId, recordIds));
+        .where(and(
+          inArray(riskFindings.recordId, recordIds),
+          scopePredicate(riskFindings, scope),
+        ));
     }
 
     // 如果指定了维度筛选，过滤会话
-    let filteredSessionIds = sessionIds;
     if (dimension && dimension !== 'all') {
       const recordIdsWithDimension = new Set(
         findings.filter(f => f.dimension === dimension).map(f => f.recordId)
@@ -91,7 +112,6 @@ export async function GET(request: Request) {
       const sessionIdsWithDimension = new Set(
         records.filter(r => recordIdsWithDimension.has(r.id)).map(r => r.sessionId)
       );
-      filteredSessionIds = sessionIds.filter(id => sessionIdsWithDimension.has(id));
       sessions = sessions.filter(s => sessionIdsWithDimension.has(s.id));
     }
 
@@ -127,14 +147,17 @@ export async function GET(request: Request) {
         score: f.score ? Number(f.score) : null,
         severity: f.severity,
         matchedRules: f.matchedRules as string[] || [],
-        evidence: f.evidence as string[] || [],
-        reason: f.reason,
+        evidence: [],
+        reason: null,
       }));
 
       return {
         id: session.id,
-        inputText: session.userPrompt,
-        outputText: session.mockModelOutput || session.finalResponse,
+        inputText: null,
+        outputText: null,
+        contentStored: Boolean(
+          session.userPrompt || session.mockModelOutput || session.finalResponse,
+        ),
         inputScore: session.inputScore ? Number(session.inputScore) : null,
         outputScore: session.outputScore ? Number(session.outputScore) : null,
         action: session.finalAction,
@@ -180,7 +203,7 @@ export async function GET(request: Request) {
   }
 }
 
-export async function DELETE(request: Request) {
+async function deleteHistory(request: Request, scope: TenantScope) {
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
@@ -196,7 +219,10 @@ export async function DELETE(request: Request) {
     const records = await db
       .select()
       .from(detectionRecords)
-      .where(eq(detectionRecords.sessionId, id));
+      .where(and(
+        eq(detectionRecords.sessionId, id),
+        scopePredicate(detectionRecords, scope),
+      ));
 
     const recordIds = records.map(r => r.id);
 
@@ -204,18 +230,27 @@ export async function DELETE(request: Request) {
     if (recordIds.length > 0) {
       await db
         .delete(riskFindings)
-        .where(inArray(riskFindings.recordId, recordIds));
+        .where(and(
+          inArray(riskFindings.recordId, recordIds),
+          scopePredicate(riskFindings, scope),
+        ));
     }
 
     // 删除关联的检测记录
     await db
       .delete(detectionRecords)
-      .where(eq(detectionRecords.sessionId, id));
+      .where(and(
+        eq(detectionRecords.sessionId, id),
+        scopePredicate(detectionRecords, scope),
+      ));
 
     // 删除会话
     await db
       .delete(detectionSessions)
-      .where(eq(detectionSessions.id, id));
+      .where(and(
+        eq(detectionSessions.id, id),
+        scopePredicate(detectionSessions, scope),
+      ));
 
     return NextResponse.json({ success: true, message: '删除成功' });
   } catch (error) {
@@ -226,6 +261,45 @@ export async function DELETE(request: Request) {
     );
   }
 }
+
+export const GET = withApiSecurity(
+  {
+    permission: 'history:read',
+    querySchema: historyQuerySchema,
+    responseSchema: jsonObjectResponseSchema,
+    maxBodyBytes: 0,
+    auditEvent: 'history.list',
+    rateLimitPolicy: {
+      id: 'history-list',
+      windowMs: 60_000,
+      maxRequests: 120,
+      scope: 'principal',
+    },
+  },
+  async ({ request, principal }) => {
+    if (!principal) {
+      throw new Error('Authenticated principal missing after authorization');
+    }
+    return getHistory(request, principal, requireTenantContext(principal));
+  },
+);
+
+export const DELETE = withApiSecurity(
+  {
+    permission: 'history:manage',
+    querySchema: historyDeleteQuerySchema,
+    responseSchema: jsonObjectResponseSchema,
+    maxBodyBytes: 0,
+    auditEvent: 'history.delete',
+    rateLimitPolicy: {
+      id: 'history-delete',
+      windowMs: 60_000,
+      maxRequests: 20,
+      scope: 'principal',
+    },
+  },
+  async ({ request, principal }) => deleteHistory(request, requireTenantContext(principal)),
+);
 
 // 维度名称映射
 function getDimensionName(code: string): string {

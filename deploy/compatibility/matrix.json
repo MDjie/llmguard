@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "1.0",
+  "baselineDate": "2026-09-02",
+  "statuses": ["IMPLEMENTED", "CI_VERIFIED", "PENDING_TARGET_POC", "NOT_SUPPORTED"],
+  "targets": [
+    { "id": "cpu-x86_64", "category": "CPU", "product": "x86_64", "required": true, "status": "CI_VERIFIED", "evidence": [".github/workflows/quality.yml"] },
+    { "id": "cpu-kunpeng", "category": "CPU", "product": "Kunpeng ARM64", "required": true, "status": "PENDING_TARGET_POC", "evidence": [".github/workflows/portability.yml"] },
+    { "id": "cpu-feiteng", "category": "CPU", "product": "Phytium ARM64", "required": true, "status": "PENDING_TARGET_POC", "evidence": [".github/workflows/portability.yml"] },
+    { "id": "cpu-hygon", "category": "CPU", "product": "Hygon x86_64", "required": true, "status": "PENDING_TARGET_POC", "evidence": [".github/workflows/portability.yml"] },
+    { "id": "cpu-zhaoxin", "category": "CPU", "product": "Zhaoxin x86_64", "required": true, "status": "PENDING_TARGET_POC", "evidence": [".github/workflows/portability.yml"] },
+    { "id": "accelerator-nvidia", "category": "Accelerator", "product": "NVIDIA CUDA", "required": false, "status": "PENDING_TARGET_POC", "evidence": [] },
+    { "id": "accelerator-ascend-910b", "category": "Accelerator", "product": "Ascend 910B with MindIE", "required": true, "status": "PENDING_TARGET_POC", "evidence": ["deploy/helm/guardllm/values-ascend-example.yaml", "src/lib/platform-adapters/inference.ts"] },
+    { "id": "accelerator-ascend-910c", "category": "Accelerator", "product": "Ascend 910C with MindIE", "required": true, "status": "PENDING_TARGET_POC", "evidence": ["deploy/helm/guardllm/values-ascend-example.yaml", "src/lib/platform-adapters/inference.ts"] },
+    { "id": "os-kylin", "category": "OS", "product": "Kylin Linux", "required": true, "status": "PENDING_TARGET_POC", "evidence": [] },
+    { "id": "os-uos", "category": "OS", "product": "UnionTech UOS Server", "required": true, "status": "PENDING_TARGET_POC", "evidence": [] },
+    { "id": "database-postgresql", "category": "Database", "product": "PostgreSQL 16 or later", "required": false, "status": "IMPLEMENTED", "evidence": ["drizzle", "tests/integration/tenancy-isolation.sql"] },
+    { "id": "database-dameng", "category": "Database", "product": "Dameng", "required": true, "status": "PENDING_TARGET_POC", "evidence": [] },
+    { "id": "database-kingbase", "category": "Database", "product": "KingbaseES", "required": true, "status": "PENDING_TARGET_POC", "evidence": [] },
+    { "id": "database-shentong", "category": "Database", "product": "ShenTong", "required": true, "status": "PENDING_TARGET_POC", "evidence": [] },
+    { "id": "database-gaussdb", "category": "Database", "product": "GaussDB", "required": true, "status": "PENDING_TARGET_POC", "evidence": [] },
+    { "id": "orchestration-kubernetes", "category": "Orchestration", "product": "Kubernetes 1.28 or later", "required": true, "status": "IMPLEMENTED", "evidence": ["deploy/helm/guardllm", "deploy/kustomize/base"] },
+    { "id": "deployment-vm", "category": "Deployment", "product": "systemd with OCI runtime", "required": true, "status": "IMPLEMENTED", "evidence": ["deploy/systemd"] },
+    { "id": "middleware-redis", "category": "Middleware", "product": "Redis-compatible Sentinel", "required": true, "status": "PENDING_TARGET_POC", "evidence": ["deploy/ha/redis-sentinel-values.yaml"] },
+    { "id": "middleware-kafka", "category": "Middleware", "product": "Kafka-compatible event bus", "required": true, "status": "PENDING_TARGET_POC", "evidence": ["deploy/ha/kafka-strimzi.yaml"] },
+    { "id": "object-s3", "category": "ObjectStorage", "product": "S3-compatible object storage", "required": true, "status": "IMPLEMENTED", "evidence": ["src/lib/object-store"] }
+  ]
+}

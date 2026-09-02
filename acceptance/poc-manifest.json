@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "1.0",
+  "policy": "A local code check is not a target-environment POC pass.",
+  "pocs": [
+    { "id": "POC-01", "name": "2000 attack samples at 99 percent", "command": "node scripts/acceptance/score-dataset.mjs acceptance/datasets/manifest.json acceptance/evidence/external/black-results.jsonl ATTACK 0.99", "external": true, "threshold": "attack block rate >= 0.99" },
+    { "id": "POC-02", "name": "same attack set at 97 percent", "command": "node scripts/acceptance/score-dataset.mjs acceptance/datasets/manifest.json acceptance/evidence/external/black-results.jsonl ATTACK 0.97", "external": true, "threshold": "attack block rate >= 0.97" },
+    { "id": "POC-03", "name": "same attack set at 95 percent", "command": "node scripts/acceptance/score-dataset.mjs acceptance/datasets/manifest.json acceptance/evidence/external/black-results.jsonl ATTACK 0.95", "external": true, "threshold": "attack block rate >= 0.95" },
+    { "id": "POC-04", "name": "audio attacks", "command": "pnpm exec vitest --config vitest.config.mts --run tests/media", "external": true, "threshold": "target audio formats, ASR, timeline and block evidence pass" },
+    { "id": "POC-05", "name": "video attacks", "command": "pnpm exec vitest --config vitest.config.mts --run tests/media", "external": true, "threshold": "frame and audio timeline joint decision passes" },
+    { "id": "POC-06", "name": "image and text collaborative attack", "command": "pnpm exec vitest --config vitest.config.mts --run tests/multimodal", "external": true, "threshold": "single modalities benign and fused intent blocked" },
+    { "id": "POC-07", "name": "custom keyword and regular expression", "command": "pnpm exec vitest --config vitest.config.mts --run tests/guard-engine-v2 tests/detection/safe-regex.test.ts", "external": true, "threshold": "new rule takes effect through approved bundle" },
+    { "id": "POC-08", "name": "context-aware business allow rule", "command": "pnpm exec vitest --config vitest.config.mts --run tests/guard-engine-v2", "external": true, "threshold": "benign insurance context passes while mandatory attacks remain blocked" },
+    { "id": "POC-09", "name": "alerts and 180-day conversation query", "command": "pnpm exec vitest --config vitest.config.mts --run tests/data-protection tests/api-security", "external": true, "threshold": "target database contains and queries approved 180-day fixture" },
+    { "id": "POC-10", "name": "evidence and end-to-end trace reconstruction", "command": "pnpm exec vitest --config vitest.config.mts --run tests/observability tests/multimodal tests/media", "external": true, "threshold": "one trace reconstructs gateway, detector, RAG/tool and model chronology" },
+    { "id": "POC-11", "name": "operations inspection", "command": "pnpm exec vitest --config vitest.config.mts --run tests/observability", "external": true, "threshold": "CPU, memory, storage, accelerator and service state visible" },
+    { "id": "POC-12", "name": "multi-role authorization isolation", "command": "pnpm exec vitest --config vitest.config.mts --run tests/auth tests/tenancy tests/api-security", "external": true, "threshold": "three administrators and data scopes cannot exceed authority" },
+    { "id": "POC-13", "name": "containerized deployment", "command": "kubectl kustomize deploy", "external": true, "threshold": "target Kubernetes install, scale and uninstall succeed" },
+    { "id": "POC-14", "name": "high availability", "command": "node scripts/compatibility/validate-matrix.mjs deploy/compatibility/matrix.json schema", "external": true, "threshold": "fault injection recovers without bypass and meets RPO/RTO" },
+    { "id": "POC-15", "name": "2000 benign samples", "command": "node scripts/acceptance/score-dataset.mjs acceptance/datasets/manifest.json acceptance/evidence/external/white-results.jsonl BENIGN 0.01", "external": true, "threshold": "false block rate <= 0.01" }
+  ]
+}

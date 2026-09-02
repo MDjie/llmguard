@@ -11,7 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Search, Trash2, Eye, RefreshCw, AlertCircle, AlertTriangle, CheckCircle2, CalendarIcon, X, Filter, Shield, Bot, Zap, GitMerge } from 'lucide-react';
+import { Search, Trash2, Eye, RefreshCw, AlertCircle, AlertTriangle, CheckCircle2, CalendarIcon, X, Filter, Shield, Bot, Zap, GitMerge, type LucideIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -47,7 +47,7 @@ interface JudgeModelResult {
   used: boolean;
   score?: number;
   confidence?: number;
-  suggestedAction?: string;
+  suggestedAction?: 'allow' | 'warn' | 'block';
   reason?: string;
   latencyMs?: number;
   error?: string;
@@ -56,12 +56,12 @@ interface JudgeModelResult {
 // 决策追踪
 interface DecisionTrace {
   ruleScore: number;
-  ruleAction: string;
+  ruleAction: 'allow' | 'warn' | 'block';
   judgeScore?: number;
-  judgeAction?: string;
+  judgeAction?: 'allow' | 'warn' | 'block';
   decisionMode: string;
   finalScore: number;
-  finalAction: string;
+  finalAction: 'allow' | 'warn' | 'block';
   reasoning: string;
 }
 
@@ -188,7 +188,7 @@ export default function HistoryPage() {
   };
 
   const getActionBadge = (action: string) => {
-    const styles: Record<string, { variant: 'destructive' | 'default' | 'secondary'; icon: any; text: string }> = {
+    const styles: Record<string, { variant: 'destructive' | 'default' | 'secondary'; icon: LucideIcon; text: string }> = {
       block: { variant: 'destructive', icon: AlertCircle, text: '拒绝' },
       warn: { variant: 'default', icon: AlertTriangle, text: '警告' },
       allow: { variant: 'secondary', icon: CheckCircle2, text: '放行' },
@@ -543,7 +543,7 @@ export default function HistoryPage() {
                     <div className="flex flex-wrap gap-2">
                       {session.skippedDimensions.map((skipped, idx) => (
                         <div key={idx} className="text-sm bg-green-100 dark:bg-green-800 text-green-700 dark:text-green-300 px-2 py-1 rounded">
-                          {skipped.dimensionName}（因命中"{skipped.whitelistName}"）
+                          {skipped.dimensionName}（因命中&quot;{skipped.whitelistName}&quot;）
                         </div>
                       ))}
                     </div>
@@ -798,7 +798,7 @@ export default function HistoryPage() {
                       <div className="flex flex-wrap gap-2">
                         {detailSession.skippedDimensions.map((skipped, idx) => (
                           <div key={idx} className="text-sm bg-green-100 text-green-700 px-2 py-1 rounded">
-                            {skipped.dimensionName}（因命中"{skipped.whitelistName}"）
+                            {skipped.dimensionName}（因命中&quot;{skipped.whitelistName}&quot;）
                           </div>
                         ))}
                       </div>
