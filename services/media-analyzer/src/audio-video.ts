@@ -10,6 +10,8 @@ import {
   transcribeAudio,
 } from './model-adapters';
 import { runOcr } from './ocr';
+import { mapInBatches } from './batching';
+import type { TranscriptSegment } from './contracts';
 
 const probeSchema = z.object({
   format: z.object({
@@ -60,6 +62,95 @@ async function extractAudio(
     '-i', inputPath, '-map', '0:a:0', '-vn', '-ac', '1', '-ar', '16000',
     '-c:a', 'pcm_s16le', '-y', outputPath,
   ], { cwd: workspace, timeoutMs, maxOutputBytes: 4 * 1_024 * 1_024 });
+}
+
+type AudioViewId = MediaRequest['audioViews'][number];
+
+interface AudioView {
+  readonly id: AudioViewId;
+  readonly path: string;
+  readonly timeScale: number;
+  readonly reverseDurationMs?: number;
+}
+
+function audioFilter(viewId: Exclude<AudioViewId, 'original'>): string {
+  if (viewId === 'denoise') return 'afftdn';
+  if (viewId === 'normalize') return 'loudnorm=I=-16:TP=-1.5:LRA=11';
+  if (viewId === 'speed_0_9') return 'atempo=0.9';
+  if (viewId === 'speed_1_1') return 'atempo=1.1';
+  return 'areverse';
+}
+
+async function materializeAudioViews(input: {
+  readonly request: MediaRequest;
+  readonly runner: CommandRunner;
+  readonly originalPath: string;
+  readonly workspace: string;
+  readonly durationMs: number;
+}): Promise<AudioView[]> {
+  const unique = [...new Set(input.request.audioViews)];
+  return mapInBatches(unique, input.request.sampling.batchSize, async (viewId) => {
+    if (viewId === 'original') {
+      return { id: viewId, path: input.originalPath, timeScale: 1 };
+    }
+    const target = join(input.workspace, `audio-${viewId}.wav`);
+    const reverseDurationMs = viewId === 'reverse_probe'
+      ? Math.min(input.durationMs, 60_000)
+      : undefined;
+    await input.runner.run(process.env.ANALYZER_FFMPEG_COMMAND ?? 'ffmpeg', [
+      '-nostdin', '-v', 'error', '-protocol_whitelist', 'file,pipe',
+      ...(reverseDurationMs === undefined
+        ? []
+        : ['-t', String(Math.max(0.001, reverseDurationMs / 1_000))]),
+      '-i', input.originalPath,
+      '-af', audioFilter(viewId),
+      '-ac', '1', '-ar', '16000', '-c:a', 'pcm_s16le', '-y', target,
+    ], {
+      cwd: input.workspace,
+      timeoutMs: input.request.sandbox.ffmpegTimeoutMs,
+      maxOutputBytes: 4 * 1_024 * 1_024,
+    });
+    return {
+      id: viewId,
+      path: target,
+      timeScale: viewId === 'speed_0_9' ? 0.9 : viewId === 'speed_1_1' ? 1.1 : 1,
+      ...(reverseDurationMs === undefined ? {} : { reverseDurationMs }),
+    };
+  });
+}
+
+export function remapAudioViewSegment(
+  segment: TranscriptSegment,
+  view: Pick<AudioView, 'timeScale' | 'reverseDurationMs'>,
+): TranscriptSegment {
+  if (view.reverseDurationMs !== undefined) {
+    return {
+      ...segment,
+      startMs: Math.max(0, view.reverseDurationMs - segment.endMs),
+      endMs: Math.max(0, view.reverseDurationMs - segment.startMs),
+    };
+  }
+  return {
+    ...segment,
+    startMs: Math.max(0, Math.round(segment.startMs * view.timeScale)),
+    endMs: Math.max(0, Math.round(segment.endMs * view.timeScale)),
+  };
+}
+
+export function mergeTranscriptSegments(
+  segments: readonly TranscriptSegment[],
+): TranscriptSegment[] {
+  const selected = new Map<string, TranscriptSegment>();
+  for (const segment of segments) {
+    const normalizedText = segment.text.normalize('NFKC').trim().toLowerCase();
+    if (!normalizedText) continue;
+    const key = `${Math.round(segment.startMs / 250)}:${Math.round(segment.endMs / 250)}:${normalizedText}`;
+    const previous = selected.get(key);
+    if (!previous || segment.confidence > previous.confidence) selected.set(key, segment);
+  }
+  return [...selected.values()]
+    .sort((left, right) => left.startMs - right.startMs || left.endMs - right.endMs)
+    .slice(0, 100_000);
 }
 
 function samplingIntervalSeconds(request: MediaRequest, durationMs: number): number {
@@ -119,14 +210,29 @@ export async function analyzeAudioVideo(
       const audioPath = join(workspace, 'audio.wav');
       await extractAudio(
         runner, inputPath, audioPath, workspace, request.sandbox.ffmpegTimeoutMs);
-      const [asr, audioRisks] = await Promise.all([
-        transcribeAudio({ runner, audioPath, workspace }),
+      const [audioViews, audioRisks] = await Promise.all([
+        materializeAudioViews({
+          request, runner, originalPath: audioPath, workspace, durationMs: metadata.durationMs,
+        }),
         classifyAudioAnomalies({ runner, audioPath, workspace }),
       ]);
-      versions.add(asr.modelVersion);
       versions.add(audioRisks.modelVersion);
-      transcript = asr.segments;
-      anomalies = audioRisks.anomalies;
+      const asrViews = await mapInBatches(
+        audioViews,
+        request.sampling.batchSize,
+        async (view) => ({
+          view,
+          result: await transcribeAudio({ runner, audioPath: view.path, workspace }),
+        }),
+      );
+      for (const item of asrViews) versions.add(item.result.modelVersion);
+      transcript = mergeTranscriptSegments(asrViews.flatMap(({ view, result }) =>
+        result.segments
+          .filter((segment) => segment.confidence >= request.sampling.minimumConfidence)
+          .map((segment) => remapAudioViewSegment(segment, view))));
+      anomalies = audioRisks.anomalies.filter(
+        (anomaly) => anomaly.score >= request.sampling.minimumConfidence,
+      );
     }
     const frames: Array<{
       frameIndex: number;
@@ -138,32 +244,52 @@ export async function analyzeAudioVideo(
       const files = await extractFrames(
         request, runner, inputPath, workspace, metadata.durationMs);
       const intervalMs = samplingIntervalSeconds(request, metadata.durationMs) * 1_000;
-      for (let index = 0; index < files.length; index += 1) {
-        const viewId = `frame_${index}`;
-        const [ocr, visual] = await Promise.all([
-          runOcr({
-            runner,
-            tesseract: process.env.ANALYZER_TESSERACT_COMMAND ?? 'tesseract',
-            ffprobe: process.env.ANALYZER_FFPROBE_COMMAND ?? 'ffprobe',
-            imagePath: files[index],
-            workspace,
-            viewId,
-          }),
-          classifyImage({
-            runner,
-            imagePath: files[index],
-            workspace,
-            viewId,
-            frameIndex: index,
-          }),
-        ]);
-        versions.add(visual.modelVersion);
-        frames.push({
-          frameIndex: index,
-          timeMs: Math.min(metadata.durationMs, Math.round(index * intervalMs)),
-          ...(ocr.length > 0 ? { ocrText: ocr.map((item) => item.text).join(' ').slice(0, 100_000) } : {}),
-          risks: visual.risks,
-        });
+      const analyzedFrames = await mapInBatches(
+        files,
+        request.sampling.batchSize,
+        async (file, index) => {
+          const viewId = `frame_${index}`;
+          const [ocr, visual] = await Promise.all([
+            runOcr({
+              runner,
+              tesseract: process.env.ANALYZER_TESSERACT_COMMAND ?? 'tesseract',
+              ffprobe: process.env.ANALYZER_FFPROBE_COMMAND ?? 'ffprobe',
+              imagePath: file,
+              workspace,
+              viewId,
+            }),
+            classifyImage({
+              runner,
+              imagePath: file,
+              workspace,
+              viewId,
+              frameIndex: index,
+            }),
+          ]);
+          return {
+            modelVersion: visual.modelVersion,
+            frame: {
+              frameIndex: index,
+              timeMs: Math.min(metadata.durationMs, Math.round(index * intervalMs)),
+              ...(ocr.some((item) => item.confidence >= request.sampling.minimumConfidence)
+                ? {
+                    ocrText: ocr
+                      .filter((item) => item.confidence >= request.sampling.minimumConfidence)
+                      .map((item) => item.text)
+                      .join(' ')
+                      .slice(0, 100_000),
+                  }
+                : {}),
+              risks: visual.risks.filter(
+                (risk) => risk.score >= request.sampling.minimumConfidence,
+              ),
+            },
+          };
+        },
+      );
+      for (const analyzed of analyzedFrames) {
+        versions.add(analyzed.modelVersion);
+        frames.push(analyzed.frame);
       }
     }
     return {

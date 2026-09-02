@@ -58,13 +58,6 @@ const PROMPT_ATTACKS: readonly MatchSpec[] = [
     severity: 'HIGH',
   },
   {
-    id: 'HARMFUL_REASONING_CHAIN',
-    riskType: 'reasoning_attack.harmful_chain',
-    pattern: /(?:(?:step by step|first.{0,30}then.{0,30}finally)|(?:第一步|先).{0,40}(?:第二步|然后).{0,40}(?:最后|最终)).{0,80}(?:bypass|evade|exploit|weapon|malware|绕过|规避|入侵|武器|恶意代码)/giu,
-    score: 0.9,
-    severity: 'HIGH',
-  },
-  {
     id: 'GOAL_HIJACK',
     riskType: 'prompt_injection.goal_hijack',
     pattern: /(?:(?:instead of|stop|abandon).{0,40}(?:original|assigned|current).{0,30}(?:task|goal).{0,40}(?:do|follow|execute)|(?:不要|停止|放弃).{0,30}(?:原始|当前|既定).{0,20}(?:任务|目标).{0,40}(?:改为|转而|执行))/giu,

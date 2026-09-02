@@ -38,6 +38,8 @@ export const documentImageRequestSchema = z.object({
     maxDecodeSeconds: z.number().int().positive().max(3_600),
     disableExternalReferences: z.literal(true),
     disableActiveContent: z.literal(true),
+    batchSize: z.number().int().positive().max(64),
+    minimumConfidence: z.number().min(0).max(1),
   }).strict(),
   views: z.array(z.object({
     id,
@@ -65,8 +67,12 @@ export const mediaRequestSchema = z.object({
     }).strict()).max(16),
     maxFrames: z.number().int().positive().max(10_000),
     maxDurationMs: z.number().int().nonnegative(),
+    batchSize: z.number().int().positive().max(64),
+    minimumConfidence: z.number().min(0).max(1),
   }).strict(),
-  audioViews: z.array(id).max(16),
+  audioViews: z.array(z.enum([
+    'original', 'denoise', 'normalize', 'speed_0_9', 'speed_1_1', 'reverse_probe',
+  ])).min(1).max(16),
 }).strict();
 
 const contentMarkMetadata = z.object({

@@ -32,6 +32,27 @@ function decision(action: GuardDecision['action'], reason = 'RULE_TEST'): GuardD
   };
 }
 
+function reasoningDecision(): GuardDecision {
+  const base = decision('BLOCK');
+  return {
+    ...base,
+    observations: [{
+      ...base.observations[0],
+      riskType: 'reasoning_attack.cumulative_chain',
+      evidence: [
+        base.observations[0].evidence[0],
+        {
+          ...base.observations[0].evidence[0],
+          start: 20,
+          end: 28,
+          contentHmac: 'b'.repeat(64),
+        },
+      ],
+      reasonCode: 'CUMULATIVE_REASONING_ATTACK',
+    }],
+  };
+}
+
 describe('multi-turn session decision', () => {
   it('uses a stricter combined decision without exposing historical offsets', () => {
     const result = chooseSessionDecision(decision('ALLOW'), decision('BLOCK'));
@@ -49,5 +70,26 @@ describe('multi-turn session decision', () => {
     const current = decision('BLOCK', 'MANDATORY_DENY');
     expect(chooseSessionDecision(current, decision('WARN'))).toBe(current);
     expect(chooseSessionDecision(current, decision('BLOCK'))).toBe(current);
+  });
+
+  it('preserves anonymized step order for a multi-turn reasoning attack', () => {
+    const result = chooseSessionDecision(decision('ALLOW'), reasoningDecision());
+    expect(result.observations[0].reasonCode).toBe('MULTI_TURN_REASONING_ATTACK');
+    expect(result.observations[0].evidence.map((item) => item.viewId)).toEqual([
+      'session_history_step_1',
+      'session_history_step_2',
+    ]);
+    expect(result.observations[0].evidence.every(
+      (item) => item.start === undefined && item.end === undefined,
+    )).toBe(true);
+  });
+
+  it('keeps cumulative reasoning evidence when the current turn is already equally strict', () => {
+    const current = decision('BLOCK', 'CURRENT_TURN_BLOCK');
+    const result = chooseSessionDecision(current, reasoningDecision());
+    expect(result).not.toBe(current);
+    expect(result.action).toBe('BLOCK');
+    expect(result.policyPath).toContain('multi-turn-session');
+    expect(result.observations[0].reasonCode).toBe('MULTI_TURN_REASONING_ATTACK');
   });
 });

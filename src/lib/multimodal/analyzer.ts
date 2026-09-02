@@ -4,6 +4,10 @@ import { objectStoreConfig, S3Presigner } from '@/lib/object-store';
 import type { TenantScope } from '@/lib/tenancy';
 import type { artifactParts, artifacts } from '@/storage/database/shared/schema';
 import { createImageViewPlan } from './view-plan';
+import {
+  loadMultimodalDetectionPolicy,
+  type MultimodalDetectionPolicy,
+} from './detection-policy';
 
 const regionSchema = z.tuple([
   z.number().nonnegative(), z.number().nonnegative(),
@@ -52,6 +56,7 @@ export async function analyzeDocumentOrImage(input: {
   artifact: typeof artifacts.$inferSelect;
   parts: readonly (typeof artifactParts.$inferSelect)[];
   signal?: AbortSignal;
+  detectionPolicy?: MultimodalDetectionPolicy;
 }): Promise<MultimodalAnalysis> {
   const baseUrl = process.env.MULTIMODAL_ANALYZER_BASE_URL;
   if (!baseUrl) throw new Error('MULTIMODAL_ANALYZER_BASE_URL is required');
@@ -70,6 +75,7 @@ export async function analyzeDocumentOrImage(input: {
     allowedHosts: configured(process.env.MULTIMODAL_ANALYZER_ALLOWED_HOSTS),
     allowedPrivateHosts: configured(process.env.MULTIMODAL_ANALYZER_ALLOWED_PRIVATE_HOSTS),
   });
+  const detectionPolicy = input.detectionPolicy ?? loadMultimodalDetectionPolicy();
   const response = await safeFetchJson({
     baseUrl,
     path: '/v1/analyze/document-image',
@@ -98,6 +104,8 @@ export async function analyzeDocumentOrImage(input: {
         maxDecodeSeconds: 300,
         disableExternalReferences: true,
         disableActiveContent: true,
+        batchSize: detectionPolicy.frameBatchSize,
+        minimumConfidence: detectionPolicy.minimumConfidence,
       },
       views: createImageViewPlan(),
     },

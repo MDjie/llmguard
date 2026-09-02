@@ -19,6 +19,7 @@ import {
 } from '@/storage/database/shared/schema';
 import { analyzeDocumentOrImage } from './analyzer';
 import { fuseMultimodal } from './fusion';
+import { loadMultimodalDetectionPolicy } from './detection-policy';
 
 export async function processNextDocumentImageJob() {
   const job = await claimNextGuardJob(['document_image']);
@@ -32,8 +33,11 @@ export async function processNextDocumentImageJob() {
     const parts = await db.select().from(artifactParts).where(and(
       eq(artifactParts.artifactId, artifact.id), scopePredicate(artifactParts, scope),
     )).orderBy(asc(artifactParts.partNumber));
+    const detectionPolicy = loadMultimodalDetectionPolicy();
     await updateGuardJobProgress(job, 'sandbox_analysis', 10);
-    const analysis = await analyzeDocumentOrImage({ scope, artifact, parts });
+    const analysis = await analyzeDocumentOrImage({
+      scope, artifact, parts, detectionPolicy,
+    });
     await updateGuardJobProgress(job, 'ocr_guard', 70, {
       ocrRegions: analysis.ocr.length,
       visualFindings: analysis.visual.length,
@@ -64,6 +68,8 @@ export async function processNextDocumentImageJob() {
         artifactId: artifact.id,
       })),
       anomalyScore,
+      reviewThreshold: detectionPolicy.reviewThreshold,
+      blockThreshold: detectionPolicy.blockThreshold,
     });
     if (analysis.derivatives.length > 0) {
       await db.transaction(async (transaction) => {

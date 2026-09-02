@@ -50,4 +50,29 @@ describe('cross-modal fusion', () => {
       process.env.CONTENT_HASH_KEY = previous;
     }
   });
+
+  it('routes medium-confidence visual findings to configurable human review', async () => {
+    const previous = process.env.CONTENT_HASH_KEY;
+    process.env.CONTENT_HASH_KEY = 'fusion-review-content-hmac-key-32-bytes-minimum';
+    try {
+      const result = await fuseMultimodal({
+        bundle,
+        context: {
+          traceId: 'trace-review-123456789',
+          tenantId: 'tenant-1', applicationId: 'app-1',
+          absoluteDeadlineEpochMs: Date.now() + 5_000,
+        },
+        ocr: [],
+        visual: [{
+          riskType: 'violence', score: 0.7, artifactId: 'image-1',
+          viewId: 'original', reasonCode: 'VISUAL_VIOLENCE',
+        }],
+        reviewThreshold: 0.65,
+        blockThreshold: 0.8,
+      });
+      expect(result.action).toBe('REQUIRE_REVIEW');
+    } finally {
+      process.env.CONTENT_HASH_KEY = previous;
+    }
+  });
 });

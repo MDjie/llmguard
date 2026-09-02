@@ -5,3 +5,5 @@ export { createImageViewPlan } from './view-plan';
 export type { ImageViewPlan } from './view-plan';
 export { fuseMultimodal } from './fusion';
 export type { OcrFusionRegion, VisualFusionFinding } from './fusion';
+export { loadMultimodalDetectionPolicy } from './detection-policy';
+export type { MultimodalDetectionPolicy } from './detection-policy';

@@ -12,4 +12,14 @@ describe('video sampling plan', () => {
     expect(plan.strategies.find((item) => item.type === 'fixed_interval')?.parameters.intervalMs)
       .toBeGreaterThanOrEqual(1_000);
   });
+
+  it('applies an explicit frame interval and bounded frame budget', () => {
+    const plan = createVideoSamplingPlan(60_000, {
+      intervalMs: 2_500,
+      maxFrames: 24,
+    });
+    expect(plan.maxFrames).toBe(24);
+    expect(plan.strategies.find((item) => item.type === 'fixed_interval')?.parameters.intervalMs)
+      .toBe(2_500);
+  });
 });

@@ -6,6 +6,7 @@ import {
   ResourceAbuseDetector,
   StructuredDlpDetector,
 } from './builtin-detectors';
+import { ReasoningAttackDetector } from './reasoning-attack-detector';
 import { RuleDetector } from './rule-detector';
 
 export function createEngineForPolicyBundle(
@@ -28,6 +29,7 @@ export function createEngineForPolicyBundle(
     },
     [
       new PromptAttackDetector(),
+      new ReasoningAttackDetector(),
       new StructuredDlpDetector(),
       new ResourceAbuseDetector(),
       new InsuranceComplianceDetector(),

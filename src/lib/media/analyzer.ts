@@ -4,6 +4,10 @@ import { objectStoreConfig, S3Presigner } from '@/lib/object-store';
 import type { TenantScope } from '@/lib/tenancy';
 import type { artifactParts, artifacts } from '@/storage/database/shared/schema';
 import { createVideoSamplingPlan } from './sampling-plan';
+import {
+  loadMultimodalDetectionPolicy,
+  type MultimodalDetectionPolicy,
+} from '@/lib/multimodal/detection-policy';
 
 const region = z.tuple([z.number().nonnegative(), z.number().nonnegative(), z.number().nonnegative(), z.number().nonnegative()]);
 const mediaAnalysisSchema = z.object({
@@ -38,6 +42,7 @@ export async function analyzeAudioVideo(input: {
   scope: TenantScope;
   artifact: typeof artifacts.$inferSelect;
   parts: readonly (typeof artifactParts.$inferSelect)[];
+  detectionPolicy?: MultimodalDetectionPolicy;
 }): Promise<MediaAnalysis> {
   const baseUrl = process.env.MEDIA_ANALYZER_BASE_URL;
   if (!baseUrl) throw new Error('MEDIA_ANALYZER_BASE_URL is required');
@@ -54,6 +59,7 @@ export async function analyzeAudioVideo(input: {
     allowedHosts: list(process.env.MEDIA_ANALYZER_ALLOWED_HOSTS),
     allowedPrivateHosts: list(process.env.MEDIA_ANALYZER_ALLOWED_PRIVATE_HOSTS),
   });
+  const detectionPolicy = input.detectionPolicy ?? loadMultimodalDetectionPolicy();
   const result = await safeFetchJson({
     baseUrl, path: '/v1/analyze/audio-video', providerType: 'custom', timeoutMs: 300_000,
     maxRequestBytes: 512 * 1_024, maxResponseBytes: 32 * 1_024 * 1_024,
@@ -69,7 +75,14 @@ export async function analyzeAudioVideo(input: {
         maxDecodedBytes: 20 * 1024 * 1024 * 1024,
         disableNetworkProtocols: true, allowedProtocols: ['file', 'pipe'],
       },
-      sampling: createVideoSamplingPlan(Number(input.artifact.metadata?.durationMs ?? 0)),
+      sampling: {
+        ...createVideoSamplingPlan(Number(input.artifact.metadata?.durationMs ?? 0), {
+          intervalMs: detectionPolicy.frameIntervalMs,
+          maxFrames: detectionPolicy.maxFrames,
+        }),
+        batchSize: detectionPolicy.frameBatchSize,
+        minimumConfidence: detectionPolicy.minimumConfidence,
+      },
       audioViews: ['original', 'denoise', 'normalize', 'speed_0_9', 'speed_1_1', 'reverse_probe'],
     },
   }, { policy });

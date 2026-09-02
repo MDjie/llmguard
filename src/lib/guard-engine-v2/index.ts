@@ -9,6 +9,7 @@ export {
 } from './builtin-detectors';
 export { buildNormalizedViews, mapViewRange } from './normalization';
 export { RuleDetector } from './rule-detector';
+export { ReasoningAttackDetector } from './reasoning-attack-detector';
 export {
   appendGuardSessionTurn,
   chooseSessionDecision,

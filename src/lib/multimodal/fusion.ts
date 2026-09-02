@@ -33,6 +33,17 @@ const ACTION_RANK: Readonly<Record<GuardAction, number>> = {
   ALLOW: 0, WARN: 1, MASK: 2, REWRITE: 2, REQUIRE_REVIEW: 3, SAFE_RESPONSE: 4, BLOCK: 5,
 };
 
+function actionForScore(
+  score: number,
+  reviewThreshold: number,
+  blockThreshold: number,
+): GuardAction {
+  if (score >= blockThreshold) return 'BLOCK';
+  if (score >= reviewThreshold) return 'REQUIRE_REVIEW';
+  if (score >= 0.5) return 'WARN';
+  return 'ALLOW';
+}
+
 function buildText(segments: readonly InputSegment[]) {
   let text = '';
   const spans: SegmentSpan[] = [];
@@ -95,6 +106,8 @@ export async function fuseMultimodal(input: {
   readonly ocr: readonly OcrFusionRegion[];
   readonly visual: readonly VisualFusionFinding[];
   readonly anomalyScore?: number;
+  readonly reviewThreshold?: number;
+  readonly blockThreshold?: number;
 }) {
   const user = buildText(input.userText ? [{
     text: input.userText,
@@ -124,7 +137,11 @@ export async function fuseMultimodal(input: {
   const cooperativeAttack = Boolean(input.userText && input.ocr.length > 0 &&
     ACTION_RANK[combinedDecision.action] > strongestIndividual);
   const visualScore = Math.max(input.anomalyScore ?? 0, 0, ...input.visual.map((item) => item.score));
-  const visualAction: GuardAction = visualScore >= 0.8 ? 'BLOCK' : visualScore >= 0.5 ? 'WARN' : 'ALLOW';
+  const visualAction = actionForScore(
+    visualScore,
+    input.reviewThreshold ?? 0.65,
+    input.blockThreshold ?? 0.8,
+  );
   const finalAction = ACTION_RANK[visualAction] > ACTION_RANK[combinedDecision.action]
     ? visualAction : combinedDecision.action;
   return {

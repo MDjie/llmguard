@@ -5,12 +5,14 @@ import {
   failGuardJob,
   updateGuardJobProgress,
 } from '@/lib/guard-jobs';
+import { readAcceptedTextArtifact } from '@/lib/artifacts';
 import { loadVerifiedPolicyBundle } from '@/lib/policy-bundle';
 import { scopePredicate } from '@/lib/tenancy';
 import { db } from '@/storage/database/shared/db';
 import { artifactParts, artifacts, mediaTimelineFindings } from '@/storage/database/shared/schema';
 import { analyzeAudioVideo } from './analyzer';
 import { fuseMediaTimeline } from './timeline-fusion';
+import { loadMultimodalDetectionPolicy } from '@/lib/multimodal/detection-policy';
 
 export async function processNextAudioVideoJob() {
   const job = await claimNextGuardJob(['audio_video']);
@@ -24,14 +26,20 @@ export async function processNextAudioVideoJob() {
     const parts = await db.select().from(artifactParts).where(and(
       eq(artifactParts.artifactId, artifact.id), scopePredicate(artifactParts, scope),
     )).orderBy(asc(artifactParts.partNumber));
+    const detectionPolicy = loadMultimodalDetectionPolicy();
     await updateGuardJobProgress(job, 'demux_decode_asr', 10);
-    const analysis = await analyzeAudioVideo({ scope, artifact, parts });
+    const analysis = await analyzeAudioVideo({
+      scope, artifact, parts, detectionPolicy,
+    });
     await updateGuardJobProgress(job, 'timeline_fusion', 75, {
       durationMs: analysis.durationMs,
       transcriptSegments: analysis.transcript.length,
       sampledFrames: analysis.frames.length,
     });
     const bundle = await loadVerifiedPolicyBundle(scope, job.bundleId);
+    const userText = job.contextArtifactId
+      ? await readAcceptedTextArtifact(scope, job.contextArtifactId)
+      : undefined;
     const anomalyScore = Math.max(0, ...analysis.anomalies.map((item) => item.score));
     const fusion = await fuseMediaTimeline({
       bundle,
@@ -39,6 +47,8 @@ export async function processNextAudioVideoJob() {
         traceId: `media-trace-${job.id}`, tenantId: scope.tenantId, applicationId: scope.applicationId,
         absoluteDeadlineEpochMs: Date.now() + 60_000,
       },
+      userText,
+      contextArtifactId: job.contextArtifactId ?? undefined,
       segments: [
         ...analysis.transcript.map((item) => ({ ...item, source: 'audio' as const })),
         ...analysis.frames.filter((item) => item.ocrText).map((item) => ({
@@ -50,6 +60,9 @@ export async function processNextAudioVideoJob() {
         ...risk, timeMs: frame.timeMs, frameIndex: frame.frameIndex,
       }))),
       anomalyScore,
+      crossModalWindowMs: detectionPolicy.crossModalWindowMs,
+      reviewThreshold: detectionPolicy.reviewThreshold,
+      blockThreshold: detectionPolicy.blockThreshold,
     });
     const rows = [
       ...fusion.evidence.map((item) => ({
@@ -61,7 +74,14 @@ export async function processNextAudioVideoJob() {
       })),
       ...analysis.anomalies.map((item) => ({
         ...scope, jobId: job.id, riskType: 'media_obfuscation', score: Math.round(item.score * 100),
-        action: item.score >= 0.8 ? 'BLOCK' : 'WARN', startMs: item.startMs, endMs: item.endMs,
+        action: item.score >= detectionPolicy.blockThreshold
+          ? 'BLOCK'
+          : item.score >= detectionPolicy.reviewThreshold
+            ? 'REQUIRE_REVIEW'
+            : item.score >= 0.5
+              ? 'WARN'
+              : 'ALLOW',
+        startMs: item.startMs, endMs: item.endMs,
         reasonCode: `MEDIA_${item.type.toUpperCase()}`,
       })),
     ];

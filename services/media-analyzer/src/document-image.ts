@@ -5,6 +5,7 @@ import type { CommandRunner } from './command-runner';
 import type { DocumentImageRequest, OcrRegion, VisualRisk } from './contracts';
 import { classifyImage } from './model-adapters';
 import { runOcr } from './ocr';
+import { mapInBatches } from './batching';
 
 interface ImageView {
   readonly id: string;
@@ -133,21 +134,35 @@ export async function analyzeDocumentImage(
     const ocr: OcrRegion[] = [];
     const visual: VisualRisk[] = [];
     const versions = new Set<string>();
-    for (const view of views) {
-      ocr.push(...await runOcr({
-        runner,
-        tesseract: process.env.ANALYZER_TESSERACT_COMMAND ?? 'tesseract',
-        ffprobe: process.env.ANALYZER_FFPROBE_COMMAND ?? 'ffprobe',
-        imagePath: view.path,
-        workspace,
-        viewId: view.id,
-        page: view.page,
-      }));
-      const classified = await classifyImage({
-        runner, imagePath: view.path, workspace, viewId: view.id,
-      });
-      versions.add(classified.modelVersion);
-      visual.push(...classified.risks);
+    const analyzedViews = await mapInBatches(
+      views,
+      request.limits.batchSize,
+      async (view) => {
+        const [regions, classified] = await Promise.all([
+          runOcr({
+            runner,
+            tesseract: process.env.ANALYZER_TESSERACT_COMMAND ?? 'tesseract',
+            ffprobe: process.env.ANALYZER_FFPROBE_COMMAND ?? 'ffprobe',
+            imagePath: view.path,
+            workspace,
+            viewId: view.id,
+            page: view.page,
+          }),
+          classifyImage({
+            runner, imagePath: view.path, workspace, viewId: view.id,
+          }),
+        ]);
+        return { regions, classified };
+      },
+    );
+    for (const analyzed of analyzedViews) {
+      versions.add(analyzed.classified.modelVersion);
+      ocr.push(...analyzed.regions.filter(
+        (region) => region.confidence >= request.limits.minimumConfidence,
+      ));
+      visual.push(...analyzed.classified.risks.filter(
+        (risk) => risk.score >= request.limits.minimumConfidence,
+      ));
     }
     const anomalies: Array<{
       type: 'rotation' | 'occlusion' | 'mosaic' | 'noise' | 'reorder' | 'adversarial_patch' | 'decoder_disagreement';

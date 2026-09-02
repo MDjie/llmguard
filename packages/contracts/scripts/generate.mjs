@@ -63,7 +63,7 @@ function renderTypescript() {
     }
     lines.push('}', '');
   }
-  return lines.join('\n') + '\n';
+  return lines.join('\n').trimEnd() + '\n';
 }
 
 function javaType(schema) {
@@ -168,7 +168,7 @@ function renderPython() {
     }
     lines.push('');
   }
-  return lines.join('\n') + '\n';
+  return lines.join('\n').trimEnd() + '\n';
 }
 
 function replaceRefs(value) {
@@ -282,7 +282,7 @@ function renderProto() {
     }
     lines.push('}', '');
   }
-  return lines.join('\n') + '\n';
+  return lines.join('\n').trimEnd() + '\n';
 }
 
 function compatibilitySignature() {

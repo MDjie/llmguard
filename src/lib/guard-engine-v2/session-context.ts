@@ -88,14 +88,15 @@ export async function appendGuardSessionTurn(
 }
 
 function sessionObservation(observation: Observation): Observation {
+  const reasoningChain = observation.riskType.startsWith('reasoning_attack.');
   return {
     ...observation,
-    evidence: observation.evidence.map((item) => ({
-      viewId: 'session_history',
+    evidence: observation.evidence.map((item, index) => ({
+      viewId: reasoningChain ? `session_history_step_${index + 1}` : 'session_history',
       contentHmac: item.contentHmac,
       maskedPreview: item.maskedPreview,
     })),
-    reasonCode: 'MULTI_TURN_SESSION_RISK',
+    reasonCode: reasoningChain ? 'MULTI_TURN_REASONING_ATTACK' : 'MULTI_TURN_SESSION_RISK',
   };
 }
 
@@ -103,7 +104,17 @@ export function chooseSessionDecision(
   current: GuardDecision,
   session: GuardDecision,
 ): GuardDecision {
-  if (ACTION_RANK[session.action] <= ACTION_RANK[current.action]) return current;
+  const sessionHasReasoningChain = session.observations.some(
+    (observation) =>
+      observation.status === 'MATCH' &&
+      observation.riskType.startsWith('reasoning_attack.'),
+  );
+  if (
+    ACTION_RANK[session.action] < ACTION_RANK[current.action] ||
+    (ACTION_RANK[session.action] === ACTION_RANK[current.action] && !sessionHasReasoningChain)
+  ) {
+    return current;
+  }
   return {
     ...session,
     traceId: current.traceId,
@@ -125,9 +136,7 @@ export async function evaluateWithSessionContext(
     currentPromise,
     appendGuardSessionTurn(scope, sessionId, request.content.text ?? ''),
   ]);
-  if (!sessionState.hasHistory || ACTION_RANK[current.action] >= ACTION_RANK.REQUIRE_REVIEW) {
-    return current;
-  }
+  if (!sessionState.hasHistory) return current;
   const sessionRequest: GuardRequest = {
     ...request,
     context: {
