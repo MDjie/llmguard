@@ -57,7 +57,7 @@ describe('multi-turn session decision', () => {
   it('uses a stricter combined decision without exposing historical offsets', () => {
     const result = chooseSessionDecision(decision('ALLOW'), decision('BLOCK'));
     expect(result.action).toBe('BLOCK');
-    expect(result.policyPath).toContain('multi-turn-session');
+    expect(result.policyPath).toContain('multi-turn-secure-memory');
     expect(result.observations[0].reasonCode).toBe('MULTI_TURN_SESSION_RISK');
     expect(result.observations[0].evidence[0]).toEqual({
       viewId: 'session_history',
@@ -89,7 +89,7 @@ describe('multi-turn session decision', () => {
     const result = chooseSessionDecision(current, reasoningDecision());
     expect(result).not.toBe(current);
     expect(result.action).toBe('BLOCK');
-    expect(result.policyPath).toContain('multi-turn-session');
+    expect(result.policyPath).toContain('multi-turn-secure-memory');
     expect(result.observations[0].reasonCode).toBe('MULTI_TURN_REASONING_ATTACK');
   });
 });

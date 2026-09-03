@@ -1,5 +1,11 @@
 import { createHmac } from 'node:crypto';
+import {
+  attachContextSources,
+  resolveContextEnvelopes,
+  validateActionIntent,
+} from '@/lib/context-trust';
 import { aggregateGuardDecision } from './aggregate';
+import { executeDetectorDag, resolveAndValidateDetectorDag } from './dag';
 import { buildNormalizedViews } from './normalization';
 import { observeGuardDecision } from '@/lib/observability/metrics';
 import type {
@@ -8,38 +14,7 @@ import type {
   GuardEngineDependencies,
   GuardEnginePolicy,
   GuardRequest,
-  Observation,
 } from './types';
-
-function failureObservation(
-  detector: GuardDetector,
-  status: 'TIMEOUT' | 'ERROR',
-): Observation {
-  return {
-    detectorId: detector.id,
-    detectorVersion: detector.version,
-    riskType: 'detector_availability',
-    score: 0,
-    severity: 'NONE',
-    evidence: [],
-    status,
-    reasonCode: status === 'TIMEOUT' ? 'DETECTOR_DEADLINE_EXCEEDED' : 'DETECTOR_FAILED',
-  };
-}
-
-async function runBeforeDeadline(
-  detector: GuardDetector,
-  context: Parameters<GuardDetector['detect']>[0],
-): Promise<readonly Observation[]> {
-  if (context.signal.aborted) throw context.signal.reason;
-  return new Promise<readonly Observation[]>((resolve, reject) => {
-    const onAbort = () => reject(context.signal.reason ?? new Error('deadline exceeded'));
-    context.signal.addEventListener('abort', onAbort, { once: true });
-    detector.detect(context).then(resolve, reject).finally(() => {
-      context.signal.removeEventListener('abort', onAbort);
-    });
-  });
-}
 
 export function createGuardEngine(
   policy: GuardEnginePolicy,
@@ -56,6 +31,7 @@ export function createGuardEngine(
     if (detectorIds.has(detector.id)) throw new Error(`Duplicate detector id: ${detector.id}`);
     detectorIds.add(detector.id);
   }
+  const detectorDag = resolveAndValidateDetectorDag(policy.detectorDag, detectors);
 
   return {
     async evaluate(request: GuardRequest) {
@@ -68,47 +44,43 @@ export function createGuardEngine(
       if (request.context.policyBundleId !== policy.bundleId) {
         throw new Error('GRD_POLICY_BUNDLE_MISMATCH');
       }
+      const envelopes = resolveContextEnvelopes(request, startedAt);
+      validateActionIntent(request, envelopes, startedAt);
       const views = buildNormalizedViews(request.content.text ?? '');
       const deadlineSignal = AbortSignal.timeout(remaining);
       const evidenceHmac = (content: string) =>
         createHmac('sha256', hmacKey).update(content, 'utf8').digest('hex');
-      const results = await Promise.all(detectors.map(async (detector) => {
-        try {
-          const observations = await runBeforeDeadline(detector, {
-            request,
-            views,
-            signal: deadlineSignal,
-            evidenceHmac,
-          });
-          return { detector, observations };
-        } catch {
-          return {
-            detector,
-            observations: [
-              failureObservation(detector, deadlineSignal.aborted ? 'TIMEOUT' : 'ERROR'),
-            ],
-          };
-        }
-      }));
-      const observations = results.flatMap((item) => item.observations);
-      const requiredDetectorFailures = results
-        .filter(({ detector, observations: detectorObservations }) =>
-          detector.required &&
-          detectorObservations.some((item) => item.status === 'ERROR' || item.status === 'TIMEOUT'),
-        )
-        .map(({ detector }) => `${detector.id}:unavailable`);
+      const execution = await executeDetectorDag({
+        dag: detectorDag,
+        detectors,
+        context: {
+          request,
+          envelopes,
+          views,
+          evidenceHmac,
+        },
+        deadlineSignal,
+        absoluteDeadlineEpochMs: request.context.absoluteDeadlineEpochMs,
+        blockThreshold: policy.blockThreshold,
+        now,
+      });
+      const observations = attachContextSources(
+        execution.observations,
+        envelopes,
+      );
       const decision = aggregateGuardDecision({
         request,
         policy,
         observations,
-        requiredDetectorFailures,
+        requiredDetectorFailures: execution.failClosedReasons,
+        degradationReasons: execution.degradationReasons,
         latencyMs: now() - startedAt,
       });
       observeGuardDecision({
         direction: request.context.direction,
         action: decision.action,
         latencyMs: decision.latencyMs,
-        detectorFailures: requiredDetectorFailures.length,
+        detectorFailures: execution.degradationReasons.length,
       });
       return decision;
     },

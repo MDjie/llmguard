@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
   "additionalProperties": false,
-  "required": ["id", "status", "environment", "startedAt", "completedAt", "artifacts", "approvers"],
+  "required": ["id", "status", "environment", "bindings", "startedAt", "completedAt", "artifacts", "approvers"],
   "properties": {
     "id": { "type": "string", "pattern": "^(POC-[0-9]{2}|[A-Z]+-[0-9]{3})$" },
     "status": { "const": "PASS" },
@@ -13,6 +13,28 @@
     },
     "startedAt": { "type": "string", "format": "date-time" },
     "completedAt": { "type": "string", "format": "date-time" },
+    "bindings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sourceCommit", "policyBundleDigest", "tokenizerDigest", "datasetDigest", "configurationDigest", "rawOutputDigest", "firstAttemptOnly", "imageDigests", "modelDigests"],
+      "properties": {
+        "sourceCommit": { "type": "string", "pattern": "^[a-f0-9]{40,64}$" },
+        "policyBundleDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "tokenizerDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "datasetDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "configurationDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "rawOutputDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "firstAttemptOnly": { "const": true },
+        "imageDigests": {
+          "type": "object", "minProperties": 1,
+          "additionalProperties": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+        },
+        "modelDigests": {
+          "type": "object", "minProperties": 1,
+          "additionalProperties": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+        }
+      }
+    },
     "metrics": { "type": "object" },
     "artifacts": {
       "type": "array",

@@ -59,6 +59,9 @@ describe('GuardEngine V2', () => {
     });
     expect(result.observations[0].evidence[0].viewId).toBe('unicode_nfkc');
     expect(result.observations[0].evidence[0].contentHmac).toMatch(/^[a-f0-9]{64}$/);
+    expect(result.observations[0].evidence[0].sourceEnvelopeIds).toHaveLength(1);
+    expect(result.failMode).toBe('NORMAL');
+    expect(result.evidenceComplete).toBe(true);
   });
 
   it('fails closed when a required detector errors', async () => {
@@ -84,6 +87,7 @@ describe('GuardEngine V2', () => {
     expect(result.action).toBe('BLOCK');
     expect(result.riskLevel).toBe('HIGH');
     expect(result.degradationReasons).toEqual(['required-vlm:unavailable']);
+    expect(result.failMode).toBe('FAIL_CLOSED');
   });
 
   it('applies scoped exceptions without allowing mandatory-deny rules to be bypassed', async () => {
@@ -225,5 +229,49 @@ describe('GuardEngine V2', () => {
     const replay = await engine.evaluate(candidate);
     expect(replay).toEqual(first);
     expect(first.observations.map((item) => item.riskType)).toEqual(['a-risk', 'z-risk']);
+  });
+
+  it('applies processing overrides above their threshold while block remains terminal', async () => {
+    const detector = new RuleDetector([
+      {
+        id: 'pii',
+        riskType: 'pii',
+        pattern: 'secret',
+        matchType: 'contains',
+        caseSensitive: false,
+        score: 0.7,
+      },
+    ]);
+    const processing = await createGuardEngine(
+      {
+        id: 'policy-1',
+        bundleId: 'bundle-1',
+        warnThreshold: 0.5,
+        blockThreshold: 0.8,
+        failClosedOnRequiredDetectorFailure: true,
+        actionOverrides: { pii: 'MASK' },
+        actionOverrideThresholds: { pii: 0.6 },
+      },
+      [detector],
+      { hmacKey },
+    ).evaluate(request('secret'));
+    expect(processing.action).toBe('MASK');
+    expect(processing.policyPath).toEqual(['policy-1', 'action-override']);
+
+    const blocking = await createGuardEngine(
+      {
+        id: 'policy-1',
+        bundleId: 'bundle-1',
+        warnThreshold: 0.5,
+        blockThreshold: 0.65,
+        failClosedOnRequiredDetectorFailure: true,
+        actionOverrides: { pii: 'REWRITE' },
+        actionOverrideThresholds: { pii: 0.6 },
+      },
+      [detector],
+      { hmacKey },
+    ).evaluate(request('secret'));
+    expect(blocking.action).toBe('BLOCK');
+    expect(blocking.policyPath).toEqual(['policy-1', 'block-threshold']);
   });
 });

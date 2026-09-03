@@ -101,6 +101,266 @@
           "RAG_CHUNK"
         ]
       },
+      "SourceType": {
+        "type": "string",
+        "enum": [
+          "SYSTEM",
+          "USER",
+          "RAG",
+          "TOOL",
+          "MEMORY",
+          "AGENT",
+          "FILE",
+          "MEDIA"
+        ]
+      },
+      "TrustLevel": {
+        "type": "string",
+        "enum": [
+          "TRUSTED",
+          "CONTROLLED",
+          "UNTRUSTED"
+        ]
+      },
+      "InstructionCapability": {
+        "type": "string",
+        "enum": [
+          "ALLOWED",
+          "DATA_ONLY",
+          "FORBIDDEN"
+        ]
+      },
+      "GuardFailMode": {
+        "type": "string",
+        "enum": [
+          "NORMAL",
+          "FAIL_CLOSED",
+          "DEGRADED",
+          "FAIL_OPEN"
+        ]
+      },
+      "ProcessingStage": {
+        "type": "string",
+        "enum": [
+          "INPUT_PRE",
+          "MODEL_PRE",
+          "MODEL_STREAM",
+          "OUTPUT_POST",
+          "RAG_INGEST",
+          "RAG_RETRIEVE",
+          "TOOL_PRE",
+          "TOOL_POST",
+          "MEDIA_ANALYZE",
+          "OFFLINE_EVALUATE"
+        ]
+      },
+      "SideEffect": {
+        "type": "string",
+        "enum": [
+          "NONE",
+          "READ",
+          "WRITE",
+          "EXECUTE",
+          "EXTERNAL_COMMUNICATION",
+          "FINANCIAL",
+          "PRIVILEGE_CHANGE"
+        ]
+      },
+      "ContextEnvelope": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "envelopeId",
+          "tenantId",
+          "applicationId",
+          "sourceType",
+          "sourceId",
+          "trustLevel",
+          "instructionCapability",
+          "sensitivityLabels",
+          "contentHash",
+          "parentEnvelopeIds",
+          "policyVersion",
+          "eventSeq",
+          "contentStart",
+          "contentEnd"
+        ],
+        "properties": {
+          "envelopeId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "tenantId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "applicationId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "sessionId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "sourceType": {
+            "$ref": "#/components/schemas/SourceType"
+          },
+          "sourceId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "trustLevel": {
+            "$ref": "#/components/schemas/TrustLevel"
+          },
+          "instructionCapability": {
+            "$ref": "#/components/schemas/InstructionCapability"
+          },
+          "sensitivityLabels": {
+            "type": "array",
+            "maxItems": 64,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "contentHash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "parentEnvelopeIds": {
+            "type": "array",
+            "maxItems": 64,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "policyVersion": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "eventSeq": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "contentStart": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "contentEnd": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "expiresAtEpochMs": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "signature": {
+            "type": "string",
+            "minLength": 16,
+            "maxLength": 4096
+          },
+          "signatureKeyId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        }
+      },
+      "ActionIntent": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "intentId",
+          "userGoal",
+          "toolName",
+          "parametersDigest",
+          "targetResource",
+          "sideEffect",
+          "requiredPermissions",
+          "supportingEnvelopeIds",
+          "dataDestinations",
+          "riskBudget"
+        ],
+        "properties": {
+          "intentId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "userGoal": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "toolName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "parametersDigest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "targetResource": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048
+          },
+          "sideEffect": {
+            "$ref": "#/components/schemas/SideEffect"
+          },
+          "requiredPermissions": {
+            "type": "array",
+            "maxItems": 64,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          },
+          "supportingEnvelopeIds": {
+            "type": "array",
+            "maxItems": 64,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "dataDestinations": {
+            "type": "array",
+            "maxItems": 32,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2048
+            }
+          },
+          "riskBudget": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "expiresAtEpochMs": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      },
       "RequestContext": {
         "type": "object",
         "additionalProperties": false,
@@ -150,6 +410,24 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 128
+          },
+          "subjectId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "authContextId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "tokenizerId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "stage": {
+            "$ref": "#/components/schemas/ProcessingStage"
           }
         }
       },
@@ -215,6 +493,13 @@
             "items": {
               "$ref": "#/components/schemas/ArtifactRef"
             }
+          },
+          "envelopes": {
+            "type": "array",
+            "maxItems": 1024,
+            "items": {
+              "$ref": "#/components/schemas/ContextEnvelope"
+            }
           }
         },
         "anyOf": [
@@ -248,6 +533,9 @@
           },
           "content": {
             "$ref": "#/components/schemas/GuardContent"
+          },
+          "actionIntent": {
+            "$ref": "#/components/schemas/ActionIntent"
           }
         }
       },
@@ -302,6 +590,29 @@
           "contentHmac": {
             "type": "string",
             "pattern": "^[a-f0-9]{64}$"
+          },
+          "sourceEnvelopeIds": {
+            "type": "array",
+            "maxItems": 64,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "tokenStart": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "tokenEnd": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "tokenizerId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
           }
         }
       },
@@ -355,6 +666,18 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 128
+          },
+          "modelVersion": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "configurationDigest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "failMode": {
+            "$ref": "#/components/schemas/GuardFailMode"
           }
         }
       },
@@ -432,6 +755,22 @@
           "transformedText": {
             "type": "string",
             "maxLength": 1048576
+          },
+          "modelVersions": {
+            "type": "array",
+            "maxItems": 64,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          },
+          "failMode": {
+            "$ref": "#/components/schemas/GuardFailMode"
+          },
+          "evidenceComplete": {
+            "type": "boolean"
           }
         }
       },
@@ -548,8 +887,32 @@
               },
               {
                 "$ref": "#/components/schemas/ArtifactRef"
+              },
+              {
+                "$ref": "#/components/schemas/ContextEnvelope"
+              },
+              {
+                "$ref": "#/components/schemas/ActionIntent"
               }
             ]
+          },
+          "sequenceNumber": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "expiresAtEpochMs": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "signature": {
+            "type": "string",
+            "minLength": 16,
+            "maxLength": 4096
+          },
+          "signatureKeyId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
           }
         }
       }

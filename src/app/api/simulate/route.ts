@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { ApiProblem, withApiSecurity } from '@/lib/api-security';
-import { detectWithDynamicRules, getDefaultPolicyId } from '@/lib/detection/dynamic-engine';
+import { getDefaultPolicyId } from '@/lib/detection/dynamic-engine';
+import { detectWithGuardEngineV2 } from '@/lib/detection/v2-compat';
 import { DetectionPolicyError } from '@/lib/detection/errors';
 import { requireTenantContext } from '@/lib/tenancy';
 
@@ -62,12 +63,12 @@ export const POST = withApiSecurity(
       });
 
       const inputStartTime = Date.now();
-      const inputDetection = await detectWithDynamicRules(
+      const inputDetection = await detectWithGuardEngineV2(
         text,
         targetPolicyId,
         scope,
         direction,
-        request.signal,
+        { signal: request.signal, allowPreRelease: true },
       );
       steps.push({
         step: 2,
@@ -126,12 +127,12 @@ export const POST = withApiSecurity(
       });
 
       const outputStartTime = Date.now();
-      const outputDetection = await detectWithDynamicRules(
+      const outputDetection = await detectWithGuardEngineV2(
         '[模拟响应] 这是一个模拟的AI响应内容。',
         targetPolicyId,
         scope,
         'output',
-        request.signal,
+        { signal: request.signal, allowPreRelease: true },
       );
       steps.push({
         step: 4,
@@ -178,7 +179,7 @@ export const POST = withApiSecurity(
 );
 
 function detectionSummary(
-  result: Awaited<ReturnType<typeof detectWithDynamicRules>>,
+  result: Awaited<ReturnType<typeof detectWithGuardEngineV2>>,
 ): Record<string, unknown> {
   return {
     action: result.action,

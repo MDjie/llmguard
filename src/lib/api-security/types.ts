@@ -55,6 +55,7 @@ export type AuthenticationMethod = 'bearer' | 'cookie' | 'service';
 export interface AuthenticatedPrincipal {
   readonly subject: string;
   readonly roles: readonly PlatformRole[];
+  readonly userGroupIds?: readonly string[];
   readonly permissions: readonly Permission[];
   readonly authenticationMethod: AuthenticationMethod;
   readonly tenantId?: string;

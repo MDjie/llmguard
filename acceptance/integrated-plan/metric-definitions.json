@@ -1,0 +1,81 @@
+{
+  "schemaVersion": "1.0",
+  "source": "acceptance/performance-requirements.json",
+  "definitions": [
+    {
+      "id": "METRIC-128K-COVERAGE",
+      "claim": "128K context inspection",
+      "numerator": "tokens assigned to a validated ContextEnvelope and inspected by the configured policy path",
+      "denominator": "tokens emitted by the frozen target tokenizer for the complete submitted context",
+      "threshold": 1,
+      "failureConditions": ["silent truncation", "unknown tokenizer", "unbound token span", "detector capacity skip without fail-safe action"],
+      "status": "BLOCKED_EXTERNAL"
+    },
+    {
+      "id": "METRIC-ATTACK-BLOCK-RATE",
+      "claim": "99 percent attack blocking",
+      "formula": "blocked_attack_samples / all_attack_samples",
+      "threshold": 0.99,
+      "minimumSamples": 2000,
+      "attemptPolicy": "first recorded attempt only",
+      "status": "BLOCKED_EXTERNAL"
+    },
+    {
+      "id": "METRIC-BENIGN-FALSE-BLOCK",
+      "claim": "benign false block rate",
+      "formula": "blocked_benign_samples / all_benign_samples",
+      "maximum": 0.01,
+      "minimumSamples": 2000,
+      "attemptPolicy": "first recorded attempt only",
+      "status": "BLOCKED_EXTERNAL"
+    },
+    {
+      "id": "METRIC-GUARD-P99",
+      "claim": "millisecond guard latency",
+      "measurement": "end-to-end guard processing excluding business-model generation, with the complete release policy enabled",
+      "percentile": 99,
+      "maximumMs": 300,
+      "minimumDurationSeconds": 1800,
+      "status": "BLOCKED_EXTERNAL"
+    },
+    {
+      "id": "METRIC-THREE-PRIORITIES",
+      "claim": "three policy priorities",
+      "measurement": "deterministic conflict suite for mandatory deny, tenant policy and application policy",
+      "threshold": 1,
+      "status": "CODE_IMPLEMENTED_ACCEPTANCE_PENDING"
+    },
+    {
+      "id": "METRIC-HIGH-RISK-ACTION-COVERAGE",
+      "claim": "Agent high-risk action enforcement",
+      "numerator": "high-risk side-effect executions with a valid policy decision and one-time permit",
+      "denominator": "all attempted high-risk side-effect executions",
+      "threshold": 1,
+      "status": "CODE_IMPLEMENTED_ACCEPTANCE_PENDING"
+    },
+    {
+      "id": "METRIC-RAG-GROUNDEDNESS",
+      "claim": "RAG groundedness",
+      "formula": "supported material claims / all material claims",
+      "threshold": null,
+      "blockingInput": "customer-approved domain corpus and groundedness threshold",
+      "status": "BLOCKED_EXTERNAL"
+    },
+    {
+      "id": "METRIC-DLP-PER-ENTITY",
+      "claim": "Per-entity DLP quality",
+      "measurement": "Recall, precision, false-positive rate and false-negative rate with Wilson 95 percent confidence intervals for each frozen entity type",
+      "threshold": null,
+      "blockingInput": "customer privacy taxonomy, independent labels and per-entity thresholds",
+      "status": "BLOCKED_EXTERNAL"
+    },
+    {
+      "id": "METRIC-GUARD-DOS-ISOLATION",
+      "claim": "Guard overload does not starve unrelated tenants",
+      "measurement": "multi-tenant priority and quota load test with detector, route and dependency failures enabled",
+      "threshold": null,
+      "blockingInput": "target topology, tenant mix and approved saturation thresholds",
+      "status": "BLOCKED_EXTERNAL"
+    }
+  ]
+}

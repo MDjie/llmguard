@@ -12,7 +12,8 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
         GatewayRateLimitProperties.class,
         GatewayConcurrencyProperties.class,
         GatewayDistributedConcurrencyProperties.class,
-        GatewayModelRoutingProperties.class
+        GatewayModelRoutingProperties.class,
+        StreamingCommitGateProperties.class
 })
 public class GuardGatewayApplication {
     public static void main(String[] args) {

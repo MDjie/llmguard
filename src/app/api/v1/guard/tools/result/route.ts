@@ -13,7 +13,11 @@ export const POST = withApiSecurity(
   },
   async ({ body, principal }) => {
     try {
-      const result = await guardToolResult({ scope: requireTenantContext(principal), ...body });
+      const result = await guardToolResult({
+        scope: requireTenantContext(principal),
+        principalId: principal!.subject,
+        ...body,
+      });
       return Response.json({ success: true, data: result });
     } catch (error) {
       if (error instanceof ToolPolicyError) {

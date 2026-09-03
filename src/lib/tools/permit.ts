@@ -4,8 +4,12 @@ import { canonicalJson } from '@/lib/policy-bundle';
 import { ToolPolicyError } from './policy';
 
 const permitSchema = z.object({
-  version: z.literal(1), invocationId: z.string(), tenantId: z.string(), applicationId: z.string(),
-  toolId: z.string(), bundleId: z.string(), parametersHash: z.string().regex(/^[a-f0-9]{64}$/),
+  version: z.literal(2), invocationId: z.string(), tenantId: z.string(), applicationId: z.string(),
+  subjectId: z.string(), agentRunId: z.string(), toolId: z.string(), toolVersion: z.string(),
+  bundleId: z.string(), action: z.string(), resourceHash: z.string().regex(/^[a-f0-9]{64}$/),
+  parametersHash: z.string().regex(/^[a-f0-9]{64}$/),
+  actionIntentHash: z.string().regex(/^[a-f0-9]{64}$/),
+  approvalDecisionId: z.string().optional(),
   expiresAt: z.number().int().positive(),
 }).strict();
 export type ToolPermit = z.infer<typeof permitSchema>;

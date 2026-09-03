@@ -10,7 +10,8 @@ import {
   documentScanTasks,
   documentScanFindings,
 } from '@/lib/db';
-import { detectWithDynamicRules, clearPolicyCache } from '@/lib/detection/dynamic-engine';
+import { clearPolicyCache } from '@/lib/detection/dynamic-engine';
+import { detectWithGuardEngineV2 } from '@/lib/detection/v2-compat';
 import type { DetectionResult, SkippedDimension, WhitelistMatched } from '@/lib/detection/types';
 import type { DocumentChunk, PlainLine } from './parser';
 import { scopePredicate, type TenantScope } from '@/lib/tenancy';
@@ -139,11 +140,15 @@ export async function detectDocument(
 
     try {
       // 调用现有检测引擎
-      const result: DetectionResult = await detectWithDynamicRules(
+      const result: DetectionResult = await detectWithGuardEngineV2(
         chunk.content,
         policyId,
         scope,
-        'input' // 文档检测使用 input 方向
+        'input',
+        {
+          sourceType: 'FILE',
+          sourceId: fileName + ':' + i,
+        },
       );
 
       // 处理检测结果
@@ -156,7 +161,17 @@ export async function detectDocument(
           let locationStatus: 'located' | 'not_found' = 'not_found';
 
           // 尝试使用证据定位
-          if (finding.evidence && finding.evidence.length > 0) {
+          if (finding.startOffset !== undefined && finding.endOffset !== undefined) {
+            startOffset = chunk.startOffset + finding.startOffset;
+            endOffset = chunk.startOffset + finding.endOffset;
+            const line = plainLines.find(
+              (candidate) => startOffset !== null
+                && startOffset >= candidate.startOffset
+                && startOffset <= candidate.endOffset,
+            );
+            lineNumber = line?.lineNumber ?? null;
+            locationStatus = line ? 'located' : 'not_found';
+          } else if (finding.evidence && finding.evidence.length > 0) {
             // 优先使用原始证据（非脱敏）进行定位
             const originalEvidence = finding.evidence[0];
             const location = locateEvidence(originalEvidence, chunk, plainLines);
@@ -225,7 +240,10 @@ export async function detectDocument(
       // 更新最终动作
       if (result.action === 'block') {
         finalAction = 'block';
-      } else if (result.action === 'warn' && finalAction !== 'block') {
+      } else if (
+        (result.action === 'warn' || result.action === 'mask' || result.action === 'rewrite')
+        && finalAction !== 'block'
+      ) {
         finalAction = 'warn';
       }
 

@@ -6,6 +6,11 @@ import {
 } from '@/lib/guard-engine-v2';
 import { loadRuntimePolicyBundle } from '@/lib/policy-bundle';
 import { requireTenantContext } from '@/lib/tenancy';
+import {
+  admitGuardRequest,
+  GuardResourceAdmissionError,
+  type GuardResourceAdmission,
+} from '@/lib/resource-control';
 
 const MAX_DEADLINE_MS = 60_000;
 
@@ -72,6 +77,37 @@ export const POST = withApiSecurity(
       });
     }
     const engine = createEngineForPolicyBundle(bundle);
-    return Response.json(await evaluateWithSessionContext(engine, body, scope));
+    let admission: GuardResourceAdmission | undefined;
+    try {
+      if (bundle.payload.resourceAdmission) {
+        admission = await admitGuardRequest({
+          spec: bundle.payload.resourceAdmission,
+          bundleId: bundle.id,
+          scope,
+          principal: principal!,
+          request: body,
+        });
+      }
+      return Response.json(await evaluateWithSessionContext(engine, body, scope));
+    } catch (error) {
+      if (error instanceof GuardResourceAdmissionError) {
+        const status = error.code === 'GUARD_QUOTA_EXCEEDED'
+          ? 429
+          : error.code === 'GUARD_REQUEST_ID_REPLAYED'
+            ? 409
+          : error.code === 'GUARD_INPUT_TOKEN_LIMIT_EXCEEDED'
+            ? 413
+            : 503;
+        throw new ApiProblem({
+          status,
+          code: error.code,
+          title: 'Guard resource admission rejected',
+          detail: error.message,
+        });
+      }
+      throw error;
+    } finally {
+      await admission?.release();
+    }
   },
 );

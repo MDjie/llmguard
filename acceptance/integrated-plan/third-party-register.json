@@ -1,0 +1,118 @@
+{
+  "schemaVersion": "1.0",
+  "policy": {
+    "latestTagsForbidden": true,
+    "releaseRequiresDigest": true,
+    "releaseRequiresLicenseApproval": true,
+    "releaseRequiresNotice": true,
+    "releaseRequiresCveReview": true,
+    "modelsAndDatasetsAreFirstClassArtifacts": true
+  },
+  "authoritativeInventories": [
+    {
+      "id": "node-dependencies",
+      "type": "CODE",
+      "source": "pnpm-lock.yaml",
+      "version": "lockfileVersion-9",
+      "sha256": "sha256:0841f3400230ecd23a7c69b76910aa898f27978d98fa13666ee51b4238a3b762",
+      "status": "DEVELOPMENT_BASELINE",
+      "maintainerRole": "frontend-platform",
+      "replacement": "remove or replace individual packages through reviewed pnpm lockfile change"
+    },
+    {
+      "id": "java-gateway-dependencies",
+      "type": "CODE",
+      "source": "services/guard-gateway/pom.xml",
+      "version": "source-manifest",
+      "sha256": "sha256:24408994bd8d339d3578c59529c0430ed668a56d67a126deff80d905cda2028a",
+      "status": "DEVELOPMENT_BASELINE",
+      "maintainerRole": "gateway-platform",
+      "replacement": "replace Maven coordinate and regenerate release SBOM"
+    },
+    {
+      "id": "ai-runtime-components",
+      "type": "MODEL",
+      "source": "security/ai-components.json",
+      "version": "1.0",
+      "sha256": "sha256:46702956133f1ada09d392242691ef4b042bb833c9e7e987e6e388dd547d5cfa",
+      "status": "BLOCKED_EXTERNAL",
+      "maintainerRole": "ml-platform",
+      "replacement": "use another model implementing the same signed analyzer contract"
+    },
+    {
+      "id": "blind-acceptance-dataset",
+      "type": "DATA",
+      "source": "acceptance/datasets/manifest.json",
+      "version": "PENDING",
+      "sha256": null,
+      "status": "BLOCKED_EXTERNAL",
+      "maintainerRole": "independent-acceptance-team",
+      "replacement": "customer-approved sealed dataset with equivalent label and arbitration protocol"
+    }
+  ],
+  "evaluationCandidates": [
+    {
+      "id": "qwen3guard",
+      "purpose": "Chinese multilingual Guard classification shadow detector",
+      "status": "EVALUATION_ONLY",
+      "allowedEnvironments": [],
+      "requiredBeforeAdmission": ["exact model revision", "weight sha256", "model card", "license approval", "NOTICE", "CVE review", "Chinese and insurance blind evaluation", "target latency and accelerator evidence", "rollback adapter"]
+    },
+    {
+      "id": "nemo-guardrails",
+      "purpose": "dialog and policy-flow guardrails evaluation",
+      "status": "EVALUATION_ONLY",
+      "allowedEnvironments": [],
+      "requiredBeforeAdmission": ["exact version", "commit", "sha256", "license approval", "NOTICE", "CVE review", "contract adapter", "shadow evaluation", "rollback adapter"]
+    },
+    {
+      "id": "cedar",
+      "purpose": "action authorization policy decision point",
+      "status": "EVALUATION_ONLY",
+      "allowedEnvironments": [],
+      "requiredBeforeAdmission": ["exact version", "commit", "sha256", "license approval", "NOTICE", "CVE review", "maintainer", "rollback adapter"]
+    },
+    {
+      "id": "presidio",
+      "purpose": "supplementary contextual PII recognition",
+      "status": "EVALUATION_ONLY",
+      "allowedEnvironments": [],
+      "requiredBeforeAdmission": ["exact version", "commit", "sha256", "model inventory", "license approval", "NOTICE", "CVE review", "shadow evaluation"]
+    },
+    {
+      "id": "promptfoo",
+      "purpose": "attack regression orchestration",
+      "status": "EVALUATION_ONLY",
+      "allowedEnvironments": [],
+      "requiredBeforeAdmission": ["exact version", "commit", "sha256", "license approval", "NOTICE", "sandbox profile"]
+    },
+    {
+      "id": "garak",
+      "purpose": "model vulnerability probing",
+      "status": "EVALUATION_ONLY",
+      "allowedEnvironments": [],
+      "requiredBeforeAdmission": ["exact version", "commit", "sha256", "license approval", "NOTICE", "sandbox profile"]
+    },
+    {
+      "id": "modelscan",
+      "purpose": "model artifact static scanning",
+      "status": "EVALUATION_ONLY",
+      "allowedEnvironments": [],
+      "requiredBeforeAdmission": ["exact version", "commit", "sha256", "license approval", "NOTICE", "format coverage POC"]
+    },
+    {
+      "id": "yara-x",
+      "purpose": "artifact signature scanning",
+      "status": "EVALUATION_ONLY",
+      "allowedEnvironments": [],
+      "requiredBeforeAdmission": ["exact version", "commit", "sha256", "license approval", "NOTICE", "rule provenance process"]
+    },
+    {
+      "id": "malskills",
+      "purpose": "cross-file agent skill supply-chain analysis",
+      "status": "EVALUATION_ONLY",
+      "allowedEnvironments": [],
+      "requiredBeforeAdmission": ["exact version", "commit", "sha256", "license approval", "NOTICE", "Chinese corpus POC", "sandbox profile"]
+    }
+  ]
+}

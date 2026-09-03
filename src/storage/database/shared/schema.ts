@@ -1180,11 +1180,12 @@ export const evaluationResults = pgTable(
 	(table) => [
 		index("evaluation_results_run_id_idx").on(table.runId),
 		index("evaluation_results_test_case_id_idx").on(table.testCaseId),
-		uniqueIndex("evaluation_results_scope_run_case_uq").on(
+		uniqueIndex("evaluation_results_scope_run_case_attempt_uq").on(
 			table.tenantId,
 			table.applicationId,
 			table.runId,
 			table.testCaseId,
+			table.attempt,
 		),
 	]
 );
@@ -1299,6 +1300,9 @@ export const guardSessionRiskStates = pgTable(
 			ciphertext: string;
 			authTag: string;
 		}>().notNull(),
+		hotWindowTokenCount: integer("hot_window_token_count").notNull().default(0),
+		tokenizerId: varchar("tokenizer_id", { length: 256 }),
+		lastEventSequence: bigint("last_event_sequence", { mode: "number" }).notNull().default(0),
 		turnCount: integer("turn_count").notNull().default(1),
 		stateVersion: integer("state_version").notNull().default(1),
 		expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
@@ -1309,6 +1313,106 @@ export const guardSessionRiskStates = pgTable(
 		uniqueIndex("guard_session_risk_states_scope_session_uq")
 			.on(table.tenantId, table.applicationId, table.sessionId),
 		index("guard_session_risk_states_expires_idx").on(table.expiresAt),
+	]
+);
+
+export const guardMemoryEvents = pgTable(
+	"guard_memory_events",
+	{
+		...tenantScopeColumns(),
+		id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+		sessionId: varchar("session_id", { length: 128 }).notNull(),
+		sequenceNumber: bigint("sequence_number", { mode: "number" }).notNull(),
+		eventType: varchar("event_type", { length: 40 }).notNull(),
+		contentHash: varchar("content_hash", { length: 64 }).notNull(),
+		payloadEnvelopes: jsonb("payload_envelopes").$type<Array<{
+			keyId: string;
+			algorithm: "AES-256-GCM";
+			iv: string;
+			ciphertext: string;
+			authTag: string;
+		}>>().notNull(),
+		sourceEnvelopeIds: jsonb("source_envelope_ids").$type<string[]>().notNull().default([]),
+		parentEventIds: jsonb("parent_event_ids").$type<string[]>().notNull().default([]),
+		sensitivityLabels: jsonb("sensitivity_labels").$type<string[]>().notNull().default([]),
+		riskLabels: jsonb("risk_labels").$type<string[]>().notNull().default([]),
+		policyBundleId: varchar("policy_bundle_id", { length: 36 }).notNull(),
+		decisionId: varchar("decision_id", { length: 128 }).notNull(),
+		tokenizerId: varchar("tokenizer_id", { length: 256 }),
+		tokenCount: integer("token_count"),
+		expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+	},
+	(table) => [
+		uniqueIndex("guard_memory_events_scope_sequence_uq")
+			.on(table.tenantId, table.applicationId, table.sessionId, table.sequenceNumber),
+		index("guard_memory_events_scope_session_idx")
+			.on(table.tenantId, table.applicationId, table.sessionId, table.createdAt),
+		index("guard_memory_events_expires_idx").on(table.expiresAt),
+	]
+);
+
+export const guardMemoryRiskLedgers = pgTable(
+	"guard_memory_risk_ledgers",
+	{
+		...tenantScopeColumns(),
+		id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+		sessionId: varchar("session_id", { length: 128 }).notNull(),
+		stateVersion: integer("state_version").notNull().default(1),
+		riskState: varchar("risk_state", { length: 24 }).notNull().default("NORMAL"),
+		maxRiskLevel: varchar("max_risk_level", { length: 20 }).notNull().default("NONE"),
+		cumulativeScore: integer("cumulative_score").notNull().default(0),
+		entries: jsonb("entries").$type<Array<{
+			riskType: string;
+			maxScore: number;
+			occurrences: number;
+			lastAction: string;
+			firstSeenAt: string;
+			lastSeenAt: string;
+			evidenceHmacs: string[];
+		}>>().notNull().default([]),
+		sensitivityLabels: jsonb("sensitivity_labels").$type<string[]>().notNull().default([]),
+		sourceEnvelopeIds: jsonb("source_envelope_ids").$type<string[]>().notNull().default([]),
+		lastDecisionId: varchar("last_decision_id", { length: 128 }).notNull(),
+		expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+		updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+	},
+	(table) => [
+		uniqueIndex("guard_memory_risk_ledgers_scope_session_uq")
+			.on(table.tenantId, table.applicationId, table.sessionId),
+		index("guard_memory_risk_ledgers_expires_idx").on(table.expiresAt),
+	]
+);
+
+export const guardMemoryGraphEdges = pgTable(
+	"guard_memory_graph_edges",
+	{
+		...tenantScopeColumns(),
+		id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+		sessionId: varchar("session_id", { length: 128 }).notNull(),
+		fromNodeType: varchar("from_node_type", { length: 32 }).notNull(),
+		fromNodeId: varchar("from_node_id", { length: 128 }).notNull(),
+		toNodeType: varchar("to_node_type", { length: 32 }).notNull(),
+		toNodeId: varchar("to_node_id", { length: 128 }).notNull(),
+		relation: varchar("relation", { length: 48 }).notNull(),
+		riskLabels: jsonb("risk_labels").$type<string[]>().notNull().default([]),
+		evidenceHmac: varchar("evidence_hmac", { length: 64 }),
+		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+	},
+	(table) => [
+		uniqueIndex("guard_memory_graph_edges_identity_uq").on(
+			table.tenantId,
+			table.applicationId,
+			table.sessionId,
+			table.fromNodeType,
+			table.fromNodeId,
+			table.toNodeType,
+			table.toNodeId,
+			table.relation,
+		),
+		index("guard_memory_graph_edges_scope_session_idx")
+			.on(table.tenantId, table.applicationId, table.sessionId),
 	]
 );
 
@@ -1689,6 +1793,23 @@ export const toolRegistry = pgTable(
 			maxStringLength?: number;
 			enums?: Record<string, Array<string | number | boolean | null>>;
 		}>().default({}),
+		sideEffect: varchar("side_effect", { length: 32 }).notNull().default("READ"),
+		requiredPermissions: jsonb("required_permissions").$type<string[]>().notNull().default([]),
+		allowedDataDestinations: jsonb("allowed_data_destinations").$type<string[]>().notNull().default([]),
+		definitionDigest: varchar("definition_digest", { length: 64 }),
+		sourceUri: varchar("source_uri", { length: 2048 }),
+		sourceDigest: varchar("source_digest", { length: 71 }),
+		signatureKeyId: varchar("signature_key_id", { length: 128 }),
+		signature: text("signature"),
+		licenseSpdx: varchar("license_spdx", { length: 128 }),
+		noticeDigest: varchar("notice_digest", { length: 71 }),
+		scannerDefinitionDigest: varchar("scanner_definition_digest", { length: 71 }),
+		networkDomains: jsonb("network_domains").$type<string[]>().notNull().default([]),
+		filePaths: jsonb("file_paths").$type<string[]>().notNull().default([]),
+		commands: jsonb("commands").$type<string[]>().notNull().default([]),
+		credentialRefs: jsonb("credential_refs").$type<string[]>().notNull().default([]),
+		approvalIds: jsonb("approval_ids").$type<string[]>().notNull().default([]),
+		isolatedDynamicAnalysis: boolean("isolated_dynamic_analysis").notNull().default(false),
 		highRisk: boolean("high_risk").notNull().default(false),
 		approvalRequired: boolean("approval_required").notNull().default(false),
 		resultGuardRequired: boolean("result_guard_required").notNull().default(true),
@@ -1701,6 +1822,7 @@ export const toolRegistry = pgTable(
 		uniqueIndex("tool_registry_scope_name_version_uq").on(table.tenantId, table.applicationId, table.name, table.version),
 		uniqueIndex("tool_registry_scope_id_uq").on(table.tenantId, table.applicationId, table.id),
 		index("tool_registry_scope_status_idx").on(table.tenantId, table.applicationId, table.status),
+		index("tool_registry_source_digest_idx").on(table.sourceDigest),
 	]
 );
 
@@ -1712,14 +1834,26 @@ export const toolInvocations = pgTable(
 		requestId: varchar("request_id", { length: 128 }).notNull(),
 		traceId: varchar("trace_id", { length: 128 }).notNull(),
 		principalId: varchar("principal_id", { length: 100 }).notNull(),
+		agentRunId: varchar("agent_run_id", { length: 128 }),
 		toolId: varchar("tool_id", { length: 36 }).notNull().references(() => toolRegistry.id, { onDelete: "restrict" }),
+		toolVersion: varchar("tool_version", { length: 64 }),
 		bundleId: varchar("bundle_id", { length: 36 }).notNull().references(() => policyBundles.id, { onDelete: "restrict" }),
 		action: varchar("action", { length: 128 }).notNull(),
 		resource: varchar("resource", { length: 1000 }).notNull(),
 		parametersHash: varchar("parameters_hash", { length: 64 }).notNull(),
+		actionIntentHash: varchar("action_intent_hash", { length: 64 }),
+		actionIntent: jsonb("action_intent").$type<Record<string, unknown>>(),
+		sideEffect: varchar("side_effect", { length: 32 }),
+		riskCost: integer("risk_cost").notNull().default(0),
+		riskBudget: integer("risk_budget").notNull().default(0),
+		supportingEnvelopeIds: jsonb("supporting_envelope_ids").$type<string[]>().notNull().default([]),
+		dataDestinations: jsonb("data_destinations").$type<string[]>().notNull().default([]),
+		repairSuggestion: jsonb("repair_suggestion").$type<Record<string, unknown>>(),
+		approvalDecisionId: varchar("approval_decision_id", { length: 36 }),
 		contextTainted: boolean("context_tainted").notNull().default(false),
 		status: varchar("status", { length: 32 }).notNull(),
 		permitExpiresAt: timestamp("permit_expires_at", { withTimezone: true }),
+		permitConsumedAt: timestamp("permit_consumed_at", { withTimezone: true }),
 		resultDecision: jsonb("result_decision").$type<Record<string, unknown>>(),
 		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 		completedAt: timestamp("completed_at", { withTimezone: true }),
@@ -1728,6 +1862,45 @@ export const toolInvocations = pgTable(
 		uniqueIndex("tool_invocations_scope_request_uq").on(table.tenantId, table.applicationId, table.requestId),
 		uniqueIndex("tool_invocations_scope_id_uq").on(table.tenantId, table.applicationId, table.id),
 		index("tool_invocations_scope_status_idx").on(table.tenantId, table.applicationId, table.status),
+	]
+);
+
+export const agentLifecycleBudgets = pgTable(
+	"agent_lifecycle_budgets",
+	{
+		...tenantScopeColumns(),
+		id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+		agentRunId: varchar("agent_run_id", { length: 128 }).notNull(),
+		principalId: varchar("principal_id", { length: 100 }).notNull(),
+		allocatedRiskBudget: integer("allocated_risk_budget").notNull(),
+		consumedRiskBudget: integer("consumed_risk_budget").notNull().default(0),
+		toolSteps: integer("tool_steps").notNull().default(0),
+		maximumToolSteps: integer("maximum_tool_steps").notNull().default(32),
+		recursionDepth: integer("recursion_depth").notNull().default(0),
+		maximumRecursionDepth: integer("maximum_recursion_depth").notNull().default(8),
+		browserTabs: integer("browser_tabs").notNull().default(0),
+		maximumBrowserTabs: integer("maximum_browser_tabs").notNull().default(8),
+		processes: integer("processes").notNull().default(0),
+		maximumProcesses: integer("maximum_processes").notNull().default(4),
+		connections: integer("connections").notNull().default(0),
+		maximumConnections: integer("maximum_connections").notNull().default(16),
+		files: integer("files").notNull().default(0),
+		maximumFiles: integer("maximum_files").notNull().default(100),
+		ocrPages: integer("ocr_pages").notNull().default(0),
+		maximumOcrPages: integer("maximum_ocr_pages").notNull().default(500),
+		mediaDurationSeconds: integer("media_duration_seconds").notNull().default(0),
+		maximumMediaDurationSeconds: integer("maximum_media_duration_seconds").notNull().default(3600),
+		guardInferenceTokens: integer("guard_inference_tokens").notNull().default(0),
+		maximumGuardInferenceTokens: integer("maximum_guard_inference_tokens").notNull().default(1000000),
+		state: varchar("state", { length: 24 }).notNull().default("ACTIVE"),
+		expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+		updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+	},
+	(table) => [
+		uniqueIndex("agent_lifecycle_budgets_scope_run_uq")
+			.on(table.tenantId, table.applicationId, table.agentRunId),
+		index("agent_lifecycle_budgets_expires_idx").on(table.expiresAt),
 	]
 );
 
@@ -1747,5 +1920,230 @@ export const toolApprovals = pgTable(
 	(table) => [
 		uniqueIndex("tool_approvals_scope_invocation_uq").on(table.tenantId, table.applicationId, table.invocationId),
 		index("tool_approvals_scope_status_idx").on(table.tenantId, table.applicationId, table.status),
+	]
+);
+
+export const operationalSecurityEvents = pgTable(
+	"operational_security_events",
+	{
+		id: uuid("id").notNull().defaultRandom(),
+		domain: varchar("domain", { length: 32 }).notNull(),
+		eventType: varchar("event_type", { length: 128 }).notNull(),
+		severity: varchar("severity", { length: 16 }).notNull(),
+		outcome: varchar("outcome", { length: 32 }).notNull(),
+		occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
+		tenantId: varchar("tenant_id", { length: 100 }),
+		applicationId: varchar("application_id", { length: 100 }),
+		principalId: varchar("principal_id", { length: 100 }),
+		traceId: varchar("trace_id", { length: 128 }),
+		requestId: varchar("request_id", { length: 128 }),
+		action: varchar("action", { length: 64 }),
+		source: varchar("source", { length: 128 }).notNull(),
+		network: jsonb("network").$type<Record<string, unknown>>(),
+		model: jsonb("model").$type<Record<string, unknown>>(),
+		evidenceDigest: varchar("evidence_digest", { length: 64 }).notNull(),
+		contentHmac: varchar("content_hmac", { length: 64 }),
+		attributes: jsonb("attributes").$type<Record<string, unknown>>().notNull().default({}),
+		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+	},
+	(table) => [
+		uniqueIndex("operational_security_events_time_id_uq").on(table.occurredAt, table.id),
+		index("operational_security_events_scope_time_idx")
+			.on(table.tenantId, table.applicationId, table.occurredAt),
+		index("operational_security_events_domain_time_idx").on(table.domain, table.occurredAt),
+	]
+);
+
+export const securityScanAssets = pgTable(
+	"security_scan_assets",
+	{
+		...tenantScopeColumns(),
+		id: uuid("id").primaryKey().defaultRandom(),
+		targetType: varchar("target_type", { length: 32 }).notNull(),
+		externalInventoryId: varchar("external_inventory_id", { length: 256 }).notNull(),
+		version: varchar("version", { length: 256 }).notNull(),
+		sha256: varchar("sha256", { length: 71 }),
+		status: varchar("status", { length: 16 }).notNull().default("ACTIVE"),
+		createdBy: varchar("created_by", { length: 100 }).notNull(),
+		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+		updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+	},
+	(table) => [
+		uniqueIndex("security_scan_assets_scope_external_version_uq").on(
+			table.tenantId,
+			table.applicationId,
+			table.targetType,
+			table.externalInventoryId,
+			table.version,
+		),
+		index("security_scan_assets_scope_status_idx")
+			.on(table.tenantId, table.applicationId, table.status),
+	]
+);
+
+export const securityScanTasks = pgTable(
+	"security_scan_tasks",
+	{
+		...tenantScopeColumns(),
+		id: uuid("id").primaryKey().defaultRandom(),
+		assetId: uuid("asset_id").notNull()
+			.references(() => securityScanAssets.id, { onDelete: "restrict" }),
+		scannerId: varchar("scanner_id", { length: 128 }).notNull(),
+		scanKind: varchar("scan_kind", { length: 32 }).notNull(),
+		targetType: varchar("target_type", { length: 32 }).notNull(),
+		targetInventoryId: varchar("target_inventory_id", { length: 256 }).notNull(),
+		targetVersion: varchar("target_version", { length: 256 }).notNull(),
+		targetSha256: varchar("target_sha256", { length: 71 }),
+		scannerDefinitionDigest: varchar("scanner_definition_digest", { length: 71 }).notNull(),
+		idempotencyKey: varchar("idempotency_key", { length: 128 }).notNull(),
+		requestHash: varchar("request_hash", { length: 64 }).notNull(),
+		submittedBy: varchar("submitted_by", { length: 100 }).notNull(),
+		status: varchar("status", { length: 24 }).notNull().default("QUEUED"),
+		attempt: integer("attempt").notNull().default(0),
+		maxAttempts: integer("max_attempts").notNull().default(3),
+		failureHistory: jsonb("failure_history").$type<Array<{
+			attempt: number;
+			at: string;
+			code: string;
+			message: string;
+		}>>().notNull().default([]),
+		resultDigest: varchar("result_digest", { length: 71 }),
+		heartbeatAt: timestamp("heartbeat_at", { withTimezone: true }),
+		startedAt: timestamp("started_at", { withTimezone: true }),
+		completedAt: timestamp("completed_at", { withTimezone: true }),
+		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+	},
+	(table) => [
+		uniqueIndex("security_scan_tasks_scope_idempotency_uq")
+			.on(table.tenantId, table.applicationId, table.idempotencyKey),
+		index("security_scan_tasks_scope_status_idx")
+			.on(table.tenantId, table.applicationId, table.status),
+		index("security_scan_tasks_status_created_idx").on(table.status, table.createdAt),
+	]
+);
+
+export const securityScanAttempts = pgTable(
+	"security_scan_attempts",
+	{
+		...tenantScopeColumns(),
+		id: uuid("id").primaryKey().defaultRandom(),
+		taskId: uuid("task_id").notNull()
+			.references(() => securityScanTasks.id, { onDelete: "cascade" }),
+		attempt: integer("attempt").notNull(),
+		status: varchar("status", { length: 24 }).notNull(),
+		scannerId: varchar("scanner_id", { length: 128 }).notNull(),
+		scannerVersion: varchar("scanner_version", { length: 256 }),
+		scannerDigest: varchar("scanner_digest", { length: 71 }),
+		rawOutputDigest: varchar("raw_output_digest", { length: 71 }),
+		errorCode: varchar("error_code", { length: 128 }),
+		errorMessage: varchar("error_message", { length: 500 }),
+		startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
+		completedAt: timestamp("completed_at", { withTimezone: true }).notNull(),
+		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+	},
+	(table) => [
+		uniqueIndex("security_scan_attempts_scope_task_attempt_uq")
+			.on(table.tenantId, table.applicationId, table.taskId, table.attempt),
+		index("security_scan_attempts_task_idx").on(table.taskId),
+	]
+);
+
+export const securityScanFindings = pgTable(
+	"security_scan_findings",
+	{
+		...tenantScopeColumns(),
+		id: uuid("id").primaryKey().defaultRandom(),
+		taskId: uuid("task_id").notNull()
+			.references(() => securityScanTasks.id, { onDelete: "cascade" }),
+		fingerprint: varchar("fingerprint", { length: 64 }).notNull(),
+		ruleId: varchar("rule_id", { length: 256 }).notNull(),
+		category: varchar("category", { length: 128 }).notNull(),
+		severity: varchar("severity", { length: 16 }).notNull(),
+		title: varchar("title", { length: 500 }).notNull(),
+		evidenceDigest: varchar("evidence_digest", { length: 71 }).notNull(),
+		remediation: text("remediation"),
+		disposition: varchar("disposition", { length: 32 }).notNull().default("UNREVIEWED"),
+		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+	},
+	(table) => [
+		uniqueIndex("security_scan_findings_scope_task_fingerprint_uq")
+			.on(table.tenantId, table.applicationId, table.taskId, table.fingerprint),
+		index("security_scan_findings_task_idx").on(table.taskId),
+		index("security_scan_findings_scope_severity_idx")
+			.on(table.tenantId, table.applicationId, table.severity),
+	]
+);
+
+export const securityScanFindingReviews = pgTable(
+	"security_scan_finding_reviews",
+	{
+		...tenantScopeColumns(),
+		id: uuid("id").primaryKey().defaultRandom(),
+		findingId: uuid("finding_id").notNull()
+			.references(() => securityScanFindings.id, { onDelete: "cascade" }),
+		reviewerId: varchar("reviewer_id", { length: 100 }).notNull(),
+		disposition: varchar("disposition", { length: 32 }).notNull(),
+		reason: varchar("reason", { length: 1000 }).notNull(),
+		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+	},
+	(table) => [
+		uniqueIndex("security_scan_reviews_scope_finding_reviewer_uq")
+			.on(table.tenantId, table.applicationId, table.findingId, table.reviewerId),
+		index("security_scan_reviews_finding_idx").on(table.findingId),
+	]
+);
+
+export const guardQuotaCounters = pgTable(
+	"guard_quota_counters",
+	{
+		...tenantScopeColumns(),
+		id: uuid("id").primaryKey().defaultRandom(),
+		policyBundleId: varchar("policy_bundle_id", { length: 36 }).notNull(),
+		scopeType: varchar("scope_type", { length: 24 }).notNull(),
+		scopeId: varchar("scope_id", { length: 256 }).notNull(),
+		metric: varchar("metric", { length: 32 }).notNull(),
+		window: varchar("window", { length: 16 }).notNull(),
+		windowStart: timestamp("window_start", { withTimezone: true }).notNull(),
+		windowEnd: timestamp("window_end", { withTimezone: true }).notNull(),
+		used: bigint("used", { mode: "number" }).notNull().default(0),
+		limitValue: bigint("limit_value", { mode: "number" }).notNull(),
+		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+		updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+	},
+	(table) => [
+		uniqueIndex("guard_quota_counters_identity_window_uq").on(
+			table.tenantId,
+			table.applicationId,
+			table.policyBundleId,
+			table.scopeType,
+			table.scopeId,
+			table.metric,
+			table.window,
+			table.windowStart,
+		),
+		index("guard_quota_counters_expiry_idx").on(table.windowEnd),
+	]
+);
+
+export const guardQuotaCharges = pgTable(
+	"guard_quota_charges",
+	{
+		...tenantScopeColumns(),
+		id: uuid("id").primaryKey().defaultRandom(),
+		counterId: uuid("counter_id").notNull()
+			.references(() => guardQuotaCounters.id, { onDelete: "restrict" }),
+		requestId: varchar("request_id", { length: 128 }).notNull(),
+		amount: bigint("amount", { mode: "number" }).notNull(),
+		releaseRequired: boolean("release_required").notNull().default(false),
+		expiresAt: timestamp("expires_at", { withTimezone: true }),
+		releasedAt: timestamp("released_at", { withTimezone: true }),
+		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+	},
+	(table) => [
+		uniqueIndex("guard_quota_charges_scope_counter_request_uq")
+			.on(table.tenantId, table.applicationId, table.counterId, table.requestId),
+		index("guard_quota_charges_expiry_idx").on(table.expiresAt, table.releasedAt),
+		index("guard_quota_charges_request_idx")
+			.on(table.tenantId, table.applicationId, table.requestId),
 	]
 );

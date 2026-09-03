@@ -1,6 +1,6 @@
 import type { ApiAuditRecord } from '@/lib/api-security/types';
 
-export type AuditExportDestinationType = 'syslog' | 'kafka';
+export type AuditExportDestinationType = 'syslog' | 'kafka' | 'tone';
 
 interface AuditExportFilter {
   readonly eventPrefixes: readonly string[];
@@ -33,7 +33,19 @@ export interface KafkaAuditExportTarget extends AuditExportFilter {
   readonly saslPassword?: string;
 }
 
-export type AuditExportTarget = SyslogAuditExportTarget | KafkaAuditExportTarget;
+export interface ToneAuditExportTarget extends AuditExportFilter {
+  readonly type: 'tone';
+  readonly destination: string;
+  readonly baseUrl: string;
+  readonly path: string;
+  readonly keyId: string;
+  readonly hmacKey: string;
+}
+
+export type AuditExportTarget =
+  | SyslogAuditExportTarget
+  | KafkaAuditExportTarget
+  | ToneAuditExportTarget;
 
 function list(value: string | undefined): string[] {
   return (value ?? '').split(',').map((item) => item.trim()).filter(Boolean);
@@ -132,6 +144,40 @@ export function resolveAuditExportTargets(
       saslMechanism,
       saslUsername,
       saslPassword,
+    });
+  }
+
+  const toneBaseUrl = environment.AUDIT_EXPORT_TONE_BASE_URL?.trim();
+  if (toneBaseUrl) {
+    let parsed: URL;
+    try {
+      parsed = new URL(toneBaseUrl);
+    } catch {
+      throw new Error('AUDIT_EXPORT_TONE_BASE_URL is invalid');
+    }
+    if (parsed.protocol !== 'https:' || parsed.username || parsed.password || parsed.hash) {
+      throw new Error('TONE audit export must use an HTTPS URL without credentials or fragments');
+    }
+    const tonePath = environment.AUDIT_EXPORT_TONE_PATH?.trim() || '/api/v1/security-events';
+    if (!/^\/[A-Za-z0-9._~!$&'()*+,;=:@%/-]{1,1024}$/.test(tonePath)) {
+      throw new Error('AUDIT_EXPORT_TONE_PATH is invalid');
+    }
+    const keyId = environment.AUDIT_EXPORT_TONE_KEY_ID?.trim();
+    const hmacKey = environment.AUDIT_EXPORT_TONE_HMAC_KEY;
+    if (!keyId || !/^[A-Za-z0-9._:-]{1,128}$/.test(keyId)) {
+      throw new Error('AUDIT_EXPORT_TONE_KEY_ID is required and invalid');
+    }
+    if (!hmacKey || Buffer.byteLength(hmacKey, 'utf8') < 32) {
+      throw new Error('AUDIT_EXPORT_TONE_HMAC_KEY must contain at least 32 bytes');
+    }
+    targets.push({
+      ...commonFilter,
+      type: 'tone',
+      destination: 'tone:' + parsed.host + tonePath,
+      baseUrl: parsed.origin,
+      path: tonePath,
+      keyId,
+      hmacKey,
     });
   }
   return targets;

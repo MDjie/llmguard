@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '@/storage/database/shared/db';
 import {
@@ -8,6 +8,8 @@ import {
 import { scopePredicate, type TenantScope } from '@/lib/tenancy';
 import { verificationPublicKey, verifyPolicyBundle } from './crypto';
 import type { CompiledPolicyBundle } from './types';
+import { semanticClassifierSpecSchema } from '@/lib/guard-engine-v2/semantic-classifier';
+import { guardResourceAdmissionSpecSchema } from '@/lib/resource-control/admission-config';
 
 const ruleSchema = z.object({
   id: z.string(),
@@ -17,6 +19,26 @@ const ruleSchema = z.object({
   caseSensitive: z.boolean(),
   score: z.number().min(0).max(1),
   mandatoryDeny: z.boolean().optional(),
+}).strict();
+const detectorDagSchema = z.object({
+  version: z.string().min(1).max(128),
+  maximumCostUnits: z.number().int().positive().max(10_000),
+  nodes: z.array(z.object({
+    id: z.string().min(1).max(128),
+    detectorId: z.string().min(1).max(128),
+    tier: z.enum(['L0', 'L1', 'L2', 'L3', 'L4']),
+    dependsOn: z.array(z.string().min(1).max(128)).max(64),
+    runCondition: z.enum([
+      'ALWAYS',
+      'WHEN_PARENT_MATCHES',
+      'WHEN_PARENT_FAILS',
+      'WHEN_NO_BLOCKING_MATCH',
+    ]),
+    timeoutMs: z.number().int().positive().max(60_000),
+    maxAttempts: z.number().int().min(1).max(3),
+    costUnits: z.number().int().positive().max(10_000),
+    failurePolicy: z.enum(['FAIL_CLOSED', 'DEGRADE']),
+  }).strict()).min(1).max(128),
 }).strict();
 const payloadSchema = z.object({
   schemaVersion: z.literal('1.0'),
@@ -45,6 +67,9 @@ const payloadSchema = z.object({
     autoMask: z.boolean(),
     autoRewrite: z.boolean(),
   }).strict()),
+  detectorDag: detectorDagSchema.optional(),
+  semanticClassifier: semanticClassifierSpecSchema().optional(),
+  resourceAdmission: guardResourceAdmissionSpecSchema().optional(),
 }).strict();
 
 export interface RuntimePolicyBundle {
@@ -123,6 +148,26 @@ export async function loadVerifiedPolicyBundle(
     throw new Error('Policy bundle signature verification failed');
   }
   return { id: row.id, generation: 0, payload };
+}
+
+export async function loadLatestVerifiedPolicyBundleForPolicy(
+  scope: TenantScope,
+  policyId: string,
+  options: { readonly allowPreRelease?: boolean } = {},
+): Promise<RuntimePolicyBundle> {
+  const allowedStates = new Set(options.allowPreRelease
+    ? ['draft', 'testing', 'pending_approval', 'approved', 'shadow', 'canary', 'active']
+    : ['approved', 'shadow', 'canary', 'active']);
+  const rows = await db.select({
+    id: policyBundles.id,
+    state: policyBundles.state,
+  }).from(policyBundles).where(and(
+    eq(policyBundles.policyId, policyId),
+    scopePredicate(policyBundles, scope),
+  )).orderBy(desc(policyBundles.version));
+  const selected = rows.find((row) => allowedStates.has(row.state));
+  if (!selected) throw new Error('Policy bundle is unavailable');
+  return loadVerifiedPolicyBundle(scope, selected.id, options);
 }
 
 export function clearRuntimePolicyBundleCache(): void {

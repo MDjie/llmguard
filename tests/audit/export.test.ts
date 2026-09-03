@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   auditExportRetryDelayMs,
+  buildToneEnvelope,
   formatRfc5424,
   resolveAuditExportTargets,
   targetAcceptsEvent,
@@ -70,5 +71,43 @@ describe('audit export', () => {
     expect(auditExportRetryDelayMs(1)).toBe(5_000);
     expect(auditExportRetryDelayMs(2)).toBe(10_000);
     expect(auditExportRetryDelayMs(100)).toBe(15 * 60_000);
+  });
+
+  it('maps TONE events with integrity evidence, HMAC signatures and no secret in destination', () => {
+    const [target] = resolveAuditExportTargets({
+      NODE_ENV: 'production',
+      AUDIT_EXPORT_TONE_BASE_URL: 'https://tone.example.internal',
+      AUDIT_EXPORT_TONE_PATH: '/api/v1/security-events',
+      AUDIT_EXPORT_TONE_KEY_ID: 'tone-key-1',
+      AUDIT_EXPORT_TONE_HMAC_KEY: 'tone-test-key-that-is-at-least-32-bytes',
+    });
+    expect(target).toMatchObject({
+      type: 'tone',
+      destination: 'tone:tone.example.internal/api/v1/security-events',
+    });
+    if (target.type !== 'tone') throw new Error('expected TONE target');
+    const envelope = buildToneEnvelope(target, payload);
+    expect(envelope.event).toMatchObject({
+      eventId: 'event-1',
+      eventType: 'guard.request.denied',
+      severity: 'MEDIUM',
+      integrity: { eventHash: 'b'.repeat(64) },
+    });
+    expect(envelope.headers['idempotency-key']).toBe('event-1');
+    expect(envelope.headers['x-guard-signature']).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(target.destination).not.toContain(target.hmacKey);
+  });
+
+  it('rejects insecure or weak TONE export configuration', () => {
+    expect(() => resolveAuditExportTargets({
+      AUDIT_EXPORT_TONE_BASE_URL: 'http://tone.example.internal',
+      AUDIT_EXPORT_TONE_KEY_ID: 'key',
+      AUDIT_EXPORT_TONE_HMAC_KEY: 'x'.repeat(32),
+    })).toThrow(/HTTPS/);
+    expect(() => resolveAuditExportTargets({
+      AUDIT_EXPORT_TONE_BASE_URL: 'https://tone.example.internal',
+      AUDIT_EXPORT_TONE_KEY_ID: 'key',
+      AUDIT_EXPORT_TONE_HMAC_KEY: 'weak',
+    })).toThrow(/32 bytes/);
   });
 });

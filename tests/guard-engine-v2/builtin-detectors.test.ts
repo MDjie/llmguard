@@ -8,6 +8,8 @@ import {
   ReasoningAttackDetector,
   ResourceAbuseDetector,
   StructuredDlpDetector,
+  validUnifiedSocialCreditCode,
+  validVehicleIdentificationNumber,
 } from '../../src/lib/guard-engine-v2';
 import type { RuntimePolicyBundle } from '../../src/lib/policy-bundle';
 
@@ -81,6 +83,29 @@ describe('built-in prompt attack and DLP detectors', () => {
     expect(invalid.observations.map((item) => item.riskType)).not.toEqual(expect.arrayContaining([
       'pii.identity.prc',
       'financial.bank_card',
+    ]));
+  });
+
+  it('validates unified social credit codes and VIN check digits', async () => {
+    expect(validUnifiedSocialCreditCode('91350100M000100Y43')).toBe(true);
+    expect(validUnifiedSocialCreditCode('91350100M000100Y44')).toBe(false);
+    expect(validVehicleIdentificationNumber('1HGCM82633A004352')).toBe(true);
+    expect(validVehicleIdentificationNumber('1HGCM82643A004352')).toBe(false);
+
+    const valid = await engine.evaluate(request(
+      '企业代码 91350100M000100Y43，车辆识别号 1HGCM82633A004352。',
+    ));
+    expect(valid.observations.map((item) => item.riskType)).toEqual(expect.arrayContaining([
+      'organization.unified_social_credit_code',
+      'vehicle.identification_number',
+    ]));
+
+    const invalid = await engine.evaluate(request(
+      '错误企业代码 91350100M000100Y44，错误车架号 1HGCM82643A004352。',
+    ));
+    expect(invalid.observations.map((item) => item.riskType)).not.toEqual(expect.arrayContaining([
+      'organization.unified_social_credit_code',
+      'vehicle.identification_number',
     ]));
   });
 

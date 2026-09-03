@@ -145,6 +145,30 @@ workloads:
       requests: { cpu: 100m, memory: 256Mi }
       limits: { cpu: 500m, memory: 512Mi }
     autoscaling: { enabled: false }
+  audit-export:
+    enabled: true
+    namespaceKey: control
+    imageKey: worker
+    replicas: 2
+    service: false
+    command: ["pnpm"]
+    args: ["audit:export-worker"]
+    resources:
+      requests: { cpu: 100m, memory: 256Mi }
+      limits: { cpu: 500m, memory: 512Mi }
+    autoscaling: { enabled: false }
+  security-scan:
+    enabled: true
+    namespaceKey: control
+    imageKey: worker
+    replicas: 2
+    service: false
+    command: ["pnpm"]
+    args: ["security-scan:worker"]
+    resources:
+      requests: { cpu: 250m, memory: 512Mi }
+      limits: { cpu: "1", memory: 1Gi }
+    autoscaling: { enabled: false }
   artifact:
     enabled: true
     namespaceKey: media

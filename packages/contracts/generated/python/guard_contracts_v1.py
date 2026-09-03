@@ -1,9 +1,9 @@
 # Generated from model/guard-v1.schema.json. Do not edit.
-# Source SHA-256: 4de68b95fb3b68b2116a5e2bdfde666a49e00baf2e1ac0716d03bc315bf4e3a5
+# Source SHA-256: 95d5f83807849b342487326076ea8dc4a664878ff7689e6ec89ce665d1316faf
 from typing import Literal, NotRequired, TypedDict
 
 GUARD_CONTRACT_VERSION = '1.0'
-GUARD_CONTRACT_SOURCE_SHA256 = '4de68b95fb3b68b2116a5e2bdfde666a49e00baf2e1ac0716d03bc315bf4e3a5'
+GUARD_CONTRACT_SOURCE_SHA256 = '95d5f83807849b342487326076ea8dc4a664878ff7689e6ec89ce665d1316faf'
 
 Direction = Literal["INPUT", "OUTPUT_COMPLETE", "OUTPUT_CHUNK", "RAG_INGEST", "RAG_CONTEXT", "TOOL_REQUEST", "TOOL_RESULT"]
 
@@ -15,6 +15,51 @@ ObservationStatus = Literal["MATCH", "NO_MATCH", "TIMEOUT", "ERROR", "SKIPPED"]
 
 ArtifactKind = Literal["TEXT", "IMAGE", "AUDIO", "VIDEO", "DOCUMENT", "TOOL_RESULT", "RAG_CHUNK"]
 
+SourceType = Literal["SYSTEM", "USER", "RAG", "TOOL", "MEMORY", "AGENT", "FILE", "MEDIA"]
+
+TrustLevel = Literal["TRUSTED", "CONTROLLED", "UNTRUSTED"]
+
+InstructionCapability = Literal["ALLOWED", "DATA_ONLY", "FORBIDDEN"]
+
+GuardFailMode = Literal["NORMAL", "FAIL_CLOSED", "DEGRADED", "FAIL_OPEN"]
+
+ProcessingStage = Literal["INPUT_PRE", "MODEL_PRE", "MODEL_STREAM", "OUTPUT_POST", "RAG_INGEST", "RAG_RETRIEVE", "TOOL_PRE", "TOOL_POST", "MEDIA_ANALYZE", "OFFLINE_EVALUATE"]
+
+SideEffect = Literal["NONE", "READ", "WRITE", "EXECUTE", "EXTERNAL_COMMUNICATION", "FINANCIAL", "PRIVILEGE_CHANGE"]
+
+class ContextEnvelope(TypedDict):
+    envelopeId: str
+    tenantId: str
+    applicationId: str
+    sessionId: NotRequired[str]
+    sourceType: SourceType
+    sourceId: str
+    trustLevel: TrustLevel
+    instructionCapability: InstructionCapability
+    sensitivityLabels: list[str]
+    contentHash: str
+    parentEnvelopeIds: list[str]
+    policyVersion: str
+    eventSeq: int
+    contentStart: int
+    contentEnd: int
+    expiresAtEpochMs: NotRequired[int]
+    signature: NotRequired[str]
+    signatureKeyId: NotRequired[str]
+
+class ActionIntent(TypedDict):
+    intentId: str
+    userGoal: str
+    toolName: str
+    parametersDigest: str
+    targetResource: str
+    sideEffect: SideEffect
+    requiredPermissions: list[str]
+    supportingEnvelopeIds: list[str]
+    dataDestinations: list[str]
+    riskBudget: float
+    expiresAtEpochMs: NotRequired[int]
+
 class RequestContext(TypedDict):
     traceId: str
     requestId: str
@@ -24,6 +69,10 @@ class RequestContext(TypedDict):
     direction: Direction
     absoluteDeadlineEpochMs: int
     policyBundleId: str
+    subjectId: NotRequired[str]
+    authContextId: NotRequired[str]
+    tokenizerId: NotRequired[str]
+    stage: NotRequired[ProcessingStage]
 
 class ArtifactRef(TypedDict):
     artifactId: str
@@ -36,11 +85,13 @@ class ArtifactRef(TypedDict):
 class GuardContent(TypedDict):
     text: NotRequired[str]
     artifacts: NotRequired[list[ArtifactRef]]
+    envelopes: NotRequired[list[ContextEnvelope]]
 
 class GuardRequest(TypedDict):
     contractVersion: Literal["1.0"]
     context: RequestContext
     content: GuardContent
+    actionIntent: NotRequired[ActionIntent]
 
 class EvidenceRef(TypedDict):
     viewId: str
@@ -51,6 +102,10 @@ class EvidenceRef(TypedDict):
     timeRangeMs: NotRequired[list[int]]
     maskedPreview: NotRequired[str]
     contentHmac: str
+    sourceEnvelopeIds: NotRequired[list[str]]
+    tokenStart: NotRequired[int]
+    tokenEnd: NotRequired[int]
+    tokenizerId: NotRequired[str]
 
 class Observation(TypedDict):
     detectorId: str
@@ -61,6 +116,9 @@ class Observation(TypedDict):
     evidence: list[EvidenceRef]
     status: ObservationStatus
     reasonCode: NotRequired[str]
+    modelVersion: NotRequired[str]
+    configurationDigest: NotRequired[str]
+    failMode: NotRequired[GuardFailMode]
 
 class GuardDecision(TypedDict):
     contractVersion: Literal["1.0"]
@@ -74,6 +132,9 @@ class GuardDecision(TypedDict):
     latencyMs: int
     degradationReasons: list[str]
     transformedText: NotRequired[str]
+    modelVersions: NotRequired[list[str]]
+    failMode: NotRequired[GuardFailMode]
+    evidenceComplete: NotRequired[bool]
 
 class GuardError(TypedDict):
     contractVersion: Literal["1.0"]
@@ -91,4 +152,8 @@ class GuardEvent(TypedDict):
     traceId: str
     tenantId: str
     applicationId: str
-    payload: GuardRequest | Observation | GuardDecision | ArtifactRef
+    payload: GuardRequest | Observation | GuardDecision | ArtifactRef | ContextEnvelope | ActionIntent
+    sequenceNumber: NotRequired[int]
+    expiresAtEpochMs: NotRequired[int]
+    signature: NotRequired[str]
+    signatureKeyId: NotRequired[str]

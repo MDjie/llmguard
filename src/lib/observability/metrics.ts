@@ -58,6 +58,13 @@ export function replaceGauge(name: string, samples: readonly { labels: Labels; v
   gauges.set(name, family);
 }
 
+function setGauge(name: string, labelsInput: Labels, value: number): void {
+  const labels = normalizedLabels(labelsInput);
+  const family = gauges.get(name) ?? new Map<string, MetricSample>();
+  family.set(labelKey(labels), { labels, value: Number.isFinite(value) ? value : 0 });
+  gauges.set(name, family);
+}
+
 function observe(name: string, labels: Labels, value: number, buckets = DEFAULT_BUCKETS_MS): void {
   const key = labelKey(labels);
   const family = histograms.get(name) ?? new Map<string, HistogramSample>();
@@ -115,6 +122,94 @@ export function observeGuardDecision(input: {
   if (input.detectorFailures > 0) {
     increment('guardllm_required_detector_failures_total', { direction: labels.direction }, input.detectorFailures);
   }
+}
+
+export function observeGuardDetectorNode(input: {
+  readonly detectorId: string;
+  readonly tier: string;
+  readonly status: string;
+  readonly latencyMs: number;
+  readonly queueDelayMs: number;
+  readonly attempts: number;
+  readonly costUnits: number;
+  readonly inputChars: number;
+  readonly batchSize: number;
+}): void {
+  const labels = {
+    detector: input.detectorId.slice(0, 128),
+    tier: input.tier.slice(0, 4),
+    status: input.status.slice(0, 16),
+  };
+  increment('guardllm_detector_runs_total', labels);
+  observe('guardllm_detector_duration_ms', labels, input.latencyMs);
+  observe('guardllm_detector_queue_delay_ms', labels, input.queueDelayMs);
+  observe(
+    'guardllm_detector_input_chars',
+    labels,
+    input.inputChars,
+    [128, 512, 2_048, 8_192, 32_768, 131_072, 524_288, 1_048_576],
+  );
+  observe('guardllm_detector_batch_size', labels, input.batchSize, [1, 2, 4, 8, 16, 32]);
+  increment('guardllm_detector_attempts_total', labels, input.attempts);
+  increment('guardllm_detector_cost_units_total', labels, input.costUnits);
+}
+
+export function observeDependencyCall(input: {
+  readonly dependency: string;
+  readonly operation: string;
+  readonly status: 'success' | 'failure' | 'timeout' | 'circuit_open';
+  readonly latencyMs: number;
+}): void {
+  const labels = {
+    dependency: input.dependency.slice(0, 64),
+    operation: input.operation.slice(0, 64),
+    status: input.status,
+  };
+  increment('guardllm_dependency_calls_total', labels);
+  observe('guardllm_dependency_duration_ms', labels, input.latencyMs);
+}
+
+export function observeRoutingDecision(input: {
+  readonly routeId: string;
+  readonly outcome: 'selected' | 'no_compliant_route' | 'unhealthy' | 'rollback';
+  readonly queueDepth: number;
+}): void {
+  const labels = { route: input.routeId.slice(0, 64), outcome: input.outcome };
+  increment('guardllm_model_routing_decisions_total', labels);
+  setGauge('guardllm_model_route_queue_depth', { route: labels.route }, input.queueDepth);
+}
+
+export function observeRagGate(input: {
+  readonly stage: 'ingest' | 'retrieval' | 'assembly' | 'output';
+  readonly action: string;
+  readonly rejectedCandidates: number;
+}): void {
+  const labels = { stage: input.stage, action: input.action.slice(0, 24) };
+  increment('guardllm_rag_gate_decisions_total', labels);
+  increment('guardllm_rag_rejected_candidates_total', { stage: input.stage }, input.rejectedCandidates);
+}
+
+export function observeToolFirewall(input: {
+  readonly sideEffect: string;
+  readonly disposition: string;
+  readonly permitReplay: boolean;
+}): void {
+  const labels = {
+    side_effect: input.sideEffect.slice(0, 32),
+    disposition: input.disposition.slice(0, 32),
+  };
+  increment('guardllm_tool_firewall_decisions_total', labels);
+  if (input.permitReplay) increment('guardllm_tool_permit_replays_total', labels);
+}
+
+export function observeAuditDelivery(input: {
+  readonly destinationType: string;
+  readonly state: 'delivered' | 'failed' | 'terminal_failed';
+}): void {
+  increment('guardllm_audit_delivery_total', {
+    destination_type: input.destinationType.slice(0, 32),
+    state: input.state,
+  });
 }
 
 export function renderPrometheusMetrics(): string {

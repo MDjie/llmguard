@@ -1,0 +1,79 @@
+{
+  "schemaVersion": "1.0",
+  "planId": "GUARDLLM-INTEGRATED-2026",
+  "planSource": "输出/代码分析与升级/14_三份优化计划整合实施方案_V1.0.md",
+  "defaultSku": "VERSION_A_SOFTWARE_GATEWAY",
+  "skus": [
+    {
+      "id": "VERSION_A_SOFTWARE_GATEWAY",
+      "decision": "APPROVED_FOR_IMPLEMENTATION",
+      "includes": [
+        "AI application guard gateway",
+        "GuardEngine policy and detector orchestration",
+        "RAG trust gate",
+        "Agent and tool action firewall",
+        "multimodal content analysis orchestration",
+        "audit, evaluation, observability and administration"
+      ],
+      "excludes": [
+        "transparent L2-L7 network forwarding",
+        "general-purpose IPS",
+        "general-purpose antivirus",
+        "volumetric DDoS mitigation",
+        "certified cryptographic hardware"
+      ],
+      "releaseOwnerRole": "product-owner",
+      "rollbackOwnerRole": "release-manager"
+    },
+    {
+      "id": "VERSION_B_FULL_APPLIANCE",
+      "decision": "BLOCKED_EXTERNAL",
+      "blockingInputs": [
+        "commercial SKU approval",
+        "target network topology",
+        "hardware bill of materials",
+        "throughput and failover acceptance profile",
+        "regulatory and certification scope"
+      ],
+      "releaseOwnerRole": "product-owner",
+      "rollbackOwnerRole": "appliance-release-manager"
+    }
+  ],
+  "claims": [
+    {
+      "id": "CLAIM-EFFECTIVENESS-99",
+      "statement": "Attack blocking rate is at least 99 percent",
+      "status": "NOT_APPROVED",
+      "requiredEvidence": "signed blind-dataset report with immutable dataset digest"
+    },
+    {
+      "id": "CLAIM-LATENCY-MILLISECOND",
+      "statement": "Full-policy guard latency satisfies the published millisecond target",
+      "status": "NOT_APPROVED",
+      "requiredEvidence": "signed target-environment latency report with P50, P95 and P99"
+    },
+    {
+      "id": "CLAIM-128K",
+      "statement": "Every token in a 128K context is inspected without silent truncation",
+      "status": "NOT_APPROVED",
+      "requiredEvidence": "target model and tokenizer digest plus long-context coverage report"
+    },
+    {
+      "id": "CLAIM-DOMESTIC-PLATFORM",
+      "statement": "Named domestic CPU, accelerator, OS and database combinations are certified",
+      "status": "NOT_APPROVED",
+      "requiredEvidence": "per-combination signed compatibility and performance report"
+    },
+    {
+      "id": "CLAIM-FULL-APPLIANCE",
+      "statement": "The product provides a complete network security appliance data plane",
+      "status": "NOT_APPROVED",
+      "requiredEvidence": "Version B approval and signed network data-plane acceptance"
+    }
+  ],
+  "policy": {
+    "unapprovedClaimsMustNotBePublished": true,
+    "versionBFeaturesMustNotAppearInVersionAClaims": true,
+    "codeChecksDoNotConstituteTargetAcceptance": true
+  }
+}

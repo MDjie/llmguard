@@ -19,6 +19,8 @@ import {
   type PolicyBundleState,
 } from './lifecycle';
 import { clearRuntimePolicyBundleCache } from './runtime';
+import { parseSemanticClassifierBuildConfig } from '@/lib/guard-engine-v2/semantic-classifier';
+import { parseGuardResourceAdmissionBuildConfig } from '@/lib/resource-control/admission-config';
 
 export { PolicyBundleTransitionError } from './lifecycle';
 export type { BundleTransition } from './lifecycle';
@@ -74,7 +76,10 @@ export async function compileAndStorePolicyBundle(
       .orderBy(desc(policyBundles.version))
       .limit(1);
     const version = (latest?.version ?? 0) + 1;
-    const signed = signPolicyBundle(compilePolicyBundle(config, version), {
+    const signed = signPolicyBundle(compilePolicyBundle(config, version, {
+      semanticClassifier: parseSemanticClassifierBuildConfig(),
+      resourceAdmission: parseGuardResourceAdmissionBuildConfig(),
+    }), {
       privateKey: signingPrivateKey(),
       signingKeyId: process.env.POLICY_SIGNING_KEY_ID ?? 'default-ed25519',
     });

@@ -26,6 +26,27 @@ export function validateEvidenceReport(reportPath, expectedId) {
   if (!report.environment?.deploymentDigests || Object.keys(report.environment.deploymentDigests).length === 0) {
     throw new Error(expectedId + ' has no deployment digests');
   }
+  const bindings = report.bindings;
+  if (!bindings || !/^[a-f0-9]{40,64}$/.test(bindings.sourceCommit ?? '')) {
+    throw new Error(expectedId + ' has no immutable source commit binding');
+  }
+  for (const key of [
+    'policyBundleDigest', 'tokenizerDigest', 'datasetDigest',
+    'configurationDigest', 'rawOutputDigest'
+  ]) {
+    if (!/^sha256:[a-f0-9]{64}$/.test(bindings[key] ?? '')) {
+      throw new Error(expectedId + ' has an invalid bindings.' + key);
+    }
+  }
+  if (bindings.firstAttemptOnly !== true) {
+    throw new Error(expectedId + ' must preserve first-attempt evidence');
+  }
+  for (const key of ['imageDigests', 'modelDigests']) {
+    if (!bindings[key] || Object.keys(bindings[key]).length === 0 ||
+        Object.values(bindings[key]).some((value) => !/^sha256:[a-f0-9]{64}$/.test(value))) {
+      throw new Error(expectedId + ' has invalid ' + key);
+    }
+  }
   if (!Array.isArray(report.approvers) || new Set(report.approvers).size < 2) {
     throw new Error(expectedId + ' requires at least two distinct approvers');
   }

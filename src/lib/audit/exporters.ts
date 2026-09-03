@@ -1,9 +1,18 @@
+import { createHmac } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { hostname } from 'node:os';
 import { connect as connectTcp } from 'node:net';
 import { connect as connectTls, type ConnectionOptions } from 'node:tls';
 import { Kafka, type KafkaConfig, type Producer, type SASLOptions } from 'kafkajs';
-import type { AuditExportTarget, KafkaAuditExportTarget, SyslogAuditExportTarget } from './export-config';
+import { z } from 'zod';
+import { safeFetchJson } from '@/lib/egress/safe-fetch';
+import { canonicalJson } from '@/lib/policy-bundle/canonical';
+import type {
+  AuditExportTarget,
+  KafkaAuditExportTarget,
+  SyslogAuditExportTarget,
+  ToneAuditExportTarget,
+} from './export-config';
 
 export interface AuditExportPayload {
   readonly schemaVersion: '1.0';
@@ -139,7 +148,74 @@ async function sendKafka(target: KafkaAuditExportTarget, payload: AuditExportPay
   });
 }
 
+const toneReceiptSchema = z.object({
+  accepted: z.literal(true),
+  eventId: z.string().min(1).max(128),
+  statusId: z.string().min(1).max(256).optional(),
+}).strict();
+
+export function buildToneEnvelope(
+  target: ToneAuditExportTarget,
+  payload: AuditExportPayload,
+) {
+  const event = {
+    schemaVersion: '1.0' as const,
+    source: 'guardllm',
+    eventId: payload.eventId,
+    eventType: payload.event,
+    outcome: payload.outcome,
+    severity: payload.outcome === 'ERROR'
+      ? 'HIGH' as const
+      : payload.outcome === 'DENIED'
+        ? 'MEDIUM' as const
+        : 'INFO' as const,
+    occurredAt: payload.occurredAt,
+    traceId: payload.traceId,
+    requestId: payload.requestId,
+    tenantId: payload.tenantId,
+    applicationId: payload.applicationId,
+    principalId: payload.principalId,
+    http: {
+      method: payload.method,
+      path: payload.path,
+      status: payload.status,
+      latencyMs: payload.latencyMs,
+    },
+    integrity: payload.chain,
+  };
+  const signature = createHmac('sha256', target.hmacKey)
+    .update(canonicalJson(event))
+    .digest('base64url');
+  return {
+    event,
+    headers: {
+      'idempotency-key': payload.eventId,
+      'x-guard-signature-algorithm': 'HMAC-SHA256',
+      'x-guard-signature-key-id': target.keyId,
+      'x-guard-signature': signature,
+    },
+  };
+}
+
+async function sendTone(target: ToneAuditExportTarget, payload: AuditExportPayload): Promise<void> {
+  const envelope = buildToneEnvelope(target, payload);
+  const receipt = toneReceiptSchema.parse(await safeFetchJson({
+    baseUrl: target.baseUrl,
+    path: target.path,
+    providerType: 'custom',
+    headers: envelope.headers,
+    body: envelope.event,
+    timeoutMs: 15_000,
+    maxRequestBytes: 1_048_576,
+    maxResponseBytes: 64 * 1_024,
+  }));
+  if (receipt.eventId !== payload.eventId) {
+    throw new Error('TONE_RECEIPT_EVENT_MISMATCH');
+  }
+}
+
 export async function sendAuditExport(target: AuditExportTarget, payload: AuditExportPayload): Promise<void> {
   if (target.type === 'syslog') return sendSyslog(target, payload);
-  return sendKafka(target, payload);
+  if (target.type === 'kafka') return sendKafka(target, payload);
+  return sendTone(target, payload);
 }

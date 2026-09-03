@@ -1,5 +1,6 @@
 import { and, asc, eq, inArray, isNull, lte, or } from 'drizzle-orm';
 import { logger } from '@/lib/observability/logger';
+import { observeAuditDelivery } from '@/lib/observability/metrics';
 import { db } from '@/storage/database/shared/db';
 import { auditExportOutbox } from '@/storage/database/shared/schema';
 import { resolveAuditExportTargets } from './export-config';
@@ -54,6 +55,7 @@ export async function dispatchNextAuditExport() {
     await db.update(auditExportOutbox).set({
       state: 'delivered', deliveredAt: new Date(), claimedAt: null, lastError: null,
     }).where(and(eq(auditExportOutbox.id, item.id), eq(auditExportOutbox.state, 'sending')));
+    observeAuditDelivery({ destinationType: item.destinationType, state: 'delivered' });
     return { id: item.id, state: 'delivered' as const };
   } catch (error) {
     const terminal = item.attempts >= maxAttempts();
@@ -65,6 +67,10 @@ export async function dispatchNextAuditExport() {
       lastError: message,
     }).where(and(eq(auditExportOutbox.id, item.id), eq(auditExportOutbox.state, 'sending')));
     const result = { id: item.id, state: terminal ? 'terminal_failed' as const : 'failed' as const };
+    observeAuditDelivery({
+      destinationType: item.destinationType,
+      state: terminal ? 'terminal_failed' : 'failed',
+    });
     if (terminal) logger.error('audit.export.terminal_failed', { id: item.id, destination: item.destination, attempts: item.attempts, error });
     else logger.warn('audit.export.failed', { id: item.id, destination: item.destination, attempts: item.attempts, error });
     return result;

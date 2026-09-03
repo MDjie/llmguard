@@ -1,14 +1,14 @@
-import { and, eq } from 'drizzle-orm';
-import { loadMasterKey, openSecret, sealSecret } from '@/lib/secrets';
+import { createHash } from 'node:crypto';
+import { resolveContextEnvelopes } from '@/lib/context-trust';
+import {
+  appendSecureMemoryEvaluation,
+  readSecureMemorySnapshot,
+  SecureMemoryVersionConflictError,
+  type SecureMemorySnapshot,
+} from '@/lib/secure-memory';
 import type { TenantScope } from '@/lib/tenancy';
-import { db } from '@/storage/database/shared/db';
-import { guardSessionRiskStates } from '@/storage/database/shared/schema';
 import type { GuardDecision, GuardEngine, GuardRequest, Observation } from './types';
 
-const MAX_SESSION_TAIL_CHARS = 4_096;
-const MAX_CONTRACT_TEXT_CHARS = 1_048_576;
-const DEFAULT_TTL_MS = 24 * 60 * 60 * 1_000;
-const MAX_TTL_MS = 7 * 24 * 60 * 60 * 1_000;
 const ACTION_RANK = {
   ALLOW: 0,
   WARN: 1,
@@ -19,82 +19,15 @@ const ACTION_RANK = {
   BLOCK: 5,
 } as const;
 
-function stateReference(scope: TenantScope, sessionId: string): string {
-  return `guard-session:${scope.tenantId}:${scope.applicationId}:${sessionId}`;
-}
-
-function ttlMs(): number {
-  const configured = Number(process.env.GUARD_SESSION_STATE_TTL_MS ?? DEFAULT_TTL_MS);
-  return Number.isFinite(configured)
-    ? Math.min(MAX_TTL_MS, Math.max(60_000, Math.floor(configured)))
-    : DEFAULT_TTL_MS;
-}
-
-export async function appendGuardSessionTurn(
-  scope: TenantScope,
-  sessionId: string,
-  currentText: string,
-): Promise<{ combinedText: string; hasHistory: boolean; turnCount: number }> {
-  if (!sessionId || sessionId.length > 128) throw new Error('GUARD_SESSION_ID_INVALID');
-  const key = loadMasterKey();
-  const reference = stateReference(scope, sessionId);
-  try {
-    return await db.transaction(async (transaction) => {
-      const [stored] = await transaction.select().from(guardSessionRiskStates).where(and(
-        eq(guardSessionRiskStates.tenantId, scope.tenantId),
-        eq(guardSessionRiskStates.applicationId, scope.applicationId),
-        eq(guardSessionRiskStates.sessionId, sessionId),
-      )).limit(1).for('update');
-      const active = stored && stored.expiresAt.getTime() > Date.now() ? stored : undefined;
-      const previous = active ? openSecret(active.tailEnvelope, reference, key) : '';
-      const combined = previous
-        ? `${previous}\n[guard-turn-boundary]\n${currentText}`
-        : currentText;
-      const combinedText = combined.slice(-MAX_CONTRACT_TEXT_CHARS);
-      const tail = combinedText.slice(-MAX_SESSION_TAIL_CHARS);
-      const envelope = sealSecret(tail, reference, key);
-      const next = {
-        ...scope,
-        sessionId,
-        tailEnvelope: envelope,
-        turnCount: (active?.turnCount ?? 0) + 1,
-        stateVersion: (active?.stateVersion ?? 0) + 1,
-        expiresAt: new Date(Date.now() + ttlMs()),
-        updatedAt: new Date(),
-      };
-      await transaction.insert(guardSessionRiskStates).values(next).onConflictDoUpdate({
-        target: [
-          guardSessionRiskStates.tenantId,
-          guardSessionRiskStates.applicationId,
-          guardSessionRiskStates.sessionId,
-        ],
-        set: {
-          tailEnvelope: next.tailEnvelope,
-          turnCount: next.turnCount,
-          stateVersion: next.stateVersion,
-          expiresAt: next.expiresAt,
-          updatedAt: next.updatedAt,
-        },
-      });
-      return {
-        combinedText,
-        hasHistory: Boolean(previous),
-        turnCount: next.turnCount,
-      };
-    });
-  } finally {
-    key.bytes.fill(0);
-  }
-}
-
 function sessionObservation(observation: Observation): Observation {
   const reasoningChain = observation.riskType.startsWith('reasoning_attack.');
   return {
     ...observation,
     evidence: observation.evidence.map((item, index) => ({
-      viewId: reasoningChain ? `session_history_step_${index + 1}` : 'session_history',
+      viewId: reasoningChain ? 'session_history_step_' + (index + 1) : 'session_history',
       contentHmac: item.contentHmac,
       maskedPreview: item.maskedPreview,
+      ...(item.sourceEnvelopeIds ? { sourceEnvelopeIds: item.sourceEnvelopeIds } : {}),
     })),
     reasonCode: reasoningChain ? 'MULTI_TURN_REASONING_ATTACK' : 'MULTI_TURN_SESSION_RISK',
   };
@@ -119,8 +52,58 @@ export function chooseSessionDecision(
     ...session,
     traceId: current.traceId,
     observations: session.observations.map(sessionObservation),
-    policyPath: [...session.policyPath, 'multi-turn-session'],
+    policyPath: [...session.policyPath, 'multi-turn-secure-memory'],
     latencyMs: Math.min(600_000, current.latencyMs + session.latencyMs),
+  };
+}
+
+function requestWithSecureMemory(
+  request: GuardRequest,
+  snapshot: SecureMemorySnapshot,
+): GuardRequest {
+  const separator = '\n[guard-turn-boundary]\n';
+  const memoryText = snapshot.hotWindow + separator;
+  const currentText = request.content.text ?? '';
+  const currentEnvelopes = resolveContextEnvelopes(request, Date.now());
+  const sessionId = request.context.sessionId;
+  if (!sessionId) return request;
+  return {
+    ...request,
+    context: {
+      ...request.context,
+      requestId: request.context.requestId.slice(0, 105) + '-secure-memory',
+    },
+    content: {
+      ...request.content,
+      text: memoryText + currentText,
+      envelopes: [
+        {
+          envelopeId: 'memory-' + createHash('sha256')
+            .update(sessionId + ':' + snapshot.lastEventSequence, 'utf8')
+            .digest('hex')
+            .slice(0, 32),
+          tenantId: request.context.tenantId,
+          applicationId: request.context.applicationId,
+          sessionId,
+          sourceType: 'MEMORY',
+          sourceId: 'secure-memory:' + sessionId,
+          trustLevel: 'UNTRUSTED',
+          instructionCapability: 'FORBIDDEN',
+          sensitivityLabels: [],
+          contentHash: createHash('sha256').update(memoryText, 'utf8').digest('hex'),
+          parentEnvelopeIds: [],
+          policyVersion: request.context.policyBundleId,
+          eventSeq: snapshot.lastEventSequence,
+          contentStart: 0,
+          contentEnd: memoryText.length,
+        },
+        ...currentEnvelopes.map((envelope) => ({
+          ...envelope,
+          contentStart: envelope.contentStart + memoryText.length,
+          contentEnd: envelope.contentEnd + memoryText.length,
+        })),
+      ],
+    },
   };
 }
 
@@ -129,24 +112,31 @@ export async function evaluateWithSessionContext(
   request: GuardRequest,
   scope: TenantScope,
 ): Promise<GuardDecision> {
-  const currentPromise = engine.evaluate(request);
+  const current = await engine.evaluate(request);
   const sessionId = request.context.sessionId;
-  if (!sessionId) return currentPromise;
-  const [current, sessionState] = await Promise.all([
-    currentPromise,
-    appendGuardSessionTurn(scope, sessionId, request.content.text ?? ''),
-  ]);
-  if (!sessionState.hasHistory) return current;
-  const sessionRequest: GuardRequest = {
-    ...request,
-    context: {
-      ...request.context,
-      requestId: `${request.context.requestId.slice(0, 115)}-session`,
-    },
-    content: {
-      ...request.content,
-      text: sessionState.combinedText,
-    },
-  };
-  return chooseSessionDecision(current, await engine.evaluate(sessionRequest));
+  if (!sessionId) return current;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const snapshot = await readSecureMemorySnapshot(scope, sessionId);
+    const selected = snapshot.hasHistory
+      ? chooseSessionDecision(
+          current,
+          await engine.evaluate(requestWithSecureMemory(request, snapshot)),
+        )
+      : current;
+    try {
+      await appendSecureMemoryEvaluation({
+        scope,
+        sessionId,
+        expectedStateVersion: snapshot.stateVersion,
+        request,
+        decision: selected,
+        tokenizerId: request.context.tokenizerId,
+      });
+      return selected;
+    } catch (error) {
+      if (error instanceof SecureMemoryVersionConflictError && attempt === 0) continue;
+      throw error;
+    }
+  }
+  throw new SecureMemoryVersionConflictError();
 }

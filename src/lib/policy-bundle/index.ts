@@ -14,6 +14,7 @@ export {
 } from './service';
 export {
   clearRuntimePolicyBundleCache,
+  loadLatestVerifiedPolicyBundleForPolicy,
   loadRuntimePolicyBundle,
   loadVerifiedPolicyBundle,
   selectBoundBundleId,

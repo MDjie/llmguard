@@ -49,3 +49,27 @@ spec:
           labels: { severity: warning }
           annotations:
             summary: GuardLLM GPU utilization remains above 95 percent
+        - alert: GuardLLMAuditDeliveryTerminalFailure
+          expr: increase(guardllm_audit_delivery_total{state="terminal_failed"}[5m]) > 0
+          for: 1m
+          labels: { severity: critical, control: audit }
+          annotations:
+            summary: Audit evidence delivery reached a terminal failure
+        - alert: GuardLLMDependencyFailureBurst
+          expr: sum by (dependency) (increase(guardllm_dependency_calls_total{status=~"failure|timeout|circuit_open"}[5m])) > 10
+          for: 5m
+          labels: { severity: critical, control: dependency }
+          annotations:
+            summary: A guarded dependency is repeatedly unavailable
+        - alert: GuardLLMNoCompliantModelRoute
+          expr: increase(guardllm_model_routing_decisions_total{outcome="no_compliant_route"}[5m]) > 0
+          for: 1m
+          labels: { severity: critical, control: routing }
+          annotations:
+            summary: Requests cannot find a healthy policy-compliant model route
+        - alert: GuardLLMToolPermitReplay
+          expr: increase(guardllm_tool_permit_replays_total[5m]) > 0
+          for: 1m
+          labels: { severity: critical, control: action-firewall }
+          annotations:
+            summary: A one-time tool permit replay was rejected

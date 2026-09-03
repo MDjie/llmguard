@@ -4,6 +4,11 @@ import type { ApiAuditRecord } from '@/lib/api-security/types';
 import { db } from '@/storage/database/shared/db';
 import { securityAuditEvents } from '@/storage/database/shared/schema';
 import { auditExportOutbox } from '@/storage/database/shared/schema';
+import { operationalSecurityEvents } from '@/storage/database/shared/schema';
+import {
+  operationalAuditEvent,
+  operationalSecurityEventRow,
+} from '@/lib/operations';
 import {
   AUDIT_CHAIN_VERSION,
   AUDIT_GENESIS_HASH,
@@ -78,6 +83,13 @@ export async function appendAuditEvent(event: ApiAuditRecord): Promise<void> {
       eventHash,
       createdAt,
     });
+    await transaction.insert(operationalSecurityEvents).values(
+      operationalSecurityEventRow(operationalAuditEvent(event, {
+        id,
+        occurredAt: createdAt,
+        evidenceDigest: eventHash,
+      })),
+    );
     if (exportTargets.length > 0) {
       const payload: AuditExportPayload = {
         schemaVersion: '1.0',

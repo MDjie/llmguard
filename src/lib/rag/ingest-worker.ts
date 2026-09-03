@@ -24,6 +24,8 @@ const sourceMetadataSchema = z.object({
   classification: z.number().int().min(0).max(10).default(0),
   allowedPrincipals: z.array(z.string().max(100)).max(1_000).default([]),
   allowedRoles: z.array(z.string().max(100)).max(100).default([]),
+  sourceVersion: z.string().min(1).max(128).optional(),
+  validUntilEpochMs: z.number().int().positive().optional(),
 }).passthrough();
 
 export async function processNextRagIngestJob() {
@@ -55,7 +57,9 @@ export async function processNextRagIngestJob() {
       },
       content: { text },
     });
-    const state = decision.action === 'BLOCK' ? 'quarantined' : 'accepted';
+    const state = decision.action === 'ALLOW' || decision.action === 'WARN'
+      ? 'accepted'
+      : 'quarantined';
     const score = Math.round(Math.max(0, ...decision.observations.map((item) => item.score)) * 100);
     const records = await db.transaction(async (transaction) => {
       const [source] = await transaction.insert(ragSources).values({
@@ -76,12 +80,18 @@ export async function processNextRagIngestJob() {
         trustLevel: metadata.trustLevel, classification: metadata.classification,
         allowedPrincipals: metadata.allowedPrincipals, allowedRoles: metadata.allowedRoles,
         state: state as 'accepted' | 'quarantined',
+        sourceVersion: metadata.sourceVersion ?? contentHash,
+        validUntilEpochMs: metadata.validUntilEpochMs,
       };
       const signature = signRagProvenance(provenance);
       const [chunk] = await transaction.insert(ragChunks).values({
         ...scope, sourceId: source.id, artifactId: artifact.id, externalChunkId: chunkId,
         contentHash, provenanceSignature: signature, riskAction: decision.action,
-        riskScore: score, state, metadata: { bundleId: bundle.id },
+        riskScore: score, state, metadata: {
+          bundleId: bundle.id,
+          sourceVersion: provenance.sourceVersion,
+          validUntilEpochMs: provenance.validUntilEpochMs,
+        },
       }).onConflictDoUpdate({
         target: [ragChunks.tenantId, ragChunks.applicationId, ragChunks.externalChunkId],
         set: { contentHash, provenanceSignature: signature, riskAction: decision.action, riskScore: score, state },

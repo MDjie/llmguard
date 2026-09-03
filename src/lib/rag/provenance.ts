@@ -12,6 +12,8 @@ export interface RagProvenance {
   readonly allowedPrincipals: readonly string[];
   readonly allowedRoles: readonly string[];
   readonly state: 'accepted' | 'quarantined' | 'deleted';
+  readonly sourceVersion?: string;
+  readonly validUntilEpochMs?: number;
 }
 
 function key(environment: NodeJS.ProcessEnv = process.env): string {

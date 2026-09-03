@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { ApiProblem, withApiSecurity } from '@/lib/api-security';
-import { detectWithDynamicRules, getDefaultPolicyId } from '@/lib/detection/dynamic-engine';
+import { getDefaultPolicyId } from '@/lib/detection/dynamic-engine';
+import { detectWithGuardEngineV2 } from '@/lib/detection/v2-compat';
 import { DetectionPolicyError } from '@/lib/detection/errors';
 import { getEffectivePolicyId } from '@/lib/policy/escalation-service';
 import { requireTenantContext } from '@/lib/tenancy';
@@ -54,12 +55,17 @@ export const POST = withApiSecurity(
     }
 
     // 执行检测（不再在这里处理策略升级，由前端汇总调用 /api/escalation-summary）
-    const result = await detectWithDynamicRules(
+    const result = await detectWithGuardEngineV2(
       text,
       effectivePolicyId,
       scope,
       direction,
-      request.signal,
+      {
+        signal: request.signal,
+        sessionId,
+        subjectId: effectiveUserId,
+        authContextId: principal.authenticationMethod + ':' + (principal.tokenVersion ?? 0),
+      },
     );
 
     // 构建响应数据
@@ -91,7 +97,7 @@ export const POST = withApiSecurity(
 
     // 添加脱敏处理 - 根据检测到的风险内容进行精确脱敏
     if (result.action === 'mask') {
-      let maskedText = text;
+      let maskedText = result.maskedText ?? text;
       const maskDetails: { original: string; masked: string; type: string }[] = [];
       
       // 基于检测结果中的证据内容进行脱敏
@@ -150,7 +156,7 @@ export const POST = withApiSecurity(
 
     // 添加安全改写处理 - 对敏感内容进行安全化处理
     if (result.action === 'rewrite') {
-      let rewrittenText = text;
+      let rewrittenText = result.rewrittenText ?? text;
       const rewriteDetails: { dimension: string; action: string }[] = [];
       
       // 根据不同维度进行针对性改写

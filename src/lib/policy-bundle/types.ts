@@ -1,4 +1,9 @@
-import type { RuleSpec } from '@/lib/guard-engine-v2';
+import type {
+  DetectorDagSpec,
+  RuleSpec,
+  SemanticClassifierSpec,
+} from '@/lib/guard-engine-v2/types';
+import type { GuardResourceAdmissionSpec } from '@/lib/resource-control/admission-config';
 
 export interface CompiledPolicyBundle {
   readonly schemaVersion: '1.0';
@@ -27,6 +32,9 @@ export interface CompiledPolicyBundle {
     readonly autoMask: boolean;
     readonly autoRewrite: boolean;
   }[];
+  readonly detectorDag?: DetectorDagSpec;
+  readonly semanticClassifier?: SemanticClassifierSpec;
+  readonly resourceAdmission?: GuardResourceAdmissionSpec;
 }
 
 export interface SignedPolicyBundle {

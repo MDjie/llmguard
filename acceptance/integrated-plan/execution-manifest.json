@@ -1,0 +1,150 @@
+{
+  "schemaVersion": "1.0",
+  "updatedOn": "2026-09-03",
+  "statusPolicy": "COMPLETE requires all acceptanceEvidence paths plus signed target evidence where the acceptance criterion depends on external data or infrastructure.",
+  "workPackages": [
+    {
+      "id": "UWP-00",
+      "mapsTo": ["FIX-000", "11/WP-00", "12/PHASE-0", "13/P0-GOVERNANCE"],
+      "status": "IN_PROGRESS_EXTERNAL",
+      "ownerRole": "product-owner",
+      "rollbackOwnerRole": "release-manager",
+      "dependencies": [],
+      "acceptanceCriteria": "SKU, environment, datasets, metrics, suppliers, evidence and rollback ownership are frozen and machine-verifiable.",
+      "acceptanceEvidence": ["acceptance/integrated-plan/scope-manifest.json", "acceptance/integrated-plan/target-environment.json", "acceptance/integrated-plan/third-party-register.json", "acceptance/integrated-plan/metric-definitions.json", "docs/architecture/adr-002-product-sku-boundary.md"],
+      "blockingInputs": ["target acceptance environment", "sealed blind dataset", "third-party legal approvals", "named accountable people"]
+    },
+    {
+      "id": "UWP-01",
+      "mapsTo": ["FIX-001", "FIX-004", "FIX-008", "11/WP-01", "12/P0-1", "13/SECURITY-DECISION"],
+      "status": "CODE_IMPLEMENTED_ACCEPTANCE_PENDING",
+      "ownerRole": "contract-architecture",
+      "rollbackOwnerRole": "platform-release-manager",
+      "dependencies": ["UWP-00"],
+      "acceptanceCriteria": "All protocols preserve one decision model, bind evidence to validated sources and remain backward compatible.",
+      "acceptanceEvidence": ["packages/contracts/model/guard-v1.schema.json", "packages/contracts/generated/manifest.json", "src/lib/context-trust/external-event.ts", "tests/contracts/guard-contracts.test.mjs", "tests/context-trust/envelope.test.ts", "tests/context-trust/external-event.test.ts", "docs/architecture/adr-001-context-envelope-and-contract-compatibility.md"],
+      "blockingInputs": ["production tenant key registry", "production shared replay-store adapter", "cross-language consumer acceptance"]
+    },
+    {
+      "id": "UWP-02",
+      "mapsTo": ["FIX-001", "FIX-002", "FIX-003", "FIX-007", "11/WP-02", "12/P0-2"],
+      "status": "CODE_IMPLEMENTED_ACCEPTANCE_PENDING",
+      "ownerRole": "guard-runtime",
+      "rollbackOwnerRole": "guard-runtime-lead",
+      "dependencies": ["UWP-01"],
+      "acceptanceCriteria": "One production path executes a signed fail-safe detector DAG with bounded streaming disclosure.",
+      "acceptanceEvidence": ["src/lib/guard-engine-v2/engine.ts", "src/lib/guard-engine-v2/dag.ts", "src/lib/guard-engine-v2/semantic-classifier.ts", "src/lib/detection/v2-compat.ts", "services/guard-gateway/src/main/java/com/guardllm/gateway/StreamingCommitGate.java", "tests/guard-engine-v2/production-path.test.ts", "tests/guard-engine-v2/dag.test.ts", "tests/guard-engine-v2/semantic-classifier.test.ts"],
+      "blockingInputs": ["approved classifier weights and serving endpoint", "Java 21 and Maven verification environment", "target full-policy streaming load and leakage tests"]
+    },
+    {
+      "id": "UWP-03",
+      "mapsTo": ["FIX-001", "FIX-002", "FIX-004", "FIX-011", "11/WP-CTX", "12/P0-3"],
+      "status": "CODE_IMPLEMENTED_ACCEPTANCE_PENDING",
+      "ownerRole": "context-security",
+      "rollbackOwnerRole": "guard-runtime-lead",
+      "dependencies": ["UWP-01", "UWP-02"],
+      "acceptanceCriteria": "Target-tokenizer counts cover the complete long context and secure memory preserves provenance and risk without cross-scope leakage.",
+      "acceptanceEvidence": ["src/lib/guard-engine-v2/session-context.ts", "src/lib/secure-memory/repository.ts", "src/lib/tokenization/coverage.ts", "src/lib/guard-engine-v2/cache-key.ts", "src/lib/resource-control/admission.ts", "drizzle/0028_secure_memory_layers.sql", "tests/secure-memory/ledger.test.ts", "tests/tokenization/coverage.test.ts", "tests/resource-control/admission.test.ts"],
+      "blockingInputs": ["target business model and tokenizer digest", "128K target capacity environment"]
+    },
+    {
+      "id": "UWP-04",
+      "mapsTo": ["FIX-012", "11/WP-RAG", "12/P1-1"],
+      "status": "CODE_IMPLEMENTED_ACCEPTANCE_PENDING",
+      "ownerRole": "rag-security",
+      "rollbackOwnerRole": "rag-platform-lead",
+      "dependencies": ["UWP-01", "UWP-02", "UWP-03"],
+      "acceptanceCriteria": "RAG ingest, retrieval, assembly and output enforce provenance, ACL, source capability and groundedness gates.",
+      "acceptanceEvidence": ["src/lib/rag/flow.ts", "src/lib/rag/provenance.ts", "src/lib/rag/groundedness.ts", "tests/rag/flow.test.ts", "tests/rag/groundedness.test.ts"],
+      "blockingInputs": ["customer-approved domain corpus and groundedness threshold"]
+    },
+    {
+      "id": "UWP-05",
+      "mapsTo": ["FIX-013", "11/WP-AGENT", "12/P1-2", "13/CEDAR"],
+      "status": "CODE_IMPLEMENTED_ACCEPTANCE_PENDING",
+      "ownerRole": "agent-security",
+      "rollbackOwnerRole": "tool-platform-lead",
+      "dependencies": ["UWP-01", "UWP-02"],
+      "acceptanceCriteria": "Every side effect passes intent validation, authorization, one-time permit enforcement and result reinspection.",
+      "acceptanceEvidence": ["src/lib/tools/service.ts", "src/lib/tools/action-firewall.ts", "src/lib/tools/permit.ts", "drizzle/0029_action_firewall.sql", "tests/tools/action-firewall.test.ts"],
+      "blockingInputs": ["target Tool/MCP integrations", "production human approval workflow", "authoritative supporting-envelope lookup"]
+    },
+    {
+      "id": "UWP-06",
+      "mapsTo": ["FIX-005", "11/WP-PRIV", "12/P1-3", "13/PRESIDIO"],
+      "status": "CODE_IMPLEMENTED_ACCEPTANCE_PENDING",
+      "ownerRole": "privacy-security",
+      "rollbackOwnerRole": "privacy-platform-lead",
+      "dependencies": ["UWP-01", "UWP-02"],
+      "acceptanceCriteria": "Deterministic DLP and approved contextual recognition propagate sensitivity labels through data flows.",
+      "acceptanceEvidence": ["src/lib/guard-engine-v2/builtin-detectors.ts", "src/lib/dlp/entity-fusion.ts", "src/lib/evaluation/classification-metrics.ts", "docs/security/privacy-computing-admission-gate.md", "tests/dlp/entity-fusion.test.ts", "tests/evaluation/classification-metrics.test.ts"],
+      "blockingInputs": ["contextual NER component admission decision", "customer privacy taxonomy"]
+    },
+    {
+      "id": "UWP-07",
+      "mapsTo": ["FIX-001", "FIX-012", "FIX-016", "11/WP-COMPUTE", "11/WP-03", "12/GUARD-DOS"],
+      "status": "CODE_IMPLEMENTED_ACCEPTANCE_PENDING",
+      "ownerRole": "gateway-scheduling",
+      "rollbackOwnerRole": "site-reliability-lead",
+      "dependencies": ["UWP-01", "UWP-02", "UWP-03"],
+      "acceptanceCriteria": "All identity scopes, lifecycle resources and detector costs are bounded; three priorities remain fair; signed model routing fails safely and rolls back.",
+      "acceptanceEvidence": ["src/lib/resource-control/quota-plan.ts", "src/lib/resource-control/lifecycle-budget.ts", "src/lib/resource-control/fair-scheduler.ts", "src/lib/resource-control/model-routing.ts", "src/lib/resource-control/admission.ts", "src/lib/resource-control/quota-store.ts", "src/app/api/v1/guard/evaluate/route.ts", "drizzle/0030_guard_resource_control.sql", "drizzle/0035_guard_quota_ledger.sql", "tests/resource-control/resource-control.test.ts", "tests/resource-control/admission.test.ts"],
+      "blockingInputs": ["Java gateway control-plane integration", "target PostgreSQL quota consistency test", "target multi-tenant Guard DoS load test", "approved model route endpoints and health feeds"]
+    },
+    {
+      "id": "UWP-08",
+      "mapsTo": ["FIX-003", "FIX-005", "FIX-011", "11/WP-MM", "12/P1-4", "13/SAFEGUARD-VL"],
+      "status": "PARTIAL_BASELINE",
+      "ownerRole": "multimodal-security",
+      "rollbackOwnerRole": "media-platform-lead",
+      "dependencies": ["UWP-01", "UWP-02", "UWP-06"],
+      "acceptanceCriteria": "Image, document, audio and video inputs pass bounded file admission, real analyzers, adversarial views and temporal fusion before GuardEngine decides.",
+      "acceptanceEvidence": ["src/lib/artifacts/security-gate.ts", "services/media-analyzer/src/audio-video.ts", "services/media-analyzer/src/document-image.ts", "src/lib/multimodal/fusion.ts", "src/lib/media/timeline-fusion.ts", "tests/artifacts/security-gate.test.ts", "tests/media-analyzer/core.test.ts"],
+      "blockingInputs": ["approved AV, archive and Office analyzers", "approved OCR, ASR and vision model artifacts", "target format and temporal attack corpus"]
+    },
+    {
+      "id": "UWP-09",
+      "mapsTo": ["FIX-007", "FIX-012", "FIX-017", "11/WP-SCAN", "11/WP-06", "12/P1-1", "12/P1-5", "13/PROMPTFOO-GARAK"],
+      "status": "CODE_IMPLEMENTED_ACCEPTANCE_PENDING",
+      "ownerRole": "security-evaluation",
+      "rollbackOwnerRole": "independent-qa-lead",
+      "dependencies": ["UWP-00"],
+      "acceptanceCriteria": "Versioned attack suites, isolated blind tests and immutable first-attempt evidence gate every release.",
+      "acceptanceEvidence": ["acceptance/poc-manifest.json", "scripts/acceptance/run-pocs.mjs", "scripts/acceptance/score-dataset.mjs", "scripts/acceptance/evidence.mjs", "acceptance/evidence-report.schema.json", "src/lib/security-scanning/scanner.ts", "src/lib/security-scanning/service.ts", "src/app/api/security-scans/route.ts", "drizzle/0031_immutable_evaluation_attempts.sql", "drizzle/0034_security_scanning.sql", "tests/acceptance/evidence.test.mjs", "tests/evaluation/dataset-integrity.test.ts", "tests/security-scanning/scanner.test.ts"],
+      "blockingInputs": ["sealed customer blind dataset", "approved host, Web and model scanner engines", "target scanner inventories and credentials"]
+    },
+    {
+      "id": "UWP-10",
+      "mapsTo": ["FIX-014", "FIX-015", "11/WP-SCAN", "12/P1-2", "13/MALSKILLS"],
+      "status": "PARTIAL_BASELINE",
+      "ownerRole": "supply-chain-security",
+      "rollbackOwnerRole": "security-release-manager",
+      "dependencies": ["UWP-00", "UWP-01", "UWP-02"],
+      "acceptanceCriteria": "Code, models, datasets, rules, vulnerability databases, MCP servers and Agent skills are pinned, scanned, signed, licensed, approved and replaceable.",
+      "acceptanceEvidence": ["security/ai-components.json", "scripts/security/generate-ai-bom.mjs", ".github/workflows/security.yml", "src/lib/supply-chain/artifact-manifest.ts", "drizzle/0032_tool_supply_chain_admission.sql", "tests/supply-chain/artifact-manifest.test.ts"],
+      "blockingInputs": ["ModelScan, YARA-X and MalSkills pinned POC results", "third-party legal approval", "release base image digests and vulnerability database snapshot"]
+    },
+    {
+      "id": "UWP-11",
+      "mapsTo": ["FIX-008", "FIX-009", "FIX-012", "FIX-013", "FIX-016", "FIX-017", "11/WP-05", "11/WP-06", "12/EVIDENCE"],
+      "status": "CODE_IMPLEMENTED_ACCEPTANCE_PENDING",
+      "ownerRole": "site-reliability-release",
+      "rollbackOwnerRole": "release-manager",
+      "dependencies": ["UWP-02", "UWP-04", "UWP-05", "UWP-08", "UWP-09", "UWP-10"],
+      "acceptanceCriteria": "Four logging domains, SLOs, dependency and saturation signals, staged release, rollback, retention and exact evidence invalidation are enforced.",
+      "acceptanceEvidence": ["src/lib/audit/repository.ts", "src/lib/audit/dispatcher.ts", "src/lib/audit/exporters.ts", "src/lib/operations/security-events.ts", "src/lib/observability/metrics.ts", "src/lib/release/evidence-binding.ts", "src/lib/release/automatic-rollback.ts", "drizzle/0033_operational_security_domains.sql", "deploy/observability/prometheus-rules.yaml", "deploy/helm/guardllm/values.yaml", "docs/runbooks/observability-slo.md", "docs/runbooks/nsf-plan-runtime-integration.md", "tests/audit/export.test.ts", "tests/operations/security-events.test.ts", "tests/release/evidence-binding.test.ts"],
+      "blockingInputs": ["target monitoring and TONE/SOC/SIEM integrations", "customer TONE inbound callback contract", "approved retention policy", "72-hour stability, fault injection and disaster recovery evidence"]
+    },
+    {
+      "id": "UWP-12",
+      "mapsTo": ["FIX-000", "11/WP-NET"],
+      "status": "BLOCKED_EXTERNAL",
+      "ownerRole": "appliance-architecture",
+      "rollbackOwnerRole": "appliance-release-manager",
+      "dependencies": ["UWP-00"],
+      "acceptanceCriteria": "Version B network data plane passes transparent forwarding, IPS, AV, DoS, bypass and failover acceptance.",
+      "acceptanceEvidence": ["src/lib/appliance/network-pal.ts", "src/lib/appliance/hardware-hal.ts", "docs/architecture/adr-003-appliance-pal-hal-boundary.md", "tests/appliance/pal-hal.test.ts"],
+      "blockingInputs": ["Version B commercial approval", "target hardware", "target network", "network data-plane technology selection"]
+    }
+  ]
+}

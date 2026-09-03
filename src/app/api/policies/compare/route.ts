@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { ApiProblem, withApiSecurity } from '@/lib/api-security';
-import { detectWithDynamicRules } from '@/lib/detection/dynamic-engine';
+import { detectWithGuardEngineV2 } from '@/lib/detection/v2-compat';
 import { DetectionPolicyError } from '@/lib/detection/errors';
 import { requireTenantContext } from '@/lib/tenancy';
 
@@ -43,8 +43,14 @@ export const POST = withApiSecurity(
       const { policyAId, policyBId, text, direction } = body;
       const scope = requireTenantContext(principal);
       const [resultA, resultB] = await Promise.all([
-        detectWithDynamicRules(text, policyAId, scope, direction, request.signal),
-        detectWithDynamicRules(text, policyBId, scope, direction, request.signal),
+        detectWithGuardEngineV2(text, policyAId, scope, direction, {
+          signal: request.signal,
+          allowPreRelease: true,
+        }),
+        detectWithGuardEngineV2(text, policyBId, scope, direction, {
+          signal: request.signal,
+          allowPreRelease: true,
+        }),
       ]);
 
       const processedResultA = buildProcessedResult(text, resultA);
@@ -81,7 +87,7 @@ export const POST = withApiSecurity(
   },
 );
 
-function buildProcessedResult(text: string, result: ReturnType<typeof detectWithDynamicRules> extends Promise<infer T> ? T : never) {
+function buildProcessedResult(text: string, result: Awaited<ReturnType<typeof detectWithGuardEngineV2>>) {
   const baseResult = {
     action: result.action,
     overallScore: result.overallScore,
@@ -98,7 +104,7 @@ function buildProcessedResult(text: string, result: ReturnType<typeof detectWith
   };
 
   if (result.action === 'mask') {
-    let maskedText = text;
+    let maskedText = result.maskedText ?? text;
     for (const finding of result.findings) {
       if (finding.evidence && finding.evidence.length > 0) {
         for (const evidence of finding.evidence) {
@@ -113,7 +119,7 @@ function buildProcessedResult(text: string, result: ReturnType<typeof detectWith
   }
 
   if (result.action === 'rewrite') {
-    let rewrittenText = text;
+    let rewrittenText = result.rewrittenText ?? text;
     for (const finding of result.findings) {
       if (finding.dimension === 'pii_leak' && finding.evidence) {
         for (const evidence of finding.evidence) {

@@ -161,6 +161,57 @@ function samplingIntervalSeconds(request: MediaRequest, durationMs: number): num
   return Math.max(0.04, durationSeconds / request.sampling.maxFrames);
 }
 
+export interface VideoSamplingJob {
+  readonly id: MediaRequest['sampling']['strategies'][number]['type'];
+  readonly filter: string;
+  readonly maximumFrames: number;
+}
+
+export function buildVideoSamplingJobs(
+  request: MediaRequest,
+  durationMs: number,
+): readonly VideoSamplingJob[] {
+  const unique = [...new Map(request.sampling.strategies.map((strategy) =>
+    [strategy.type, strategy])).values()];
+  let remaining = request.sampling.maxFrames;
+  const jobs: VideoSamplingJob[] = [];
+  const reserve = (type: VideoSamplingJob['id'], desired: number, filter: string) => {
+    if (remaining <= 0 || !unique.some((strategy) => strategy.type === type)) return;
+    const maximumFrames = Math.min(remaining, desired);
+    jobs.push({ id: type, filter, maximumFrames });
+    remaining -= maximumFrames;
+  };
+  const durationSeconds = Math.max(0, durationMs / 1_000);
+  reserve('boundary', 2, `select='lte(t,0.04)+gte(t,${Math.max(0, durationSeconds - 0.04)})'`);
+  const midpoint = unique.find((strategy) => strategy.type === 'midpoint');
+  if (midpoint) {
+    const atSeconds = Number(midpoint.parameters.atMs ?? durationMs / 2) / 1_000;
+    reserve('midpoint', 1, `select='between(t,${Math.max(0, atSeconds - 0.04)},${atSeconds + 0.04})'`);
+  }
+  const remainingTypes = unique.filter((strategy) =>
+    !['boundary', 'midpoint'].includes(strategy.type));
+  for (let index = 0; index < remainingTypes.length && remaining > 0; index += 1) {
+    const strategy = remainingTypes[index];
+    const maximumFrames = index === remainingTypes.length - 1
+      ? remaining
+      : Math.max(1, Math.floor(remaining / (remainingTypes.length - index)));
+    let filter: string;
+    if (strategy.type === 'fixed_interval') {
+      const interval = samplingIntervalSeconds(request, durationMs);
+      filter = `fps=1/${interval}`;
+    } else if (strategy.type === 'scene_change') {
+      const threshold = Math.min(1, Math.max(0, Number(strategy.parameters.threshold ?? 0.25)));
+      filter = `select='gt(scene,${threshold})'`;
+    } else {
+      const scanFps = Math.min(25, Math.max(1, Number(strategy.parameters.scanFps ?? 25)));
+      filter = `fps=${scanFps}`;
+    }
+    jobs.push({ id: strategy.type, filter, maximumFrames });
+    remaining -= maximumFrames;
+  }
+  return jobs;
+}
+
 async function extractFrames(
   request: MediaRequest,
   runner: CommandRunner,
@@ -168,19 +219,21 @@ async function extractFrames(
   workspace: string,
   durationMs: number,
 ): Promise<string[]> {
-  const interval = samplingIntervalSeconds(request, durationMs);
-  await runner.run(process.env.ANALYZER_FFMPEG_COMMAND ?? 'ffmpeg', [
-    '-nostdin', '-v', 'error', '-protocol_whitelist', 'file,pipe',
-    '-i', inputPath, '-vf', `fps=1/${interval}`,
-    '-frames:v', String(request.sampling.maxFrames), '-vsync', 'vfr',
-    '-y', join(workspace, 'frame-%06d.png'),
-  ], {
-    cwd: workspace,
-    timeoutMs: request.sandbox.ffmpegTimeoutMs,
-    maxOutputBytes: 4 * 1_024 * 1_024,
-  });
+  const jobs = buildVideoSamplingJobs(request, durationMs);
+  for (const job of jobs) {
+    await runner.run(process.env.ANALYZER_FFMPEG_COMMAND ?? 'ffmpeg', [
+      '-nostdin', '-v', 'error', '-protocol_whitelist', 'file,pipe',
+      '-i', inputPath, '-vf', job.filter,
+      '-frames:v', String(job.maximumFrames), '-vsync', 'vfr',
+      '-y', join(workspace, `frame-${job.id}-%06d.png`),
+    ], {
+      cwd: workspace,
+      timeoutMs: request.sandbox.ffmpegTimeoutMs,
+      maxOutputBytes: 4 * 1_024 * 1_024,
+    });
+  }
   return (await readdir(workspace))
-    .filter((name) => /^frame-\d{6}\.png$/u.test(name))
+    .filter((name) => /^frame-[a-z_]+-\d{6}\.png$/u.test(name))
     .sort()
     .slice(0, request.sampling.maxFrames)
     .map((name) => join(workspace, name));
@@ -243,7 +296,7 @@ export async function analyzeAudioVideo(
     if (request.artifact.kind === 'VIDEO') {
       const files = await extractFrames(
         request, runner, inputPath, workspace, metadata.durationMs);
-      const intervalMs = samplingIntervalSeconds(request, metadata.durationMs) * 1_000;
+      const intervalMs = metadata.durationMs / Math.max(1, files.length - 1);
       const analyzedFrames = await mapInBatches(
         files,
         request.sampling.batchSize,

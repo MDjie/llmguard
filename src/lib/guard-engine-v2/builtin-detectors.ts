@@ -174,6 +174,22 @@ const STRUCTURED_DLP: readonly MatchSpec[] = [
     validate: (value) => validLuhn(value.replace(/[ -]/g, '')),
   },
   {
+    id: 'UNIFIED_SOCIAL_CREDIT_CODE',
+    riskType: 'organization.unified_social_credit_code',
+    pattern: /(?<![0-9A-Z])[0-9A-HJ-NP-RTUWXY]{18}(?![0-9A-Z])/giu,
+    score: 0.96,
+    severity: 'CRITICAL',
+    validate: validUnifiedSocialCreditCode,
+  },
+  {
+    id: 'VEHICLE_IDENTIFICATION_NUMBER',
+    riskType: 'vehicle.identification_number',
+    pattern: /(?<![A-Z0-9])[A-HJ-NPR-Z0-9]{17}(?![A-Z0-9])/giu,
+    score: 0.94,
+    severity: 'HIGH',
+    validate: validVehicleIdentificationNumber,
+  },
+  {
     id: 'MOBILE_PHONE',
     riskType: 'pii.mobile',
     pattern: /(?<!\d)1[3-9]\d{9}(?!\d)/gu,
@@ -331,6 +347,40 @@ function validPrcIdentity(value: string): boolean {
   return checks[total % 11] === normalized[17];
 }
 
+const UNIFIED_CREDIT_ALPHABET = '0123456789ABCDEFGHJKLMNPQRTUWXY';
+const UNIFIED_CREDIT_WEIGHTS = [1, 3, 9, 27, 19, 26, 16, 17, 20, 29, 25, 13, 8, 24, 10, 30, 28];
+
+export function validUnifiedSocialCreditCode(value: string): boolean {
+  const normalized = value.toUpperCase();
+  if (!/^[0-9A-HJ-NP-RTUWXY]{18}$/u.test(normalized)) return false;
+  const total = UNIFIED_CREDIT_WEIGHTS.reduce((sum, weight, index) => {
+    const characterValue = UNIFIED_CREDIT_ALPHABET.indexOf(normalized[index]);
+    return sum + characterValue * weight;
+  }, 0);
+  const checkValue = (31 - (total % 31)) % 31;
+  return UNIFIED_CREDIT_ALPHABET[checkValue] === normalized[17];
+}
+
+const VIN_TRANSLITERATION: Readonly<Record<string, number>> = {
+  A: 1, B: 2, C: 3, D: 4, E: 5, F: 6, G: 7, H: 8,
+  J: 1, K: 2, L: 3, M: 4, N: 5, P: 7, R: 9,
+  S: 2, T: 3, U: 4, V: 5, W: 6, X: 7, Y: 8, Z: 9,
+};
+const VIN_WEIGHTS = [8, 7, 6, 5, 4, 3, 2, 10, 0, 9, 8, 7, 6, 5, 4, 3, 2];
+
+export function validVehicleIdentificationNumber(value: string): boolean {
+  const normalized = value.toUpperCase();
+  if (!/^[A-HJ-NPR-Z0-9]{17}$/u.test(normalized)) return false;
+  const total = [...normalized].reduce((sum, character, index) => {
+    const transliterated = /\d/u.test(character)
+      ? Number(character)
+      : VIN_TRANSLITERATION[character];
+    return sum + transliterated * VIN_WEIGHTS[index];
+  }, 0);
+  const remainder = total % 11;
+  return normalized[8] === (remainder === 10 ? 'X' : String(remainder));
+}
+
 export class PromptAttackDetector implements GuardDetector {
   readonly id = 'prompt-attack-baseline';
   readonly version = '1.0.0';
@@ -344,7 +394,7 @@ export class PromptAttackDetector implements GuardDetector {
 
 export class StructuredDlpDetector implements GuardDetector {
   readonly id = 'structured-dlp';
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
   readonly required = true;
 
   async detect(context: GuardDetectorContext): Promise<readonly Observation[]> {

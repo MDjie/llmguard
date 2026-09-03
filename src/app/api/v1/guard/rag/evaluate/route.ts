@@ -51,6 +51,8 @@ export const POST = withApiSecurity(
       candidates: body.candidates,
       output: body.output,
       citedChunkIds: body.citedChunkIds,
+      minimumTrustLevel: body.minimumTrustLevel,
+      maximumCandidatesPerSource: body.maximumCandidatesPerSource,
     });
     await db.insert(ragRetrievalAudits).values({
       ...scope, principalId: principal!.subject, traceId: body.traceId,

@@ -13,6 +13,8 @@ const candidate = z.object({
   allowedPrincipals: z.array(z.string().max(100)).max(1_000),
   allowedRoles: z.array(z.string().max(100)).max(100),
   state: z.enum(['accepted', 'quarantined', 'deleted']),
+  sourceVersion: z.string().min(1).max(128).optional(),
+  validUntilEpochMs: z.number().int().positive().optional(),
   signature: z.string().min(16).max(128),
 }).strict();
 
@@ -25,4 +27,6 @@ export const guardRagFlowSchema = z.object({
   candidates: z.array(candidate).max(100),
   output: z.string().max(1_048_576).optional(),
   citedChunkIds: z.array(id).max(1_000).optional(),
+  minimumTrustLevel: z.number().int().min(0).max(100).default(0),
+  maximumCandidatesPerSource: z.number().int().min(1).max(100).default(20),
 }).strict();

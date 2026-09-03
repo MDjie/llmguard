@@ -3,6 +3,12 @@ import { jsonObjectResponseSchema } from '@/contracts/http/common';
 import { registerToolSchema } from '@/contracts/http/tools';
 import { withApiSecurity } from '@/lib/api-security';
 import { ProviderEndpointPolicy } from '@/lib/egress';
+import { canonicalJson } from '@/lib/policy-bundle';
+import {
+  trustedSupplyChainKeysFromEnvironment,
+  validateSupplyChainArtifactManifest,
+} from '@/lib/supply-chain';
+import { createHash } from 'node:crypto';
 import { requireTenantContext, scopePredicate } from '@/lib/tenancy';
 import { db } from '@/storage/database/shared/db';
 import { toolRegistry } from '@/storage/database/shared/schema';
@@ -38,8 +44,30 @@ export const POST = withApiSecurity(
       allowedPrivateHosts: values(process.env.TOOL_ALLOWED_PRIVATE_HOSTS),
     });
     await policy.assertAllowed(body.endpoint, 'custom');
+    validateSupplyChainArtifactManifest({
+      id: body.name,
+      type: body.kind === 'MCP' ? 'MCP' : 'CODE',
+      version: body.version,
+      sourceUri: body.sourceUri,
+      sourceDigest: body.sourceDigest,
+      licenseSpdx: body.licenseSpdx,
+      noticeDigest: body.noticeDigest,
+      scannerDefinitionDigest: body.scannerDefinitionDigest,
+      signatureKeyId: body.signatureKeyId,
+      signature: body.signature,
+      permissions: body.requiredPermissions,
+      networkDomains: body.networkDomains,
+      filePaths: body.filePaths,
+      commands: body.commands,
+      credentialRefs: body.credentialRefs,
+      approvalIds: body.approvalIds,
+      isolatedDynamicAnalysis: body.isolatedDynamicAnalysis,
+    }, trustedSupplyChainKeysFromEnvironment());
     const [created] = await db.insert(toolRegistry).values({
-      ...requireTenantContext(principal), ...body, createdBy: principal!.subject,
+      ...requireTenantContext(principal),
+      ...body,
+      definitionDigest: createHash('sha256').update(canonicalJson(body)).digest('hex'),
+      createdBy: principal!.subject,
     }).returning();
     return Response.json({ success: true, data: created }, { status: 201 });
   },

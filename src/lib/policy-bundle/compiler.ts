@@ -1,9 +1,16 @@
 import type { CachedPolicyConfig } from '@/lib/detection/types';
 import type { CompiledPolicyBundle } from './types';
+import { buildDefaultDetectorDag } from '@/lib/guard-engine-v2/default-dag';
+import type { SemanticClassifierSpec } from '@/lib/guard-engine-v2/types';
+import type { GuardResourceAdmissionSpec } from '@/lib/resource-control/admission-config';
 
 export function compilePolicyBundle(
   config: CachedPolicyConfig,
   policyVersion: number,
+  options: {
+    readonly semanticClassifier?: SemanticClassifierSpec;
+    readonly resourceAdmission?: GuardResourceAdmissionSpec;
+  } = {},
 ): CompiledPolicyBundle {
   const dimensions = [...config.dimensions]
     .sort((left, right) => left.code.localeCompare(right.code))
@@ -60,5 +67,12 @@ export function compilePolicyBundle(
     rules,
     exceptions,
     thresholds,
+    detectorDag: buildDefaultDetectorDag(options.semanticClassifier),
+    ...(options.semanticClassifier
+      ? { semanticClassifier: options.semanticClassifier }
+      : {}),
+    ...(options.resourceAdmission
+      ? { resourceAdmission: options.resourceAdmission }
+      : {}),
   };
 }

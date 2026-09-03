@@ -15,7 +15,7 @@ export const POST = withApiSecurity(
     try {
       const result = await authorizeToolInvocation({
         scope: requireTenantContext(principal), principalId: principal!.subject,
-        roles: principal!.roles, ...body,
+        roles: principal!.roles, permissions: principal!.permissions, ...body,
       });
       return Response.json({ success: true, data: result });
     } catch (error) {

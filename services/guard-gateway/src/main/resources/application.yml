@@ -38,6 +38,10 @@ guard:
     shadow-bundle-id: ${GUARD_SHADOW_BUNDLE_ID:}
     request-timeout: ${GUARD_REQUEST_TIMEOUT:20s}
     max-in-flight: ${GUARD_MAX_IN_FLIGHT:200}
+    streaming:
+      maximum-wait: ${GUARD_STREAM_MAXIMUM_WAIT:150ms}
+      maximum-uncommitted-chars: ${GUARD_STREAM_MAXIMUM_UNCOMMITTED_CHARS:8192}
+      maximum-history-chars: ${GUARD_STREAM_MAXIMUM_HISTORY_CHARS:32768}
     concurrency:
       enabled: ${GUARD_CONCURRENCY_ENABLED:true}
       tenant-max-in-flight: ${GUARD_TENANT_MAX_IN_FLIGHT:200}

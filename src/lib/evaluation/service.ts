@@ -29,6 +29,31 @@ function sha256(value: string): string {
   return createHash('sha256').update(value, 'utf8').digest('hex');
 }
 
+interface EvaluationDatasetCase {
+  readonly id: string;
+  readonly inputText: string;
+  readonly outputText: string | null;
+  readonly expectedAction: string | null;
+  readonly expectedDimensions: string[] | null;
+  readonly expectedScoreMin: string | null;
+  readonly expectedScoreMax: string | null;
+}
+
+export function hashEvaluationDataset(cases: readonly EvaluationDatasetCase[]): string {
+  const snapshot = [...cases]
+    .sort((left, right) => left.id.localeCompare(right.id))
+    .map((item) => ({
+      id: item.id,
+      inputText: item.inputText,
+      outputText: item.outputText,
+      expectedAction: item.expectedAction,
+      expectedDimensions: item.expectedDimensions,
+      expectedScoreMin: item.expectedScoreMin,
+      expectedScoreMax: item.expectedScoreMax,
+    }));
+  return sha256(canonicalJson(snapshot));
+}
+
 function percentage(value: number): string {
   return (value * 100).toFixed(2);
 }
@@ -65,7 +90,7 @@ export async function submitEvaluationRun(input: {
       'One or more test cases are missing, disabled or outside the application scope',
     );
   }
-  const datasetHash = sha256(canonicalJson(cases));
+  const datasetHash = hashEvaluationDataset(cases);
   const requestHash = sha256(canonicalJson({
     bundleId: bundle.id,
     datasetHash,
@@ -153,6 +178,9 @@ async function executeClaimedRun(run: typeof evaluationRuns.$inferSelect): Promi
   if (cases.length !== run.testCaseIds.length) {
     throw new Error('Evaluation dataset changed after submission');
   }
+  if (hashEvaluationDataset(cases) !== run.datasetHash) {
+    throw new Error('Evaluation dataset digest changed after submission');
+  }
   const metricInputs: EvaluationMetricInput[] = [];
   let completedCases = 0;
   for (const testCase of cases) {
@@ -191,24 +219,14 @@ async function executeClaimedRun(run: typeof evaluationRuns.$inferSelect): Promi
       isCorrect,
       findings: [],
       decision: decision as unknown as Record<string, unknown>,
-    }).onConflictDoUpdate({
+    }).onConflictDoNothing({
       target: [
         evaluationResults.tenantId,
         evaluationResults.applicationId,
         evaluationResults.runId,
         evaluationResults.testCaseId,
+        evaluationResults.attempt,
       ],
-      set: {
-        expectedAction,
-        actualAction: decision.action,
-        actualScore: scoreForDecision(decision.observations),
-        decisionId: decision.decisionId,
-        latencyMs: decision.latencyMs,
-        attempt: run.attempt,
-        isCorrect,
-        decision: decision as unknown as Record<string, unknown>,
-        createdAt: new Date(),
-      },
     });
     completedCases += 1;
     await db.update(evaluationRuns).set({

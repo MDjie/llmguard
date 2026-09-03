@@ -57,6 +57,9 @@ describe('signed policy bundles', () => {
   it('is deterministic and rejects any payload tampering', () => {
     const { privateKey, publicKey } = generateKeyPairSync('ed25519');
     const payload = compilePolicyBundle(config, 4);
+    expect(payload.detectorDag?.version).toBe('guard-default-dag-1');
+    expect(payload.detectorDag?.nodes.map((node) => node.tier))
+      .toEqual(expect.arrayContaining(['L0', 'L3']));
     const signed = signPolicyBundle(payload, { privateKey, signingKeyId: 'test-key' });
     expect(verifyPolicyBundle(signed, publicKey)).toBe(true);
     expect(signPolicyBundle(payload, { privateKey, signingKeyId: 'test-key' }).contentHash)
@@ -64,6 +67,16 @@ describe('signed policy bundles', () => {
     expect(verifyPolicyBundle({
       ...signed,
       payload: { ...payload, policyVersion: 5 },
+    }, publicKey)).toBe(false);
+    expect(verifyPolicyBundle({
+      ...signed,
+      payload: {
+        ...payload,
+        detectorDag: {
+          ...payload.detectorDag!,
+          maximumCostUnits: 9_999,
+        },
+      },
     }, publicKey)).toBe(false);
   });
 

@@ -171,6 +171,69 @@ function renderPython() {
   return lines.join('\n').trimEnd() + '\n';
 }
 
+function goType(schema) {
+  const reference = refName(schema);
+  if (reference) return reference;
+  if (schema.oneOf || Array.isArray(schema.type)) return 'any';
+  if (schema.type === 'string' || 'const' in schema) return 'string';
+  if (schema.type === 'integer') return 'int64';
+  if (schema.type === 'number') return 'float64';
+  if (schema.type === 'boolean') return 'bool';
+  if (schema.type === 'array') return '[]' + goType(schema.items);
+  if (schema.type === 'object') return 'map[string]any';
+  return 'any';
+}
+
+function goFieldType(schema, required) {
+  const type = goType(schema);
+  if (required || type.startsWith('[]') || type.startsWith('map[') || type === 'any') return type;
+  return '*' + type;
+}
+
+function goName(value) {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function renderGo() {
+  const lines = [
+    '// Code generated from model/guard-v1.schema.json. DO NOT EDIT.',
+    '// Source SHA-256: ' + sourceHash,
+    'package guardv1',
+    '',
+    'const GuardContractVersion = "1.0"',
+    'const GuardContractSourceSHA256 = "' + sourceHash + '"',
+    '',
+  ];
+  for (const [name, schema] of Object.entries(definitions)) {
+    if (schema.enum) {
+      lines.push('type ' + name + ' string', '', 'const (');
+      for (const value of schema.enum) {
+        const constantName = snakeCase(value)
+          .split('_')
+          .map(goName)
+          .join('');
+        lines.push('\t' + name + constantName + ' ' + name + ' = "' + value + '"');
+      }
+      lines.push(')', '');
+      continue;
+    }
+    if (schema.type !== 'object') continue;
+    const required = new Set(schema.required ?? []);
+    lines.push('type ' + name + ' struct {');
+    for (const [propertyName, propertySchema] of Object.entries(schema.properties ?? {})) {
+      const isRequired = required.has(propertyName);
+      const jsonTag = propertyName + (isRequired ? '' : ',omitempty');
+      const quote = String.fromCharCode(96);
+      lines.push(
+        '\t' + goName(propertyName) + ' ' + goFieldType(propertySchema, isRequired) +
+          ' ' + quote + 'json:"' + jsonTag + '"' + quote,
+      );
+    }
+    lines.push('}', '');
+  }
+  return lines.join('\n').trimEnd() + '\n';
+}
+
 function replaceRefs(value) {
   if (Array.isArray(value)) return value.map(replaceRefs);
   if (!value || typeof value !== 'object') return value;
@@ -310,6 +373,7 @@ const outputMap = {
   'generated/typescript/guard-v1.ts': renderTypescript(),
   'generated/java/io/guardllm/contracts/v1/GuardContracts.java': renderJava(),
   'generated/python/guard_contracts_v1.py': renderPython(),
+  'generated/go/guardv1/contracts.go': renderGo(),
   'openapi/guard-v1.openapi.json': renderOpenApi(),
   'proto/guard/v1/guard.proto': renderProto(),
   '../../services/guard-gateway/src/main/proto/guard/v1/guard.proto': renderProto(),

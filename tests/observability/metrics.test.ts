@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import {
   normalizeMetricPath,
   observeGuardDecision,
+  observeAuditDelivery,
+  observeDependencyCall,
   observeHttpRequest,
   renderPrometheusMetrics,
   replaceGauge,
@@ -26,5 +28,17 @@ describe('bounded Prometheus metrics', () => {
     expect(output).toContain('guardllm_required_detector_failures_total');
     expect(output).toContain('guardllm_guard_jobs_pending{job_type="media"} 3');
     expect(output).not.toContain('tenant');
+  });
+
+  it('exports dependency and audit-delivery failure signals without subject identifiers', () => {
+    observeDependencyCall({
+      dependency: 'presidio', operation: 'analyze', status: 'timeout', latencyMs: 500,
+    });
+    observeAuditDelivery({ destinationType: 'kafka', state: 'terminal_failed' });
+    const output = renderPrometheusMetrics();
+    expect(output).toContain('guardllm_dependency_calls_total');
+    expect(output).toContain('guardllm_dependency_duration_ms');
+    expect(output).toContain('guardllm_audit_delivery_total');
+    expect(output).not.toContain('request-');
   });
 });

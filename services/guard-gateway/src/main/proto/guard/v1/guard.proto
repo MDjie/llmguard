@@ -1,5 +1,5 @@
 // Generated from model/guard-v1.schema.json. Do not edit.
-// Source SHA-256: 4de68b95fb3b68b2116a5e2bdfde666a49e00baf2e1ac0716d03bc315bf4e3a5
+// Source SHA-256: 95d5f83807849b342487326076ea8dc4a664878ff7689e6ec89ce665d1316faf
 syntax = "proto3";
 
 package guardllm.contracts.v1;
@@ -60,6 +60,100 @@ enum ArtifactKind {
   ARTIFACT_KIND_RAG_CHUNK = 7;
 }
 
+enum SourceType {
+  SOURCE_TYPE_UNSPECIFIED = 0;
+  SOURCE_TYPE_SYSTEM = 1;
+  SOURCE_TYPE_USER = 2;
+  SOURCE_TYPE_RAG = 3;
+  SOURCE_TYPE_TOOL = 4;
+  SOURCE_TYPE_MEMORY = 5;
+  SOURCE_TYPE_AGENT = 6;
+  SOURCE_TYPE_FILE = 7;
+  SOURCE_TYPE_MEDIA = 8;
+}
+
+enum TrustLevel {
+  TRUST_LEVEL_UNSPECIFIED = 0;
+  TRUST_LEVEL_TRUSTED = 1;
+  TRUST_LEVEL_CONTROLLED = 2;
+  TRUST_LEVEL_UNTRUSTED = 3;
+}
+
+enum InstructionCapability {
+  INSTRUCTION_CAPABILITY_UNSPECIFIED = 0;
+  INSTRUCTION_CAPABILITY_ALLOWED = 1;
+  INSTRUCTION_CAPABILITY_DATA_ONLY = 2;
+  INSTRUCTION_CAPABILITY_FORBIDDEN = 3;
+}
+
+enum GuardFailMode {
+  GUARD_FAIL_MODE_UNSPECIFIED = 0;
+  GUARD_FAIL_MODE_NORMAL = 1;
+  GUARD_FAIL_MODE_FAIL_CLOSED = 2;
+  GUARD_FAIL_MODE_DEGRADED = 3;
+  GUARD_FAIL_MODE_FAIL_OPEN = 4;
+}
+
+enum ProcessingStage {
+  PROCESSING_STAGE_UNSPECIFIED = 0;
+  PROCESSING_STAGE_INPUT_PRE = 1;
+  PROCESSING_STAGE_MODEL_PRE = 2;
+  PROCESSING_STAGE_MODEL_STREAM = 3;
+  PROCESSING_STAGE_OUTPUT_POST = 4;
+  PROCESSING_STAGE_RAG_INGEST = 5;
+  PROCESSING_STAGE_RAG_RETRIEVE = 6;
+  PROCESSING_STAGE_TOOL_PRE = 7;
+  PROCESSING_STAGE_TOOL_POST = 8;
+  PROCESSING_STAGE_MEDIA_ANALYZE = 9;
+  PROCESSING_STAGE_OFFLINE_EVALUATE = 10;
+}
+
+enum SideEffect {
+  SIDE_EFFECT_UNSPECIFIED = 0;
+  SIDE_EFFECT_NONE = 1;
+  SIDE_EFFECT_READ = 2;
+  SIDE_EFFECT_WRITE = 3;
+  SIDE_EFFECT_EXECUTE = 4;
+  SIDE_EFFECT_EXTERNAL_COMMUNICATION = 5;
+  SIDE_EFFECT_FINANCIAL = 6;
+  SIDE_EFFECT_PRIVILEGE_CHANGE = 7;
+}
+
+message ContextEnvelope {
+  string envelope_id = 1;
+  string tenant_id = 2;
+  string application_id = 3;
+  optional string session_id = 4;
+  SourceType source_type = 5;
+  string source_id = 6;
+  TrustLevel trust_level = 7;
+  InstructionCapability instruction_capability = 8;
+  repeated string sensitivity_labels = 9;
+  string content_hash = 10;
+  repeated string parent_envelope_ids = 11;
+  string policy_version = 12;
+  int64 event_seq = 13;
+  int64 content_start = 14;
+  int64 content_end = 15;
+  optional int64 expires_at_epoch_ms = 16;
+  optional string signature = 17;
+  optional string signature_key_id = 18;
+}
+
+message ActionIntent {
+  string intent_id = 1;
+  string user_goal = 2;
+  string tool_name = 3;
+  string parameters_digest = 4;
+  string target_resource = 5;
+  SideEffect side_effect = 6;
+  repeated string required_permissions = 7;
+  repeated string supporting_envelope_ids = 8;
+  repeated string data_destinations = 9;
+  double risk_budget = 10;
+  optional int64 expires_at_epoch_ms = 11;
+}
+
 message RequestContext {
   string trace_id = 1;
   string request_id = 2;
@@ -69,6 +163,10 @@ message RequestContext {
   Direction direction = 6;
   int64 absolute_deadline_epoch_ms = 7;
   string policy_bundle_id = 8;
+  optional string subject_id = 9;
+  optional string auth_context_id = 10;
+  optional string tokenizer_id = 11;
+  optional ProcessingStage stage = 12;
 }
 
 message ArtifactRef {
@@ -83,12 +181,14 @@ message ArtifactRef {
 message GuardContent {
   optional string text = 1;
   repeated ArtifactRef artifacts = 2;
+  repeated ContextEnvelope envelopes = 3;
 }
 
 message GuardRequest {
   string contract_version = 1;
   RequestContext context = 2;
   GuardContent content = 3;
+  optional ActionIntent action_intent = 4;
 }
 
 message EvidenceRef {
@@ -100,6 +200,10 @@ message EvidenceRef {
   repeated int64 time_range_ms = 6;
   optional string masked_preview = 7;
   string content_hmac = 8;
+  repeated string source_envelope_ids = 9;
+  optional int64 token_start = 10;
+  optional int64 token_end = 11;
+  optional string tokenizer_id = 12;
 }
 
 message Observation {
@@ -111,6 +215,9 @@ message Observation {
   repeated EvidenceRef evidence = 6;
   ObservationStatus status = 7;
   optional string reason_code = 8;
+  optional string model_version = 9;
+  optional string configuration_digest = 10;
+  optional GuardFailMode fail_mode = 11;
 }
 
 message GuardDecision {
@@ -125,6 +232,9 @@ message GuardDecision {
   int64 latency_ms = 9;
   repeated string degradation_reasons = 10;
   optional string transformed_text = 11;
+  repeated string model_versions = 12;
+  optional GuardFailMode fail_mode = 13;
+  optional bool evidence_complete = 14;
 }
 
 message GuardError {
@@ -145,6 +255,10 @@ message GuardEvent {
   string tenant_id = 6;
   string application_id = 7;
   google.protobuf.Value payload = 8;
+  optional int64 sequence_number = 9;
+  optional int64 expires_at_epoch_ms = 10;
+  optional string signature = 11;
+  optional string signature_key_id = 12;
 }
 
 service GuardService {

@@ -23,6 +23,17 @@ function fixture() {
     },
     startedAt: '2026-09-01T00:00:00.000Z',
     completedAt: '2026-09-01T00:01:00.000Z',
+    bindings: {
+      sourceCommit: 'c'.repeat(40),
+      policyBundleDigest: 'sha256:' + '1'.repeat(64),
+      tokenizerDigest: 'sha256:' + '2'.repeat(64),
+      datasetDigest: 'sha256:' + '3'.repeat(64),
+      configurationDigest: 'sha256:' + '4'.repeat(64),
+      rawOutputDigest: 'sha256:' + '5'.repeat(64),
+      firstAttemptOnly: true,
+      imageDigests: { app: 'sha256:' + '6'.repeat(64) },
+      modelDigests: { guard: 'sha256:' + '7'.repeat(64) }
+    },
     artifacts: [{
       path: 'artifacts/result.txt',
       sha256: 'sha256:' + createHash('sha256').update(artifact).digest('hex')
@@ -52,5 +63,12 @@ describe('acceptance evidence validation', () => {
     const { directory, reportPath } = fixture();
     writeFileSync(join(directory, 'artifacts', 'result.txt'), 'changed');
     expect(() => validateEvidenceReport(reportPath, 'POC-01')).toThrow(/hash mismatch/);
+  });
+
+  it('rejects a PASS report that can select a later attempt', () => {
+    const { report, reportPath } = fixture();
+    report.bindings.firstAttemptOnly = false;
+    writeFileSync(reportPath, JSON.stringify(report));
+    expect(() => validateEvidenceReport(reportPath, 'POC-01')).toThrow(/first-attempt/);
   });
 });

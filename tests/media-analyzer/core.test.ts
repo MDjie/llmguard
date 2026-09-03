@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { documentImageRequestSchema } from '../../services/media-analyzer/src/contracts';
+import type { MediaRequest } from '../../services/media-analyzer/src/contracts';
 import { parseTesseractTsv } from '../../services/media-analyzer/src/ocr';
 import { mapInBatches } from '../../services/media-analyzer/src/batching';
 import {
+  buildVideoSamplingJobs,
   mergeTranscriptSegments,
   remapAudioViewSegment,
 } from '../../services/media-analyzer/src/audio-video';
@@ -76,5 +78,39 @@ describe('media analyzer core', () => {
       speedMapped,
       { ...speedMapped, confidence: 0.95 },
     ])).toEqual([{ ...speedMapped, confidence: 0.95 }]);
+  });
+
+  it('materializes boundary, midpoint, fixed, scene and short-flash sampling budgets', () => {
+    const request: MediaRequest = {
+      contractVersion: '1.0' as const,
+      context: { tenantId: 'tenant-1', applicationId: 'app-1' },
+      artifact: {
+        id: 'artifact-1', kind: 'VIDEO' as const, mediaType: 'video/mp4',
+        sizeBytes: 1, sha256: 'a'.repeat(64),
+        parts: [{ partNumber: 1, sizeBytes: 1, sha256: 'b'.repeat(64), url: 'https://objects.example/part' }],
+      },
+      sandbox: {
+        ffprobeTimeoutMs: 1_000, ffmpegTimeoutMs: 1_000, maxDecodedBytes: 1_000,
+        disableNetworkProtocols: true as const, allowedProtocols: ['file' as const],
+      },
+      sampling: {
+        strategies: [
+          { type: 'boundary' as const, parameters: { startMs: 0, endMs: 60_000 } },
+          { type: 'midpoint' as const, parameters: { atMs: 30_000 } },
+          { type: 'fixed_interval' as const, parameters: { intervalMs: 5_000 } },
+          { type: 'scene_change' as const, parameters: { threshold: 0.25 } },
+          { type: 'short_flash' as const, parameters: { scanFps: 25 } },
+        ],
+        maxFrames: 100, maxDurationMs: 60_000, batchSize: 4, minimumConfidence: 0.5,
+      },
+      audioViews: ['original' as const],
+    };
+    const jobs = buildVideoSamplingJobs(request, 60_000);
+    expect(jobs.map((job) => job.id)).toEqual([
+      'boundary', 'midpoint', 'fixed_interval', 'scene_change', 'short_flash',
+    ]);
+    expect(jobs.reduce((sum, job) => sum + job.maximumFrames, 0)).toBe(100);
+    expect(jobs.find((job) => job.id === 'scene_change')?.filter).toContain('scene');
+    expect(jobs.find((job) => job.id === 'short_flash')?.filter).toBe('fps=25');
   });
 });

@@ -132,6 +132,8 @@ export interface DetectionFinding {
   ruleId?: string;
   ruleName?: string;
   ruleType?: 'keyword' | 'regex' | 'semantic' | 'llm';
+  startOffset?: number;
+  endOffset?: number;
   whitelistMatched?: WhitelistMatched;
   skippedDimensions?: SkippedDimension[];
 }

@@ -17,6 +17,22 @@ function stable(value) {
   );
 }
 
+function propertySchemaIsBackwardCompatible(previousSchema, currentSchema) {
+  if (JSON.stringify(stable(previousSchema)) === JSON.stringify(stable(currentSchema))) return true;
+  if (!Array.isArray(previousSchema.oneOf) || !Array.isArray(currentSchema.oneOf)) return false;
+  const previousRest = { ...previousSchema };
+  const currentRest = { ...currentSchema };
+  delete previousRest.oneOf;
+  delete currentRest.oneOf;
+  if (JSON.stringify(stable(previousRest)) !== JSON.stringify(stable(currentRest))) return false;
+  const currentBranches = new Set(
+    currentSchema.oneOf.map((branch) => JSON.stringify(stable(branch))),
+  );
+  return previousSchema.oneOf.every(
+    (branch) => currentBranches.has(JSON.stringify(stable(branch))),
+  );
+}
+
 export function findCompatibilityViolations(currentSource, acceptedBaseline) {
   const violations = [];
   for (const [definitionName, previous] of Object.entries(acceptedBaseline.definitions)) {
@@ -41,7 +57,7 @@ export function findCompatibilityViolations(currentSource, acceptedBaseline) {
         violations.push('removed property ' + definitionName + '.' + propertyName);
         continue;
       }
-      if (JSON.stringify(stable(previousSchema)) !== JSON.stringify(stable(currentSchema))) {
+      if (!propertySchemaIsBackwardCompatible(previousSchema, currentSchema)) {
         violations.push('changed property schema ' + definitionName + '.' + propertyName);
       }
     }

@@ -15,6 +15,16 @@ const riskOrder: Readonly<Record<RiskLevel, number>> = {
   CRITICAL: 4,
 };
 
+const actionOrder = {
+  ALLOW: 0,
+  WARN: 1,
+  MASK: 2,
+  REWRITE: 3,
+  SAFE_RESPONSE: 4,
+  REQUIRE_REVIEW: 5,
+  BLOCK: 6,
+} as const;
+
 export function stableObservations(
   observations: readonly Observation[],
 ): readonly Observation[] {
@@ -31,6 +41,7 @@ export function aggregateGuardDecision(params: {
   readonly policy: GuardEnginePolicy;
   readonly observations: readonly Observation[];
   readonly requiredDetectorFailures: readonly string[];
+  readonly degradationReasons?: readonly string[];
   readonly latencyMs: number;
 }): GuardDecision {
   const observations = stableObservations(params.observations);
@@ -44,17 +55,17 @@ export function aggregateGuardDecision(params: {
   const degradedBlock =
     params.policy.failClosedOnRequiredDetectorFailure &&
     params.requiredDetectorFailures.length > 0;
-  const override = matches
-    .map((item) => params.policy.actionOverrides?.[item.riskType])
-    .find((action) => action === 'BLOCK' || action === 'REQUIRE_REVIEW');
-  const action = mandatoryDeny || degradedBlock
+  const override = matches.reduce<GuardDecision['action'] | undefined>((selected, item) => {
+    const candidate = params.policy.actionOverrides?.[item.riskType];
+    const threshold = params.policy.actionOverrideThresholds?.[item.riskType]
+      ?? params.policy.warnThreshold;
+    if (!candidate || item.score < threshold) return selected;
+    return !selected || actionOrder[candidate] > actionOrder[selected] ? candidate : selected;
+  }, undefined);
+  const thresholdBlock = maximumScore >= params.policy.blockThreshold;
+  const action = mandatoryDeny || degradedBlock || thresholdBlock
     ? 'BLOCK'
-    : override ??
-      (maximumScore >= params.policy.blockThreshold
-        ? 'BLOCK'
-        : maximumScore >= params.policy.warnThreshold
-          ? 'WARN'
-          : 'ALLOW');
+    : override ?? (maximumScore >= params.policy.warnThreshold ? 'WARN' : 'ALLOW');
   const riskLevel = degradedBlock && riskOrder[maximumRisk] < riskOrder.HIGH
     ? 'HIGH'
     : maximumRisk;
@@ -65,6 +76,25 @@ export function aggregateGuardDecision(params: {
     action,
     observations,
   });
+  const modelVersions = [...new Set(
+    observations.flatMap((observation) =>
+      observation.modelVersion === undefined ? [] : [observation.modelVersion],
+    ),
+  )].sort();
+  const degradationReasons = [
+    ...new Set(params.degradationReasons ?? params.requiredDetectorFailures),
+  ].sort();
+  const failMode = degradationReasons.length === 0
+    ? 'NORMAL'
+    : degradedBlock
+      ? 'FAIL_CLOSED'
+      : 'DEGRADED';
+  const evidenceComplete = matches.every((observation) =>
+    observation.evidence.length > 0 &&
+    observation.evidence.every((evidence) =>
+      evidence.artifactId !== undefined || (evidence.sourceEnvelopeIds?.length ?? 0) > 0,
+    ),
+  );
   return {
     contractVersion: '1.0',
     decisionId: `dec_${createHash('sha256').update(decisionSeed).digest('hex').slice(0, 32)}`,
@@ -72,9 +102,23 @@ export function aggregateGuardDecision(params: {
     action,
     riskLevel,
     observations,
-    policyPath: [params.policy.id, mandatoryDeny ? 'mandatory-deny' : 'score-threshold'],
+    policyPath: [
+      params.policy.id,
+      mandatoryDeny
+        ? 'mandatory-deny'
+        : degradedBlock
+          ? 'required-detector-failure'
+          : thresholdBlock
+            ? 'block-threshold'
+            : override
+              ? 'action-override'
+              : 'score-threshold',
+    ],
     bundleId: params.policy.bundleId,
     latencyMs: Math.min(600_000, Math.max(0, Math.round(params.latencyMs))),
-    degradationReasons: [...params.requiredDetectorFailures].sort(),
+    degradationReasons,
+    ...(modelVersions.length > 0 ? { modelVersions } : {}),
+    failMode,
+    evidenceComplete,
   };
 }

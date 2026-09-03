@@ -31,3 +31,8 @@ before loading images.
 The chart does not install PostgreSQL, Redis, Kafka, object storage, search, PKI, GPU drivers or
 observability operators. Those are platform services with independent lifecycle and HA controls;
 their required topology and recovery procedures are in docs/runbooks.
+
+The audit-export and security-scan workers are enabled by default. Their TONE credentials,
+trusted scanner catalog, trusted signing keys, semantic classifier configuration and exact
+tokenizer/resource-admission configuration must be injected through the runtime Secret. Do not
+place HMAC keys or private signing material in Helm values.
