@@ -21,10 +21,9 @@ WORKDIR /app
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1
 
-# Workers currently execute TypeScript through the existing pnpm scripts. Keep
-# their dependency tree, but do not inherit the builder filesystem: only the
-# runtime source, generated contracts, and supported worker entrypoints belong
-# in the worker image.
+# Workers execute TypeScript through Node's tsx loader. Keep their dependency
+# tree, but do not inherit the builder filesystem: only the runtime source,
+# generated contracts, and supported worker entrypoints belong in the image.
 COPY --from=dependencies --chown=node:node /app/node_modules ./node_modules
 COPY --chown=node:node package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc tsconfig.json ./
 COPY --chown=node:node src ./src

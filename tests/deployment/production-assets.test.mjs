@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const read = (path) => readFileSync(path, 'utf8');
@@ -89,6 +89,7 @@ describe('production deployment invariants', () => {
   it('keeps local Compose complete, loopback-only, and explicit about HTTP/TLS exceptions', () => {
     const compose = read('docker-compose.yml');
     const rootDockerfile = read('Dockerfile');
+    const values = read('deploy/helm/guardllm/values.yaml');
     const analyzerDockerfile = read('services/media-analyzer/Dockerfile');
     const applianceDockerfile = read('services/appliance-agent/Dockerfile');
     const workers = [
@@ -110,6 +111,8 @@ describe('production deployment invariants', () => {
     expect(compose).toContain('GUARDLLM_ENABLE_EXPERIMENTAL_LABS: "${GUARDLLM_ENABLE_EXPERIMENTAL_LABS:-false}"');
     expect(compose).toContain('scripts/run-worker.mjs');
     expect(rootDockerfile).toContain('scripts/run-worker.mjs');
+    expect(values).not.toContain('command: ["pnpm"]');
+    expect(values).toContain('args: ["--import", "tsx", "scripts/run-worker.mjs", "evaluation"]');
     expect(compose).toContain('./drizzle/0035_guard_quota_ledger.sql');
     expect(compose).toContain('media-analyzer:');
     for (const worker of workers) expect(compose).toContain(`  ${worker}:`);
@@ -132,5 +135,12 @@ describe('production deployment invariants', () => {
     expect(productionLauncher).toContain("loadEnvConfig(workspaceDirectory, false)");
     expect(productionLauncher).toContain("path.join(workspaceDirectory, '.next', 'static')");
     expect(productionLauncher).toContain("path.join(workspaceDirectory, 'public')");
+  });
+
+  it('keeps legacy seed and request-time initialization modules out of the product', () => {
+    expect(existsSync('src/app/api/init-database/route.ts')).toBe(false);
+    expect(existsSync('src/lib/db/seed.ts')).toBe(false);
+    expect(existsSync('src/lib/db/seed-supabase.ts')).toBe(false);
+    expect(existsSync('src/lib/detection/init-database.ts')).toBe(false);
   });
 });

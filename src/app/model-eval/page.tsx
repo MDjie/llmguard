@@ -333,7 +333,10 @@ export default function ModelEvalPage() {
   };
 
   return (
-    <div className="h-[calc(100vh-100px)] min-h-0 flex gap-4 overflow-hidden">
+    <div className="relative h-[calc(100vh-100px)] min-h-0 flex gap-4 overflow-hidden pt-16">
+      <div className="absolute inset-x-0 top-0 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+        开发评测原型：当前仅重复执行护栏策略检测，不会调用所选业务模型，不得生成或引用为多模型评测报告。
+      </div>
       {/* 左侧：选择区域 */}
       <div className="w-80 min-h-0 flex flex-col gap-4 overflow-hidden flex-shrink-0">
         {/* 策略选择 */}

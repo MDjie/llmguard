@@ -48,7 +48,7 @@ const navigationGroups: readonly {
     title: '核心功能',
     items: [
       { name: '安全对话', href: '/', icon: MessageCircle, desc: '双引擎安全对话', permission: 'guard:use' },
-      { name: '链路演示', href: '/simulate', icon: Zap, desc: '实验性检测流程', permission: 'guard:use', experimental: true },
+      { name: '链路实验', href: '/simulate', icon: Zap, desc: '非生产检测流程', permission: 'guard:use', experimental: true },
       { name: '文档检测', href: '/document-scan', icon: FileText, desc: '文档安全扫描', permission: 'security:operate' },
     ]
   },
@@ -66,7 +66,7 @@ const navigationGroups: readonly {
     title: '策略验证',
     items: [
       { name: '策略验证集', href: '/test-cases', icon: CheckCircle, desc: '验证样本管理', permission: 'policy:manage' },
-      { name: '多模型评测（实验）', href: '/model-eval', icon: Cpu, desc: '旧版实验评测界面', permission: 'policy:read', experimental: true },
+      { name: '评测原型', href: '/model-eval', icon: Cpu, desc: '非生产策略评测原型', permission: 'policy:read', experimental: true },
       { name: '评测门禁', href: '/evaluation-runs', icon: GitCompare, desc: '异步回归与发布证据', permission: 'policy:read' },
     ]
   },

@@ -372,8 +372,11 @@ export default function SimulatePage() {
       )}
 
       <div className="space-y-6 pt-12">
+        <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+          开发实验功能：包含模拟模型与测试数据，仅用于研发验证，不得作为生产检测结果或客户交付证据。
+        </div>
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">完整检测链路演示</h1>
+          <h1 className="text-3xl font-bold text-gray-900">检测链路实验</h1>
           <p className="text-gray-600 mt-1">体验完整的输入→护栏→模型→护栏→输出全流程</p>
         </div>
 

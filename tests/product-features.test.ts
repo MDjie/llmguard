@@ -7,8 +7,24 @@ describe('experimental product feature gates', () => {
   });
 
   it('requires an explicit true value', () => {
-    expect(experimentalLabsEnabled({ GUARDLLM_ENABLE_EXPERIMENTAL_LABS: 'true' })).toBe(true);
-    expect(experimentalLabsEnabled({ GUARDLLM_ENABLE_EXPERIMENTAL_LABS: 'TRUE' })).toBe(true);
-    expect(experimentalLabsEnabled({ GUARDLLM_ENABLE_EXPERIMENTAL_LABS: '1' })).toBe(false);
+    expect(experimentalLabsEnabled({
+      NODE_ENV: 'development',
+      GUARDLLM_ENABLE_EXPERIMENTAL_LABS: 'true',
+    })).toBe(true);
+    expect(experimentalLabsEnabled({
+      NODE_ENV: 'development',
+      GUARDLLM_ENABLE_EXPERIMENTAL_LABS: 'TRUE',
+    })).toBe(true);
+    expect(experimentalLabsEnabled({
+      NODE_ENV: 'development',
+      GUARDLLM_ENABLE_EXPERIMENTAL_LABS: '1',
+    })).toBe(false);
+  });
+
+  it('cannot be enabled in production', () => {
+    expect(experimentalLabsEnabled({
+      NODE_ENV: 'production',
+      GUARDLLM_ENABLE_EXPERIMENTAL_LABS: 'true',
+    })).toBe(false);
   });
 });

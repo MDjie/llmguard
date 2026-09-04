@@ -127,8 +127,8 @@ workloads:
     imageKey: worker
     replicas: 2
     service: false
-    command: ["pnpm"]
-    args: ["evaluation:worker"]
+    command: ["node"]
+    args: ["--import", "tsx", "scripts/run-worker.mjs", "evaluation"]
     resources:
       requests: { cpu: 250m, memory: 512Mi }
       limits: { cpu: "1", memory: 1Gi }
@@ -139,8 +139,8 @@ workloads:
     imageKey: worker
     replicas: 1
     service: false
-    command: ["pnpm"]
-    args: ["audit:timestamp-worker"]
+    command: ["node"]
+    args: ["--import", "tsx", "scripts/run-worker.mjs", "audit-timestamp"]
     resources:
       requests: { cpu: 100m, memory: 256Mi }
       limits: { cpu: 500m, memory: 512Mi }
@@ -151,8 +151,8 @@ workloads:
     imageKey: worker
     replicas: 2
     service: false
-    command: ["pnpm"]
-    args: ["audit:export-worker"]
+    command: ["node"]
+    args: ["--import", "tsx", "scripts/run-worker.mjs", "audit-export"]
     resources:
       requests: { cpu: 100m, memory: 256Mi }
       limits: { cpu: 500m, memory: 512Mi }
@@ -163,8 +163,8 @@ workloads:
     imageKey: worker
     replicas: 2
     service: false
-    command: ["pnpm"]
-    args: ["security-scan:worker"]
+    command: ["node"]
+    args: ["--import", "tsx", "scripts/run-worker.mjs", "security-scan"]
     resources:
       requests: { cpu: 250m, memory: 512Mi }
       limits: { cpu: "1", memory: 1Gi }
@@ -175,8 +175,8 @@ workloads:
     imageKey: worker
     replicas: 2
     service: false
-    command: ["pnpm"]
-    args: ["artifact:worker"]
+    command: ["node"]
+    args: ["--import", "tsx", "scripts/run-worker.mjs", "artifact"]
     resources:
       requests: { cpu: 250m, memory: 512Mi }
       limits: { cpu: "1", memory: 1Gi }
@@ -187,8 +187,8 @@ workloads:
     imageKey: worker
     replicas: 2
     service: false
-    command: ["pnpm"]
-    args: ["multimodal:worker"]
+    command: ["node"]
+    args: ["--import", "tsx", "scripts/run-worker.mjs", "multimodal"]
     resources:
       requests: { cpu: 500m, memory: 1Gi }
       limits: { cpu: "2", memory: 4Gi }
@@ -199,8 +199,8 @@ workloads:
     imageKey: worker
     replicas: 2
     service: false
-    command: ["pnpm"]
-    args: ["media:worker"]
+    command: ["node"]
+    args: ["--import", "tsx", "scripts/run-worker.mjs", "media"]
     resources:
       requests: { cpu: "1", memory: 2Gi }
       limits: { cpu: "4", memory: 8Gi }
@@ -211,8 +211,8 @@ workloads:
     imageKey: worker
     replicas: 2
     service: false
-    command: ["pnpm"]
-    args: ["content-marking:worker"]
+    command: ["node"]
+    args: ["--import", "tsx", "scripts/run-worker.mjs", "content-marking"]
     resources:
       requests: { cpu: 250m, memory: 512Mi }
       limits: { cpu: "1", memory: 1Gi }
@@ -237,8 +237,8 @@ workloads:
     imageKey: worker
     replicas: 2
     service: false
-    command: ["pnpm"]
-    args: ["rag:worker"]
+    command: ["node"]
+    args: ["--import", "tsx", "scripts/run-worker.mjs", "rag"]
     resources:
       requests: { cpu: 250m, memory: 512Mi }
       limits: { cpu: "1", memory: 2Gi }
@@ -249,8 +249,8 @@ workloads:
     imageKey: worker
     replicas: 2
     service: false
-    command: ["pnpm"]
-    args: ["callback:worker"]
+    command: ["node"]
+    args: ["--import", "tsx", "scripts/run-worker.mjs", "callback"]
     resources:
       requests: { cpu: 100m, memory: 256Mi }
       limits: { cpu: 500m, memory: 512Mi }

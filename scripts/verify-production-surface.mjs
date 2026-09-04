@@ -26,13 +26,16 @@ const allowedPublicFiles = new Set([
   'public/logo.png',
 ]);
 
-const retiredRoutes = [
+const retiredProductionModules = [
   'src/app/api/init-database/route.ts',
+  'src/lib/db/seed.ts',
+  'src/lib/db/seed-supabase.ts',
+  'src/lib/detection/init-database.ts',
 ];
 
-for (const route of retiredRoutes) {
-  if (existsSync(join(root, route))) {
-    failures.push(`retired production route still exists: ${route}`);
+for (const modulePath of retiredProductionModules) {
+  if (existsSync(join(root, modulePath))) {
+    failures.push(`retired production module still exists: ${modulePath}`);
   }
 }
 
@@ -45,6 +48,25 @@ for (const guardedLab of [
     failures.push(`guarded experimental lab is missing: ${guardedLab}`);
   } else if (!read(guardedLab).includes('experimentalLabsEnabled')) {
     failures.push(`experimental lab lacks an explicit feature gate: ${guardedLab}`);
+  }
+}
+
+const productFeatures = read('src/lib/product-features.ts');
+if (!productFeatures.includes("environment.NODE_ENV !== 'production'")) {
+  failures.push('experimental labs are not hard-disabled in production');
+}
+
+const proxy = read('src/proxy.ts');
+if (!proxy.includes('experimentalLabsEnabled')) {
+  failures.push('experimental labs are not guarded at the HTTP boundary');
+}
+for (const matcher of [
+  '/simulate/:path*',
+  '/model-eval/:path*',
+  '/api/simulate/:path*',
+]) {
+  if (!proxy.includes(`'${matcher}'`)) {
+    failures.push(`experimental route is missing from the HTTP boundary: ${matcher}`);
   }
 }
 
@@ -118,6 +140,14 @@ if (!workerStage) {
   if (/acceptance|batch_test|extract_pdf|gen_arch_doc|gs_login_page|youhua/u.test(workerStage)) {
     failures.push('worker stage references internal QA or prototype content');
   }
+  if (/CMD\s*\[\s*["']pnpm["']/u.test(workerStage)) {
+    failures.push('worker runtime must not invoke Corepack or download pnpm');
+  }
+}
+
+const helmValues = read('deploy/helm/guardllm/values.yaml');
+if (/command:\s*\["pnpm"\]/u.test(helmValues)) {
+  failures.push('Helm workers must use the offline Node dispatcher');
 }
 
 if (failures.length > 0) {
