@@ -59,38 +59,54 @@ async function getPolicy(
       client.from('keyword_categories').select().eq('policy_id', id).order('priority'),
       client.from('keyword_rules').select().eq('policy_id', id).order('created_at', { ascending: false }),
       client.from('policy_versions').select().eq('policy_id', id).order('version', { ascending: false }).limit(10),
-      client.from('detection_dimensions').select().eq('enabled', true).order('name'),
+      client.from('detection_dimensions').select().eq('enabled', true),
     ]);
 
     // 合并 policy_rules 和 detection_dimensions，确保所有维度都显示
     const existingRules = rulesResult.data || [];
     const allDimensions = dimensionsResult.data || [];
 
-    // 为没有 policy_rule 的维度创建默认配置
-    const rulesWithDimensions = allDimensions.map((dim: Record<string, unknown>) => {
-      const existingRule = existingRules.find(
-        (r: Record<string, unknown>) => r.dimension === dim.code
-      );
-      if (existingRule) {
-        // 转换 camelCase 到 snake_case
-        return toSnakeCase(existingRule);
-      }
-      // 新维度没有配置时返回默认配置
-      return {
-        id: null,
-        policy_id: id,
-        dimension: dim.code,
-        dimension_name: dim.name,
-        enabled: true,
-        warn_enabled: true,
-        block_enabled: true,
-        warn_threshold: 50,
-        block_threshold: 80,
-        auto_mask: dim.code === 'pii_leak',
-        auto_rewrite: false,
-        is_new: true, // 标记为新增维度
-      };
-    });
+    // 为没有 policy_rule 的维度创建默认配置(未开启), 并按"加入时间"倒序排列,
+    // 让后新增/后配置的检测维度排在最上面。已配置维度用 policy_rules.created_at
+    // (加入本策略的时间), 未配置(新)维度用 detection_dimensions.created_at。
+    // 注意: 必须在 toSnakeCase() 之前读取时间值 —— 它返回的 Date 对象没有可枚举
+    // 属性, toSnakeCase() 递归会把 Date 序列化成空对象 {}。
+    const mergeEntries: Array<{ row: Record<string, unknown>; ts: number }> =
+      allDimensions.map((dim: Record<string, unknown>) => {
+        const existingRule = existingRules.find(
+          (r: Record<string, unknown>) => r.dimension === dim.code
+        );
+        if (existingRule) {
+          const rawTs = existingRule.created_at ?? existingRule.createdAt;
+          const ts = rawTs ? new Date(rawTs as string | number | Date).getTime() : 0;
+          const row = toSnakeCase(existingRule) as Record<string, unknown>;
+          return { row, ts: Number.isFinite(ts) ? ts : 0 };
+        }
+        // 新维度没有配置时返回默认配置, 默认未开启(enabled: false)
+        const rawTs = dim.created_at ?? dim.createdAt;
+        const ts = rawTs ? new Date(rawTs as string | number | Date).getTime() : 0;
+        return {
+          row: {
+            id: null,
+            policy_id: id,
+            dimension: dim.code,
+            dimension_name: dim.name,
+            enabled: false,
+            warn_enabled: true,
+            block_enabled: true,
+            warn_threshold: 50,
+            block_threshold: 80,
+            auto_mask: dim.code === 'pii_leak',
+            auto_rewrite: false,
+            is_new: true, // 标记为新增维度
+          },
+          ts: Number.isFinite(ts) ? ts : 0,
+        };
+      });
+
+    // 后加入/后创建的排最上面(时间倒序)
+    mergeEntries.sort((a, b) => b.ts - a.ts);
+    const rulesWithDimensions = mergeEntries.map((entry) => entry.row);
 
     // 转换字段名从 snake_case 到 camelCase
     const transformPolicy = (p: Record<string, unknown>) => ({

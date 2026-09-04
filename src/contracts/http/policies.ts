@@ -15,6 +15,12 @@ export const createPolicySchema = z
   })
   .strict();
 
+// GET /api/policies/[id] 合并返回的规则行会附带 policy_id / created_at /
+// tenant_id / application_id / dimension_name 等额外字段, 前端"保存更改"会原样
+// 回传给 PUT /api/policies。因此这里(1)不做 .strict(), 让额外字段被剥离,
+// 而不是 400 拒绝(否则前端会看到"保存失败: undefined"); (2) DB 层 NUMERIC(5,2)
+// 阈值(如 warn_threshold)会以 "50.00" 字符串返回并随 GET 回传, 用 coerce 同时
+// 接受 number 与数字字符串。
 export const policyDimensionRuleSchema = z
   .object({
     id: boundedId.nullable().optional(),
@@ -23,12 +29,11 @@ export const policyDimensionRuleSchema = z
     enabled: z.boolean().default(true),
     warn_enabled: z.boolean().default(true),
     block_enabled: z.boolean().default(true),
-    warn_threshold: z.number().int().min(0).max(100).default(50),
-    block_threshold: z.number().int().min(0).max(100).default(80),
+    warn_threshold: z.coerce.number().int().min(0).max(100).default(50),
+    block_threshold: z.coerce.number().int().min(0).max(100).default(80),
     auto_mask: z.boolean().default(false),
     auto_rewrite: z.boolean().default(false),
   })
-  .strict()
   .refine((value) => value.warn_threshold <= value.block_threshold, {
     message: 'warn_threshold must not exceed block_threshold',
     path: ['warn_threshold'],
