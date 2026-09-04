@@ -1,4 +1,4 @@
-FROM node:24.20.0-alpine AS builder
+FROM node:24.20.0-alpine AS dependencies
 
 RUN corepack enable && corepack prepare pnpm@11.19.0 --activate
 WORKDIR /app
@@ -6,19 +6,47 @@ WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY scripts/enforce-pnpm.mjs ./scripts/enforce-pnpm.mjs
 RUN pnpm install --frozen-lockfile
+
+FROM dependencies AS builder
 
 COPY . .
 RUN pnpm run build
 
-FROM builder AS worker
+FROM node:24.20.0-alpine AS worker
+
+WORKDIR /app
 
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1
 
+# Workers currently execute TypeScript through the existing pnpm scripts. Keep
+# their dependency tree, but do not inherit the builder filesystem: only the
+# runtime source, generated contracts, and supported worker entrypoints belong
+# in the worker image.
+COPY --from=dependencies --chown=node:node /app/node_modules ./node_modules
+COPY --chown=node:node package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc tsconfig.json ./
+COPY --chown=node:node src ./src
+COPY --chown=node:node packages/contracts/generated ./packages/contracts/generated
+COPY --chown=node:node packages/contracts-appliance/generated ./packages/contracts-appliance/generated
+COPY --chown=node:node \
+    scripts/artifact-verifier-worker.ts \
+    scripts/audio-video-worker.ts \
+    scripts/audit-export-worker.ts \
+    scripts/audit-timestamp-worker.ts \
+    scripts/callback-dispatcher-worker.ts \
+    scripts/content-marking-worker.ts \
+    scripts/document-image-worker.ts \
+    scripts/evaluation-worker.ts \
+    scripts/rag-ingest-worker.ts \
+    scripts/run-worker.mjs \
+    scripts/security-scan-worker.ts \
+    ./scripts/
+
 USER node
 STOPSIGNAL SIGTERM
-CMD ["pnpm", "evaluation:worker"]
+CMD ["node", "--import", "tsx", "scripts/run-worker.mjs", "evaluation"]
 
 FROM node:24.20.0-alpine AS runner
 

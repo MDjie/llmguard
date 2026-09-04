@@ -53,7 +53,6 @@ describe('API route security inventory', () => {
 
   it('does not initialize schema or seed data from ordinary request routes', () => {
     const violations = routes
-      .filter((file) => routeName(file) !== 'init-database/route.ts')
       .filter((file) => /\b(?:initializeDatabase|initDefaultPolicy)\b/.test(readFileSync(file, 'utf8')))
       .map(routeName);
     expect(violations).toEqual([]);

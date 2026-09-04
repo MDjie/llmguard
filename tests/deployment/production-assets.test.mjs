@@ -58,7 +58,7 @@ describe('production deployment invariants', () => {
   });
 
   it('provides independent app, worker, gateway and analyzer container targets', () => {
-    expect(read('Dockerfile')).toContain('FROM builder AS worker');
+    expect(read('Dockerfile')).toContain('AS worker');
     expect(read('services/guard-gateway/Dockerfile')).toContain('USER 10001');
     const analyzer = read('services/media-analyzer/Dockerfile');
     const values = read('deploy/helm/guardllm/values.yaml');
@@ -84,6 +84,39 @@ describe('production deployment invariants', () => {
     expect(workloads).toContain('affinity:');
     expect(ascend).toContain('huawei.com/Ascend910');
     expect(ascend).toContain('kubernetes.io/arch: arm64');
+  });
+
+  it('keeps local Compose complete, loopback-only, and explicit about HTTP/TLS exceptions', () => {
+    const compose = read('docker-compose.yml');
+    const rootDockerfile = read('Dockerfile');
+    const analyzerDockerfile = read('services/media-analyzer/Dockerfile');
+    const applianceDockerfile = read('services/appliance-agent/Dockerfile');
+    const workers = [
+      'evaluation-worker',
+      'security-scan-worker',
+      'artifact-worker',
+      'multimodal-worker',
+      'media-worker',
+      'content-marking-worker',
+      'rag-worker',
+      'callback-worker',
+      'audit-export-worker',
+      'audit-timestamp-worker',
+    ];
+
+    expect(compose).toContain('127.0.0.1:${APP_PORT:-58082}:5000');
+    expect(compose).toContain('SESSION_COOKIE_SECURE: "${SESSION_COOKIE_SECURE:-false}"');
+    expect(compose).toContain('DATABASE_PLAINTEXT_ALLOWED_HOSTS: "${DATABASE_PLAINTEXT_ALLOWED_HOSTS:-postgres}"');
+    expect(compose).toContain('GUARDLLM_ENABLE_EXPERIMENTAL_LABS: "${GUARDLLM_ENABLE_EXPERIMENTAL_LABS:-false}"');
+    expect(compose).toContain('scripts/run-worker.mjs');
+    expect(rootDockerfile).toContain('scripts/run-worker.mjs');
+    expect(compose).toContain('./drizzle/0035_guard_quota_ledger.sql');
+    expect(compose).toContain('media-analyzer:');
+    for (const worker of workers) expect(compose).toContain(`  ${worker}:`);
+    for (const dockerfile of [rootDockerfile, analyzerDockerfile, applianceDockerfile]) {
+      expect(dockerfile.indexOf('COPY scripts/enforce-pnpm.mjs'))
+        .toBeLessThan(dockerfile.indexOf('RUN pnpm install --frozen-lockfile'));
+    }
   });
 
   it('keeps local runtime commands cross-platform and standalone assets deployable', () => {

@@ -37,4 +37,28 @@ describe('DAT-002 verified database transport', () => {
       nodeEnv: 'production',
     })).toThrow('must use verified TLS');
   });
+
+  it('allows plaintext for an exact explicitly allowlisted container host', () => {
+    expect(resolveDatabaseTls('postgres://user:password@postgres:5432/db', {
+      sslMode: 'disable',
+      nodeEnv: 'production',
+      plaintextAllowedHosts: 'postgres',
+    })).toBe(false);
+  });
+
+  it('does not allow suffix or substring matches in the plaintext host allowlist', () => {
+    expect(() => resolveDatabaseTls('postgres://user:password@postgres.attacker:5432/db', {
+      sslMode: 'disable',
+      nodeEnv: 'production',
+      plaintextAllowedHosts: 'postgres',
+    })).toThrow('must use verified TLS');
+  });
+
+  it('rejects malformed plaintext host allowlist entries', () => {
+    expect(() => resolveDatabaseTls('postgres://user:password@postgres:5432/db', {
+      sslMode: 'disable',
+      nodeEnv: 'production',
+      plaintextAllowedHosts: 'postgres/path',
+    })).toThrow('invalid hostname');
+  });
 });

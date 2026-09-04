@@ -125,7 +125,7 @@ export async function recordDetectionSession(
 }
 
 /**
- * 批量记录检测会话（用于多模型评测等场景）
+ * 批量记录检测会话（用于策略回归验证等场景）
  */
 export async function recordBatchDetectionSessions(
   sessions: RecordSessionParams[]

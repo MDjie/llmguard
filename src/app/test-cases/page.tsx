@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,8 +32,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { TestTube, RefreshCw, Plus, Pencil, Trash2 } from 'lucide-react';
+import { ShieldCheck, RefreshCw, Plus, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { csrfHeaders } from '@/lib/auth/csrf-client';
 
 interface TestCase {
   id: string;
@@ -114,11 +115,11 @@ export default function TestCasesPage() {
         setTestCases(result.data || []);
         setError(null);
       } else {
-        setError('加载测试用例失败');
+        setError('加载策略验证集失败');
       }
     } catch (err) {
-      console.error('加载测试用例失败:', err);
-      setError('加载测试用例失败，请重试');
+      console.error('加载策略验证集失败:', err);
+      setError('加载策略验证集失败，请重试');
     } finally {
       setLoading(false);
     }
@@ -162,14 +163,14 @@ export default function TestCasesPage() {
     setDeleteDialogOpen(true);
   };
 
-  // 保存测试用例
+  // 保存验证样本
   const handleSave = async () => {
     if (!form.title.trim()) {
       toast.error('请输入标题');
       return;
     }
     if (!form.inputText.trim()) {
-      toast.error('请输入测试文本');
+      toast.error('请输入验证内容');
       return;
     }
 
@@ -197,14 +198,14 @@ export default function TestCasesPage() {
         // 更新
         response = await fetch(`/api/test-cases/${editingId}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
           body: JSON.stringify(payload),
         });
       } else {
         // 新增
         response = await fetch('/api/test-cases', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
           body: JSON.stringify(payload),
         });
       }
@@ -225,7 +226,7 @@ export default function TestCasesPage() {
     }
   };
 
-  // 删除测试用例
+  // 删除验证样本
   const handleDelete = async () => {
     if (!deletingId) return;
 
@@ -233,6 +234,7 @@ export default function TestCasesPage() {
       setSaving(true);
       const response = await fetch(`/api/test-cases/${deletingId}`, {
         method: 'DELETE',
+        headers: csrfHeaders(),
       });
       const result = await response.json();
       if (result.success) {
@@ -295,8 +297,8 @@ export default function TestCasesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">测试用例库</h1>
-          <p className="text-gray-600 mt-1">管理测试用例，评估检测效果</p>
+          <h1 className="text-3xl font-bold text-gray-900">策略验证集</h1>
+          <p className="text-gray-600 mt-1">管理策略验证样本，用于回归评测与发布门禁</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={fetchTestCases}>
@@ -324,11 +326,11 @@ export default function TestCasesPage() {
         </div>
       ) : testCases.length === 0 ? (
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-12 text-center">
-          <TestTube className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600">暂无测试用例</p>
+          <ShieldCheck className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <p className="text-gray-600">暂无策略验证样本</p>
           <Button className="mt-4" onClick={handleAdd}>
             <Plus className="h-4 w-4 mr-2" />
-            添加测试用例
+            添加验证样本
           </Button>
         </div>
       ) : (
@@ -336,7 +338,7 @@ export default function TestCasesPage() {
           <div className="bg-white rounded-lg border">
             <div className="p-4 border-b">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">共 {testCases.length} 条测试用例</span>
+                <span className="text-sm text-gray-600">共 {testCases.length} 条验证样本</span>
               </div>
             </div>
 
@@ -435,9 +437,9 @@ export default function TestCasesPage() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingId ? '编辑测试用例' : '新增测试用例'}</DialogTitle>
+            <DialogTitle>{editingId ? '编辑验证样本' : '新增验证样本'}</DialogTitle>
             <DialogDescription>
-              {editingId ? '修改测试用例信息' : '创建新的测试用例'}
+              {editingId ? '修改验证样本信息' : '创建新的验证样本'}
             </DialogDescription>
           </DialogHeader>
           
@@ -449,7 +451,7 @@ export default function TestCasesPage() {
                   id="title"
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
-                  placeholder="测试用例标题"
+                  placeholder="验证样本标题"
                 />
               </div>
               <div className="space-y-2">
@@ -473,17 +475,17 @@ export default function TestCasesPage() {
                 id="description"
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
-                placeholder="测试用例描述"
+                placeholder="验证样本描述"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="inputText">测试文本 *</Label>
+              <Label htmlFor="inputText">输入内容 *</Label>
               <Textarea
                 id="inputText"
                 value={form.inputText}
                 onChange={(e) => setForm({ ...form, inputText: e.target.value })}
-                placeholder="输入测试文本"
+                placeholder="输入待验证内容"
                 rows={3}
               />
             </div>
@@ -579,7 +581,7 @@ export default function TestCasesPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>确认删除</AlertDialogTitle>
             <AlertDialogDescription>
-              此操作将永久删除该测试用例，无法恢复。确定要继续吗？
+              此操作将永久删除该验证样本，无法恢复。确定要继续吗？
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

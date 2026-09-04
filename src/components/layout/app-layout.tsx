@@ -9,10 +9,9 @@ import {
   Settings,
   History,
   BarChart3,
-  TestTube,
   Cloud,
-  GitCompare,
   Cpu,
+  GitCompare,
   FileText,
   Download,
   Zap,
@@ -38,6 +37,7 @@ interface NavigationItem {
   readonly icon: typeof Shield;
   readonly desc: string;
   readonly permission: Permission;
+  readonly experimental?: boolean;
 }
 
 const navigationGroups: readonly {
@@ -48,7 +48,7 @@ const navigationGroups: readonly {
     title: '核心功能',
     items: [
       { name: '安全对话', href: '/', icon: MessageCircle, desc: '双引擎安全对话', permission: 'guard:use' },
-      { name: '链路演示', href: '/simulate', icon: Zap, desc: '完整检测流程', permission: 'guard:use' },
+      { name: '链路演示', href: '/simulate', icon: Zap, desc: '实验性检测流程', permission: 'guard:use', experimental: true },
       { name: '文档检测', href: '/document-scan', icon: FileText, desc: '文档安全扫描', permission: 'security:operate' },
     ]
   },
@@ -63,11 +63,11 @@ const navigationGroups: readonly {
     ]
   },
   {
-    title: '测试评估',
+    title: '策略验证',
     items: [
-      { name: '测试用例', href: '/test-cases', icon: TestTube, desc: '用例管理与执行', permission: 'policy:manage' },
-      { name: '多模型评测', href: '/model-eval', icon: Cpu, desc: '模型安全评估', permission: 'policy:read' },
-      { name: '评测门禁', href: '/evaluation-runs', icon: TestTube, desc: '异步回归与发布证据', permission: 'policy:read' },
+      { name: '策略验证集', href: '/test-cases', icon: CheckCircle, desc: '验证样本管理', permission: 'policy:manage' },
+      { name: '多模型评测（实验）', href: '/model-eval', icon: Cpu, desc: '旧版实验评测界面', permission: 'policy:read', experimental: true },
+      { name: '评测门禁', href: '/evaluation-runs', icon: GitCompare, desc: '异步回归与发布证据', permission: 'policy:read' },
     ]
   },
   {
@@ -107,7 +107,13 @@ interface ApplicationInfo {
   status: 'active' | 'disabled';
 }
 
-export function AppLayout({ children }: { children: React.ReactNode }) {
+export function AppLayout({
+  children,
+  legacyDemosEnabled,
+}: {
+  children: React.ReactNode;
+  legacyDemosEnabled: boolean;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const [dbStatus, setDbStatus] = useState<DbStatus>('checking');
@@ -122,7 +128,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const visibleNavigationGroups = navigationGroups
     .map((group) => ({
       ...group,
-      items: group.items.filter((item) => user?.permissions.includes(item.permission)),
+      items: group.items.filter((item) => (
+        user?.permissions.includes(item.permission)
+        && (!item.experimental || legacyDemosEnabled)
+      )),
     }))
     .filter((group) => group.items.length > 0);
 
@@ -273,6 +282,18 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   // 未认证时不渲染内容（已跳转到登录页）
   if (authStatus === 'unauthenticated') {
     return null;
+  }
+
+  if (!legacyDemosEnabled && (pathname === '/simulate' || pathname === '/model-eval')) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+        <div className="max-w-lg rounded-lg border bg-white p-8 text-center shadow-sm">
+          <Shield className="mx-auto mb-4 h-10 w-10 text-amber-500" />
+          <h1 className="text-xl font-semibold">实验功能未启用</h1>
+          <p className="mt-2 text-sm text-gray-600">该旧版演示界面默认不进入正式产品面，仅可通过显式部署开关启用。</p>
+        </div>
+      </div>
+    );
   }
 
   return (

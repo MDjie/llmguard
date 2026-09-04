@@ -63,6 +63,7 @@ function getDb() {
         sslMode: process.env.DATABASE_SSL_MODE,
         caCertificate: process.env.DATABASE_CA_CERT,
         nodeEnv: process.env.NODE_ENV,
+        plaintextAllowedHosts: process.env.DATABASE_PLAINTEXT_ALLOWED_HOSTS,
       }),
     });
 

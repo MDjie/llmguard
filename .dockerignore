@@ -7,6 +7,8 @@ node_modules
 out
 dist
 build
+.artifact-build
+.tmp
 
 # Development files
 *.log
@@ -37,15 +39,39 @@ docker-compose.yml
 # Test files
 coverage
 .nyc_output
+tests
+test-results
+playwright-report
+acceptance
 *.test.ts
+*.test.tsx
 *.spec.ts
+*.spec.tsx
 __tests__
+
+# Internal reports, design sources, and generated documentation
+输出
+文档
+docs
+assets
+
+# Internal QA, document-generation, and one-time import tooling
+batch_test*.py
+extract_pdf*.py
+gen_arch_doc.py
+import_sensitive_lexicon.py
+*_import.sql
+scripts/acceptance
+scripts/compatibility
+scripts/dr
+scripts/integration
+scripts/security
+scripts/generate-*.py
 
 # Misc
 .env*.local
 .env
 *.md
-!README.md
 
 # Temporary files
 tmp

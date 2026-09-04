@@ -43,7 +43,7 @@
     "blockingReason": "No customer-approved target model, tokenizer, hardware, platform or live endpoint manifest is present."
   },
   "sourceDigests": [
-    { "id": "pnpmLock", "path": "pnpm-lock.yaml", "sha256": "sha256:0841f3400230ecd23a7c69b76910aa898f27978d98fa13666ee51b4238a3b762" },
+    { "id": "pnpmLock", "path": "pnpm-lock.yaml", "sha256": "sha256:835e7210ef29095af12f776fd345a8d06ba7ef08a533e30029abaf496649d2b1" },
     { "id": "gatewayPom", "path": "services/guard-gateway/pom.xml", "sha256": "sha256:24408994bd8d339d3578c59529c0430ed668a56d67a126deff80d905cda2028a" },
     { "id": "aiComponentCatalog", "path": "security/ai-components.json", "sha256": "sha256:46702956133f1ada09d392242691ef4b042bb833c9e7e987e6e388dd547d5cfa" },
     { "id": "datasetManifest", "path": "acceptance/datasets/manifest.json", "sha256": "sha256:83b19d483b68c0dd8cf01977a70ea1e087280e27fdebf0ed357ae3f4e02948ff" },

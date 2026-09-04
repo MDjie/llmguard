@@ -2,8 +2,14 @@ import type { NextResponse } from 'next/server';
 import type { IssuedSession } from './session';
 import { AUTH_COOKIE_NAME, CSRF_COOKIE_NAME, SCOPE_COOKIE_NAME } from './constants';
 
-function secureCookies(): boolean {
-  return process.env.NODE_ENV === 'production';
+export function secureCookies(environment: NodeJS.ProcessEnv = process.env): boolean {
+  const configured = environment.SESSION_COOKIE_SECURE?.trim().toLowerCase();
+  if (!configured) {
+    return environment.NODE_ENV === 'production';
+  }
+  if (configured === 'true') return true;
+  if (configured === 'false') return false;
+  throw new Error('SESSION_COOKIE_SECURE must be either true or false');
 }
 
 export function setSessionCookies(response: NextResponse, session: IssuedSession): void {

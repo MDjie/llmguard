@@ -1,3 +1,56 @@
+x-runtime-environment: &runtime-environment
+  DATABASE_URL: "postgres://${DB_USER:-guardllm}:${DB_PASSWORD:?DB_PASSWORD is required}@postgres:5432/${DB_NAME:-guardllm}"
+  DATABASE_SSL_MODE: "${DATABASE_SSL_MODE:-disable}"
+  DATABASE_PLAINTEXT_ALLOWED_HOSTS: "${DATABASE_PLAINTEXT_ALLOWED_HOSTS:-postgres}"
+  NODE_ENV: production
+  GUARDLLM_ENABLE_EXPERIMENTAL_LABS: "${GUARDLLM_ENABLE_EXPERIMENTAL_LABS:-false}"
+  JWT_SECRET: "${JWT_SECRET:?JWT_SECRET is required}"
+  SECRET_MASTER_KEY: "${SECRET_MASTER_KEY:?SECRET_MASTER_KEY is required}"
+  SECRET_MASTER_KEY_ID: "${SECRET_MASTER_KEY_ID:-local-v1}"
+  CONTENT_HASH_KEY: "${CONTENT_HASH_KEY:?CONTENT_HASH_KEY is required}"
+  AUDIT_CHAIN_KEY: "${AUDIT_CHAIN_KEY:?AUDIT_CHAIN_KEY is required}"
+  AUDIT_CHAIN_KEY_ID: "${AUDIT_CHAIN_KEY_ID:-audit-hmac-v1}"
+  PASSWORD_MAX_AGE_DAYS: "${PASSWORD_MAX_AGE_DAYS:-90}"
+  CONTENT_MARKING_KEY: "${CONTENT_MARKING_KEY:?CONTENT_MARKING_KEY is required}"
+  CONTENT_MARKING_KEY_ID: "${CONTENT_MARKING_KEY_ID:-content-mark-hmac-v1}"
+  CONTENT_MARKING_PROVIDER_CODE: "${CONTENT_MARKING_PROVIDER_CODE:?CONTENT_MARKING_PROVIDER_CODE is required}"
+  METRICS_BEARER_TOKEN: "${METRICS_BEARER_TOKEN:?METRICS_BEARER_TOKEN is required}"
+  RAG_PROVENANCE_KEY: "${RAG_PROVENANCE_KEY:-}"
+  TOOL_PERMIT_SIGNING_KEY: "${TOOL_PERMIT_SIGNING_KEY:-}"
+  MULTIMODAL_ANALYZER_BASE_URL: "http://media-analyzer:8090"
+  ANALYZER_SHARED_TOKEN: "${ANALYZER_SHARED_TOKEN:?ANALYZER_SHARED_TOKEN is required}"
+  EXPORT_APPROVAL_REQUIRED: "${EXPORT_APPROVAL_REQUIRED:-true}"
+  RAW_CONTENT_STORAGE_ENABLED: "${RAW_CONTENT_STORAGE_ENABLED:-false}"
+  RAW_CONTENT_RETENTION_DAYS: "${RAW_CONTENT_RETENTION_DAYS:-7}"
+  PROVIDER_ALLOWED_HOSTS: "${PROVIDER_ALLOWED_HOSTS:-}"
+  PROVIDER_ALLOWED_PRIVATE_HOSTS: "${PROVIDER_ALLOWED_PRIVATE_HOSTS:-}"
+  CALLBACK_ALLOWED_HOSTS: "${CALLBACK_ALLOWED_HOSTS:-}"
+  CALLBACK_ALLOWED_PRIVATE_HOSTS: "${CALLBACK_ALLOWED_PRIVATE_HOSTS:-}"
+  TOOL_ALLOWED_HOSTS: "${TOOL_ALLOWED_HOSTS:-}"
+  TOOL_ALLOWED_PRIVATE_HOSTS: "${TOOL_ALLOWED_PRIVATE_HOSTS:-}"
+
+x-worker-service: &worker-service
+  image: guardllm-r0-worker:latest
+  build:
+    context: .
+    dockerfile: Dockerfile
+    target: worker
+  restart: unless-stopped
+  init: true
+  depends_on:
+    postgres:
+      condition: service_healthy
+    media-analyzer:
+      condition: service_started
+  environment: *runtime-environment
+  networks: [guardllm-network]
+  read_only: true
+  tmpfs:
+    - /tmp:size=256m,mode=1777
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  stop_grace_period: 30s
+
 services:
   postgres:
     image: postgres:16.10-alpine
@@ -38,6 +91,14 @@ services:
       - ./drizzle/0025_generated_content_derivatives.sql:/docker-entrypoint-initdb.d/34-generated-content-derivatives.sql:ro
       - ./drizzle/0026_audit_trusted_timestamp.sql:/docker-entrypoint-initdb.d/35-audit-trusted-timestamp.sql:ro
       - ./drizzle/0027_data_lineage_deletion_proofs.sql:/docker-entrypoint-initdb.d/36-data-lineage-deletion-proofs.sql:ro
+      - ./drizzle/0028_secure_memory_layers.sql:/docker-entrypoint-initdb.d/37-secure-memory-layers.sql:ro
+      - ./drizzle/0029_action_firewall.sql:/docker-entrypoint-initdb.d/38-action-firewall.sql:ro
+      - ./drizzle/0030_guard_resource_control.sql:/docker-entrypoint-initdb.d/39-guard-resource-control.sql:ro
+      - ./drizzle/0031_immutable_evaluation_attempts.sql:/docker-entrypoint-initdb.d/40-immutable-evaluation-attempts.sql:ro
+      - ./drizzle/0032_tool_supply_chain_admission.sql:/docker-entrypoint-initdb.d/41-tool-supply-chain-admission.sql:ro
+      - ./drizzle/0033_operational_security_domains.sql:/docker-entrypoint-initdb.d/42-operational-security-domains.sql:ro
+      - ./drizzle/0034_security_scanning.sql:/docker-entrypoint-initdb.d/43-security-scanning.sql:ro
+      - ./drizzle/0035_guard_quota_ledger.sql:/docker-entrypoint-initdb.d/44-guard-quota-ledger.sql:ro
     ports:
       - "127.0.0.1:${DB_PORT:-5434}:5432"
     healthcheck:
@@ -49,37 +110,54 @@ services:
     networks: [guardllm-network]
     security_opt: [no-new-privileges:true]
 
+  media-analyzer:
+    image: guardllm-r0-media-analyzer:latest
+    build:
+      context: .
+      dockerfile: services/media-analyzer/Dockerfile
+    restart: unless-stopped
+    init: true
+    environment:
+      NODE_ENV: production
+      ANALYZER_SHARED_TOKEN: "${ANALYZER_SHARED_TOKEN:?ANALYZER_SHARED_TOKEN is required}"
+      ANALYZER_OBJECT_STORE_HOSTS: "${ANALYZER_OBJECT_STORE_HOSTS:-}"
+      ANALYZER_MAX_IN_FLIGHT: "${ANALYZER_MAX_IN_FLIGHT:-4}"
+    networks: [guardllm-network]
+    read_only: true
+    tmpfs:
+      - /tmp:size=512m,mode=1777
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:8090/health/live').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
   app:
+    image: guardllm-r0-app:latest
     build:
       context: .
       dockerfile: Dockerfile
+      target: runner
     restart: unless-stopped
     init: true
     depends_on:
       postgres:
         condition: service_healthy
+      media-analyzer:
+        condition: service_started
     environment:
-      DATABASE_URL: "postgres://${DB_USER:-guardllm}:${DB_PASSWORD:?DB_PASSWORD is required}@postgres:5432/${DB_NAME:-guardllm}"
+      <<: *runtime-environment
       PORT: 5000
-      NODE_ENV: production
-      JWT_SECRET: "${JWT_SECRET:?JWT_SECRET is required}"
-      SECRET_MASTER_KEY: "${SECRET_MASTER_KEY:?SECRET_MASTER_KEY is required}"
-      SECRET_MASTER_KEY_ID: "${SECRET_MASTER_KEY_ID:-local-v1}"
-      CONTENT_HASH_KEY: "${CONTENT_HASH_KEY:?CONTENT_HASH_KEY is required}"
-      AUDIT_CHAIN_KEY: "${AUDIT_CHAIN_KEY:?AUDIT_CHAIN_KEY is required}"
-      AUDIT_CHAIN_KEY_ID: "${AUDIT_CHAIN_KEY_ID:-audit-hmac-v1}"
-      PASSWORD_MAX_AGE_DAYS: "${PASSWORD_MAX_AGE_DAYS:-90}"
-      CONTENT_MARKING_KEY: "${CONTENT_MARKING_KEY:?CONTENT_MARKING_KEY is required}"
-      CONTENT_MARKING_KEY_ID: "${CONTENT_MARKING_KEY_ID:-content-mark-hmac-v1}"
-      CONTENT_MARKING_PROVIDER_CODE: "${CONTENT_MARKING_PROVIDER_CODE:?CONTENT_MARKING_PROVIDER_CODE is required}"
-      METRICS_BEARER_TOKEN: "${METRICS_BEARER_TOKEN:?METRICS_BEARER_TOKEN is required}"
-      EXPORT_APPROVAL_REQUIRED: "${EXPORT_APPROVAL_REQUIRED:-true}"
-      RAW_CONTENT_STORAGE_ENABLED: "${RAW_CONTENT_STORAGE_ENABLED:-false}"
-      RAW_CONTENT_RETENTION_DAYS: "${RAW_CONTENT_RETENTION_DAYS:-7}"
-      PROVIDER_ALLOWED_HOSTS: "${PROVIDER_ALLOWED_HOSTS:-}"
-      PROVIDER_ALLOWED_PRIVATE_HOSTS: "${PROVIDER_ALLOWED_PRIVATE_HOSTS:-}"
+      SESSION_COOKIE_SECURE: "${SESSION_COOKIE_SECURE:-false}"
     ports:
-      - "${APP_PORT:-58082}:5000"
+      - "127.0.0.1:${APP_PORT:-58082}:5000"
     networks: [guardllm-network]
     read_only: true
     tmpfs:
@@ -97,6 +175,47 @@ services:
       retries: 5
       start_period: 30s
     stop_grace_period: 30s
+
+  evaluation-worker:
+    <<: *worker-service
+    command: ["node", "--import", "tsx", "scripts/run-worker.mjs", "evaluation"]
+
+  security-scan-worker:
+    <<: *worker-service
+    command: ["node", "--import", "tsx", "scripts/run-worker.mjs", "security-scan"]
+
+  artifact-worker:
+    <<: *worker-service
+    command: ["node", "--import", "tsx", "scripts/run-worker.mjs", "artifact"]
+
+  multimodal-worker:
+    <<: *worker-service
+    command: ["node", "--import", "tsx", "scripts/run-worker.mjs", "multimodal"]
+
+  media-worker:
+    <<: *worker-service
+    command: ["node", "--import", "tsx", "scripts/run-worker.mjs", "media"]
+
+  content-marking-worker:
+    <<: *worker-service
+    command: ["node", "--import", "tsx", "scripts/run-worker.mjs", "content-marking"]
+
+  rag-worker:
+    <<: *worker-service
+    command: ["node", "--import", "tsx", "scripts/run-worker.mjs", "rag"]
+
+  callback-worker:
+    <<: *worker-service
+    command: ["node", "--import", "tsx", "scripts/run-worker.mjs", "callback"]
+
+  audit-export-worker:
+    <<: *worker-service
+    command: ["node", "--import", "tsx", "scripts/run-worker.mjs", "audit-export"]
+
+  audit-timestamp-worker:
+    <<: *worker-service
+    command: ["node", "--import", "tsx", "scripts/run-worker.mjs", "audit-timestamp"]
+
 
 volumes:
   postgres_data:

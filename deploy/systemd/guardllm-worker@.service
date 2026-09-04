@@ -7,7 +7,7 @@ Wants=network-online.target
 Type=simple
 EnvironmentFile=/etc/guardllm/runtime.env
 ExecStartPre=/usr/local/libexec/guardllm-verify-image worker
-ExecStart=/usr/bin/podman run --rm --name guardllm-worker-%i --network guardllm --read-only --cap-drop ALL --security-opt no-new-privileges --tmpfs /tmp:rw,noexec,nosuid,size=1g --env-file /etc/guardllm/runtime.env ${GUARDLLM_WORKER_IMAGE} pnpm %i:worker
+ExecStart=/usr/bin/podman run --rm --name guardllm-worker-%i --network guardllm --read-only --cap-drop ALL --security-opt no-new-privileges --tmpfs /tmp:rw,noexec,nosuid,size=1g --env-file /etc/guardllm/runtime.env ${GUARDLLM_WORKER_IMAGE} node --import tsx scripts/run-worker.mjs %i
 ExecStop=/usr/bin/podman stop --time 45 guardllm-worker-%i
 Restart=always
 RestartSec=5

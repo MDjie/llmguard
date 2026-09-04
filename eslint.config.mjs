@@ -50,6 +50,8 @@ const eslintConfig = defineConfig([
     'coverage/**',
     'playwright-report/**',
     'test-results/**',
+    '.tmp/**',
+    '.artifact-build/**',
     // Script files (CommonJS):
     'scripts/**/*.js',
   ]),

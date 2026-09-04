@@ -1,14 +1,14 @@
 {
   "schemaVersion": "1.0",
-  "generatedAt": "2026-09-04T04:31:51.689Z",
+  "generatedAt": "2026-09-04T05:42:38.923Z",
   "reportType": "VERSION_B_SOFTWARE_BASELINE",
   "status": "SOFTWARE_BASELINE_VERIFIED",
   "targetAcceptanceStatus": "BLOCKED_EXTERNAL",
   "targetClaimsUnlocked": false,
   "source": {
-    "commit": "f7fb8a0cca3f8f35932ba4a98ddff79223a5b6dc",
-    "workingTreeStatus": "CLEAN",
-    "evidenceSetDigest": "851132360ef93cfca997880f01be9c841162d091205330adf7bf6254ee31d0cc"
+    "commit": "212c254078feaef3bd0e692831e7c07f470ff846",
+    "workingTreeStatus": "DIRTY",
+    "evidenceSetDigest": "037655c9c80e3137b1daeeb26291b96046713d5da6f8804ddb4023e396d71eb9"
   },
   "checks": [
     {
@@ -16,7 +16,7 @@
       "command": "E:\\CLAUDE\\node.exe C:\\Users\\ROG\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\node_modules\\pnpm\\bin\\pnpm.mjs appliance:contracts:check",
       "status": "PASSED",
       "exitCode": 0,
-      "durationMs": 440,
+      "durationMs": 478,
       "outputSha256": "02221437c5f9c78d420dd42cf360dd19831e5cf963b2ea0de3a96b7ff0ff2d83",
       "outputTail": [
         "Appliance contract outputs are current (source b10daf922dd2098768c989fea3284fa56fc6ebacadb8d35520c6fcec29f5a080)",
@@ -29,7 +29,7 @@
       "command": "E:\\CLAUDE\\node.exe C:\\Users\\ROG\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\node_modules\\pnpm\\bin\\pnpm.mjs appliance:plan-check",
       "status": "PASSED",
       "exitCode": 0,
-      "durationMs": 377,
+      "durationMs": 367,
       "outputSha256": "c48fb2976d244336c43f22583007eb558e154d07b554c5889f79ea1734e280ef",
       "outputTail": [
         "{\"status\":\"VALID\",\"environment\":\"BLOCKED_EXTERNAL\",\"bomComponents\":11,\"topologyModes\":4,\"metrics\":11,\"workPackages\":13}",
@@ -41,7 +41,7 @@
       "command": "E:\\CLAUDE\\node.exe C:\\Users\\ROG\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\node_modules\\pnpm\\bin\\pnpm.mjs ts-check",
       "status": "PASSED",
       "exitCode": 0,
-      "durationMs": 10949,
+      "durationMs": 2998,
       "outputSha256": "29c5ee0f6b0b20dbb259b99d01276198c3d28190090706394608d4deda6d2c0b",
       "outputTail": [
         "$ tsc -p tsconfig.json"
@@ -52,21 +52,21 @@
       "command": "E:\\CLAUDE\\node.exe C:\\Users\\ROG\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\node_modules\\pnpm\\bin\\pnpm.mjs exec vitest --config vitest.config.mts --run tests/appliance tests/contracts/appliance-contracts.test.mjs tests/acceptance/appliance-plan.test.mjs tests/artifacts/security-gate.test.ts",
       "status": "PASSED",
       "exitCode": 0,
-      "durationMs": 3061,
-      "outputSha256": "87bf146c7711c17940985665285dc649497911c8caecd35c8370d7dcefded368",
+      "durationMs": 2609,
+      "outputSha256": "6830fc6c67b10bd1e673623d598ebf9984d705e6cbd5625847bf85ea24b93a7b",
       "outputTail": [
         " ✓ tests/appliance/pal-hal.test.ts (3 tests) 4ms",
-        " ✓ tests/appliance/guard-runtime-adapter.test.ts (5 tests) 8ms",
-        " ✓ tests/appliance/system-update.test.ts (5 tests) 8ms",
-        " ✓ tests/appliance/pal-v2.test.ts (6 tests) 8ms",
-        " ✓ tests/appliance/virtual-lab.test.ts (5 tests) 14ms",
-        " ✓ tests/appliance/inspection-fabric.test.ts (6 tests) 17ms",
-        " ✓ tests/appliance/evidence-file-store.test.ts (4 tests) 92ms",
+        " ✓ tests/appliance/pal-v2.test.ts (6 tests) 5ms",
+        " ✓ tests/appliance/guard-runtime-adapter.test.ts (5 tests) 6ms",
+        " ✓ tests/appliance/system-update.test.ts (5 tests) 6ms",
+        " ✓ tests/appliance/virtual-lab.test.ts (5 tests) 13ms",
+        " ✓ tests/appliance/inspection-fabric.test.ts (6 tests) 14ms",
+        " ✓ tests/appliance/evidence-file-store.test.ts (4 tests) 66ms",
         "",
         " Test Files  17 passed (17)",
         "      Tests  89 passed (89)",
-        "   Start at  12:31:49",
-        "   Duration  2.20s (transform 2.40s, setup 0ms, import 16.37s, tests 244ms, environment 2ms)"
+        "   Start at  13:42:36",
+        "   Duration  1.93s (transform 2.19s, setup 0ms, import 13.67s, tests 201ms, environment 2ms)"
       ]
     }
   ],
@@ -98,8 +98,8 @@
     },
     {
       "path": "acceptance/appliance/generated/software-baseline-evidence.json",
-      "bytes": 13410,
-      "sha256": "2394efa96e2f1c3141f169df4de351c8425586c1ad6397f2cbc138f1424a755d"
+      "bytes": 13770,
+      "sha256": "aad7d5b14bf0022f87c4196df5a720015af11c43d97bfdc37e5b10a19ca89a01"
     },
     {
       "path": "acceptance/appliance/metrics.json",
@@ -113,8 +113,8 @@
     },
     {
       "path": "docs/architecture/adr-004-version-b-data-plane-selection.md",
-      "bytes": 2775,
-      "sha256": "130093295bd819a8655452a5f7fcf77d4c8222918763505d10ed47ef1c2625ea"
+      "bytes": 5041,
+      "sha256": "498c5aaf6b525fdb226cd700288c708086fde7e60012b2be719ea022dae3b2d3"
     },
     {
       "path": "packages/contracts-appliance/generated/manifest.json",

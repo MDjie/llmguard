@@ -4,6 +4,7 @@ import { getDefaultPolicyId } from '@/lib/detection/dynamic-engine';
 import { detectWithGuardEngineV2 } from '@/lib/detection/v2-compat';
 import { DetectionPolicyError } from '@/lib/detection/errors';
 import { requireTenantContext } from '@/lib/tenancy';
+import { experimentalLabsEnabled } from '@/lib/product-features';
 
 const bodySchema = z
   .object({
@@ -33,6 +34,15 @@ export const POST = withApiSecurity(
     },
   },
   async ({ body, request, principal }) => {
+    if (!experimentalLabsEnabled()) {
+      throw new ApiProblem({
+        status: 404,
+        code: 'EXPERIMENTAL_FEATURE_DISABLED',
+        title: 'Not found',
+        detail: 'The legacy simulation API is disabled.',
+      });
+    }
+
     try {
       const { text, policyId, direction } = body;
       const scope = requireTenantContext(principal);

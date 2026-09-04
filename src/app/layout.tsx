@@ -1,8 +1,10 @@
 import type { Metadata } from 'next';
-import { Inspector } from 'react-dev-inspector';
 import './globals.css';
 import { AppLayout } from '@/components/layout/app-layout';
 import { Toaster } from '@/components/ui/sonner';
+import { experimentalLabsEnabled } from '@/lib/product-features';
+
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: {
@@ -10,7 +12,7 @@ export const metadata: Metadata = {
     template: '%s | 大模型安全护栏检测平台',
   },
   description:
-    '多模型可接入的大模型安全护栏检测与评估平台，支持输入输出双向检测、5大风险维度识别、策略配置、A/B对比和多模型安全评测。',
+    '企业级大模型安全护栏检测与治理平台，支持输入输出双向检测、风险识别、策略配置、发布门禁与审计追踪。',
   keywords: [
     '大模型安全',
     '护栏检测',
@@ -18,11 +20,10 @@ export const metadata: Metadata = {
     'PII检测',
     '安全护栏',
     'LLM安全',
-    '多模型评测',
-    'A/B测试',
+    '策略治理',
+    '发布门禁',
   ],
   authors: [{ name: 'Guoshun Tech', url: 'https://guoshun.com' }],
-  generator: 'Coze Code',
 };
 
 export default function RootLayout({
@@ -30,13 +31,12 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const isDev = process.env.COZE_PROJECT_ENV === 'DEV';
-
   return (
     <html lang="zh-CN">
       <body className={`antialiased`}>
-        {isDev && <Inspector />}
-        <AppLayout>{children}</AppLayout>
+        <AppLayout legacyDemosEnabled={experimentalLabsEnabled()}>
+          {children}
+        </AppLayout>
         <Toaster richColors closeButton />
       </body>
     </html>

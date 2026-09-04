@@ -3,7 +3,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { generateKeyPairSync } from 'node:crypto';
 import { afterEach, describe, expect, it } from 'vitest';
-import { EvidenceFileStore, EvidenceWal } from '@/lib/appliance';
+import { EvidenceFileStore } from '@/lib/appliance';
+import { EvidenceWal } from '@/lib/appliance/evidence-wal';
 
 const directories: string[] = [];
 

@@ -1,12 +1,12 @@
 import { generateKeyPairSync } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import {
-  AbSystemUpdater,
   createHealthSnapshot,
   signSystemImageManifest,
   verifySystemImageManifest,
   type SystemImageManifest,
 } from '@/lib/appliance';
+import { AbSystemUpdater } from '@/lib/appliance/system-update';
 
 const clock = { value: 10_000 };
 const keys = generateKeyPairSync('ed25519');

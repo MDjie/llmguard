@@ -7,7 +7,10 @@ Wants=network-online.target
 Type=simple
 EnvironmentFile=/etc/guardllm/runtime.env
 ExecStartPre=/usr/local/libexec/guardllm-verify-image appliance-agent
-ExecStart=/usr/bin/podman run --rm --name guardllm-appliance-agent --network none --read-only --cap-drop ALL --security-opt no-new-privileges --tmpfs /tmp:rw,noexec,nosuid,size=64m --env-file /etc/guardllm/runtime.env -v /etc/guardllm:/etc/guardllm:ro,Z -v /var/lib/guardllm:/var/lib/guardllm:rw,Z ${GUARDLLM_APPLIANCE_AGENT_IMAGE}
+# Host networking is intentional: the agent rejects non-loopback listenHost values,
+# so its API is reachable from this host only. --network none would trap loopback
+# inside the container and make the management API unreachable from the host.
+ExecStart=/usr/bin/podman run --rm --name guardllm-appliance-agent --network host --read-only --cap-drop ALL --security-opt no-new-privileges --tmpfs /tmp:rw,noexec,nosuid,size=64m --env-file /etc/guardllm/runtime.env -v /etc/guardllm:/etc/guardllm:ro,Z -v /var/lib/guardllm:/var/lib/guardllm:rw,Z ${GUARDLLM_APPLIANCE_AGENT_IMAGE}
 ExecStop=/usr/bin/podman stop --time 30 guardllm-appliance-agent
 Restart=always
 RestartSec=5

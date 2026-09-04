@@ -7,14 +7,13 @@ import type {
   NetworkObservation,
 } from '../../packages/contracts-appliance/generated/typescript/appliance-v1';
 import {
-  EvidenceWal,
-  FastPathReferenceModel,
   InspectionFabric,
-  VirtualApplianceLab,
   verifyEnforcementDecisionToken,
-  verifyEvidenceRecords,
   type InspectionEngineAdapter,
 } from '@/lib/appliance';
+import { EvidenceWal, verifyEvidenceRecords } from '@/lib/appliance/evidence-wal';
+import { FastPathReferenceModel } from '@/lib/appliance/fast-path-reference';
+import { VirtualApplianceLab } from '@/lib/appliance/virtual-lab';
 
 const NOW = 10_000;
 const decisionKeys = generateKeyPairSync('ed25519');

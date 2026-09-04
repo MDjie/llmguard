@@ -86,7 +86,7 @@ async function getLegacyWhitelist(
       return NextResponse.json({ 
         success: true, 
         data: [],
-        message: '白名单规则为空。请访问 /api/init-database 初始化数据库，或在白名单管理页面添加规则。'
+        message: '白名单规则为空。请确认已执行部署迁移，或在白名单管理页面添加规则。'
       });
     }
 

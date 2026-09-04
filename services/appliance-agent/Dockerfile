@@ -2,6 +2,7 @@ FROM node:24.20.0-alpine AS builder
 RUN corepack enable && corepack prepare pnpm@11.19.0 --activate
 WORKDIR /workspace
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc tsconfig.json ./
+COPY scripts/enforce-pnpm.mjs ./scripts/enforce-pnpm.mjs
 RUN pnpm install --frozen-lockfile
 COPY packages/contracts-appliance packages/contracts-appliance
 COPY src/lib/appliance src/lib/appliance

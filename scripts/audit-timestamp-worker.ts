@@ -10,6 +10,17 @@ const idleMs = Math.max(1_000, Number(process.env.AUDIT_TIMESTAMP_WORKER_IDLE_MS
 const batchSize = Math.max(1, Number(process.env.AUDIT_TIMESTAMP_BATCH_SIZE ?? 20));
 
 async function main(): Promise<void> {
+  if (!process.env.TRUSTED_TIMESTAMP_ENDPOINT?.trim()) {
+    logger.warn('audit.timestamp.worker.disabled', {
+      reason: 'TRUSTED_TIMESTAMP_ENDPOINT is not configured',
+    });
+    if (once) return;
+    while (!stopping) {
+      await new Promise((resolve) => setTimeout(resolve, idleMs));
+    }
+    return;
+  }
+
   do {
     const anchored = await timestampPendingAuditEvents(batchSize);
     if (anchored > 0) logger.info('audit.timestamp.batch.completed', { anchored });

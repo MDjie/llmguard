@@ -1,25 +1,11 @@
-import type { Permission, PlatformRole } from '@/lib/api-security/types';
+import {
+  PLATFORM_PERMISSIONS,
+  type Permission,
+  type PlatformRole,
+} from '@/lib/api-security/types';
 
 const rolePermissions: Readonly<Record<PlatformRole, readonly Permission[]>> = {
-  SYSTEM_ADMIN: [
-    'auth:password:change',
-    'profile:self:write',
-    'iam:users:read',
-    'iam:users:manage',
-    'platform:settings:manage',
-    'tenant:read',
-    'tenant:manage',
-    'application:read',
-    'application:manage',
-    'application:credential:manage',
-    'policy:read',
-    'provider:read',
-    'provider:manage',
-    'provider:test',
-    'guard:use',
-    'data:catalog:read',
-    'data:catalog:manage',
-  ],
+  SYSTEM_ADMIN: PLATFORM_PERMISSIONS,
   SECURITY_ADMIN: [
     'auth:password:change',
     'profile:self:write',

@@ -53,7 +53,9 @@ export type {
   ApplianceEngineRequirement,
   SignedApplianceBundle,
 } from './appliance-bundle';
-export { HaController, WitnessLeaseAuthority } from './ha-controller';
+// The in-memory WitnessLeaseAuthority is a conformance fixture. Consumers that
+// explicitly need it for tests must import it from './ha-controller'.
+export { HaController } from './ha-controller';
 export type {
   HaControllerOptions,
   HaHeartbeat,
@@ -62,16 +64,6 @@ export type {
   HaTransitionReceipt,
   WitnessLease,
 } from './ha-controller';
-export { EvidenceWal, verifyEvidenceRecords } from './evidence-wal';
-export type {
-  EvidenceDomain,
-  EvidenceExportAck,
-  EvidenceExportBatch,
-  EvidenceInput,
-  EvidenceRecordBody,
-  EvidenceWalStatus,
-  SignedEvidenceRecord,
-} from './evidence-wal';
 export {
   signEnforcementDecision,
   verifyEnforcementDecisionToken,
@@ -119,19 +111,7 @@ export type {
   ArtifactReconstructionResult,
   ArtifactReleaseReceipt,
 } from './artifact-isolation';
-export { FastPathReferenceModel } from './fast-path-reference';
-export type {
-  FastPathAclAction,
-  FastPathAclRule,
-  FastPathPolicy,
-  FastPathSnapshot,
-  ReinjectionAuthorization,
-} from './fast-path-reference';
-export {
-  AbSystemUpdater,
-  signSystemImageManifest,
-  verifySystemImageManifest,
-} from './system-update';
+export { signSystemImageManifest, verifySystemImageManifest } from './system-update';
 export type {
   SignedSystemImageManifest,
   SystemImageManifest,
@@ -139,7 +119,8 @@ export type {
   SystemUpdateReceipt,
   SystemUpdateState,
 } from './system-update';
-export { ApplianceBundleRollout } from './bundle-rollout';
+// ApplianceBundleRollout is an in-memory conformance coordinator. Tests and
+// tooling must import it explicitly from './bundle-rollout'.
 export type {
   BundleRolloutPlan,
   BundleRolloutSnapshot,
@@ -147,10 +128,3 @@ export type {
 } from './bundle-rollout';
 export { EvidenceFileStore } from './evidence-file-store';
 export type { EvidenceRecoveryResult } from './evidence-file-store';
-export { VirtualApplianceLab } from './virtual-lab';
-export type {
-  VirtualApplianceLabOptions,
-  VirtualLabFrameResult,
-  VirtualLabOpenResult,
-  VirtualLabSnapshot,
-} from './virtual-lab';

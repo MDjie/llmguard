@@ -57,9 +57,9 @@ const providerTypes = [
 ];
 
 const useCases = [
-  { value: 'target', label: '被测模型', description: '在检测工作台作为被测模型使用' },
-  { value: 'judge', label: '裁判模型', description: '在多模型评测中作为裁判模型使用' },
-  { value: 'both', label: '两者均可', description: '可在检测工作台和多模型评测中使用' },
+  { value: 'target', label: '业务模型', description: '接入安全对话等受控业务调用链' },
+  { value: 'judge', label: '治理模型', description: '用于风险研判与安全治理的辅助决策' },
+  { value: 'both', label: '业务与治理', description: '可同时用于业务模型接入与风险治理' },
   { value: 'ocr', label: 'OCR 模型', description: '仅在文档检测中用于图片文字识别，不可用于其他场景' },
 ];
 
