@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+
 type Labels = Readonly<Record<string, string | number>>;
 
 interface MetricSample {
@@ -17,6 +19,80 @@ const counters = new Map<string, Map<string, MetricSample>>();
 const gauges = new Map<string, Map<string, MetricSample>>();
 const histograms = new Map<string, Map<string, HistogramSample>>();
 const DEFAULT_BUCKETS_MS = [5, 10, 20, 50, 100, 200, 500, 1_000, 2_000, 5_000];
+const MAX_SERIES_PER_FAMILY = 2_048;
+
+export function scopeMetricBucket(value: string): string {
+  const bucket = createHash('sha256').update(value, 'utf8').digest().readUInt16BE(0) % 64;
+  return 'b' + String(bucket).padStart(2, '0');
+}
+
+function boundedRiskCategory(value: string | undefined): string {
+  if (!value) return 'none';
+  const parts = value.toLocaleLowerCase('en-US').split('.').filter(Boolean);
+  const root = parts[0] ?? 'other';
+  const known = new Set([
+    'prompt_injection', 'reasoning_attack', 'resource_abuse', 'insurance', 'illegal_content',
+    'malicious_code', 'adult_content', 'self_harm', 'fraud_scam', 'misinformation',
+    'copyright_risk', 'business_sensitive', 'output', 'pii', 'financial', 'credential',
+    'sensitive_compliance', 'spam_detection', 'ad_detection', 'detector_availability',
+  ]);
+  if (!known.has(root)) return 'custom';
+  return root === 'output' ? parts.slice(0, 2).join('.') || 'output' : root;
+}
+
+function boundedLocale(value: string | undefined): string {
+  const normalized = value?.trim().toLocaleLowerCase('en-US') ?? '';
+  if (normalized.startsWith('zh')) return 'zh';
+  if (normalized.startsWith('en')) return 'en';
+  if (normalized.startsWith('ja')) return 'ja';
+  if (normalized.startsWith('ko')) return 'ko';
+  if (normalized.startsWith('ar')) return 'ar';
+  if (normalized.startsWith('es')) return 'es';
+  if (normalized.startsWith('fr')) return 'fr';
+  return normalized ? 'other' : 'und';
+}
+
+const OUTPUT_DOMAINS = new Set([
+  'output.political', 'output.sexual', 'output.illegal', 'output.credential',
+  'output.privacy', 'output.internal', 'output.insurance',
+]);
+const OUTPUT_INDUSTRIES = new Set([
+  'general', 'insurance', 'banking', 'securities', 'healthcare', 'government',
+  'telecom', 'retail', 'education', 'technology',
+]);
+const OUTPUT_JURISDICTIONS = new Set(['GLOBAL', 'CN', 'HK', 'MO', 'TW', 'US', 'EU', 'UK', 'SG', 'JP']);
+const OUTPUT_ACTIONS = new Set(['ALLOW', 'WARN', 'MASK', 'REWRITE', 'REQUIRE_REVIEW', 'SAFE_RESPONSE', 'BLOCK']);
+
+function boundedOutputDomain(value: string): string {
+  const normalized = value.trim().toLocaleLowerCase('en-US');
+  return OUTPUT_DOMAINS.has(normalized) ? normalized : 'output.custom';
+}
+
+function boundedIndustry(value: string): string {
+  const normalized = value.trim().toLocaleLowerCase('en-US');
+  return OUTPUT_INDUSTRIES.has(normalized) ? normalized : normalized ? 'custom' : 'general';
+}
+
+function boundedJurisdiction(value: string): string {
+  const normalized = value.trim().toLocaleUpperCase('en-US');
+  return OUTPUT_JURISDICTIONS.has(normalized) ? normalized : normalized ? 'OTHER' : 'GLOBAL';
+}
+
+const KNOWN_DLP_ENTITY_TYPES = new Set([
+  'person.name', 'pii.mobile', 'pii.email', 'pii.identity.prc', 'pii.passport',
+  'pii.address', 'customer.number', 'customer.phone', 'insurance.policy_number',
+  'insurance.claim_number', 'insurance.beneficiary', 'insurance.underwriting',
+  'sensitive.health', 'sensitive.medical', 'health.medical', 'financial.bank_card',
+  'financial.account_balance', 'financial.income', 'financial.credit',
+  'financial.payment', 'internal.system_prompt', 'internal.pricing',
+  'internal.unreleased_product', 'internal.rule', 'internal.architecture',
+  'internal.staff',
+]);
+
+function boundedDlpEntityType(value: string): string {
+  const normalized = value.trim().toLocaleLowerCase('en-US');
+  return KNOWN_DLP_ENTITY_TYPES.has(normalized) ? normalized : 'custom';
+}
 
 function normalizedLabels(labels: Labels): Labels {
   return Object.fromEntries(
@@ -43,6 +119,7 @@ function renderLabels(labels: Labels, extra: Labels = {}): string {
 function increment(name: string, labels: Labels, amount = 1): void {
   const key = labelKey(labels);
   const family = counters.get(name) ?? new Map<string, MetricSample>();
+  if (!family.has(key) && family.size >= MAX_SERIES_PER_FAMILY) return;
   const sample = family.get(key) ?? { labels: normalizedLabels(labels), value: 0 };
   sample.value += amount;
   family.set(key, sample);
@@ -51,7 +128,7 @@ function increment(name: string, labels: Labels, amount = 1): void {
 
 export function replaceGauge(name: string, samples: readonly { labels: Labels; value: number }[]): void {
   const family = new Map<string, MetricSample>();
-  for (const item of samples) {
+  for (const item of samples.slice(0, MAX_SERIES_PER_FAMILY)) {
     const labels = normalizedLabels(item.labels);
     family.set(labelKey(labels), { labels, value: Number.isFinite(item.value) ? item.value : 0 });
   }
@@ -61,13 +138,16 @@ export function replaceGauge(name: string, samples: readonly { labels: Labels; v
 function setGauge(name: string, labelsInput: Labels, value: number): void {
   const labels = normalizedLabels(labelsInput);
   const family = gauges.get(name) ?? new Map<string, MetricSample>();
-  family.set(labelKey(labels), { labels, value: Number.isFinite(value) ? value : 0 });
+  const key = labelKey(labels);
+  if (!family.has(key) && family.size >= MAX_SERIES_PER_FAMILY) return;
+  family.set(key, { labels, value: Number.isFinite(value) ? value : 0 });
   gauges.set(name, family);
 }
 
 function observe(name: string, labels: Labels, value: number, buckets = DEFAULT_BUCKETS_MS): void {
   const key = labelKey(labels);
   const family = histograms.get(name) ?? new Map<string, HistogramSample>();
+  if (!family.has(key) && family.size >= MAX_SERIES_PER_FAMILY) return;
   const sample = family.get(key) ?? {
     labels: normalizedLabels(labels),
     buckets: [...buckets],
@@ -112,10 +192,24 @@ export function observeGuardDecision(input: {
   readonly action: string;
   readonly latencyMs: number;
   readonly detectorFailures: number;
+  readonly riskCategory?: string;
+  readonly tenantId?: string;
+  readonly applicationId?: string;
+  readonly locale?: string;
+  readonly modality?: string;
+  readonly policyVersion?: string;
+  readonly degraded?: boolean;
 }): void {
   const labels = {
     direction: input.direction.slice(0, 32),
     action: input.action.slice(0, 16),
+    risk_category: boundedRiskCategory(input.riskCategory),
+    tenant_bucket: input.tenantId ? scopeMetricBucket(input.tenantId) : 'platform',
+    application_bucket: input.applicationId ? scopeMetricBucket(input.applicationId) : 'platform',
+    locale: boundedLocale(input.locale),
+    modality: (input.modality ?? 'TEXT').replace(/[^A-Z_|]/giu, '').slice(0, 48) || 'OTHER',
+    policy_version: (input.policyVersion ?? 'unknown').replace(/[^A-Za-z0-9._-]/gu, '_').slice(0, 32),
+    outcome: input.degraded ? 'degraded' : 'ok',
   };
   increment('guardllm_guard_decisions_total', labels);
   observe('guardllm_guard_decision_duration_ms', labels, input.latencyMs);
@@ -236,23 +330,81 @@ export function observeOutputControl(input: {
   readonly recheck: 'completed' | 'failed' | 'not_required';
   readonly latencyMs: number;
   readonly entityTypes: readonly string[];
+  readonly templateFallback?: boolean;
 }): void {
+  const normalizedAction = input.action.trim().toLocaleUpperCase('en-US');
   const labels = {
-    domain: input.domain.slice(0, 64),
-    action: input.action.slice(0, 24),
-    locale: input.locale.slice(0, 32),
-    jurisdiction: input.jurisdiction.slice(0, 64),
-    industry: input.industry.slice(0, 64),
+    domain: boundedOutputDomain(input.domain),
+    action: OUTPUT_ACTIONS.has(normalizedAction) ? normalizedAction : 'OTHER',
+    locale: boundedLocale(input.locale),
+    jurisdiction: boundedJurisdiction(input.jurisdiction),
+    industry: boundedIndustry(input.industry),
     recheck: input.recheck,
   };
   increment('guardllm_output_control_decisions_total', labels);
   observe('guardllm_output_control_duration_ms', labels, input.latencyMs);
+  if (input.templateFallback) {
+    increment('guardllm_template_fallback_total', { action: labels.action, domain: labels.domain });
+  }
+  if (input.recheck === 'failed') {
+    increment('guardllm_output_recheck_failures_total', { action: labels.action, domain: labels.domain });
+  }
   for (const entityType of new Set(input.entityTypes)) {
     increment('guardllm_dlp_entities_total', {
-      entity_type: entityType.slice(0, 128),
+      entity_type: boundedDlpEntityType(entityType),
       action: labels.action,
     });
   }
+}
+
+export function observeShadowComparison(input: {
+  readonly actionChanged: boolean;
+  readonly activeHit: boolean;
+  readonly shadowHit: boolean;
+  readonly latencyDeltaMs: number;
+}): void {
+  const labels = {
+    action_changed: input.actionChanged ? 'yes' : 'no',
+    hit_diff: input.activeHit === input.shadowHit ? 'same' : input.shadowHit ? 'shadow_only' : 'active_only',
+  };
+  increment('guardllm_shadow_comparisons_total', labels);
+  observe('guardllm_shadow_latency_delta_ms', labels, Math.abs(input.latencyDeltaMs));
+}
+
+export function observePolicyBundleGeneration(input: {
+  readonly generation: number;
+  readonly tenantId: string;
+  readonly applicationId: string;
+}): void {
+  setGauge('guardllm_policy_bundle_generation', {
+    tenant_bucket: scopeMetricBucket(input.tenantId),
+    application_bucket: scopeMetricBucket(input.applicationId),
+  }, input.generation);
+}
+
+export function observeHumanReview(input: {
+  readonly workflow: 'badcase' | 'security_scan' | 'content_access';
+  readonly agreement: 'agree' | 'disagree' | 'pending';
+  readonly cycleMs?: number;
+}): void {
+  const labels = { workflow: input.workflow, agreement: input.agreement };
+  increment('guardllm_human_review_total', labels);
+  if (input.cycleMs !== undefined) {
+    observe('guardllm_human_review_cycle_ms', labels, input.cycleMs, [1_000, 10_000, 60_000, 300_000, 3_600_000, 86_400_000]);
+  }
+}
+
+export type SafetyAlertType =
+  | 'POLICY_BUNDLE_MISSING'
+  | 'POLICY_SIGNATURE_INVALID'
+  | 'POLICY_DIGEST_MISMATCH'
+  | 'POLICY_PUBLIC_KEY_MISMATCH'
+  | 'AUDIT_CHAIN_BREAK'
+  | 'MANDATORY_DENY_BYPASS'
+  | 'STREAM_COMMIT_GATE_FAILURE';
+
+export function observeSafetyAlert(type: SafetyAlertType): void {
+  increment('guardllm_safety_alerts_total', { alert_type: type, priority: 'high' });
 }
 
 export function renderPrometheusMetrics(): string {

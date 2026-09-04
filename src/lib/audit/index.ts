@@ -6,3 +6,4 @@ export * from './export-config';
 export * from './exporters';
 export * from './dispatcher';
 export * from './reporting';
+export * from './verification';

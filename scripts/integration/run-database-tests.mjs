@@ -28,6 +28,7 @@ const sqlFiles = process.argv.includes('--policy-governance-schema-only')
       'drizzle/0037_targeted_whitelist_rules.sql',
       'drizzle/0038_policy_governance.sql',
       'drizzle/0040_output_control_governance.sql',
+      'drizzle/0041_policy_operations_governance.sql',
     ]
   : allSqlFiles;
 const client = new pg.Client({
@@ -71,6 +72,7 @@ try {
     'response_templates',
     'detector_calibrations',
     'badcase_feedback',
+    'content_access_requests',
   ];
   const relations = await client.query(
     'select tablename from pg_tables where schemaname = current_schema() and tablename = any($1::text[])',
@@ -91,6 +93,7 @@ try {
     'keyword_rules_release_scope_fk',
     'detector_calibrations_application_scope_fk',
     'badcase_feedback_application_scope_fk',
+    'content_access_requests_application_scope_fk',
   ];
   const scopeConstraints = await client.query(
     'select conname from pg_constraint where conname = any($1::text[])',
@@ -218,6 +221,100 @@ try {
     }
   }
 
+  const requiredP5Columns = [
+    ['content_access_requests', 'source_digest'],
+    ['content_access_requests', 'purpose'],
+    ['content_access_requests', 'reviewed_by'],
+    ['content_access_requests', 'reviewed_at'],
+    ['content_access_requests', 'expires_at'],
+    ['content_access_requests', 'used_at'],
+  ];
+  const p5Columns = await client.query(
+    `select table_name, column_name
+       from information_schema.columns
+      where table_schema = current_schema()
+        and table_name = 'content_access_requests'
+        and column_name = any($1::text[])`,
+    [requiredP5Columns.map(([, column]) => column)],
+  );
+  const foundP5Columns = new Set(p5Columns.rows.map(
+    (row) => `${String(row.table_name)}:${String(row.column_name)}`,
+  ));
+  const missingP5Columns = requiredP5Columns.filter(
+    ([table, column]) => !foundP5Columns.has(`${table}:${column}`),
+  );
+  if (missingP5Columns.length > 0) {
+    throw new Error(`Missing P5 migrated columns: ${missingP5Columns
+      .map(([table, column]) => `${table}.${column}`).join(', ')}`);
+  }
+
+  const requiredP5Constraints = [
+    'content_access_requests_resource_ck',
+    'content_access_requests_purpose_ck',
+    'content_access_requests_digest_ck',
+    'content_access_requests_status_ck',
+    'content_access_requests_review_ck',
+    'content_access_requests_expiry_ck',
+    'content_access_requests_use_ck',
+  ];
+  const p5Constraints = await client.query(
+    'select conname from pg_constraint where conname = any($1::text[])',
+    [requiredP5Constraints],
+  );
+  const foundP5Constraints = new Set(p5Constraints.rows.map((row) => String(row.conname)));
+  const missingP5Constraints = requiredP5Constraints.filter(
+    (name) => !foundP5Constraints.has(name),
+  );
+  if (missingP5Constraints.length > 0) {
+    throw new Error(`Missing P5 constraints: ${missingP5Constraints.join(', ')}`);
+  }
+
+  const requiredP5Indexes = [
+    'dictionary_releases_one_active_uq',
+    'response_templates_one_active_selector_uq',
+    'content_access_requests_pending_uq',
+  ];
+  const p5Indexes = await client.query(
+    'select indexname, indexdef from pg_indexes where schemaname = current_schema() and indexname = any($1::text[])',
+    [requiredP5Indexes],
+  );
+  const p5IndexDefinitions = new Map(p5Indexes.rows.map(
+    (row) => [String(row.indexname), String(row.indexdef)],
+  ));
+  const missingP5Indexes = requiredP5Indexes.filter((name) => !p5IndexDefinitions.has(name));
+  if (missingP5Indexes.length > 0) {
+    throw new Error(`Missing P5 indexes: ${missingP5Indexes.join(', ')}`);
+  }
+  for (const name of requiredP5Indexes) {
+    if (!p5IndexDefinitions.get(name)?.includes(' WHERE ')) {
+      throw new Error(`P5 governance index must be partial: ${name}`);
+    }
+  }
+
+  const p5IdentityTrigger = await client.query(
+    `select 1
+       from pg_trigger trigger
+       join pg_class relation on relation.oid = trigger.tgrelid
+      where relation.relname = 'content_access_requests'
+        and trigger.tgname = 'content_access_requests_identity_immutable'
+        and not trigger.tgisinternal`,
+  );
+  if (p5IdentityTrigger.rowCount !== 1) {
+    throw new Error('P5 content-access identity trigger is missing');
+  }
+
+  const forbiddenP5Columns = await client.query(
+    `select column_name
+       from information_schema.columns
+      where table_schema = current_schema()
+        and table_name = 'content_access_requests'
+        and column_name = any($1::text[])`,
+    [['raw_content', 'raw_text', 'input_text', 'output_text', 'payload', 'evidence']],
+  );
+  if (forbiddenP5Columns.rowCount !== 0) {
+    throw new Error('P5 content-access requests persist forbidden raw evidence');
+  }
+
   const appendOnlyTrigger = await client.query(
     `select 1
        from pg_trigger trigger
@@ -244,6 +341,11 @@ try {
     p4SchemaColumns: requiredP4Columns.length,
     p4SchemaConstraints: 1,
     p4SelectorIndex: 'PASS',
+    p5SchemaColumns: requiredP5Columns.length,
+    p5SchemaConstraints: requiredP5Constraints.length,
+    p5GovernanceIndexes: requiredP5Indexes.length,
+    p5ContentAccessIdentity: 'PASS',
+    p5RawEvidencePersistence: 'PASS',
   }) + '\n');
 } finally {
   await client.end();

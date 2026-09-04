@@ -4,6 +4,7 @@ import { ApiProblem } from '@/lib/api-security';
 import { scopePredicate, type TenantContext } from '@/lib/tenancy';
 import { db } from '@/storage/database/shared/db';
 import { incidentTransitions, securityIncidents } from '@/storage/database/shared/schema';
+import { projectIncidentWithoutRawEvidence } from './projection';
 import { assertIncidentTransition, IncidentTransitionError, incidentSlaBreached, type IncidentStatus } from './state-machine';
 
 export interface CreateIncidentInput {
@@ -70,7 +71,7 @@ export async function createIncident(scope: TenantContext, input: CreateIncident
     const [incident] = await transaction.insert(securityIncidents).values(records.incident).returning();
     await transaction.insert(incidentTransitions).values(records.transition);
     if (!incident) throw new Error('Incident insert returned no row');
-    return incident;
+    return projectIncidentWithoutRawEvidence(incident);
   });
 }
 
@@ -90,7 +91,7 @@ export async function listIncidents(scope: TenantContext, input: {
   ]);
   const now = new Date();
   return {
-    items: items.map((item) => ({ ...item, slaBreached: incidentSlaBreached(item.status as IncidentStatus, item.slaDueAt, now) })),
+    items: items.map((item) => projectIncidentWithoutRawEvidence({ ...item, slaBreached: incidentSlaBreached(item.status as IncidentStatus, item.slaDueAt, now) })),
     total: Number(countRows[0]?.count ?? 0),
   };
 }
@@ -105,11 +106,11 @@ export async function getIncident(scope: TenantContext, incidentId: string) {
     scopePredicate(incidentTransitions, scope),
     eq(incidentTransitions.incidentId, incidentId),
   )).orderBy(incidentTransitions.version);
-  return {
+  return projectIncidentWithoutRawEvidence({
     ...incident,
     slaBreached: incidentSlaBreached(incident.status as IncidentStatus, incident.slaDueAt),
     transitions,
-  };
+  });
 }
 
 export async function transitionIncident(scope: TenantContext, input: {
@@ -173,7 +174,7 @@ export async function transitionIncident(scope: TenantContext, input: {
         version,
         createdAt: now,
       });
-      return updated;
+      return projectIncidentWithoutRawEvidence(updated);
     });
   } catch (error) {
     if (error instanceof IncidentTransitionError) {

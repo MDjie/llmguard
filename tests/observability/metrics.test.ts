@@ -27,7 +27,8 @@ describe('bounded Prometheus metrics', () => {
     expect(output).toContain('guardllm_guard_decisions_total');
     expect(output).toContain('guardllm_required_detector_failures_total');
     expect(output).toContain('guardllm_guard_jobs_pending{job_type="media"} 3');
-    expect(output).not.toContain('tenant');
+    expect(output).toContain('tenant_bucket="platform"');
+    expect(output).not.toContain('customer-tenant-id');
   });
 
   it('exports dependency and audit-delivery failure signals without subject identifiers', () => {

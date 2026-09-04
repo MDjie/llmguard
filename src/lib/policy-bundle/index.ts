@@ -77,3 +77,5 @@ export {
   recordPolicyIntegrityFailure,
 } from './integrity-events';
 export type { PolicyIntegrityFailure, PolicyIntegrityFailureInput } from './integrity-events';
+export { reconcilePolicyReleaseHealth } from './rollout';
+export type { ReleaseHealthReconciliationInput } from './rollout';

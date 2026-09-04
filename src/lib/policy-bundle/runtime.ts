@@ -136,6 +136,7 @@ const payloadSchema = z.object({
     dictionaryId: z.string(),
     version: z.string(),
     state: z.enum(['reviewed', 'shadow', 'canary', 'active']),
+    layer: z.enum(['PLATFORM_REDLINE', 'INDUSTRY', 'TENANT', 'APPLICATION', 'INCIDENT']).optional(),
     manifestHash: sha256Schema,
     contentHash: sha256Schema,
     signatureAlgorithm: z.literal('Ed25519'),
@@ -320,6 +321,23 @@ export async function loadRuntimePolicyBundle(
         );
       }
     }
+    if (error instanceof PolicyBundleRuntimeError) {
+      const failure = error.code === 'POLICY_BUNDLE_MISSING' || error.code === 'POLICY_BINDING_MISSING'
+        ? 'POLICY_BUNDLE_MISSING'
+        : error.code === 'POLICY_SIGNATURE_INVALID'
+          ? 'POLICY_SIGNATURE_INVALID'
+          : error.code === 'POLICY_SIGNING_KEY_UNTRUSTED'
+            ? 'POLICY_PUBLIC_KEY_MISMATCH'
+            : undefined;
+      if (failure) {
+        await recordPolicyIntegrityFailure({
+          failure,
+          scope,
+          bundleId: requestedBundleId,
+          detailCode: error.code,
+        }).catch(() => undefined);
+      }
+    }
     throw error;
   }
 }
@@ -385,7 +403,7 @@ export async function loadVerifiedPolicyBundle(
     signature: row.signature,
   }, publicKey)) {
     await recordPolicyIntegrityFailure({
-      failure: 'POLICY_DIGEST_MISMATCH',
+      failure: 'POLICY_SIGNATURE_INVALID',
       scope,
       bundleId: row.id,
       detailCode: 'POLICY_SIGNATURE_INVALID',

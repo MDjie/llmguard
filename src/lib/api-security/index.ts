@@ -22,3 +22,4 @@ export type {
   RateLimitPolicy,
   RequestContext,
 } from './types';
+export { requirePermission } from './require-permission';

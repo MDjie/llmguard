@@ -127,6 +127,7 @@ export interface DetectorDagSpec {
 export interface GuardEnginePolicy {
   readonly id: string;
   readonly bundleId: string;
+  readonly policyVersion?: string;
   readonly warnThreshold: number;
   readonly blockThreshold: number;
   readonly failClosedOnRequiredDetectorFailure: boolean;

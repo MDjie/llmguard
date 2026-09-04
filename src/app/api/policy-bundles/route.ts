@@ -5,7 +5,7 @@ import {
   listPolicyBundlesQuerySchema,
   transitionPolicyBundleSchema,
 } from '@/contracts/http/policy-bundles';
-import { ApiProblem, withApiSecurity } from '@/lib/api-security';
+import { ApiProblem, requirePermission, withApiSecurity, type Permission } from '@/lib/api-security';
 import {
   compileAndStorePolicyBundle,
   PolicyBundleTransitionError,
@@ -62,7 +62,7 @@ export const GET = withApiSecurity(
 
 export const POST = withApiSecurity(
   {
-    permission: 'policy:manage',
+    permission: 'policy:write',
     bodySchema: compilePolicyBundleSchema,
     responseSchema: jsonObjectResponseSchema,
     maxBodyBytes: 8_192,
@@ -86,7 +86,7 @@ export const POST = withApiSecurity(
 
 export const PATCH = withApiSecurity(
   {
-    permission: 'policy:manage',
+    permission: 'policy:read',
     bodySchema: transitionPolicyBundleSchema,
     responseSchema: jsonObjectResponseSchema,
     maxBodyBytes: 8_192,
@@ -94,6 +94,12 @@ export const PATCH = withApiSecurity(
     rateLimitPolicy: { id: 'policy-bundle-transition', windowMs: 60_000, maxRequests: 20, scope: 'application' },
   },
   async ({ body, principal }) => {
+    const requiredPermission: Permission = ['submit_test', 'record_test_pass'].includes(body.action)
+      ? 'policy:write'
+      : ['approve', 'reject'].includes(body.action)
+        ? 'policy:approve'
+        : 'policy:publish';
+    requirePermission(principal, requiredPermission);
     try {
       await transitionPolicyBundle(
         requireTenantContext(principal),

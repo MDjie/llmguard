@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, Clock3, Eye, Loader2, Plus, RefreshCw, ShieldAlert, UserRound } from 'lucide-react';
 import { toast } from 'sonner';
+import { EvidenceAccessPanel } from '@/components/incidents/evidence-access-panel';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -43,6 +44,9 @@ interface Incident {
   attackTechnique: string;
   impact: string;
   answerEvidence: string;
+  answerEvidenceDigest?: string;
+  answerEvidenceBytes?: number;
+  rawEvidenceAccess?: 'APPROVAL_REQUIRED';
   assigneeId: string | null;
   slaDueAt: string;
   resolution: string | null;
@@ -394,6 +398,7 @@ export default function IncidentsPage() {
                     <p className="mt-2 whitespace-pre-wrap break-words rounded-md bg-gray-50 p-3 text-sm leading-6 text-gray-700">{value}</p>
                   </section>
                 ))}
+                <EvidenceAccessPanel incidentId={selected.id} sourceDigest={selected.answerEvidenceDigest} />
                 {allowedTransitions[selected.status].length > 0 && (
                   <section className="border-y border-gray-200 py-5">
                     <h3 className="text-sm font-semibold text-gray-900">处置流转</h3>

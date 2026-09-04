@@ -1,3 +1,4 @@
+import { observeSafetyAlert } from '@/lib/observability/metrics';
 import { parseSseEvents, type SseEvent } from './sse';
 import {
   StreamBlockedError,
@@ -99,6 +100,7 @@ export async function* gateSseStream(
           const decision = await inspect(candidate, auditSequence, false, options);
           options.onAuditDecision?.(decision);
         } catch {
+          observeSafetyAlert('STREAM_COMMIT_GATE_FAILURE');
           // Audit mode never changes traffic; detector availability is reported by its adapter.
         }
       });
@@ -110,6 +112,7 @@ export async function* gateSseStream(
     held.push(event);
     heldBytes += event.byteLength;
     if (heldBytes > options.maxBufferedBytes) {
+      observeSafetyAlert('STREAM_COMMIT_GATE_FAILURE');
       await stop(iterator, new StreamGateCapacityError(), options);
     }
     if (options.mode !== 'complete') {
@@ -117,6 +120,7 @@ export async function* gateSseStream(
       try {
         decision = await inspect(candidate, sequence, false, options);
       } catch {
+        observeSafetyAlert('STREAM_COMMIT_GATE_FAILURE');
         decision = { action: 'BLOCK', decisionId: `stream-detector-failure-${sequence}` };
       }
       if (!isCommittable(decision)) {
@@ -142,6 +146,7 @@ export async function* gateSseStream(
   try {
     finalDecision = await inspect(finalText, sequence, true, options);
   } catch {
+    observeSafetyAlert('STREAM_COMMIT_GATE_FAILURE');
     finalDecision = { action: 'BLOCK', decisionId: 'stream-final-detector-failure' };
   }
   if (!isCommittable(finalDecision)) {

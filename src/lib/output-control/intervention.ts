@@ -182,6 +182,8 @@ export async function applyOutputIntervention(
   let templateId: string | undefined;
   let templateVersion: number | undefined;
   let recheckDecisionId: string | undefined;
+  let recheckStatus: 'completed' | 'failed' | 'not_required' = 'not_required';
+  let templateFallback = false;
   const addedReasonCodes: string[] = [];
   const degradationReasons = [...decision.degradationReasons];
 
@@ -215,6 +217,7 @@ export async function applyOutputIntervention(
       templateId = template.templateId;
       templateVersion = template.templateVersion;
     } else {
+      templateFallback = true;
       transformedText = rewriteInsuranceOutput(originalText, context.legalDisclaimerVersion);
       if (template.reasonCode !== 'TEMPLATE_NOT_FOUND') {
         addedReasonCodes.push(template.reasonCode ?? 'TEMPLATE_RENDER_FAILED');
@@ -235,7 +238,10 @@ export async function applyOutputIntervention(
     templateId = template.templateId;
     templateVersion = template.templateVersion;
     transformType = action;
-    if (!template.ok) addedReasonCodes.push(template.reasonCode ?? 'TEMPLATE_RENDER_FAILED');
+    if (!template.ok) {
+      templateFallback = true;
+      addedReasonCodes.push(template.reasonCode ?? 'TEMPLATE_RENDER_FAILED');
+    }
   }
 
   if (transformedText !== undefined && TRANSFORM_RECHECK_ACTIONS.has(action)) {
@@ -255,6 +261,7 @@ export async function applyOutputIntervention(
       recheckDecisionId = recheck.decisionId;
       const recheckFailed = !['ALLOW', 'WARN'].includes(recheck.action) ||
         matched(recheck).some((observation) => isOutputRedline(observation.riskType));
+      recheckStatus = recheckFailed ? 'failed' : 'completed';
       if (recheckFailed) {
         action = 'BLOCK';
         transformedText = PLATFORM_FIXED_SAFE_RESPONSE;
@@ -262,6 +269,7 @@ export async function applyOutputIntervention(
         addedReasonCodes.push('OUTPUT_RECHECK_REDLINE_MATCH');
       }
     } catch (error) {
+      recheckStatus = 'failed';
       action = 'BLOCK';
       transformedText = PLATFORM_FIXED_SAFE_RESPONSE;
       transformType = 'BLOCK';
@@ -301,9 +309,10 @@ export async function applyOutputIntervention(
     locale: context.locale,
     jurisdiction: context.jurisdiction,
     industry: context.industry,
-    recheck: recheckDecisionId ? 'completed' : TRANSFORM_RECHECK_ACTIONS.has(decision.action) ? 'failed' : 'not_required',
+    recheck: recheckStatus,
     latencyMs: interventionMs,
     entityTypes: ranges.map((range) => range.entityType),
+    templateFallback,
   });
 
   const transform: DecisionTransform | undefined = transformType && outputHash

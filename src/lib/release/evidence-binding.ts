@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { canonicalJson } from '@/lib/policy-bundle';
+import { canonicalJson } from '@/lib/policy-bundle/canonical';
 
 export interface ReleaseSubjectBinding {
   readonly sourceCommit: string;

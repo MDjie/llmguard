@@ -1,7 +1,9 @@
-import { createHash } from 'node:crypto';
-import { and, eq, gt, inArray, isNotNull, isNull, lte, or } from 'drizzle-orm';
+import { createHash, verify } from 'node:crypto';
+import { and, eq, gt, inArray, isNotNull, isNull, lte, or, sql } from 'drizzle-orm';
 import type { Direction, GuardAction } from '@guardllm/contracts';
+import { dictionaryLayerSchema, dictionaryManifestSchema } from '@/contracts/http/policy-governance';
 import { canonicalJson } from './canonical';
+import { policySigningKeyId, verificationPublicKey } from './crypto';
 import type { RuleSpec } from '@/lib/guard-engine-v2/types';
 import { db } from '@/storage/database/shared/db';
 import {
@@ -23,6 +25,7 @@ export interface DictionaryReleaseManifest {
   readonly dictionaryId: string;
   readonly version: string;
   readonly state: 'reviewed' | 'shadow' | 'canary' | 'active';
+  readonly layer?: 'PLATFORM_REDLINE' | 'INDUSTRY' | 'TENANT' | 'APPLICATION' | 'INCIDENT';
   readonly manifestHash: string;
   readonly contentHash: string;
   readonly signatureAlgorithm: 'Ed25519';
@@ -251,7 +254,8 @@ function validateGovernedKeywordRules(artifacts: GovernedPolicyArtifacts): void 
       );
     }
     const release = releases.get(rule.dictionaryReleaseId);
-    if (!release || release.state !== 'active' || release.version !== rule.dictionaryVersion) {
+    if (!release || release.state !== 'active' || release.version !== rule.dictionaryVersion ||
+        (release.layer !== undefined && release.layer !== rule.dictionaryLayer)) {
       throw new PolicyGovernanceValidationError(
         'KEYWORD_RULE_RELEASE_INVALID',
         'Governed keyword rule is not attached to its active approved release',
@@ -322,6 +326,9 @@ export function validateGovernedPolicyArtifacts(
 
   for (const release of artifacts.dictionaryReleases) {
     requireIdentifier(release.dictionaryId, 'dictionaryId');
+    if (release.layer !== undefined && !dictionaryLayerSchema.safeParse(release.layer).success) {
+      throw new PolicyGovernanceValidationError('DICTIONARY_LAYER_INVALID', 'Dictionary release layer is invalid');
+    }
     requireSha256(release.manifestHash, 'dictionary manifestHash');
     requireSha256(release.contentHash, 'dictionary contentHash');
     requireIdentifier(release.signingKeyId, 'dictionary signingKeyId');
@@ -374,8 +381,46 @@ export function builtInTokenizerManifest(
   return manifest;
 }
 
-function manifestHash(manifest: Readonly<Record<string, unknown>>): string {
-  return createHash('sha256').update(canonicalJson(manifest), 'utf8').digest('hex');
+function verifiedDictionaryRelease(row: typeof dictionaryReleases.$inferSelect) {
+  const parsed = dictionaryManifestSchema.safeParse(row.canonicalManifest);
+  if (!parsed.success) {
+    throw new PolicyGovernanceValidationError('DICTIONARY_MANIFEST_INVALID', 'Approved dictionary manifest is invalid');
+  }
+  const serialized = canonicalJson(parsed.data);
+  const digest = createHash('sha256').update(serialized, 'utf8').digest('hex');
+  const entryCount = parsed.data.entries.reduce((count, entry) => count + entry.variants.length, 0);
+  let validSignature = false;
+  try {
+    validSignature = row.signatureAlgorithm === 'Ed25519' &&
+      row.signingKeyId === policySigningKeyId() &&
+      verify(null, Buffer.from(serialized, 'utf8'), verificationPublicKey(), Buffer.from(row.signature, 'base64url'));
+  } catch {
+    validSignature = false;
+  }
+  if (
+    digest !== row.contentHash || !validSignature ||
+    parsed.data.dictionaryId !== row.dictionaryId || parsed.data.version !== row.version ||
+    entryCount !== row.entryCount
+  ) {
+    throw new PolicyGovernanceValidationError('DICTIONARY_SIGNATURE_INVALID', 'Approved dictionary integrity verification failed');
+  }
+  return {
+    manifest: parsed.data,
+    release: {
+      id: row.id,
+      dictionaryId: row.dictionaryId,
+      version: row.version,
+      state: row.state as DictionaryReleaseManifest['state'],
+      layer: parsed.data.layer,
+      manifestHash: digest,
+      contentHash: row.contentHash,
+      signatureAlgorithm: 'Ed25519' as const,
+      signingKeyId: row.signingKeyId,
+      entryCount: row.entryCount,
+      submittedBy: row.submittedBy,
+      approvedBy: row.approvedBy!,
+    },
+  };
 }
 
 export async function loadGovernedPolicyArtifacts(
@@ -388,6 +433,7 @@ export async function loadGovernedPolicyArtifacts(
       scopePredicate(dictionaryReleases, scope),
       inArray(dictionaryReleases.state, ['reviewed', 'shadow', 'canary', 'active']),
       isNotNull(dictionaryReleases.approvedBy),
+      sql`${dictionaryReleases.canonicalManifest}->>'policyId' = ${policyId}`,
     )),
     db.select({
       id: keywordRules.id,
@@ -435,22 +481,16 @@ export async function loadGovernedPolicyArtifacts(
     )),
   ]);
 
+  const verifiedReleases = releaseRows.map(verifiedDictionaryRelease);
+  const releaseById = new Map(verifiedReleases.map((item) => [item.release.id, item]));
   return validateGovernedPolicyArtifacts({
-    dictionaryReleases: releaseRows.map((row) => ({
-      id: row.id,
-      dictionaryId: row.dictionaryId,
-      version: row.version,
-      state: row.state as DictionaryReleaseManifest['state'],
-      manifestHash: manifestHash(row.canonicalManifest),
-      contentHash: row.contentHash,
-      signatureAlgorithm: 'Ed25519',
-      signingKeyId: row.signingKeyId,
-      entryCount: row.entryCount,
-      submittedBy: row.submittedBy,
-      approvedBy: row.approvedBy!,
-    })),
+    dictionaryReleases: verifiedReleases.map((item) => item.release),
     keywordRules: keywordRows.map((row) => {
       const canonicalTerm = row.canonicalTerm?.trim() || row.keyword;
+      const release = releaseById.get(row.releaseId);
+      if (!release) {
+        throw new PolicyGovernanceValidationError('KEYWORD_RULE_RELEASE_INVALID', 'Keyword rule references an unverified dictionary release');
+      }
       return {
         id: row.id,
         riskType: row.dimension,
@@ -466,6 +506,7 @@ export async function loadGovernedPolicyArtifacts(
         variantId: row.id,
         dictionaryReleaseId: row.releaseId,
         dictionaryVersion: row.releaseVersion,
+        dictionaryLayer: release.manifest.layer,
         owner: row.owner ?? '',
         locale: row.locale,
         direction: row.direction as GovernedKeywordRule['direction'],

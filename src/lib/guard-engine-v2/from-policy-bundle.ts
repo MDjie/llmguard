@@ -101,6 +101,7 @@ export function createEngineForPolicyBundle(
     {
       id: bundle.payload.policyId,
       bundleId: bundle.id,
+      policyVersion: String(bundle.payload.policyVersion),
       warnThreshold,
       blockThreshold,
       failClosedOnRequiredDetectorFailure: true,

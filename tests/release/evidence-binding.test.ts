@@ -29,8 +29,13 @@ describe('release evidence binding', () => {
 
   it('orders rollback on safety, latency, detector or evidence-delivery failures', () => {
     expect(releaseHealthAction({
-      errorBudgetHealthy: true, p99LatencyMs: 301, maximumP99LatencyMs: 300,
+      sampleSize: 2_000, minimumSampleSize: 1_000,
+      errorBudgetHealthy: true, errorRate: 0.001, maximumErrorRate: 0.01,
+      p95LatencyMs: 180, maximumP95LatencyMs: 200,
+      p99LatencyMs: 301, maximumP99LatencyMs: 300,
+      falsePositiveRate: 0.005, maximumFalsePositiveRate: 0.01,
       falseNegativeRate: 0.01, maximumFalseNegativeRate: 0.01,
+      resourceRejectionRate: 0.001, maximumResourceRejectionRate: 0.01,
       requiredDetectorFailures: 1, auditDeliveryTerminalFailures: 1,
     })).toMatchObject({
       action: 'ROLLBACK',

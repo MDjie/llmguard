@@ -5,11 +5,17 @@ import {
   type OperationalEventDomain,
   type OperationalSecurityEvent,
 } from '@/lib/operations';
+import { observeSafetyAlert, type SafetyAlertType } from '@/lib/observability/metrics';
 import type { TenantScope } from '@/lib/tenancy';
 
 export type PolicyIntegrityFailure =
   | 'AUDIT_CHAIN_BREAK'
+  | 'POLICY_BUNDLE_MISSING'
   | 'POLICY_DIGEST_MISMATCH'
+  | 'POLICY_SIGNATURE_INVALID'
+  | 'POLICY_PUBLIC_KEY_MISMATCH'
+  | 'MANDATORY_DENY_BYPASS'
+  | 'STREAM_COMMIT_GATE_FAILURE'
   | 'TEMPLATE_RECHECK_FAILED';
 
 const failureProfile: Readonly<Record<PolicyIntegrityFailure, {
@@ -24,11 +30,41 @@ const failureProfile: Readonly<Record<PolicyIntegrityFailure, {
     severity: 'CRITICAL',
     action: 'QUARANTINE_AUDIT_PARTITION',
   },
+  POLICY_BUNDLE_MISSING: {
+    domain: 'RUNTIME',
+    eventType: 'POLICY.BUNDLE.MISSING',
+    severity: 'CRITICAL',
+    action: 'FAIL_CLOSED',
+  },
   POLICY_DIGEST_MISMATCH: {
     domain: 'RUNTIME',
     eventType: 'POLICY.BUNDLE.INTEGRITY_FAILURE',
     severity: 'CRITICAL',
     action: 'FAIL_CLOSED',
+  },
+  POLICY_SIGNATURE_INVALID: {
+    domain: 'RUNTIME',
+    eventType: 'POLICY.BUNDLE.SIGNATURE_INVALID',
+    severity: 'CRITICAL',
+    action: 'FAIL_CLOSED',
+  },
+  POLICY_PUBLIC_KEY_MISMATCH: {
+    domain: 'RUNTIME',
+    eventType: 'POLICY.PUBLIC_KEY.MISMATCH',
+    severity: 'CRITICAL',
+    action: 'FAIL_CLOSED',
+  },
+  MANDATORY_DENY_BYPASS: {
+    domain: 'RUNTIME',
+    eventType: 'POLICY.MANDATORY_DENY.BYPASS',
+    severity: 'CRITICAL',
+    action: 'FAIL_CLOSED',
+  },
+  STREAM_COMMIT_GATE_FAILURE: {
+    domain: 'RUNTIME',
+    eventType: 'POLICY.STREAM_COMMIT_GATE.FAILURE',
+    severity: 'CRITICAL',
+    action: 'ABORT_STREAM',
   },
   TEMPLATE_RECHECK_FAILED: {
     domain: 'RUNTIME',
@@ -88,5 +124,9 @@ export function policyIntegritySecurityEvent(
 export async function recordPolicyIntegrityFailure(
   input: PolicyIntegrityFailureInput,
 ): Promise<void> {
+  const metricType = input.failure === 'TEMPLATE_RECHECK_FAILED'
+    ? undefined
+    : input.failure as SafetyAlertType;
+  if (metricType) observeSafetyAlert(metricType);
   await appendOperationalSecurityEvent(policyIntegritySecurityEvent(input));
 }

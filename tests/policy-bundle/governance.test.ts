@@ -60,6 +60,7 @@ function keywordRule(overrides: Partial<GovernedKeywordRule> = {}): GovernedKeyw
     severity: 'CRITICAL',
     ruleVersion: '1.0.0',
     mandatoryDeny: true,
+    dictionaryLayer: 'PLATFORM_REDLINE',
     canonicalTermId: 'term-1234567890abcdef',
     variantId: 'variant-1',
     dictionaryReleaseId: 'release-1',
@@ -84,6 +85,7 @@ function governedArtifacts(): GovernedPolicyArtifacts {
       dictionaryId: 'content-safety-core',
       version: '1.0.0',
       state: 'active',
+      layer: 'PLATFORM_REDLINE',
       manifestHash: sha256('manifest'),
       contentHash: sha256('dictionary'),
       signatureAlgorithm: 'Ed25519',
@@ -133,6 +135,7 @@ describe('policy governance artifacts', () => {
       dictionaryReleaseId: 'release-1',
       owner: 'platform-security',
       mandatoryDeny: true,
+      dictionaryLayer: 'PLATFORM_REDLINE',
     })]);
     expect(payload.dictionaryReleases).toEqual([expect.objectContaining({ id: 'release-1' })]);
     expect(payload.responseTemplates).toEqual([expect.objectContaining({ id: 'template-1' })]);

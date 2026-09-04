@@ -232,6 +232,21 @@ BEGIN
   END;
 
   BEGIN
+    INSERT INTO content_access_requests (
+      tenant_id, application_id, resource_type, resource_id, source_digest,
+      requester_id, purpose, reason
+    ) VALUES (
+      '30000000-0000-0000-0000-000000000010',
+      '30000000-0000-0000-0000-000000000002',
+      'INCIDENT_EVIDENCE', 'incident-cross-tenant', repeat('8', 64),
+      'requester-1', 'INCIDENT_INVESTIGATION', 'Cross-tenant negative test'
+    );
+    RAISE EXCEPTION 'cross-tenant content access request unexpectedly accepted';
+  EXCEPTION
+    WHEN foreign_key_violation THEN NULL;
+  END;
+
+  BEGIN
     INSERT INTO dictionary_releases (
       tenant_id, application_id, id, dictionary_id, version, state,
       canonical_manifest, content_hash, signature, signing_key_id,
@@ -314,6 +329,84 @@ INSERT INTO badcase_feedback (
   '["evidence-hmac"]'::jsonb, 'false_negative'
 );
 
+INSERT INTO content_access_requests (
+  tenant_id, application_id, id, resource_type, resource_id, source_digest,
+  requester_id, purpose, reason
+) VALUES (
+  '30000000-0000-0000-0000-000000000001',
+  '30000000-0000-0000-0000-000000000002',
+  '30000000-0000-0000-0000-000000000008',
+  'INCIDENT_EVIDENCE', 'incident-governance-test', repeat('9', 64),
+  'requester-1', 'INCIDENT_INVESTIGATION', 'Verify one-time governed evidence access'
+);
+
+DO $p5_governance$
+BEGIN
+  BEGIN
+    INSERT INTO dictionary_releases (
+      tenant_id, application_id, id, dictionary_id, version, state,
+      canonical_manifest, content_hash, signature, signing_key_id,
+      entry_count, submitted_by, approved_by, approved_at, activated_at
+    ) VALUES (
+      '30000000-0000-0000-0000-000000000001',
+      '30000000-0000-0000-0000-000000000002',
+      '30000000-0000-0000-0000-000000000024',
+      'content-safety-core', '2.0.0', 'active', '{}'::jsonb,
+      repeat('1', 64), 'test-signature', 'test-key', 0,
+      'builder-1', 'reviewer-2', now(), now()
+    );
+    RAISE EXCEPTION 'second active dictionary unexpectedly accepted';
+  EXCEPTION
+    WHEN unique_violation THEN NULL;
+  END;
+
+  BEGIN
+    INSERT INTO response_templates (
+      tenant_id, application_id, id, template_key, risk_category, action,
+      template_text, allowed_variables, version, content_hash,
+      signature_digest, approval_status, created_by, approved_by,
+      approved_at, enabled
+    ) VALUES (
+      '30000000-0000-0000-0000-000000000001',
+      '30000000-0000-0000-0000-000000000002',
+      '30000000-0000-0000-0000-000000000025',
+      'tenant.block.prompt-injection', 'prompt_injection', 'BLOCK',
+      'A conflicting runtime selector.', '[]'::jsonb, 1,
+      repeat('2', 64), repeat('3', 64), 'approved', 'builder-1',
+      'reviewer-2', now(), true
+    );
+    RAISE EXCEPTION 'conflicting active response-template selector unexpectedly accepted';
+  EXCEPTION
+    WHEN unique_violation THEN NULL;
+  END;
+
+  BEGIN
+    UPDATE content_access_requests
+       SET status = 'approved', reviewed_by = 'requester-1', reviewed_at = now(),
+           expires_at = now() + interval '15 minutes'
+     WHERE id = '30000000-0000-0000-0000-000000000008';
+    RAISE EXCEPTION 'maker-checker self approval unexpectedly accepted';
+  EXCEPTION
+    WHEN check_violation THEN NULL;
+  END;
+
+  BEGIN
+    INSERT INTO content_access_requests (
+      tenant_id, application_id, resource_type, resource_id, source_digest,
+      requester_id, purpose, reason
+    ) VALUES (
+      '30000000-0000-0000-0000-000000000001',
+      '30000000-0000-0000-0000-000000000002',
+      'INCIDENT_EVIDENCE', 'incident-governance-test', repeat('9', 64),
+      'requester-1', 'REGULATORY_REVIEW', 'Duplicate pending request test'
+    );
+    RAISE EXCEPTION 'duplicate pending evidence request unexpectedly accepted';
+  EXCEPTION
+    WHEN unique_violation THEN NULL;
+  END;
+END
+$p5_governance$;
+
 DO $immutability$
 BEGIN
   BEGIN
@@ -346,6 +439,25 @@ BEGIN
   END;
 
   BEGIN
+    UPDATE content_access_requests
+       SET source_digest = repeat('0', 64)
+     WHERE id = '30000000-0000-0000-0000-000000000008';
+    RAISE EXCEPTION 'content access request identity mutation unexpectedly accepted';
+  EXCEPTION
+    WHEN raise_exception THEN
+      IF SQLERRM <> 'content access request identity is immutable' THEN RAISE; END IF;
+  END;
+
+  BEGIN
+    DELETE FROM content_access_requests
+     WHERE id = '30000000-0000-0000-0000-000000000008';
+    RAISE EXCEPTION 'content access request deletion unexpectedly accepted';
+  EXCEPTION
+    WHEN raise_exception THEN
+      IF SQLERRM <> 'content access requests are append-preserved' THEN RAISE; END IF;
+  END;
+
+  BEGIN
     UPDATE response_templates
        SET template_text = 'tampered'
      WHERE id = '30000000-0000-0000-0000-000000000006';
@@ -363,6 +475,16 @@ BEGIN
        AND column_name IN ('raw_content', 'raw_text', 'input_text', 'payload')
   ) THEN
     RAISE EXCEPTION 'badcase feedback contains a forbidden raw-content column';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+      FROM information_schema.columns
+     WHERE table_schema = current_schema()
+       AND table_name = 'content_access_requests'
+       AND column_name IN ('raw_content', 'raw_text', 'input_text', 'output_text', 'payload', 'evidence')
+  ) THEN
+    RAISE EXCEPTION 'content access request contains a forbidden raw-evidence column';
   END IF;
 END
 $immutability$;

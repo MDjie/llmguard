@@ -25,6 +25,8 @@ import {
   UserCog,
   MessageCircle,
   Building2,
+  BookOpenCheck,
+  MessagesSquare,
 } from 'lucide-react';
 import { UserProfileModal } from '@/components/login/user-profile-modal';
 import { csrfHeaders } from '@/lib/auth/csrf-client';
@@ -58,7 +60,9 @@ const navigationGroups: readonly {
       { name: '检测维度', href: '/dimensions', icon: Layers, desc: '维度与规则配置', permission: 'policy:manage' },
       { name: '白名单规则', href: '/whitelist', icon: CheckCircle, desc: '安全内容放行', permission: 'policy:manage' },
       { name: '策略配置', href: '/policies', icon: Settings, desc: '检测策略管理', permission: 'policy:manage' },
-      { name: '策略发布', href: '/policy-releases', icon: GitCompare, desc: '审批、灰度与回滚', permission: 'policy:manage' },
+      { name: '敏感词典', href: '/dictionaries', icon: BookOpenCheck, desc: '分层词典与版本治理', permission: 'policy:read' },
+      { name: '响应模板', href: '/response-templates', icon: MessagesSquare, desc: '代答模板与复检治理', permission: 'policy:read' },
+      { name: '策略发布', href: '/policy-releases', icon: GitCompare, desc: '审批、灰度与回滚', permission: 'policy:read' },
       { name: '模型管理', href: '/providers', icon: Cloud, desc: '模型供应商配置', permission: 'provider:manage' },
     ]
   },

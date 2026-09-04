@@ -256,6 +256,36 @@ export const incidentTransitions = pgTable(
 	]
 );
 
+export const contentAccessRequests = pgTable(
+	"content_access_requests",
+	{
+		...tenantScopeColumns(),
+		id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+		resourceType: varchar("resource_type", { length: 32 }).notNull(),
+		resourceId: varchar("resource_id", { length: 128 }).notNull(),
+		sourceDigest: varchar("source_digest", { length: 64 }).notNull(),
+		requesterId: varchar("requester_id", { length: 100 }).notNull(),
+		purpose: varchar("purpose", { length: 40 }).notNull(),
+		reason: varchar("reason", { length: 500 }).notNull(),
+		status: varchar("status", { length: 16 }).notNull().default("pending"),
+		reviewedBy: varchar("reviewed_by", { length: 100 }),
+		reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+		decisionReason: varchar("decision_reason", { length: 500 }),
+		expiresAt: timestamp("expires_at", { withTimezone: true }),
+		usedAt: timestamp("used_at", { withTimezone: true }),
+		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+	},
+	(table) => [
+		index("content_access_requests_scope_status_idx")
+			.on(table.tenantId, table.applicationId, table.status, table.createdAt),
+		index("content_access_requests_resource_idx")
+			.on(table.tenantId, table.applicationId, table.resourceType, table.resourceId),
+		uniqueIndex("content_access_requests_pending_uq")
+			.on(table.tenantId, table.applicationId, table.resourceType, table.resourceId, table.requesterId)
+			.where(sql`status = 'pending'`),
+	],
+);
+
 export const dataCatalogEntries = pgTable(
 	"data_catalog_entries",
 	{

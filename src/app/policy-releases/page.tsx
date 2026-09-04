@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Archive, CheckCircle2, GitBranch, Loader2, Play, RefreshCw, RotateCcw, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
+import { PolicyRuntimeStatus } from '@/components/policy/policy-runtime-status';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -236,6 +237,8 @@ export default function PolicyReleasesPage() {
           <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
         </Button>
       </div>
+
+      <PolicyRuntimeStatus />
 
       <div className="flex flex-wrap items-end gap-3 border-y border-gray-200 bg-white px-3 py-3">
         <div className="min-w-72 space-y-1.5">

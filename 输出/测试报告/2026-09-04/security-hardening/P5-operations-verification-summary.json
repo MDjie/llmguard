@@ -1,0 +1,72 @@
+{
+  "schemaVersion": "1.0",
+  "phase": "P5",
+  "evaluatedAt": "2026-09-05T05:14:28+08:00",
+  "status": "PASS",
+  "tests": {
+    "targeted": {
+      "files": 26,
+      "tests": 83,
+      "failed": 0
+    },
+    "fullUnit": {
+      "files": 160,
+      "tests": 754,
+      "failed": 0
+    },
+    "browserE2E": {
+      "logicalTests": 10,
+      "passed": 10,
+      "desktopAuthenticated": "PASS",
+      "mobileAuthenticated": "PASS",
+      "temporaryAccountRemoved": true
+    },
+    "databaseIntegration": {
+      "migrations": 43,
+      "requiredRelations": 18,
+      "scopeForeignKeys": 9,
+      "p5Columns": 6,
+      "p5CheckConstraints": 7,
+      "p5PartialUniqueIndexes": 3,
+      "identityImmutability": "PASS",
+      "rawEvidencePersistence": "PASS",
+      "freshComposeMigrations": "PASS"
+    },
+    "auditChain": {
+      "valid": true,
+      "partitions": 2,
+      "eventsChecked": 2325
+    }
+  },
+  "qualityGates": {
+    "typeScript": "PASS",
+    "lint": "PASS",
+    "productionBuild": "PASS",
+    "productionSurface": "PASS",
+    "gitDiffCheck": "PASS",
+    "rawEvidenceConsumeCsrf": "PASS"
+  },
+  "runtime": {
+    "composeServicesRunning": 13,
+    "applicationHealthy": true,
+    "databaseHealthy": true,
+    "mediaAnalyzerHealthy": true,
+    "liveStatus": 200,
+    "databaseReadinessStatus": 200,
+    "policyReadinessStatus": 200,
+    "policyGeneration": 3,
+    "newProtectedApiAnonymousStatus": 401,
+    "highSeverityStartupLogMatches": 0
+  },
+  "images": {
+    "app": "sha256:2758d1a3b62fd9aa53f570261d5ac1ed2c692d9a70653ce55a975ded07bbfdad",
+    "worker": "sha256:6c7854cdecc3f01bf378090c3693161cd6c07d4de542e1973e53f3e3d9c7ed61",
+    "mediaAnalyzer": "sha256:1b3b66c69a7af06eb623b540896b1f08602526ba5d1f58025367e9c9143b3ba3"
+  },
+  "externalAcceptance": {
+    "productionBlindSet": "BLOCKED_EXTERNAL",
+    "approvedProductionLexicon": "BLOCKED_EXTERNAL",
+    "productionVisionAsrAudioTtsAssets": "BLOCKED_EXTERNAL",
+    "helmTargetEnvironment": "BLOCKED_EXTERNAL"
+  }
+}

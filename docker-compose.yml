@@ -125,6 +125,8 @@ services:
       - ./drizzle/0037_targeted_whitelist_rules.sql:/docker-entrypoint-initdb.d/46-targeted-whitelist-rules.sql:ro
       - ./drizzle/0038_policy_governance.sql:/docker-entrypoint-initdb.d/47-policy-governance.sql:ro
       - ./drizzle/0039_session_risk_and_media_resilience.sql:/docker-entrypoint-initdb.d/48-session-risk-media-resilience.sql:ro
+      - ./drizzle/0040_output_control_governance.sql:/docker-entrypoint-initdb.d/49-output-control-governance.sql:ro
+      - ./drizzle/0041_policy_operations_governance.sql:/docker-entrypoint-initdb.d/50-policy-operations-governance.sql:ro
     ports:
       - "127.0.0.1:${DB_PORT:-5434}:5432"
     healthcheck:

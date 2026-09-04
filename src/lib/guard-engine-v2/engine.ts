@@ -7,7 +7,7 @@ import {
 import { aggregateGuardDecision } from './aggregate';
 import { executeDetectorDag, resolveAndValidateDetectorDag } from './dag';
 import { buildNormalizedViews } from './normalization';
-import { observeGuardDecision } from '@/lib/observability/metrics';
+import { observeGuardDecision, observeSafetyAlert } from '@/lib/observability/metrics';
 import type {
   GuardDetector,
   GuardEngine,
@@ -80,12 +80,30 @@ export function createGuardEngine(
         degradationReasons: execution.degradationReasons,
         latencyMs: now() - startedAt,
       });
+      const matchedRisk = decision.observations.find((item) => item.status === 'MATCH')?.riskType;
+      const modalities = [...new Set([
+        ...(request.content.text === undefined ? [] : ['TEXT']),
+        ...(request.content.artifacts ?? []).map((artifact) => artifact.kind),
+      ])].sort().join('|') || 'OTHER';
       observeGuardDecision({
         direction: request.context.direction,
         action: decision.action,
         latencyMs: decision.latencyMs,
         detectorFailures: execution.degradationReasons.length,
+        riskCategory: matchedRisk,
+        tenantId: request.context.tenantId,
+        applicationId: request.context.applicationId,
+        locale: request.context.locale,
+        modality: modalities,
+        policyVersion: policy.policyVersion,
+        degraded: decision.degraded,
       });
+      if (
+        decision.observations.some((item) => item.status === 'MATCH' && item.reasonCode === 'MANDATORY_DENY') &&
+        decision.action !== 'BLOCK'
+      ) {
+        observeSafetyAlert('MANDATORY_DENY_BYPASS');
+      }
       return decision;
     },
   };
