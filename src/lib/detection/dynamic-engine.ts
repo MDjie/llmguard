@@ -15,7 +15,7 @@ import {
   policyProfiles,
   policyRules,
 } from '@/lib/db';
-import { eq, and, inArray } from 'drizzle-orm';
+import { eq, and, gt, inArray, isNotNull, lte } from 'drizzle-orm';
 
 // 导入裁判模型模块
 import {
@@ -54,7 +54,6 @@ import type {
 } from './types';
 import { DetectionPolicyError } from './errors';
 import {
-  exceptionSkipsRule,
   isMandatoryDenyRule,
   strictestRiskAction,
   terminalAction,
@@ -63,7 +62,6 @@ import {
 import {
   validateSafeRegexPattern,
   safeRegexMatches,
-  safeRegexTest,
   UnsafeRegexError,
 } from './safe-regex';
 import { scopePredicate, type TenantScope } from '@/lib/tenancy';
@@ -209,25 +207,68 @@ function matchRuleAll(text: string, rule: DetectionRule): Array<{ raw: string; i
   return matches;
 }
 
-// 白名单匹配
-function matchWhitelist(text: string, whitelist: WhitelistRule): boolean {
+function whitelistOccurrences(
+  text: string,
+  whitelist: WhitelistRule,
+): Array<{ raw: string; index: number }> {
   const searchText = whitelist.caseSensitive ? text : text.toLowerCase();
   const pattern = whitelist.caseSensitive ? whitelist.pattern : whitelist.pattern.toLowerCase();
 
   switch (whitelist.matchType) {
     case 'exact':
-      return searchText === pattern;
-    case 'contains':
-      return searchText.includes(pattern);
+      return searchText === pattern ? [{ raw: text, index: 0 }] : [];
     case 'prefix':
-      return searchText.startsWith(pattern);
-    case 'suffix':
-      return searchText.endsWith(pattern);
+      return searchText.startsWith(pattern)
+        ? [{ raw: text.slice(0, whitelist.pattern.length), index: 0 }]
+        : [];
+    case 'suffix': {
+      const index = text.length - whitelist.pattern.length;
+      return searchText.endsWith(pattern)
+        ? [{ raw: text.slice(index), index }]
+        : [];
+    }
     case 'regex':
-      return safeRegexTest(text, whitelist.pattern, whitelist.caseSensitive);
-    default:
-      return false;
+      return safeRegexMatches(text, whitelist.pattern, whitelist.caseSensitive);
+    case 'contains': {
+      const result: Array<{ raw: string; index: number }> = [];
+      let cursor = 0;
+      while (result.length < 100) {
+        const index = searchText.indexOf(pattern, cursor);
+        if (index < 0) break;
+        result.push({ raw: text.slice(index, index + whitelist.pattern.length), index });
+        cursor = index + Math.max(1, whitelist.pattern.length);
+      }
+      return result;
+    }
   }
+}
+
+function whitelistSuppressesMatch(input: {
+  readonly whitelist: WhitelistRule;
+  readonly text: string;
+  readonly match: { readonly raw: string; readonly index: number };
+  readonly ruleId: string;
+  readonly dimensionCode: string;
+  readonly direction: 'INPUT' | 'OUTPUT_COMPLETE';
+  readonly now: number;
+}): boolean {
+  const { whitelist, text, match, ruleId, dimensionCode, direction, now } = input;
+  if (
+    whitelist.approvalStatus !== 'approved' ||
+    !whitelist.approvedBy?.trim() ||
+    whitelist.dimensionScope !== 'specific' ||
+    !whitelist.dimensionCodes.includes(dimensionCode) ||
+    !whitelist.targetRuleIds?.includes(ruleId) ||
+    !whitelist.directions?.includes(direction) ||
+    whitelist.validFromEpochMs === undefined ||
+    whitelist.validFromEpochMs > now ||
+    whitelist.expiresAtEpochMs === undefined ||
+    whitelist.expiresAtEpochMs <= now
+  ) return false;
+  const end = match.index + match.raw.length;
+  return whitelistOccurrences(text, whitelist).some((occurrence) =>
+    occurrence.index <= match.index && occurrence.index + occurrence.raw.length >= end,
+  );
 }
 
 // 获取默认策略ID
@@ -545,12 +586,17 @@ async function getWhitelistRules(
   scope: TenantScope,
 ): Promise<WhitelistRule[]> {
   try {
-    // 获取所有启用的白名单规则
+    const now = new Date();
+    // 仅加载审批通过、处于有效期且有具名审批人的白名单。
     const allWhitelists = await db
       .select()
       .from(whitelistRules)
       .where(and(
         eq(whitelistRules.enabled, true),
+        eq(whitelistRules.approvalStatus, 'approved'),
+        isNotNull(whitelistRules.approvedBy),
+        lte(whitelistRules.validFrom, now),
+        gt(whitelistRules.expiresAt, now),
         scopePredicate(whitelistRules, scope),
       ));
 
@@ -578,6 +624,13 @@ async function getWhitelistRules(
       policyScope: (w.policyScope || 'specific') as 'all' | 'specific',
       dimensionScope: (w.dimensionScope || 'specific') as 'all' | 'specific',
       dimensionCodes: (w.dimensionCodes as string[]) || [],
+      targetRuleIds: (w.targetRuleIds as string[]) || [],
+      directions: w.directions || [],
+      validFromEpochMs: w.validFrom.getTime(),
+      expiresAtEpochMs: w.expiresAt?.getTime(),
+      approvalStatus: w.approvalStatus as WhitelistRule['approvalStatus'],
+      approvedBy: w.approvedBy || undefined,
+      approvedAtEpochMs: w.approvedAt?.getTime(),
       priority: w.priority || 100,
       pattern: w.pattern,
       matchType: w.matchType as 'exact' | 'contains' | 'prefix' | 'suffix' | 'regex',
@@ -612,64 +665,15 @@ export async function detectWithDynamicRules(
     );
   }
 
-  // 获取所有维度信息，用于返回跳过的维度名称
-  const allDimensions = await getAllDimensions(scope);
-  const dimensionNameMap = new Map(allDimensions.map(d => [d.code, d.name]));
-
   // 按 priority 从高到低排序白名单
-  const sortedWhitelists = [...config.whitelists].sort((a, b) => 
+  const sortedWhitelists = [...config.whitelists].sort((a, b) =>
     (b.priority || 100) - (a.priority || 100)
   );
 
   const skippedDimensions: SkippedDimension[] = [];
-  const skippedDimensionCodes = new Set<string>();
   let whitelistMatched: WhitelistMatched | undefined;
-
-  // 全局白名单仅跳过可豁免规则；mandatory deny 仍会执行。
-  for (const whitelist of sortedWhitelists.filter(w => w.dimensionScope === 'all')) {
-    if (matchWhitelist(text, whitelist)) {
-      whitelistMatched = {
-        id: whitelist.id,
-        name: whitelist.name || '未命名白名单',
-        policyScope: whitelist.policyScope,
-        dimensionScope: whitelist.dimensionScope,
-        dimensionCodes: allDimensions.map((dimension) => dimension.code),
-        pattern: whitelist.pattern,
-        matchType: whitelist.matchType,
-        effect: 'skip_selected_dimensions',
-      };
-      for (const dimension of allDimensions) {
-        skippedDimensionCodes.add(dimension.code);
-        skippedDimensions.push({
-          dimensionCode: dimension.code,
-          dimensionName: dimension.name,
-          whitelistId: whitelist.id,
-          whitelistName: whitelist.name || '未命名白名单',
-          effect: 'skip_dimension_detection',
-        });
-      }
-      break;
-    }
-  }
-
-  // 检查维度白名单
-  for (const whitelist of sortedWhitelists.filter(w => w.dimensionScope === 'specific')) {
-    if (matchWhitelist(text, whitelist)) {
-      // 命中维度白名单，记录要跳过的维度
-      for (const dimCode of whitelist.dimensionCodes) {
-        if (!skippedDimensionCodes.has(dimCode)) {
-          skippedDimensionCodes.add(dimCode);
-          skippedDimensions.push({
-            dimensionCode: dimCode,
-            dimensionName: dimensionNameMap.get(dimCode) || dimCode,
-            whitelistId: whitelist.id,
-            whitelistName: whitelist.name || '未命名白名单',
-            effect: 'skip_dimension_detection',
-          });
-        }
-      }
-    }
-  }
+  const evaluationTime = Date.now();
+  const guardDirection = direction === 'input' ? 'INPUT' : 'OUTPUT_COMPLETE';
 
   const findings: DetectionFinding[] = [];
   let maxScore = 0;
@@ -689,7 +693,6 @@ export async function detectWithDynamicRules(
       if (rule.type !== 'keyword' && rule.type !== 'regex') continue;
       if (!rule.pattern) continue;
       const mandatoryDeny = isMandatoryDenyRule(rule);
-      if (exceptionSkipsRule(skippedDimensionCodes.has(dimension.code), rule)) continue;
 
       // 获取所有匹配
       const allMatches = matchRuleAll(text, rule);
@@ -697,6 +700,30 @@ export async function detectWithDynamicRules(
 
       // 为每个匹配生成独立的 finding
       for (const match of allMatches) {
+        const suppressingWhitelist = mandatoryDeny ? undefined : sortedWhitelists.find(
+          (whitelist) => whitelistSuppressesMatch({
+            whitelist,
+            text,
+            match,
+            ruleId: rule.id,
+            dimensionCode: dimension.code,
+            direction: guardDirection,
+            now: evaluationTime,
+          }),
+        );
+        if (suppressingWhitelist) {
+          whitelistMatched ??= {
+            id: suppressingWhitelist.id,
+            name: suppressingWhitelist.name || '未命名白名单',
+            policyScope: suppressingWhitelist.policyScope,
+            dimensionScope: suppressingWhitelist.dimensionScope,
+            dimensionCodes: suppressingWhitelist.dimensionCodes,
+            pattern: suppressingWhitelist.pattern,
+            matchType: suppressingWhitelist.matchType,
+            effect: 'suppress_target_rule_match',
+          };
+          continue;
+        }
         const evidence = match.raw;
         
         // 计算该规则的风险分数

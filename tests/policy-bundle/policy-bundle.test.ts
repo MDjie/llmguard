@@ -54,6 +54,41 @@ const config: CachedPolicyConfig = {
 };
 
 describe('signed policy bundles', () => {
+  it('preserves target rule scopes on compiled exceptions', () => {
+    const payload = compilePolicyBundle({
+      ...config,
+      whitelists: [{
+        id: 'allow-1',
+        policyScope: 'specific',
+        policyIds: ['policy-1'],
+        dimensionScope: 'specific',
+        dimensionCodes: ['prompt_injection'],
+        targetRuleIds: ['rule-2', 'rule-1'],
+        directions: ['OUTPUT_CHUNK', 'INPUT'],
+        validFromEpochMs: 1_700_000_000_000,
+        expiresAtEpochMs: 1_800_000_000_000,
+        approvalStatus: 'approved',
+        approvedBy: 'reviewer-2',
+        priority: 100,
+        pattern: 'approved example',
+        matchType: 'contains',
+        caseSensitive: false,
+        enabled: true,
+      }],
+    }, 4, { compileTimeEpochMs: 1_750_000_000_000 });
+
+    expect(payload.exceptions).toEqual([expect.objectContaining({
+      id: 'allow-1',
+      targetRuleIds: ['rule-1', 'rule-2'],
+      directions: ['INPUT', 'OUTPUT_CHUNK'],
+      validFromEpochMs: 1_700_000_000_000,
+      expiresAtEpochMs: 1_800_000_000_000,
+      approvalStatus: 'approved',
+      approvedBy: 'reviewer-2',
+      mandatoryDenyExempt: false,
+    })]);
+  });
+
   it('is deterministic and rejects any payload tampering', () => {
     const { privateKey, publicKey } = generateKeyPairSync('ed25519');
     const payload = compilePolicyBundle(config, 4);

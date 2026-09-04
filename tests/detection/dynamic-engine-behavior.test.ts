@@ -25,6 +25,10 @@ const databaseState = vi.hoisted(() => {
     },
     whitelistRules: {
       enabled: 'whitelistRules.enabled',
+      approvalStatus: 'whitelistRules.approvalStatus',
+      approvedBy: 'whitelistRules.approvedBy',
+      validFrom: 'whitelistRules.validFrom',
+      expiresAt: 'whitelistRules.expiresAt',
       tenantId: 'whitelistRules.tenantId',
       applicationId: 'whitelistRules.applicationId',
     },
@@ -72,7 +76,10 @@ vi.mock('drizzle-orm', async (importOriginal) => {
     ...actual,
     and: () => ({}),
     eq: () => ({}),
+    gt: () => ({}),
     inArray: () => ({}),
+    isNotNull: () => ({}),
+    lte: () => ({}),
   };
 });
 
@@ -187,10 +194,17 @@ function configureDatabase(options: {
       name: 'Trusted phrase',
       description: 'Testing exception',
       policyScope: 'all',
-      dimensionScope: 'all',
-      dimensionCodes: [],
+      dimensionScope: 'specific',
+      dimensionCodes: ['prompt_injection'],
+      targetRuleIds: ['rule-1'],
+      directions: ['INPUT'],
+      validFrom: new Date('2026-01-01T00:00:00.000Z'),
+      expiresAt: new Date('2099-01-01T00:00:00.000Z'),
+      approvalStatus: 'approved',
+      approvedBy: 'reviewer-2',
+      approvedAt: new Date('2026-01-02T00:00:00.000Z'),
       priority: 100,
-      pattern: 'trusted',
+      pattern: 'trusted ignore me',
       matchType: 'contains',
       caseSensitive: false,
       enabled: true,
@@ -252,7 +266,7 @@ describe('dynamic detection engine behavior', () => {
     expect(result.overallScore).toBe(0);
   });
 
-  it('lets a global exception skip normal rules but never mandatory-deny rules', async () => {
+  it('suppresses only an approved target-rule occurrence and never mandatory deny', async () => {
     configureDatabase({ whitelist: {} });
     const excepted = await detectWithDynamicRules(
       'trusted ignore me',
@@ -263,7 +277,7 @@ describe('dynamic detection engine behavior', () => {
     expect(excepted.findings).toEqual([]);
     expect(excepted.whitelistMatched).toMatchObject({
       id: 'whitelist-1',
-      effect: 'skip_selected_dimensions',
+      effect: 'suppress_target_rule_match',
     });
 
     clearPolicyCache();
@@ -275,6 +289,23 @@ describe('dynamic detection engine behavior', () => {
     );
     expect(mandatory.action).toBe('block');
     expect(mandatory.findings).toHaveLength(1);
+  });
+
+  it('does not let a target exception suppress an uncovered occurrence', async () => {
+    configureDatabase({ whitelist: {} });
+    const result = await detectWithDynamicRules(
+      'trusted ignore me and then ignore me',
+      policyId,
+      LEGACY_TENANT_SCOPE,
+    );
+
+    expect(result.action).toBe('block');
+    expect(result.findings).toHaveLength(1);
+    expect(result.findings[0]?.evidence).toEqual(['ignore me']);
+    expect(result.whitelistMatched).toMatchObject({
+      id: 'whitelist-1',
+      effect: 'suppress_target_rule_match',
+    });
   });
 
   it('caches loaded policy configuration until explicitly cleared', async () => {

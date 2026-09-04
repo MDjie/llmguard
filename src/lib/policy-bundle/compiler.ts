@@ -1,8 +1,75 @@
 import type { CachedPolicyConfig } from '@/lib/detection/types';
-import type { CompiledPolicyBundle } from './types';
+import { validateSafeRegexPattern } from '@/lib/detection/safe-regex';
 import { buildDefaultDetectorDag } from '@/lib/guard-engine-v2/default-dag';
 import type { SemanticClassifierSpec } from '@/lib/guard-engine-v2/types';
 import type { GuardResourceAdmissionSpec } from '@/lib/resource-control/admission-config';
+import {
+  builtInTokenizerManifest,
+  PolicyGovernanceValidationError,
+  validateGovernedKeywordRulesForCompilation,
+  validateGovernedPolicyArtifacts,
+  type GovernedPolicyArtifacts,
+  type ModelDigestManifest,
+} from './governance';
+import type { CompiledPolicyBundle } from './types';
+
+function requireUniqueIds(values: readonly { readonly id: string }[], field: string): void {
+  if (new Set(values.map((value) => value.id)).size !== values.length) {
+    throw new PolicyGovernanceValidationError(
+      'GOVERNANCE_DUPLICATE',
+      `${field} contains duplicate ids`,
+    );
+  }
+}
+
+function sortedGovernance(artifacts: GovernedPolicyArtifacts): GovernedPolicyArtifacts {
+  return {
+    dictionaryReleases: [...artifacts.dictionaryReleases]
+      .sort((left, right) => left.id.localeCompare(right.id)),
+    keywordRules: [...artifacts.keywordRules]
+      .sort((left, right) =>
+        left.riskType.localeCompare(right.riskType) || left.id.localeCompare(right.id)),
+    responseTemplates: [...artifacts.responseTemplates]
+      .sort((left, right) => left.id.localeCompare(right.id)),
+    detectorCalibrations: [...artifacts.detectorCalibrations]
+      .sort((left, right) => left.id.localeCompare(right.id)),
+    modelDigests: [...artifacts.modelDigests]
+      .sort((left, right) => left.modelId.localeCompare(right.modelId) ||
+        left.modelVersion.localeCompare(right.modelVersion)),
+    tokenizer: artifacts.tokenizer,
+    failurePolicies: [...artifacts.failurePolicies]
+      .sort((left, right) => left.detectorId.localeCompare(right.detectorId)),
+  };
+}
+
+function semanticModelDigest(
+  semanticClassifier: SemanticClassifierSpec | undefined,
+): ModelDigestManifest[] {
+  return semanticClassifier ? [{
+    modelId: semanticClassifier.modelId,
+    modelVersion: semanticClassifier.modelVersion,
+    sha256: semanticClassifier.modelSha256,
+  }] : [];
+}
+
+function mergeModelDigests(
+  configured: readonly ModelDigestManifest[],
+  semantic: readonly ModelDigestManifest[],
+): readonly ModelDigestManifest[] {
+  const models = new Map<string, ModelDigestManifest>();
+  for (const model of [...configured, ...semantic]) {
+    const key = `${model.modelId}:${model.modelVersion}`;
+    const existing = models.get(key);
+    if (existing && existing.sha256 !== model.sha256) {
+      throw new PolicyGovernanceValidationError(
+        'MODEL_DIGEST_CONFLICT',
+        `Model ${key} has conflicting digests`,
+      );
+    }
+    models.set(key, model);
+  }
+  return [...models.values()];
+}
 
 export function compilePolicyBundle(
   config: CachedPolicyConfig,
@@ -10,13 +77,53 @@ export function compilePolicyBundle(
   options: {
     readonly semanticClassifier?: SemanticClassifierSpec;
     readonly resourceAdmission?: GuardResourceAdmissionSpec;
+    readonly governance?: Partial<GovernedPolicyArtifacts>;
+    readonly compileTimeEpochMs?: number;
   } = {},
 ): CompiledPolicyBundle {
+  const compileTimeEpochMs = options.compileTimeEpochMs ?? Date.now();
+  if (!Number.isSafeInteger(compileTimeEpochMs) || compileTimeEpochMs < 1) {
+    throw new PolicyGovernanceValidationError('COMPILE_TIME_INVALID', 'Compile time is invalid');
+  }
+
+  const detectorDag = buildDefaultDetectorDag(options.semanticClassifier);
+  const governanceInput = options.governance;
+  const governance = sortedGovernance(validateGovernedPolicyArtifacts({
+    dictionaryReleases: governanceInput?.dictionaryReleases ?? [],
+    keywordRules: governanceInput?.keywordRules ?? [],
+    responseTemplates: governanceInput?.responseTemplates ?? [],
+    detectorCalibrations: governanceInput?.detectorCalibrations ?? [],
+    modelDigests: mergeModelDigests(
+      governanceInput?.modelDigests ?? [],
+      semanticModelDigest(options.semanticClassifier),
+    ),
+    tokenizer: governanceInput?.tokenizer ?? builtInTokenizerManifest(),
+    failurePolicies: governanceInput?.failurePolicies?.length
+      ? governanceInput.failurePolicies
+      : detectorDag.nodes.map((node) => ({
+          detectorId: node.detectorId,
+          policy: node.failurePolicy,
+        })),
+  }));
+  validateGovernedKeywordRulesForCompilation(governance.keywordRules, compileTimeEpochMs);
+
   const dimensions = [...config.dimensions]
     .sort((left, right) => left.code.localeCompare(right.code))
     .map(({ id, code, name, weight }) => ({ id, code, name, weight }));
+  requireUniqueIds(dimensions, 'dimensions');
   const dimensionById = new Map(dimensions.map((dimension) => [dimension.id, dimension]));
-  const rules = [...config.rules.entries()]
+  const dimensionCodes = new Set(dimensions.map((dimension) => dimension.code));
+  for (const rule of governance.keywordRules) {
+    if (!dimensionCodes.has(rule.riskType)) {
+      throw new PolicyGovernanceValidationError(
+        'KEYWORD_RULE_DIMENSION_UNKNOWN',
+        `Governed keyword rule ${rule.id} references an unknown dimension`,
+      );
+    }
+  }
+
+  const sourceRules = [
+    ...[...config.rules.entries()]
     .flatMap(([dimensionId, entries]) => {
       const dimension = dimensionById.get(dimensionId);
       if (!dimension) return [];
@@ -33,12 +140,52 @@ export function compilePolicyBundle(
             rule.config.mandatoryDeny === true ||
             rule.config.hardBlock === true,
         }));
-    })
-    .sort((left, right) =>
-      left.riskType.localeCompare(right.riskType) || left.id.localeCompare(right.id),
-    );
-  const exceptions = [...config.whitelists]
-    .filter((exception) => exception.enabled)
+    }),
+    ...governance.keywordRules,
+  ];
+  requireUniqueIds(sourceRules, 'rules');
+  for (const rule of sourceRules) {
+    if (rule.matchType === 'regex') {
+      validateSafeRegexPattern(rule.pattern, rule.caseSensitive ? '' : 'i');
+    }
+  }
+  const rules = sourceRules.sort((left, right) =>
+    left.riskType.localeCompare(right.riskType) || left.id.localeCompare(right.id),
+  );
+
+  const sourceExceptions = [...config.whitelists].filter((exception) => exception.enabled);
+  requireUniqueIds(sourceExceptions, 'exceptions');
+  for (const exception of sourceExceptions) {
+    if (
+      exception.approvalStatus !== 'approved' ||
+      !exception.approvedBy?.trim() ||
+      exception.dimensionScope !== 'specific' ||
+      exception.dimensionCodes.length === 0 ||
+      !exception.targetRuleIds?.length ||
+      !exception.directions?.length ||
+      exception.validFromEpochMs === undefined ||
+      exception.expiresAtEpochMs === undefined
+    ) {
+      throw new PolicyGovernanceValidationError(
+        'WHITELIST_APPROVAL_SCOPE_INVALID',
+        'Enabled whitelist lacks approval or a bounded target scope',
+      );
+    }
+    if (
+      exception.validFromEpochMs > compileTimeEpochMs ||
+      exception.expiresAtEpochMs <= compileTimeEpochMs ||
+      exception.expiresAtEpochMs <= exception.validFromEpochMs
+    ) {
+      throw new PolicyGovernanceValidationError(
+        'WHITELIST_EXPIRED',
+        'Enabled whitelist is inactive or expired',
+      );
+    }
+    if (exception.matchType === 'regex') {
+      validateSafeRegexPattern(exception.pattern, exception.caseSensitive ? '' : 'i');
+    }
+  }
+  const exceptions = sourceExceptions
     .sort((left, right) => left.id.localeCompare(right.id))
     .map((exception) => ({
       id: exception.id,
@@ -47,8 +194,15 @@ export function compilePolicyBundle(
       caseSensitive: exception.caseSensitive,
       dimensionScope: exception.dimensionScope,
       dimensionCodes: [...exception.dimensionCodes].sort(),
+      targetRuleIds: [...exception.targetRuleIds!].sort(),
+      directions: [...exception.directions!].sort(),
+      validFromEpochMs: exception.validFromEpochMs,
+      expiresAtEpochMs: exception.expiresAtEpochMs,
+      approvalStatus: 'approved' as const,
+      approvedBy: exception.approvedBy,
       mandatoryDenyExempt: false as const,
     }));
+
   const thresholds = [...config.dimensionConfigs]
     .filter((item) => item.enabled)
     .sort((left, right) => left.dimensionId.localeCompare(right.dimensionId))
@@ -59,6 +213,7 @@ export function compilePolicyBundle(
       autoMask: item.autoMask,
       autoRewrite: item.autoRewrite,
     }));
+
   return {
     schemaVersion: '1.0',
     policyId: config.policyId,
@@ -67,12 +222,18 @@ export function compilePolicyBundle(
     rules,
     exceptions,
     thresholds,
-    detectorDag: buildDefaultDetectorDag(options.semanticClassifier),
+    detectorDag,
     ...(options.semanticClassifier
       ? { semanticClassifier: options.semanticClassifier }
       : {}),
     ...(options.resourceAdmission
       ? { resourceAdmission: options.resourceAdmission }
       : {}),
+    dictionaryReleases: governance.dictionaryReleases,
+    responseTemplates: governance.responseTemplates,
+    detectorCalibrations: governance.detectorCalibrations,
+    modelDigests: governance.modelDigests,
+    tokenizer: governance.tokenizer,
+    failurePolicies: governance.failurePolicies,
   };
 }

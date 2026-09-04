@@ -4,6 +4,14 @@ import type {
   SemanticClassifierSpec,
 } from '@/lib/guard-engine-v2/types';
 import type { GuardResourceAdmissionSpec } from '@/lib/resource-control/admission-config';
+import type {
+  DetectorCalibrationManifest,
+  DictionaryReleaseManifest,
+  FailurePolicyManifest,
+  ModelDigestManifest,
+  ResponseTemplateManifest,
+  TokenizerManifest,
+} from './governance';
 
 export interface CompiledPolicyBundle {
   readonly schemaVersion: '1.0';
@@ -23,6 +31,12 @@ export interface CompiledPolicyBundle {
     readonly caseSensitive: boolean;
     readonly dimensionScope: 'all' | 'specific';
     readonly dimensionCodes: readonly string[];
+    readonly targetRuleIds?: readonly string[];
+    readonly directions?: readonly import('@guardllm/contracts').Direction[];
+    readonly validFromEpochMs?: number;
+    readonly expiresAtEpochMs?: number;
+    readonly approvalStatus?: 'approved';
+    readonly approvedBy?: string;
     readonly mandatoryDenyExempt: false;
   }[];
   readonly thresholds: readonly {
@@ -35,6 +49,12 @@ export interface CompiledPolicyBundle {
   readonly detectorDag?: DetectorDagSpec;
   readonly semanticClassifier?: SemanticClassifierSpec;
   readonly resourceAdmission?: GuardResourceAdmissionSpec;
+  readonly dictionaryReleases?: readonly DictionaryReleaseManifest[];
+  readonly responseTemplates?: readonly ResponseTemplateManifest[];
+  readonly detectorCalibrations?: readonly DetectorCalibrationManifest[];
+  readonly modelDigests?: readonly ModelDigestManifest[];
+  readonly tokenizer?: TokenizerManifest;
+  readonly failurePolicies?: readonly FailurePolicyManifest[];
 }
 
 export interface SignedPolicyBundle {

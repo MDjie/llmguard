@@ -1,0 +1,368 @@
+{
+  "schema": "content-safety-lexicon-coverage-report/v1",
+  "generatedAt": "2026-09-04T15:12:29.501Z",
+  "lexiconPath": "data/content-safety/lexicon/content-safety-lexicon.v1.jsonl",
+  "mode": "production",
+  "passed": false,
+  "recordCounts": {
+    "total": 124,
+    "sources": 8,
+    "risks": 40,
+    "entries": 63,
+    "allowRules": 12,
+    "byStatus": {
+      "candidate": 63
+    }
+  },
+  "requiredGbtRiskCount": 31,
+  "definedGbtRiskCount": 31,
+  "activeEntryCount": 0,
+  "enforcementEligibleEntryCount": 0,
+  "productionTarget": 10000,
+  "coverageByRisk": {
+    "CN.A1.01": {
+      "name": "煽动颠覆国家政权、推翻社会主义制度",
+      "requiredKeywordMin": 200,
+      "totalEntries": 3,
+      "activeEntries": 0,
+      "candidateEntries": 3,
+      "productionShortfall": 200
+    },
+    "CN.A1.02": {
+      "name": "危害国家安全和利益、损害国家形象",
+      "requiredKeywordMin": 200,
+      "totalEntries": 3,
+      "activeEntries": 0,
+      "candidateEntries": 3,
+      "productionShortfall": 200
+    },
+    "CN.A1.03": {
+      "name": "煽动分裂国家、破坏国家统一和社会稳定",
+      "requiredKeywordMin": 200,
+      "totalEntries": 3,
+      "activeEntries": 0,
+      "candidateEntries": 3,
+      "productionShortfall": 200
+    },
+    "CN.A1.04": {
+      "name": "宣扬恐怖主义、极端主义",
+      "requiredKeywordMin": 200,
+      "totalEntries": 3,
+      "activeEntries": 0,
+      "candidateEntries": 3,
+      "productionShortfall": 200
+    },
+    "CN.A1.05": {
+      "name": "宣扬民族仇恨",
+      "requiredKeywordMin": 200,
+      "totalEntries": 2,
+      "activeEntries": 0,
+      "candidateEntries": 2,
+      "productionShortfall": 200
+    },
+    "CN.A1.06": {
+      "name": "宣扬暴力、淫秽色情",
+      "requiredKeywordMin": 200,
+      "totalEntries": 3,
+      "activeEntries": 0,
+      "candidateEntries": 3,
+      "productionShortfall": 200
+    },
+    "CN.A1.07": {
+      "name": "传播虚假有害信息",
+      "requiredKeywordMin": 200,
+      "totalEntries": 3,
+      "activeEntries": 0,
+      "candidateEntries": 3,
+      "productionShortfall": 200
+    },
+    "CN.A1.08": {
+      "name": "其他法律、行政法规禁止的内容",
+      "requiredKeywordMin": 200,
+      "totalEntries": 4,
+      "activeEntries": 0,
+      "candidateEntries": 4,
+      "productionShortfall": 200
+    },
+    "CN.A2.01": {
+      "name": "民族歧视",
+      "requiredKeywordMin": 100,
+      "totalEntries": 4,
+      "activeEntries": 0,
+      "candidateEntries": 4,
+      "productionShortfall": 100
+    },
+    "CN.A2.02": {
+      "name": "信仰歧视",
+      "requiredKeywordMin": 100,
+      "totalEntries": 1,
+      "activeEntries": 0,
+      "candidateEntries": 1,
+      "productionShortfall": 100
+    },
+    "CN.A2.03": {
+      "name": "国别歧视",
+      "requiredKeywordMin": 100,
+      "totalEntries": 1,
+      "activeEntries": 0,
+      "candidateEntries": 1,
+      "productionShortfall": 100
+    },
+    "CN.A2.04": {
+      "name": "地域歧视",
+      "requiredKeywordMin": 100,
+      "totalEntries": 1,
+      "activeEntries": 0,
+      "candidateEntries": 1,
+      "productionShortfall": 100
+    },
+    "CN.A2.05": {
+      "name": "性别歧视",
+      "requiredKeywordMin": 100,
+      "totalEntries": 2,
+      "activeEntries": 0,
+      "candidateEntries": 2,
+      "productionShortfall": 100
+    },
+    "CN.A2.06": {
+      "name": "年龄歧视",
+      "requiredKeywordMin": 100,
+      "totalEntries": 1,
+      "activeEntries": 0,
+      "candidateEntries": 1,
+      "productionShortfall": 100
+    },
+    "CN.A2.07": {
+      "name": "职业歧视",
+      "requiredKeywordMin": 100,
+      "totalEntries": 1,
+      "activeEntries": 0,
+      "candidateEntries": 1,
+      "productionShortfall": 100
+    },
+    "CN.A2.08": {
+      "name": "健康歧视",
+      "requiredKeywordMin": 100,
+      "totalEntries": 2,
+      "activeEntries": 0,
+      "candidateEntries": 2,
+      "productionShortfall": 100
+    },
+    "CN.A2.09": {
+      "name": "其他方面歧视",
+      "requiredKeywordMin": 100,
+      "totalEntries": 3,
+      "activeEntries": 0,
+      "candidateEntries": 3,
+      "productionShortfall": 100
+    },
+    "CN.A3.01": {
+      "name": "侵犯他人知识产权",
+      "requiredKeywordMin": null,
+      "totalEntries": 2,
+      "activeEntries": 0,
+      "candidateEntries": 2,
+      "productionShortfall": 0
+    },
+    "CN.A3.02": {
+      "name": "违反商业道德",
+      "requiredKeywordMin": null,
+      "totalEntries": 1,
+      "activeEntries": 0,
+      "candidateEntries": 1,
+      "productionShortfall": 0
+    },
+    "CN.A3.03": {
+      "name": "泄露他人商业秘密",
+      "requiredKeywordMin": null,
+      "totalEntries": 2,
+      "activeEntries": 0,
+      "candidateEntries": 2,
+      "productionShortfall": 0
+    },
+    "CN.A3.04": {
+      "name": "垄断和不正当竞争",
+      "requiredKeywordMin": null,
+      "totalEntries": 2,
+      "activeEntries": 0,
+      "candidateEntries": 2,
+      "productionShortfall": 0
+    },
+    "CN.A3.05": {
+      "name": "其他商业违法违规",
+      "requiredKeywordMin": null,
+      "totalEntries": 1,
+      "activeEntries": 0,
+      "candidateEntries": 1,
+      "productionShortfall": 0
+    },
+    "CN.A4.01": {
+      "name": "危害他人身心健康",
+      "requiredKeywordMin": null,
+      "totalEntries": 3,
+      "activeEntries": 0,
+      "candidateEntries": 3,
+      "productionShortfall": 0
+    },
+    "CN.A4.02": {
+      "name": "侵害他人肖像权",
+      "requiredKeywordMin": null,
+      "totalEntries": 1,
+      "activeEntries": 0,
+      "candidateEntries": 1,
+      "productionShortfall": 0
+    },
+    "CN.A4.03": {
+      "name": "侵害他人名誉权",
+      "requiredKeywordMin": null,
+      "totalEntries": 3,
+      "activeEntries": 0,
+      "candidateEntries": 3,
+      "productionShortfall": 0
+    },
+    "CN.A4.04": {
+      "name": "侵害他人荣誉权",
+      "requiredKeywordMin": null,
+      "totalEntries": 1,
+      "activeEntries": 0,
+      "candidateEntries": 1,
+      "productionShortfall": 0
+    },
+    "CN.A4.05": {
+      "name": "侵害他人隐私权",
+      "requiredKeywordMin": null,
+      "totalEntries": 2,
+      "activeEntries": 0,
+      "candidateEntries": 2,
+      "productionShortfall": 0
+    },
+    "CN.A4.06": {
+      "name": "侵害他人个人信息权益",
+      "requiredKeywordMin": null,
+      "totalEntries": 4,
+      "activeEntries": 0,
+      "candidateEntries": 4,
+      "productionShortfall": 0
+    },
+    "CN.A4.07": {
+      "name": "侵犯他人其他合法权益",
+      "requiredKeywordMin": null,
+      "totalEntries": 0,
+      "activeEntries": 0,
+      "candidateEntries": 0,
+      "productionShortfall": 0
+    },
+    "CN.A5.01": {
+      "name": "特定服务内容不准确",
+      "requiredKeywordMin": null,
+      "totalEntries": 2,
+      "activeEntries": 0,
+      "candidateEntries": 2,
+      "productionShortfall": 0
+    },
+    "CN.A5.02": {
+      "name": "特定服务内容不可靠",
+      "requiredKeywordMin": null,
+      "totalEntries": 1,
+      "activeEntries": 0,
+      "candidateEntries": 1,
+      "productionShortfall": 0
+    },
+    "HARM.SELF_HARM": {
+      "name": "自残自杀与危机意图",
+      "requiredKeywordMin": null,
+      "totalEntries": 3,
+      "activeEntries": 0,
+      "candidateEntries": 3,
+      "productionShortfall": 0
+    },
+    "HARM.CHILD_SEXUAL_EXPLOITATION": {
+      "name": "未成年人性剥削",
+      "requiredKeywordMin": null,
+      "totalEntries": 1,
+      "activeEntries": 0,
+      "candidateEntries": 1,
+      "productionShortfall": 0
+    },
+    "HARM.VIOLENT_CRIME": {
+      "name": "暴力犯罪协助",
+      "requiredKeywordMin": null,
+      "totalEntries": 3,
+      "activeEntries": 0,
+      "candidateEntries": 3,
+      "productionShortfall": 0
+    },
+    "HARM.NONVIOLENT_CRIME": {
+      "name": "非暴力违法犯罪协助",
+      "requiredKeywordMin": null,
+      "totalEntries": 3,
+      "activeEntries": 0,
+      "candidateEntries": 3,
+      "productionShortfall": 0
+    },
+    "PRIVACY.PII": {
+      "name": "个人信息识别与泄露",
+      "requiredKeywordMin": null,
+      "totalEntries": 6,
+      "activeEntries": 0,
+      "candidateEntries": 6,
+      "productionShortfall": 0
+    },
+    "PRIVACY.SECRET": {
+      "name": "凭证和商业秘密泄露",
+      "requiredKeywordMin": null,
+      "totalEntries": 3,
+      "activeEntries": 0,
+      "candidateEntries": 3,
+      "productionShortfall": 0
+    },
+    "SEC.PROMPT_INJECTION": {
+      "name": "提示注入",
+      "requiredKeywordMin": null,
+      "totalEntries": 2,
+      "activeEntries": 0,
+      "candidateEntries": 2,
+      "productionShortfall": 0
+    },
+    "SEC.JAILBREAK": {
+      "name": "越狱与策略绕过",
+      "requiredKeywordMin": null,
+      "totalEntries": 5,
+      "activeEntries": 0,
+      "candidateEntries": 5,
+      "productionShortfall": 0
+    },
+    "SEC.SYSTEM_PROMPT_LEAKAGE": {
+      "name": "系统提示泄露",
+      "requiredKeywordMin": null,
+      "totalEntries": 1,
+      "activeEntries": 0,
+      "candidateEntries": 1,
+      "productionShortfall": 0
+    }
+  },
+  "errors": [
+    "Production gate: manifest release_state must be active or emergency",
+    "Production gate: manifest content_sha256 is required",
+    "Production gate: signed approval metadata is incomplete",
+    "Production gate: active or emergency entry count must be at least 10000",
+    "Production gate: CN.A1.01 active entries 0/200",
+    "Production gate: CN.A1.02 active entries 0/200",
+    "Production gate: CN.A1.03 active entries 0/200",
+    "Production gate: CN.A1.04 active entries 0/200",
+    "Production gate: CN.A1.05 active entries 0/200",
+    "Production gate: CN.A1.06 active entries 0/200",
+    "Production gate: CN.A1.07 active entries 0/200",
+    "Production gate: CN.A1.08 active entries 0/200",
+    "Production gate: CN.A2.01 active entries 0/100",
+    "Production gate: CN.A2.02 active entries 0/100",
+    "Production gate: CN.A2.03 active entries 0/100",
+    "Production gate: CN.A2.04 active entries 0/100",
+    "Production gate: CN.A2.05 active entries 0/100",
+    "Production gate: CN.A2.06 active entries 0/100",
+    "Production gate: CN.A2.07 active entries 0/100",
+    "Production gate: CN.A2.08 active entries 0/100",
+    "Production gate: CN.A2.09 active entries 0/100"
+  ],
+  "warnings": []
+}

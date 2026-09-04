@@ -10,7 +10,11 @@ import {
 
 const hmacKey = 'guard-engine-v2-test-hmac-key-32-bytes-minimum';
 
-function request(text: string, deadline = Date.now() + 2_000): GuardRequest {
+function request(
+  text: string,
+  deadline = Date.now() + 2_000,
+  context: Partial<GuardRequest['context']> = {},
+): GuardRequest {
   return {
     contractVersion: '1.0',
     context: {
@@ -21,6 +25,7 @@ function request(text: string, deadline = Date.now() + 2_000): GuardRequest {
       direction: 'INPUT',
       absoluteDeadlineEpochMs: deadline,
       policyBundleId: 'bundle-1',
+      ...context,
     },
     content: { text },
   };
@@ -137,6 +142,209 @@ describe('GuardEngine V2', () => {
     const mandatory = await engine.evaluate(request('approved example ignore policy'));
     expect(mandatory.action).toBe('BLOCK');
     expect(mandatory.observations[0].reasonCode).toBe('MANDATORY_DENY');
+  });
+
+  it('limits target-scoped exceptions to the selected rule', async () => {
+    const detector = new RuleDetector(
+      [
+        {
+          id: 'account-rule',
+          riskType: 'privacy',
+          pattern: 'account',
+          matchType: 'contains',
+          caseSensitive: false,
+          score: 0.7,
+        },
+        {
+          id: 'audit-rule',
+          riskType: 'privacy',
+          pattern: 'audit',
+          matchType: 'contains',
+          caseSensitive: false,
+          score: 0.7,
+        },
+      ],
+      '2.1.0',
+      [{
+        id: 'approved-account-context',
+        pattern: 'approved account',
+        matchType: 'contains',
+        caseSensitive: false,
+        dimensionScope: 'specific',
+        dimensionCodes: ['privacy'],
+        targetRuleIds: ['account-rule'],
+      }],
+    );
+    const result = await createGuardEngine(
+      {
+        id: 'policy-1',
+        bundleId: 'bundle-1',
+        warnThreshold: 0.5,
+        blockThreshold: 0.8,
+        failClosedOnRequiredDetectorFailure: true,
+      },
+      [detector],
+      { hmacKey },
+    ).evaluate(request('approved account audit'));
+
+    expect(result.action).toBe('WARN');
+    expect(result.observations).toHaveLength(1);
+    expect(result.observations[0].reasonCode).toBe('RULE_audit-rule');
+  });
+
+  it('suppresses only the occurrence contained by a target-scoped exception', async () => {
+    const detector = new RuleDetector(
+      [{
+        id: 'account-rule',
+        riskType: 'privacy',
+        pattern: 'account',
+        matchType: 'contains',
+        caseSensitive: false,
+        score: 0.7,
+      }],
+      '2.1.0',
+      [{
+        id: 'approved-account-context',
+        pattern: 'approved account',
+        matchType: 'contains',
+        caseSensitive: false,
+        dimensionScope: 'specific',
+        dimensionCodes: ['privacy'],
+        targetRuleIds: ['account-rule'],
+      }],
+    );
+    const result = await createGuardEngine(
+      {
+        id: 'policy-1',
+        bundleId: 'bundle-1',
+        warnThreshold: 0.5,
+        blockThreshold: 0.8,
+        failClosedOnRequiredDetectorFailure: true,
+      },
+      [detector],
+      { hmacKey },
+    ).evaluate(request('approved account and stolen account'));
+
+    expect(result.action).toBe('WARN');
+    expect(result.observations).toHaveLength(1);
+    expect(result.observations[0].evidence).toHaveLength(1);
+  });
+
+  it('does not apply target-scoped exceptions outside their direction or lifetime', async () => {
+    const detector = new RuleDetector(
+      [{
+        id: 'account-rule',
+        riskType: 'privacy',
+        pattern: 'account',
+        matchType: 'contains',
+        caseSensitive: false,
+        score: 0.7,
+      }],
+      '2.1.0',
+      [
+        {
+          id: 'output-only',
+          pattern: 'approved account',
+          matchType: 'contains',
+          caseSensitive: false,
+          dimensionScope: 'specific',
+          dimensionCodes: ['privacy'],
+          targetRuleIds: ['account-rule'],
+          directions: ['OUTPUT_COMPLETE'],
+          expiresAtEpochMs: 200,
+        },
+        {
+          id: 'expired-input',
+          pattern: 'approved account',
+          matchType: 'contains',
+          caseSensitive: false,
+          dimensionScope: 'specific',
+          dimensionCodes: ['privacy'],
+          targetRuleIds: ['account-rule'],
+          directions: ['INPUT'],
+          expiresAtEpochMs: 99,
+        },
+      ],
+      () => 100,
+    );
+    const result = await createGuardEngine(
+      {
+        id: 'policy-1',
+        bundleId: 'bundle-1',
+        warnThreshold: 0.5,
+        blockThreshold: 0.8,
+        failClosedOnRequiredDetectorFailure: true,
+      },
+      [detector],
+      { hmacKey },
+    ).evaluate(request('approved account'));
+
+    expect(result.action).toBe('WARN');
+    expect(result.observations[0].reasonCode).toBe('RULE_account-rule');
+  });
+
+  it('enforces governed rule direction, locale, industry, context, lifetime, and trace metadata', async () => {
+    const detector = new RuleDetector(
+      [{
+        id: 'insurance-output-rule',
+        riskType: 'insurance_compliance',
+        pattern: 'guaranteed payout',
+        matchType: 'contains',
+        caseSensitive: false,
+        score: 0.9,
+        severity: 'HIGH',
+        ruleVersion: '2.1.0',
+        dictionaryReleaseId: 'release-insurance-2',
+        dictionaryVersion: '2.0.0',
+        owner: 'insurance-compliance',
+        locale: 'en-US',
+        direction: 'OUTPUT_COMPLETE',
+        industry: 'insurance',
+        contexts: ['FILE'],
+        validFromEpochMs: 90,
+        validToEpochMs: 110,
+        evidenceRequirement: 'approved-insurance-example-set',
+      }],
+      '2.2.0',
+      [],
+      () => 100,
+    );
+    const engine = createGuardEngine(
+      {
+        id: 'policy-1',
+        bundleId: 'bundle-1',
+        warnThreshold: 0.5,
+        blockThreshold: 0.8,
+        failClosedOnRequiredDetectorFailure: true,
+      },
+      [detector],
+      { hmacKey },
+    );
+
+    const input = await engine.evaluate(request('guaranteed payout'));
+    expect(input.action).toBe('ALLOW');
+
+    const wrongLocale = await engine.evaluate(request(
+      'guaranteed payout',
+      Date.now() + 2_000,
+      { direction: 'OUTPUT_COMPLETE', locale: 'fr-FR', industry: 'insurance', sourceType: 'FILE' },
+    ));
+    expect(wrongLocale.action).toBe('ALLOW');
+
+    const matching = await engine.evaluate(request(
+      'guaranteed payout',
+      Date.now() + 2_000,
+      { direction: 'OUTPUT_COMPLETE', locale: 'en-US', industry: 'insurance', sourceType: 'FILE' },
+    ));
+    expect(matching.action).toBe('BLOCK');
+    expect(matching.observations[0]).toMatchObject({
+      category: 'insurance_compliance',
+      confidence: 0.9,
+      ruleId: 'insurance-output-rule',
+      ruleVersion: '2.1.0',
+      dictionaryReleaseId: 'release-insurance-2',
+      dictionaryVersion: '2.0.0',
+    });
   });
 
   it('returns at the absolute deadline even when a detector ignores cancellation', async () => {

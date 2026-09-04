@@ -16,16 +16,26 @@ ALTER TABLE "agent_lifecycle_budgets"
   ADD COLUMN IF NOT EXISTS "guard_inference_tokens" integer NOT NULL DEFAULT 0,
   ADD COLUMN IF NOT EXISTS "maximum_guard_inference_tokens" integer NOT NULL DEFAULT 1000000;
 
-ALTER TABLE "agent_lifecycle_budgets"
-  ADD CONSTRAINT "agent_lifecycle_budgets_nonnegative_check" CHECK (
-    "allocated_risk_budget" >= 0 AND "consumed_risk_budget" >= 0 AND
-    "tool_steps" >= 0 AND "maximum_tool_steps" >= 0 AND
-    "recursion_depth" >= 0 AND "maximum_recursion_depth" >= 0 AND
-    "browser_tabs" >= 0 AND "maximum_browser_tabs" >= 0 AND
-    "processes" >= 0 AND "maximum_processes" >= 0 AND
-    "connections" >= 0 AND "maximum_connections" >= 0 AND
-    "files" >= 0 AND "maximum_files" >= 0 AND
-    "ocr_pages" >= 0 AND "maximum_ocr_pages" >= 0 AND
-    "media_duration_seconds" >= 0 AND "maximum_media_duration_seconds" >= 0 AND
-    "guard_inference_tokens" >= 0 AND "maximum_guard_inference_tokens" >= 0
-  );
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+      FROM pg_constraint
+     WHERE conname = 'agent_lifecycle_budgets_nonnegative_check'
+       AND conrelid = 'agent_lifecycle_budgets'::regclass
+  ) THEN
+    ALTER TABLE "agent_lifecycle_budgets"
+      ADD CONSTRAINT "agent_lifecycle_budgets_nonnegative_check" CHECK (
+        "allocated_risk_budget" >= 0 AND "consumed_risk_budget" >= 0 AND
+        "tool_steps" >= 0 AND "maximum_tool_steps" >= 0 AND
+        "recursion_depth" >= 0 AND "maximum_recursion_depth" >= 0 AND
+        "browser_tabs" >= 0 AND "maximum_browser_tabs" >= 0 AND
+        "processes" >= 0 AND "maximum_processes" >= 0 AND
+        "connections" >= 0 AND "maximum_connections" >= 0 AND
+        "files" >= 0 AND "maximum_files" >= 0 AND
+        "ocr_pages" >= 0 AND "maximum_ocr_pages" >= 0 AND
+        "media_duration_seconds" >= 0 AND "maximum_media_duration_seconds" >= 0 AND
+        "guard_inference_tokens" >= 0 AND "maximum_guard_inference_tokens" >= 0
+      );
+  END IF;
+END $$;

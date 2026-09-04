@@ -8,6 +8,7 @@ import {
 } from '@/storage/database/shared/schema';
 import { scopePredicate, type TenantScope } from '@/lib/tenancy';
 import { policySigningKeyId, verificationPublicKey, verifyPolicyBundle } from './crypto';
+import { recordPolicyIntegrityFailure } from './integrity-events';
 import {
   isTransientPolicyDatabaseError,
   policyLastKnownGoodMaxAgeMs,
@@ -17,6 +18,8 @@ import type { CompiledPolicyBundle } from './types';
 import { semanticClassifierSpecSchema } from '@/lib/guard-engine-v2/semantic-classifier';
 import { guardResourceAdmissionSpecSchema } from '@/lib/resource-control/admission-config';
 
+const sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
+
 const ruleSchema = z.object({
   id: z.string(),
   riskType: z.string(),
@@ -24,7 +27,30 @@ const ruleSchema = z.object({
   matchType: z.enum(['exact', 'contains', 'prefix', 'suffix', 'regex']),
   caseSensitive: z.boolean(),
   score: z.number().min(0).max(1),
+  severity: z.enum(['NONE', 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).optional(),
+  ruleVersion: z.string().optional(),
   mandatoryDeny: z.boolean().optional(),
+  canonicalTermId: z.string().optional(),
+  variantId: z.string().optional(),
+  dictionaryReleaseId: z.string().optional(),
+  dictionaryVersion: z.string().optional(),
+  owner: z.string().optional(),
+  locale: z.string().optional(),
+  direction: z.enum([
+    'BOTH',
+    'INPUT',
+    'OUTPUT_COMPLETE',
+    'OUTPUT_CHUNK',
+    'RAG_INGEST',
+    'RAG_CONTEXT',
+    'TOOL_REQUEST',
+    'TOOL_RESULT',
+  ]).optional(),
+  industry: z.string().optional(),
+  contexts: z.array(z.string()).optional(),
+  validFromEpochMs: z.number().int().positive().optional(),
+  validToEpochMs: z.number().int().positive().optional(),
+  evidenceRequirement: z.string().optional(),
 }).strict();
 const detectorDagSchema = z.object({
   version: z.string().min(1).max(128),
@@ -64,6 +90,20 @@ const payloadSchema = z.object({
     caseSensitive: z.boolean(),
     dimensionScope: z.enum(['all', 'specific']),
     dimensionCodes: z.array(z.string()),
+    targetRuleIds: z.array(z.string().min(1)).min(1).max(5_000).optional(),
+    directions: z.array(z.enum([
+      'INPUT',
+      'OUTPUT_COMPLETE',
+      'OUTPUT_CHUNK',
+      'RAG_INGEST',
+      'RAG_CONTEXT',
+      'TOOL_REQUEST',
+      'TOOL_RESULT',
+    ])).min(1).max(7).optional(),
+    validFromEpochMs: z.number().int().positive().optional(),
+    expiresAtEpochMs: z.number().int().positive().optional(),
+    approvalStatus: z.literal('approved').optional(),
+    approvedBy: z.string().min(1).max(255).optional(),
     mandatoryDenyExempt: z.literal(false),
   }).strict()),
   thresholds: z.array(z.object({
@@ -76,7 +116,72 @@ const payloadSchema = z.object({
   detectorDag: detectorDagSchema.optional(),
   semanticClassifier: semanticClassifierSpecSchema().optional(),
   resourceAdmission: guardResourceAdmissionSpecSchema().optional(),
+  dictionaryReleases: z.array(z.object({
+    id: z.string(),
+    dictionaryId: z.string(),
+    version: z.string(),
+    state: z.enum(['reviewed', 'shadow', 'canary', 'active']),
+    manifestHash: sha256Schema,
+    contentHash: sha256Schema,
+    signatureAlgorithm: z.literal('Ed25519'),
+    signingKeyId: z.string(),
+    entryCount: z.number().int().nonnegative(),
+    submittedBy: z.string().min(1),
+    approvedBy: z.string().min(1),
+  }).strict()).optional(),
+  responseTemplates: z.array(z.object({
+    id: z.string(),
+    templateKey: z.string(),
+    riskCategory: z.string(),
+    action: z.enum([
+      'WARN',
+      'MASK',
+      'REWRITE',
+      'REQUIRE_REVIEW',
+      'SAFE_RESPONSE',
+      'BLOCK',
+    ]),
+    locale: z.string(),
+    industry: z.string(),
+    templateText: z.string(),
+    allowedVariables: z.array(z.string()),
+    version: z.number().int().positive(),
+    contentHash: sha256Schema,
+    signatureDigest: sha256Schema,
+    approvedBy: z.string().min(1),
+  }).strict()).optional(),
+  detectorCalibrations: z.array(z.object({
+    id: z.string(),
+    detectorId: z.string(),
+    detectorVersion: z.string(),
+    riskType: z.string(),
+    locale: z.string(),
+    industry: z.string(),
+    threshold: z.number().min(0).max(1),
+    confidenceFloor: z.number().min(0).max(1),
+    metrics: z.record(z.string(), z.number()),
+    datasetHash: sha256Schema,
+    approvedBy: z.string().min(1),
+  }).strict()).optional(),
+  modelDigests: z.array(z.object({
+    modelId: z.string(),
+    modelVersion: z.string(),
+    sha256: sha256Schema,
+  }).strict()).optional(),
+  tokenizer: z.object({
+    id: z.string(),
+    version: z.string(),
+    sha256: sha256Schema,
+  }).strict().optional(),
+  failurePolicies: z.array(z.object({
+    detectorId: z.string(),
+    policy: z.enum(['FAIL_CLOSED', 'DEGRADE']),
+  }).strict()).optional(),
 }).strict();
+
+export function parseCompiledPolicyBundlePayload(value: unknown): CompiledPolicyBundle {
+  return payloadSchema.parse(value) as CompiledPolicyBundle;
+}
 
 export interface RuntimePolicyBundle {
   readonly id: string;
@@ -229,8 +334,14 @@ export async function loadVerifiedPolicyBundle(
   requireTrustedSigningMetadata(row);
   let payload: CompiledPolicyBundle;
   try {
-    payload = payloadSchema.parse(row.canonicalJson) as CompiledPolicyBundle;
+    payload = parseCompiledPolicyBundlePayload(row.canonicalJson);
   } catch (error) {
+    await recordPolicyIntegrityFailure({
+      failure: 'POLICY_DIGEST_MISMATCH',
+      scope,
+      bundleId: row.id,
+      detailCode: 'POLICY_BUNDLE_SCHEMA_INVALID',
+    }).catch(() => undefined);
     throw new PolicyBundleRuntimeError(
       'POLICY_BUNDLE_SCHEMA_INVALID',
       'Policy bundle schema validation failed',
@@ -254,6 +365,12 @@ export async function loadVerifiedPolicyBundle(
     contentHash: row.contentHash,
     signature: row.signature,
   }, publicKey)) {
+    await recordPolicyIntegrityFailure({
+      failure: 'POLICY_DIGEST_MISMATCH',
+      scope,
+      bundleId: row.id,
+      detailCode: 'POLICY_SIGNATURE_INVALID',
+    }).catch(() => undefined);
     throw new PolicyBundleRuntimeError(
       'POLICY_SIGNATURE_INVALID',
       'Policy bundle signature verification failed',

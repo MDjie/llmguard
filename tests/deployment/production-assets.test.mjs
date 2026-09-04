@@ -114,6 +114,8 @@ describe('production deployment invariants', () => {
     expect(values).not.toContain('command: ["pnpm"]');
     expect(values).toContain('args: ["--import", "tsx", "scripts/run-worker.mjs", "evaluation"]');
     expect(compose).toContain('./drizzle/0035_guard_quota_ledger.sql');
+    expect(compose).toContain('./drizzle/0037_targeted_whitelist_rules.sql');
+    expect(compose).toContain('./drizzle/0038_policy_governance.sql');
     expect(compose).toContain('media-analyzer:');
     for (const worker of workers) expect(compose).toContain(`  ${worker}:`);
     for (const dockerfile of [rootDockerfile, analyzerDockerfile, applianceDockerfile]) {

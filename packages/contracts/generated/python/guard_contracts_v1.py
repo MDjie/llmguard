@@ -1,9 +1,9 @@
 # Generated from model/guard-v1.schema.json. Do not edit.
-# Source SHA-256: 95d5f83807849b342487326076ea8dc4a664878ff7689e6ec89ce665d1316faf
+# Source SHA-256: 2da2dcd7e08805684ff47b35f29d160f2d583db74671af14c64f4a86b7911962
 from typing import Literal, NotRequired, TypedDict
 
 GUARD_CONTRACT_VERSION = '1.0'
-GUARD_CONTRACT_SOURCE_SHA256 = '95d5f83807849b342487326076ea8dc4a664878ff7689e6ec89ce665d1316faf'
+GUARD_CONTRACT_SOURCE_SHA256 = '2da2dcd7e08805684ff47b35f29d160f2d583db74671af14c64f4a86b7911962'
 
 Direction = Literal["INPUT", "OUTPUT_COMPLETE", "OUTPUT_CHUNK", "RAG_INGEST", "RAG_CONTEXT", "TOOL_REQUEST", "TOOL_RESULT"]
 
@@ -32,6 +32,11 @@ class ContextEnvelope(TypedDict):
     tenantId: str
     applicationId: str
     sessionId: NotRequired[str]
+    modality: NotRequired[ArtifactKind]
+    artifactId: NotRequired[str]
+    page: NotRequired[int]
+    timeRangeMs: NotRequired[list[int]]
+    region: NotRequired[list[float]]
     sourceType: SourceType
     sourceId: str
     trustLevel: TrustLevel
@@ -66,6 +71,10 @@ class RequestContext(TypedDict):
     tenantId: str
     applicationId: str
     sessionId: NotRequired[str]
+    sourceType: NotRequired[SourceType]
+    locale: NotRequired[str]
+    jurisdiction: NotRequired[str]
+    industry: NotRequired[str]
     direction: Direction
     absoluteDeadlineEpochMs: int
     policyBundleId: str
@@ -106,11 +115,20 @@ class EvidenceRef(TypedDict):
     tokenStart: NotRequired[int]
     tokenEnd: NotRequired[int]
     tokenizerId: NotRequired[str]
+    normalizedStart: NotRequired[int]
+    normalizedEnd: NotRequired[int]
+    normalizationTransforms: NotRequired[list[str]]
 
 class Observation(TypedDict):
     detectorId: str
     detectorVersion: str
     riskType: str
+    category: NotRequired[str]
+    confidence: NotRequired[float]
+    ruleId: NotRequired[str]
+    ruleVersion: NotRequired[str]
+    dictionaryReleaseId: NotRequired[str]
+    dictionaryVersion: NotRequired[str]
     score: float
     severity: RiskLevel
     evidence: list[EvidenceRef]
@@ -119,6 +137,13 @@ class Observation(TypedDict):
     modelVersion: NotRequired[str]
     configurationDigest: NotRequired[str]
     failMode: NotRequired[GuardFailMode]
+
+class LatencyBreakdown(TypedDict):
+    normalizationMs: NotRequired[int]
+    detectionMs: NotRequired[int]
+    aggregationMs: NotRequired[int]
+    interventionMs: NotRequired[int]
+    totalMs: int
 
 class GuardDecision(TypedDict):
     contractVersion: Literal["1.0"]
@@ -130,6 +155,9 @@ class GuardDecision(TypedDict):
     policyPath: list[str]
     bundleId: str
     latencyMs: int
+    latencyBreakdown: NotRequired[LatencyBreakdown]
+    degraded: NotRequired[bool]
+    reasonCodes: NotRequired[list[str]]
     degradationReasons: list[str]
     transformedText: NotRequired[str]
     modelVersions: NotRequired[list[str]]

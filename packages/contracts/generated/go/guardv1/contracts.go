@@ -1,9 +1,9 @@
 // Code generated from model/guard-v1.schema.json. DO NOT EDIT.
-// Source SHA-256: 95d5f83807849b342487326076ea8dc4a664878ff7689e6ec89ce665d1316faf
+// Source SHA-256: 2da2dcd7e08805684ff47b35f29d160f2d583db74671af14c64f4a86b7911962
 package guardv1
 
 const GuardContractVersion = "1.0"
-const GuardContractSourceSHA256 = "95d5f83807849b342487326076ea8dc4a664878ff7689e6ec89ce665d1316faf"
+const GuardContractSourceSHA256 = "2da2dcd7e08805684ff47b35f29d160f2d583db74671af14c64f4a86b7911962"
 
 type Direction string
 
@@ -131,6 +131,11 @@ type ContextEnvelope struct {
 	TenantId string `json:"tenantId"`
 	ApplicationId string `json:"applicationId"`
 	SessionId *string `json:"sessionId,omitempty"`
+	Modality *ArtifactKind `json:"modality,omitempty"`
+	ArtifactId *string `json:"artifactId,omitempty"`
+	Page *int64 `json:"page,omitempty"`
+	TimeRangeMs []int64 `json:"timeRangeMs,omitempty"`
+	Region []float64 `json:"region,omitempty"`
 	SourceType SourceType `json:"sourceType"`
 	SourceId string `json:"sourceId"`
 	TrustLevel TrustLevel `json:"trustLevel"`
@@ -167,6 +172,10 @@ type RequestContext struct {
 	TenantId string `json:"tenantId"`
 	ApplicationId string `json:"applicationId"`
 	SessionId *string `json:"sessionId,omitempty"`
+	SourceType *SourceType `json:"sourceType,omitempty"`
+	Locale *string `json:"locale,omitempty"`
+	Jurisdiction *string `json:"jurisdiction,omitempty"`
+	Industry *string `json:"industry,omitempty"`
 	Direction Direction `json:"direction"`
 	AbsoluteDeadlineEpochMs int64 `json:"absoluteDeadlineEpochMs"`
 	PolicyBundleId string `json:"policyBundleId"`
@@ -211,12 +220,21 @@ type EvidenceRef struct {
 	TokenStart *int64 `json:"tokenStart,omitempty"`
 	TokenEnd *int64 `json:"tokenEnd,omitempty"`
 	TokenizerId *string `json:"tokenizerId,omitempty"`
+	NormalizedStart *int64 `json:"normalizedStart,omitempty"`
+	NormalizedEnd *int64 `json:"normalizedEnd,omitempty"`
+	NormalizationTransforms []string `json:"normalizationTransforms,omitempty"`
 }
 
 type Observation struct {
 	DetectorId string `json:"detectorId"`
 	DetectorVersion string `json:"detectorVersion"`
 	RiskType string `json:"riskType"`
+	Category *string `json:"category,omitempty"`
+	Confidence *float64 `json:"confidence,omitempty"`
+	RuleId *string `json:"ruleId,omitempty"`
+	RuleVersion *string `json:"ruleVersion,omitempty"`
+	DictionaryReleaseId *string `json:"dictionaryReleaseId,omitempty"`
+	DictionaryVersion *string `json:"dictionaryVersion,omitempty"`
 	Score float64 `json:"score"`
 	Severity RiskLevel `json:"severity"`
 	Evidence []EvidenceRef `json:"evidence"`
@@ -225,6 +243,14 @@ type Observation struct {
 	ModelVersion *string `json:"modelVersion,omitempty"`
 	ConfigurationDigest *string `json:"configurationDigest,omitempty"`
 	FailMode *GuardFailMode `json:"failMode,omitempty"`
+}
+
+type LatencyBreakdown struct {
+	NormalizationMs *int64 `json:"normalizationMs,omitempty"`
+	DetectionMs *int64 `json:"detectionMs,omitempty"`
+	AggregationMs *int64 `json:"aggregationMs,omitempty"`
+	InterventionMs *int64 `json:"interventionMs,omitempty"`
+	TotalMs int64 `json:"totalMs"`
 }
 
 type GuardDecision struct {
@@ -237,6 +263,9 @@ type GuardDecision struct {
 	PolicyPath []string `json:"policyPath"`
 	BundleId string `json:"bundleId"`
 	LatencyMs int64 `json:"latencyMs"`
+	LatencyBreakdown *LatencyBreakdown `json:"latencyBreakdown,omitempty"`
+	Degraded *bool `json:"degraded,omitempty"`
+	ReasonCodes []string `json:"reasonCodes,omitempty"`
 	DegradationReasons []string `json:"degradationReasons"`
 	TransformedText *string `json:"transformedText,omitempty"`
 	ModelVersions []string `json:"modelVersions,omitempty"`

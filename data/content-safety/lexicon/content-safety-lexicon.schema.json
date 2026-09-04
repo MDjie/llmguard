@@ -1,0 +1,252 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://guardllm.local/schemas/content-safety-lexicon-record.v1.json",
+  "title": "GuardLLM content-safety lexicon JSONL record",
+  "oneOf": [
+    { "$ref": "#/$defs/manifest" },
+    { "$ref": "#/$defs/source" },
+    { "$ref": "#/$defs/risk" },
+    { "$ref": "#/$defs/term" },
+    { "$ref": "#/$defs/pattern" },
+    { "$ref": "#/$defs/allowRule" }
+  ],
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "stringArray": {
+      "type": "array",
+      "items": { "type": "string" },
+      "uniqueItems": true
+    },
+    "manifest": {
+      "type": "object",
+      "required": [
+        "_type",
+        "schema_version",
+        "lexicon_id",
+        "version",
+        "release_state",
+        "coverage",
+        "safety_note"
+      ],
+      "properties": {
+        "_type": { "const": "manifest" },
+        "schema_version": { "const": "1.0.0" },
+        "lexicon_id": { "$ref": "#/$defs/nonEmptyString" },
+        "version": { "$ref": "#/$defs/nonEmptyString" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "release_state": {
+          "enum": ["candidate", "reviewed", "shadow", "canary", "active", "deprecated", "emergency"]
+        },
+        "content_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "signature": { "$ref": "#/$defs/nonEmptyString" },
+        "signature_algorithm": { "const": "Ed25519" },
+        "signing_key_id": { "$ref": "#/$defs/nonEmptyString" },
+        "approved_by": { "$ref": "#/$defs/nonEmptyString" },
+        "approved_at": { "type": "string", "format": "date-time" },
+        "default_locale": { "$ref": "#/$defs/nonEmptyString" },
+        "target_standard": { "$ref": "#/$defs/nonEmptyString" },
+        "coverage": {
+          "type": "object",
+          "required": [
+            "gbt_risks_defined",
+            "gbt_risks_total",
+            "terms_seeded",
+            "allow_rules_seeded"
+          ],
+          "properties": {
+            "gbt_risks_defined": { "type": "integer", "minimum": 0 },
+            "gbt_risks_total": { "type": "integer", "const": 31 },
+            "terms_seeded": { "type": "integer", "minimum": 0 },
+            "allow_rules_seeded": { "type": "integer", "minimum": 0 }
+          },
+          "additionalProperties": false
+        },
+        "safety_note": { "$ref": "#/$defs/nonEmptyString" }
+      },
+      "additionalProperties": true
+    },
+    "source": {
+      "type": "object",
+      "required": [
+        "_type",
+        "source_id",
+        "name",
+        "url",
+        "license_or_basis",
+        "allowed_use",
+        "retrieved_at"
+      ],
+      "properties": {
+        "_type": { "const": "source" },
+        "source_id": { "$ref": "#/$defs/nonEmptyString" },
+        "name": { "$ref": "#/$defs/nonEmptyString" },
+        "url": { "type": "string", "format": "uri" },
+        "license_or_basis": { "$ref": "#/$defs/nonEmptyString" },
+        "allowed_use": { "$ref": "#/$defs/nonEmptyString" },
+        "retrieved_at": { "type": "string", "format": "date" }
+      },
+      "additionalProperties": false
+    },
+    "risk": {
+      "type": "object",
+      "required": ["_type", "risk_id", "parent", "name"],
+      "properties": {
+        "_type": { "const": "risk" },
+        "risk_id": { "$ref": "#/$defs/nonEmptyString" },
+        "parent": { "$ref": "#/$defs/nonEmptyString" },
+        "name": { "$ref": "#/$defs/nonEmptyString" },
+        "standard_ref": { "type": "string" },
+        "mapping": { "$ref": "#/$defs/stringArray" },
+        "required_by": { "type": "string" },
+        "required_keyword_min": { "type": "integer", "minimum": 0 },
+        "required_test_min": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "baseDetectionEntry": {
+      "type": "object",
+      "required": [
+        "_type",
+        "term_id",
+        "canonical",
+        "locale",
+        "match_mode",
+        "risk_ids",
+        "severity",
+        "signal_weight",
+        "action_hint",
+        "status",
+        "source_ids"
+      ],
+      "properties": {
+        "_type": { "enum": ["term", "pattern"] },
+        "term_id": { "$ref": "#/$defs/nonEmptyString" },
+        "canonical": { "$ref": "#/$defs/nonEmptyString" },
+        "variants": { "$ref": "#/$defs/stringArray" },
+        "pattern": { "type": "string", "minLength": 1 },
+        "locale": { "$ref": "#/$defs/nonEmptyString" },
+        "match_mode": {
+          "enum": ["exact", "token", "phrase", "regex", "fuzzy", "phonetic", "entity", "proximity"]
+        },
+        "risk_ids": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "severity": {
+          "enum": ["none", "low", "medium", "high", "critical"]
+        },
+        "signal_weight": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "action_hint": { "$ref": "#/$defs/nonEmptyString" },
+        "status": {
+          "enum": ["candidate", "reviewed", "shadow", "canary", "active", "deprecated", "emergency"]
+        },
+        "owner": { "$ref": "#/$defs/nonEmptyString" },
+        "evidence_requirement": { "$ref": "#/$defs/nonEmptyString" },
+        "direction": {
+          "enum": ["both", "input", "output", "retrieval", "tool", "training"]
+        },
+        "industry": { "$ref": "#/$defs/nonEmptyString" },
+        "contexts": { "$ref": "#/$defs/stringArray" },
+        "valid_from": { "type": "string", "format": "date-time" },
+        "valid_to": { "type": "string", "format": "date-time" },
+        "source_ids": { "$ref": "#/$defs/stringArray" },
+        "positive_contexts": { "$ref": "#/$defs/stringArray" },
+        "negative_contexts": { "$ref": "#/$defs/stringArray" }
+      },
+      "additionalProperties": false
+    },
+    "term": {
+      "allOf": [
+        { "$ref": "#/$defs/baseDetectionEntry" },
+        {
+          "properties": {
+            "_type": { "const": "term" },
+            "variants": { "$ref": "#/$defs/stringArray" }
+          },
+          "required": ["variants"]
+        }
+      ]
+    },
+    "pattern": {
+      "allOf": [
+        { "$ref": "#/$defs/baseDetectionEntry" },
+        {
+          "properties": {
+            "_type": { "const": "pattern" },
+            "match_mode": { "const": "regex" }
+          },
+          "required": ["pattern"]
+        }
+      ]
+    },
+    "allowRule": {
+      "type": "object",
+      "required": [
+        "_type",
+        "allow_id",
+        "target_term_ids",
+        "full_phrase",
+        "effect",
+        "scope",
+        "forbidden_risk_ids",
+        "status",
+        "expires_at",
+        "required_tests"
+      ],
+      "properties": {
+        "_type": { "const": "allow_rule" },
+        "allow_id": { "$ref": "#/$defs/nonEmptyString" },
+        "target_term_ids": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "full_phrase": { "type": "string", "minLength": 2 },
+        "effect": {
+          "enum": [
+            "suppress_lexical_only",
+            "reduce_score",
+            "route_to_supportive_context",
+            "require_review"
+          ]
+        },
+        "scope": {
+          "type": "object",
+          "required": ["locale", "direction"],
+          "properties": {
+            "locale": { "$ref": "#/$defs/nonEmptyString" },
+            "direction": {
+              "type": "array",
+              "items": { "enum": ["input", "output", "retrieval", "tool", "training"] },
+              "minItems": 1,
+              "uniqueItems": true
+            }
+          },
+          "additionalProperties": true
+        },
+        "forbidden_risk_ids": { "$ref": "#/$defs/stringArray" },
+        "status": {
+          "enum": ["candidate", "reviewed", "shadow", "canary", "active", "deprecated", "emergency"]
+        },
+        "expires_at": { "type": "string", "format": "date" },
+        "required_tests": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 2,
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

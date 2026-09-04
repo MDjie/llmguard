@@ -13,27 +13,47 @@ async function createMissingTables() {
     // 创建 whitelist_rules 表（新版结构）
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS whitelist_rules (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid()::text,
+        tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT,
+        application_id VARCHAR(36) NOT NULL REFERENCES applications(id) ON DELETE RESTRICT,
         -- 兼容旧字段
         policy_id VARCHAR(36) REFERENCES policy_profiles(id) ON DELETE CASCADE,
-        dimension_id UUID REFERENCES detection_dimensions(id) ON DELETE CASCADE,
-        -- 新增字段
+        dimension_id VARCHAR(36) REFERENCES detection_dimensions(id) ON DELETE CASCADE,
+        -- 受治理的目标范围
         name VARCHAR(200),
         description TEXT,
         policy_scope VARCHAR(20) NOT NULL DEFAULT 'specific',
         dimension_scope VARCHAR(20) NOT NULL DEFAULT 'specific',
-        dimension_codes JSONB DEFAULT '[]',
+        dimension_codes JSONB NOT NULL DEFAULT '[]',
+        target_rule_ids JSONB NOT NULL DEFAULT '[]',
+        directions JSONB NOT NULL DEFAULT '[]',
+        valid_from TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+        expires_at TIMESTAMP WITH TIME ZONE,
+        approval_status VARCHAR(32) NOT NULL DEFAULT 'pending',
+        approved_by VARCHAR(100),
+        approved_at TIMESTAMP WITH TIME ZONE,
         priority INTEGER NOT NULL DEFAULT 100,
         -- 匹配规则
         pattern TEXT NOT NULL,
         match_type VARCHAR(20) NOT NULL DEFAULT 'contains',
         case_sensitive BOOLEAN NOT NULL DEFAULT false,
-        enabled BOOLEAN NOT NULL DEFAULT true,
+        enabled BOOLEAN NOT NULL DEFAULT false,
         created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
         updated_at TIMESTAMP WITH TIME ZONE
       );
     `);
     console.log('✅ whitelist_rules 表创建成功');
+
+    await db.execute(sql`
+      ALTER TABLE whitelist_rules
+        ADD COLUMN IF NOT EXISTS target_rule_ids JSONB NOT NULL DEFAULT '[]',
+        ADD COLUMN IF NOT EXISTS directions JSONB NOT NULL DEFAULT '[]',
+        ADD COLUMN IF NOT EXISTS valid_from TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+        ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP WITH TIME ZONE,
+        ADD COLUMN IF NOT EXISTS approval_status VARCHAR(32) NOT NULL DEFAULT 'pending',
+        ADD COLUMN IF NOT EXISTS approved_by VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS approved_at TIMESTAMP WITH TIME ZONE;
+    `);
 
     // 创建 whitelist_rules 索引
     await db.execute(sql`
@@ -54,16 +74,24 @@ async function createMissingTables() {
     await db.execute(sql`
       CREATE INDEX IF NOT EXISTS whitelist_rules_priority_idx ON whitelist_rules(priority);
     `);
+    await db.execute(sql`
+      CREATE INDEX IF NOT EXISTS whitelist_rules_expires_at_idx ON whitelist_rules(expires_at);
+    `);
+    await db.execute(sql`
+      CREATE INDEX IF NOT EXISTS whitelist_rules_approval_idx ON whitelist_rules(approval_status, valid_from);
+    `);
     console.log('✅ whitelist_rules 索引创建成功');
 
     // 创建 whitelist_rule_policies 表
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS whitelist_rule_policies (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        whitelist_rule_id UUID NOT NULL REFERENCES whitelist_rules(id) ON DELETE CASCADE,
+        id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid()::text,
+        tenant_id VARCHAR(36) NOT NULL REFERENCES tenants(id) ON DELETE RESTRICT,
+        application_id VARCHAR(36) NOT NULL REFERENCES applications(id) ON DELETE RESTRICT,
+        whitelist_rule_id VARCHAR(36) NOT NULL REFERENCES whitelist_rules(id) ON DELETE CASCADE,
         policy_id VARCHAR(36) NOT NULL REFERENCES policy_profiles(id) ON DELETE CASCADE,
         created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-        UNIQUE(whitelist_rule_id, policy_id)
+        UNIQUE(tenant_id, application_id, whitelist_rule_id, policy_id)
       );
     `);
     console.log('✅ whitelist_rule_policies 表创建成功');

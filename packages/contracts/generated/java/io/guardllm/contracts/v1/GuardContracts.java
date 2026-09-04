@@ -1,5 +1,5 @@
 // Generated from model/guard-v1.schema.json. Do not edit.
-// Source SHA-256: 95d5f83807849b342487326076ea8dc4a664878ff7689e6ec89ce665d1316faf
+// Source SHA-256: 2da2dcd7e08805684ff47b35f29d160f2d583db74671af14c64f4a86b7911962
 package io.guardllm.contracts.v1;
 
 import java.util.List;
@@ -7,7 +7,7 @@ import java.util.Map;
 
 public final class GuardContracts {
   public static final String CONTRACT_VERSION = "1.0";
-  public static final String SOURCE_SHA256 = "95d5f83807849b342487326076ea8dc4a664878ff7689e6ec89ce665d1316faf";
+  public static final String SOURCE_SHA256 = "2da2dcd7e08805684ff47b35f29d160f2d583db74671af14c64f4a86b7911962";
   private GuardContracts() {}
 
   public enum Direction { INPUT, OUTPUT_COMPLETE, OUTPUT_CHUNK, RAG_INGEST, RAG_CONTEXT, TOOL_REQUEST, TOOL_RESULT }
@@ -37,6 +37,11 @@ public final class GuardContracts {
     String tenantId,
     String applicationId,
     String sessionId,
+    ArtifactKind modality,
+    String artifactId,
+    Long page,
+    List<Long> timeRangeMs,
+    List<Double> region,
     SourceType sourceType,
     String sourceId,
     TrustLevel trustLevel,
@@ -73,6 +78,10 @@ public final class GuardContracts {
     String tenantId,
     String applicationId,
     String sessionId,
+    SourceType sourceType,
+    String locale,
+    String jurisdiction,
+    String industry,
     Direction direction,
     long absoluteDeadlineEpochMs,
     String policyBundleId,
@@ -116,13 +125,22 @@ public final class GuardContracts {
     List<String> sourceEnvelopeIds,
     Long tokenStart,
     Long tokenEnd,
-    String tokenizerId
+    String tokenizerId,
+    Long normalizedStart,
+    Long normalizedEnd,
+    List<String> normalizationTransforms
   ) {}
 
   public record Observation(
     String detectorId,
     String detectorVersion,
     String riskType,
+    String category,
+    Double confidence,
+    String ruleId,
+    String ruleVersion,
+    String dictionaryReleaseId,
+    String dictionaryVersion,
     double score,
     RiskLevel severity,
     List<EvidenceRef> evidence,
@@ -131,6 +149,14 @@ public final class GuardContracts {
     String modelVersion,
     String configurationDigest,
     GuardFailMode failMode
+  ) {}
+
+  public record LatencyBreakdown(
+    Long normalizationMs,
+    Long detectionMs,
+    Long aggregationMs,
+    Long interventionMs,
+    long totalMs
   ) {}
 
   public record GuardDecision(
@@ -143,6 +169,9 @@ public final class GuardContracts {
     List<String> policyPath,
     String bundleId,
     long latencyMs,
+    LatencyBreakdown latencyBreakdown,
+    Boolean degraded,
+    List<String> reasonCodes,
     List<String> degradationReasons,
     String transformedText,
     List<String> modelVersions,

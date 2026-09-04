@@ -1,0 +1,33 @@
+{
+  "schema": "content-safety-shadow-evaluation-report/v1",
+  "generatedAt": "2026-09-04T15:12:14.318Z",
+  "lexiconVersion": "0.1.0-candidate",
+  "bundleContentHash": "c91c3ec0ea25667f87a6b411d7207eb8ad0cca021ee89efe8af4302b664c064b",
+  "passed": true,
+  "total": 44,
+  "passedCount": 44,
+  "failedCount": 0,
+  "byKind": {
+    "benign_target_suppression": {
+      "total": 10,
+      "passed": 10
+    },
+    "benign_uncompiled_control": {
+      "total": 2,
+      "passed": 2
+    },
+    "dangerous_second_occurrence": {
+      "total": 12,
+      "passed": 12
+    },
+    "expired_exception": {
+      "total": 10,
+      "passed": 10
+    },
+    "out_of_scope_direction": {
+      "total": 10,
+      "passed": 10
+    }
+  },
+  "failures": []
+}

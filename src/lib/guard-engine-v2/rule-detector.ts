@@ -69,6 +69,69 @@ function occurrences(
   return result;
 }
 
+function exceptionAppliesToRisk(
+  exception: RuleExceptionSpec,
+  rule: RuleSpec,
+): boolean {
+  return exception.dimensionScope === 'all' ||
+    exception.dimensionCodes.includes(rule.riskType);
+}
+
+function exceptionIsActiveForRequest(
+  exception: RuleExceptionSpec,
+  context: GuardDetectorContext,
+  now: number,
+): boolean {
+  const appliesToDirection = exception.directions === undefined ||
+    exception.directions.includes(context.request.context.direction);
+  const hasStarted = exception.validFromEpochMs === undefined ||
+    exception.validFromEpochMs <= now;
+  const isUnexpired = exception.expiresAtEpochMs === undefined ||
+    exception.expiresAtEpochMs > now;
+  return appliesToDirection && hasStarted && isUnexpired;
+}
+
+function ruleIsActiveForRequest(
+  rule: RuleSpec,
+  context: GuardDetectorContext,
+  now: number,
+): boolean {
+  if (rule.validFromEpochMs !== undefined && rule.validFromEpochMs > now) return false;
+  if (rule.validToEpochMs !== undefined && rule.validToEpochMs <= now) return false;
+  if (
+    rule.direction !== undefined &&
+    rule.direction !== 'BOTH' &&
+    rule.direction !== context.request.context.direction
+  ) return false;
+  if (
+    rule.locale !== undefined &&
+    rule.locale !== 'und' &&
+    context.request.context.locale !== undefined &&
+    rule.locale !== context.request.context.locale
+  ) return false;
+  if (
+    rule.industry !== undefined &&
+    rule.industry !== 'general' &&
+    context.request.context.industry !== undefined &&
+    rule.industry !== context.request.context.industry
+  ) return false;
+  return rule.contexts === undefined || rule.contexts.length === 0 ||
+    context.request.context.sourceType === undefined ||
+    rule.contexts.includes(context.request.context.sourceType);
+}
+
+function exceptionContainsMatch(
+  view: NormalizedView,
+  match: { raw: string; index: number },
+  exception: RuleExceptionSpec,
+): boolean {
+  const matchEnd = match.index + match.raw.length;
+  return occurrences(view, exception).some((exceptionMatch) =>
+    exceptionMatch.index <= match.index &&
+    exceptionMatch.index + exceptionMatch.raw.length >= matchEnd,
+  );
+}
+
 export class RuleDetector implements GuardDetector {
   readonly id = 'rules';
   readonly version: string;
@@ -78,6 +141,7 @@ export class RuleDetector implements GuardDetector {
     private readonly rules: readonly RuleSpec[],
     version = '2.0.0',
     private readonly exceptions: readonly RuleExceptionSpec[] = [],
+    private readonly now: () => number = Date.now,
   ) {
     this.version = version;
   }
@@ -87,22 +151,39 @@ export class RuleDetector implements GuardDetector {
     const defensiveContext = isDefensiveEducationalContext(
       context.request.content.text ?? '',
     );
+    const evaluationTime = this.now();
     for (const rule of this.rules) {
       if (context.signal.aborted) throw context.signal.reason;
+      if (!ruleIsActiveForRequest(rule, context, evaluationTime)) continue;
       if (!rule.mandatoryDeny && defensiveContext && CONTEXTUAL_RISK_TYPES.has(rule.riskType)) {
         continue;
       }
       const isExcepted = !rule.mandatoryDeny && this.exceptions.some((exception) => {
-        const appliesToRisk = exception.dimensionScope === 'all' ||
-          exception.dimensionCodes.includes(rule.riskType);
-        return appliesToRisk && context.views.some(
+        const isLegacyDimensionException = exception.targetRuleIds === undefined;
+        return isLegacyDimensionException &&
+          exceptionAppliesToRisk(exception, rule) &&
+          exceptionIsActiveForRequest(exception, context, evaluationTime) &&
+          context.views.some(
           (view) => occurrences(view, exception).length > 0,
         );
       });
       if (isExcepted) continue;
+      const targetedExceptions = rule.mandatoryDeny
+        ? []
+        : this.exceptions.filter((exception) =>
+            exception.targetRuleIds !== undefined &&
+            exception.targetRuleIds.includes(rule.id) &&
+            exceptionAppliesToRisk(exception, rule) &&
+            exceptionIsActiveForRequest(exception, context, evaluationTime),
+          );
       const evidence = [];
       for (const view of context.views) {
         for (const match of occurrences(view, rule)) {
+          if (targetedExceptions.some((exception) =>
+            exceptionContainsMatch(view, match, exception),
+          )) {
+            continue;
+          }
           const origin = mapViewRange(view, match.index, match.index + match.raw.length);
           evidence.push({
             viewId: view.id,
@@ -123,6 +204,12 @@ export class RuleDetector implements GuardDetector {
         detectorId: this.id,
         detectorVersion: this.version,
         riskType: rule.riskType,
+        category: rule.riskType,
+        confidence: score,
+        ruleId: rule.id,
+        ruleVersion: rule.ruleVersion,
+        dictionaryReleaseId: rule.dictionaryReleaseId,
+        dictionaryVersion: rule.dictionaryVersion,
         score,
         severity: rule.severity ?? riskLevel(score, Boolean(rule.mandatoryDeny)),
         evidence,

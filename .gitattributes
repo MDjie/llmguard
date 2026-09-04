@@ -1,0 +1,2 @@
+# Third-party source-lock inputs must remain byte-for-byte identical to upstream files.
+/data/content-safety/sources/raw/** -text -diff

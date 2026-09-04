@@ -1,0 +1,3279 @@
+{
+  "schema": "guardllm-lexicon-shadow-bundle/v1",
+  "generatedAt": "2026-09-04T15:12:12.479Z",
+  "sourceLexicon": "data/content-safety/lexicon/content-safety-lexicon.v1.jsonl",
+  "lexiconId": "guardllm-content-safety",
+  "lexiconVersion": "0.1.0-candidate",
+  "mode": "shadow",
+  "enforcementAllowed": false,
+  "signed": false,
+  "safetyBoundary": "This artifact is for offline replay and shadow evaluation only. It is not a SignedPolicyBundle and the production loader must reject it.",
+  "contentHash": "c91c3ec0ea25667f87a6b411d7207eb8ad0cca021ee89efe8af4302b664c064b",
+  "ruleCount": 155,
+  "rules": [
+    {
+      "id": "lex:cn-a1-01-0001:0:CN.A1.01",
+      "riskType": "CN.A1.01",
+      "pattern": "煽动颠覆国家政权",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.95,
+      "severity": "CRITICAL",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a1-01-0002:0:CN.A1.01",
+      "riskType": "CN.A1.01",
+      "pattern": "推翻社会主义制度",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.95,
+      "severity": "CRITICAL",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a1-01-0003:0:CN.A1.01",
+      "riskType": "CN.A1.01",
+      "pattern": "颠覆国家政权",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.75,
+      "severity": "CRITICAL",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a1-02-0001:0:CN.A1.02",
+      "riskType": "CN.A1.02",
+      "pattern": "危害国家安全",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.45,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a1-02-0002:0:CN.A1.02",
+      "riskType": "CN.A1.02",
+      "pattern": "损害国家形象",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.55,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a1-02-0003:0:CN.A1.02",
+      "riskType": "CN.A1.02",
+      "pattern": "泄露国家秘密",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.85,
+      "severity": "CRITICAL",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a1-02-0003:1:CN.A1.02",
+      "riskType": "CN.A1.02",
+      "pattern": "泄漏国家秘密",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.85,
+      "severity": "CRITICAL",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a1-03-0001:0:CN.A1.03",
+      "riskType": "CN.A1.03",
+      "pattern": "煽动分裂国家",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.95,
+      "severity": "CRITICAL",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a1-03-0002:0:CN.A1.03",
+      "riskType": "CN.A1.03",
+      "pattern": "破坏国家统一",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.85,
+      "severity": "CRITICAL",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a1-03-0003:0:CN.A1.03",
+      "riskType": "CN.A1.03",
+      "pattern": "破坏社会稳定",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.55,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a1-04-0001:0:CN.A1.04",
+      "riskType": "CN.A1.04",
+      "pattern": "恐怖主义",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.55,
+      "severity": "CRITICAL",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a1-04-0002:0:CN.A1.04",
+      "riskType": "CN.A1.04",
+      "pattern": "极端主义",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.55,
+      "severity": "CRITICAL",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a1-04-0003:0:CN.A1.04",
+      "riskType": "CN.A1.04",
+      "pattern": "恐怖组织招募",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.95,
+      "severity": "CRITICAL",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a1-05-0001:0:CN.A1.05",
+      "riskType": "CN.A1.05",
+      "pattern": "民族仇恨",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.75,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a1-05-0002:0:CN.A1.05",
+      "riskType": "CN.A1.05",
+      "pattern": "挑动民族对立",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.9,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a1-06-0001:0:CN.A1.06",
+      "riskType": "CN.A1.06",
+      "pattern": "宣扬暴力",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.85,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a1-06-0001:1:CN.A1.06",
+      "riskType": "CN.A1.06",
+      "pattern": "鼓吹暴力",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.85,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a1-06-0002:0:CN.A1.06",
+      "riskType": "CN.A1.06",
+      "pattern": "淫秽色情",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.7,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a1-06-0003:0:CN.A1.06",
+      "riskType": "CN.A1.06",
+      "pattern": "未成年人色情",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.98,
+      "severity": "CRITICAL",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a1-06-0003:1:CN.A1.06",
+      "riskType": "CN.A1.06",
+      "pattern": "儿童色情",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.98,
+      "severity": "CRITICAL",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a1-07-0001:0:CN.A1.07",
+      "riskType": "CN.A1.07",
+      "pattern": "虚假有害信息",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.55,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a1-07-0002:0:CN.A1.07",
+      "riskType": "CN.A1.07",
+      "pattern": "虚假新闻",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.45,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a1-07-0002:1:CN.A1.07",
+      "riskType": "CN.A1.07",
+      "pattern": "假新闻",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.45,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a1-07-0003:0:CN.A1.07",
+      "riskType": "CN.A1.07",
+      "pattern": "网络谣言",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.45,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a1-07-0003:1:CN.A1.07",
+      "riskType": "CN.A1.07",
+      "pattern": "造谣",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.45,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a1-08-0001:0:CN.A1.08",
+      "riskType": "CN.A1.08",
+      "pattern": "电信网络诈骗",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.55,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a1-08-0001:1:CN.A1.08",
+      "riskType": "CN.A1.08",
+      "pattern": "电诈",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.55,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a1-08-0002:0:CN.A1.08",
+      "riskType": "CN.A1.08",
+      "pattern": "赌博",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.4,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a1-08-0003:0:CN.A1.08",
+      "riskType": "CN.A1.08",
+      "pattern": "毒品交易",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.9,
+      "severity": "CRITICAL",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a1-08-0003:1:CN.A1.08",
+      "riskType": "CN.A1.08",
+      "pattern": "贩卖毒品",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.9,
+      "severity": "CRITICAL",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a1-08-0004:0:CN.A1.08",
+      "riskType": "CN.A1.08",
+      "pattern": "邪教",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.45,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a1-05-0001:0:CN.A2.01",
+      "riskType": "CN.A2.01",
+      "pattern": "民族仇恨",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.75,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a1-05-0002:0:CN.A2.01",
+      "riskType": "CN.A2.01",
+      "pattern": "挑动民族对立",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.9,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a2-01-0001:0:CN.A2.01",
+      "riskType": "CN.A2.01",
+      "pattern": "民族歧视",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.7,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a2-01-0002:0:CN.A2.01",
+      "riskType": "CN.A2.01",
+      "pattern": "种族歧视",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.7,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a2-02-0001:0:CN.A2.02",
+      "riskType": "CN.A2.02",
+      "pattern": "信仰歧视",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.7,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a2-02-0001:1:CN.A2.02",
+      "riskType": "CN.A2.02",
+      "pattern": "宗教歧视",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.7,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a2-03-0001:0:CN.A2.03",
+      "riskType": "CN.A2.03",
+      "pattern": "国别歧视",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.7,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a2-03-0001:1:CN.A2.03",
+      "riskType": "CN.A2.03",
+      "pattern": "国籍歧视",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.7,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a2-04-0001:0:CN.A2.04",
+      "riskType": "CN.A2.04",
+      "pattern": "地域歧视",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.6,
+      "severity": "MEDIUM",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a2-04-0001:1:CN.A2.04",
+      "riskType": "CN.A2.04",
+      "pattern": "地域黑",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.6,
+      "severity": "MEDIUM",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a2-05-0001:0:CN.A2.05",
+      "riskType": "CN.A2.05",
+      "pattern": "性别歧视",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.7,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a2-05-0002:0:CN.A2.05",
+      "riskType": "CN.A2.05",
+      "pattern": "厌女",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.45,
+      "severity": "MEDIUM",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a2-05-0002:1:CN.A2.05",
+      "riskType": "CN.A2.05",
+      "pattern": "仇女",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.45,
+      "severity": "MEDIUM",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a2-06-0001:0:CN.A2.06",
+      "riskType": "CN.A2.06",
+      "pattern": "年龄歧视",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.65,
+      "severity": "MEDIUM",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a2-07-0001:0:CN.A2.07",
+      "riskType": "CN.A2.07",
+      "pattern": "职业歧视",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.65,
+      "severity": "MEDIUM",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a2-08-0001:0:CN.A2.08",
+      "riskType": "CN.A2.08",
+      "pattern": "健康歧视",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.7,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a2-08-0001:1:CN.A2.08",
+      "riskType": "CN.A2.08",
+      "pattern": "疾病歧视",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.7,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a2-08-0002:0:CN.A2.08",
+      "riskType": "CN.A2.08",
+      "pattern": "残疾歧视",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.75,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a2-08-0002:1:CN.A2.08",
+      "riskType": "CN.A2.08",
+      "pattern": "残障歧视",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.75,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a2-01-0002:0:CN.A2.09",
+      "riskType": "CN.A2.09",
+      "pattern": "种族歧视",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.7,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a2-08-0002:0:CN.A2.09",
+      "riskType": "CN.A2.09",
+      "pattern": "残疾歧视",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.75,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a2-08-0002:1:CN.A2.09",
+      "riskType": "CN.A2.09",
+      "pattern": "残障歧视",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.75,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a2-09-0001:0:CN.A2.09",
+      "riskType": "CN.A2.09",
+      "pattern": "身份歧视",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.6,
+      "severity": "MEDIUM",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a3-01-0001:0:CN.A3.01",
+      "riskType": "CN.A3.01",
+      "pattern": "侵犯知识产权",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.55,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a3-01-0001:1:CN.A3.01",
+      "riskType": "CN.A3.01",
+      "pattern": "知识产权侵权",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.55,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a3-01-0002:0:CN.A3.01",
+      "riskType": "CN.A3.01",
+      "pattern": "盗版传播",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.55,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a3-01-0002:1:CN.A3.01",
+      "riskType": "CN.A3.01",
+      "pattern": "盗版资源",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.55,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a3-02-0001:0:CN.A3.02",
+      "riskType": "CN.A3.02",
+      "pattern": "商业贿赂",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.65,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a3-03-0001:0:CN.A3.03",
+      "riskType": "CN.A3.03",
+      "pattern": "商业秘密",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.45,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a3-03-0001:1:CN.A3.03",
+      "riskType": "CN.A3.03",
+      "pattern": "企业机密",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.45,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:privacy-secret-pattern-0001:0:CN.A3.03",
+      "riskType": "CN.A3.03",
+      "pattern": "-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----",
+      "matchType": "regex",
+      "caseSensitive": false,
+      "score": 0.99,
+      "severity": "CRITICAL",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a3-04-0001:0:CN.A3.04",
+      "riskType": "CN.A3.04",
+      "pattern": "不正当竞争",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.55,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a3-04-0002:0:CN.A3.04",
+      "riskType": "CN.A3.04",
+      "pattern": "垄断协议",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.6,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a3-02-0001:0:CN.A3.05",
+      "riskType": "CN.A3.05",
+      "pattern": "商业贿赂",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.65,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a4-01-0001:0:CN.A4.01",
+      "riskType": "CN.A4.01",
+      "pattern": "自杀",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.55,
+      "severity": "CRITICAL",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a4-01-0001:1:CN.A4.01",
+      "riskType": "CN.A4.01",
+      "pattern": "轻生",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.55,
+      "severity": "CRITICAL",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a4-01-0002:0:CN.A4.01",
+      "riskType": "CN.A4.01",
+      "pattern": "自残",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.6,
+      "severity": "CRITICAL",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a4-01-0002:1:CN.A4.01",
+      "riskType": "CN.A4.01",
+      "pattern": "伤害自己",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.6,
+      "severity": "CRITICAL",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a4-01-0003:0:CN.A4.01",
+      "riskType": "CN.A4.01",
+      "pattern": "网络欺凌",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.55,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a4-01-0003:1:CN.A4.01",
+      "riskType": "CN.A4.01",
+      "pattern": "网络霸凌",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.55,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a4-02-0001:0:CN.A4.02",
+      "riskType": "CN.A4.02",
+      "pattern": "侵犯肖像权",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.65,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a4-02-0001:1:CN.A4.02",
+      "riskType": "CN.A4.02",
+      "pattern": "肖像侵权",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.65,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a1-07-0003:0:CN.A4.03",
+      "riskType": "CN.A4.03",
+      "pattern": "网络谣言",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.45,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a1-07-0003:1:CN.A4.03",
+      "riskType": "CN.A4.03",
+      "pattern": "造谣",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.45,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a4-01-0003:0:CN.A4.03",
+      "riskType": "CN.A4.03",
+      "pattern": "网络欺凌",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.55,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a4-01-0003:1:CN.A4.03",
+      "riskType": "CN.A4.03",
+      "pattern": "网络霸凌",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.55,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a4-03-0001:0:CN.A4.03",
+      "riskType": "CN.A4.03",
+      "pattern": "侮辱诽谤",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.6,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a4-03-0001:1:CN.A4.03",
+      "riskType": "CN.A4.03",
+      "pattern": "造谣诽谤",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.6,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a4-04-0001:0:CN.A4.04",
+      "riskType": "CN.A4.04",
+      "pattern": "侵害荣誉权",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.6,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a4-05-0001:0:CN.A4.05",
+      "riskType": "CN.A4.05",
+      "pattern": "侵犯隐私",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.65,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a4-05-0001:1:CN.A4.05",
+      "riskType": "CN.A4.05",
+      "pattern": "隐私侵权",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.65,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a4-05-0002:0:CN.A4.05",
+      "riskType": "CN.A4.05",
+      "pattern": "人肉搜索",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.8,
+      "severity": "CRITICAL",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a4-05-0002:1:CN.A4.05",
+      "riskType": "CN.A4.05",
+      "pattern": "人肉某人",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.8,
+      "severity": "CRITICAL",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a4-06-0001:0:CN.A4.06",
+      "riskType": "CN.A4.06",
+      "pattern": "居民身份证号码",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.35,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a4-06-0001:1:CN.A4.06",
+      "riskType": "CN.A4.06",
+      "pattern": "身份证号",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.35,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a4-06-0001:2:CN.A4.06",
+      "riskType": "CN.A4.06",
+      "pattern": "身份证号码",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.35,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a4-06-0002:0:CN.A4.06",
+      "riskType": "CN.A4.06",
+      "pattern": "金融账户",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.35,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a4-06-0002:1:CN.A4.06",
+      "riskType": "CN.A4.06",
+      "pattern": "银行账户",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.35,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a4-06-0002:2:CN.A4.06",
+      "riskType": "CN.A4.06",
+      "pattern": "银行卡号",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.35,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a4-06-0003:0:CN.A4.06",
+      "riskType": "CN.A4.06",
+      "pattern": "行踪轨迹",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.45,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a4-06-0003:1:CN.A4.06",
+      "riskType": "CN.A4.06",
+      "pattern": "精准定位轨迹",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.45,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:privacy-pii-pattern-0001:0:CN.A4.06",
+      "riskType": "CN.A4.06",
+      "pattern": "(?:^|[^0-9])[0-9]{17}[0-9Xx](?:$|[^0-9])",
+      "matchType": "regex",
+      "caseSensitive": false,
+      "score": 0.8,
+      "severity": "CRITICAL",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a5-01-0001:0:CN.A5.01",
+      "riskType": "CN.A5.01",
+      "pattern": "医疗诊断",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.3,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a5-01-0001:1:CN.A5.01",
+      "riskType": "CN.A5.01",
+      "pattern": "疾病诊断",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.3,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a5-01-0002:0:CN.A5.01",
+      "riskType": "CN.A5.01",
+      "pattern": "金融投资建议",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.3,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a5-01-0002:1:CN.A5.01",
+      "riskType": "CN.A5.01",
+      "pattern": "投资建议",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.3,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a5-02-0001:0:CN.A5.02",
+      "riskType": "CN.A5.02",
+      "pattern": "心理咨询",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.25,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a5-02-0001:1:CN.A5.02",
+      "riskType": "CN.A5.02",
+      "pattern": "心理治疗建议",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.25,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a1-06-0003:0:HARM.CHILD_SEXUAL_EXPLOITATION",
+      "riskType": "HARM.CHILD_SEXUAL_EXPLOITATION",
+      "pattern": "未成年人色情",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.98,
+      "severity": "CRITICAL",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a1-06-0003:1:HARM.CHILD_SEXUAL_EXPLOITATION",
+      "riskType": "HARM.CHILD_SEXUAL_EXPLOITATION",
+      "pattern": "儿童色情",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.98,
+      "severity": "CRITICAL",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a1-08-0001:0:HARM.NONVIOLENT_CRIME",
+      "riskType": "HARM.NONVIOLENT_CRIME",
+      "pattern": "电信网络诈骗",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.55,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a1-08-0001:1:HARM.NONVIOLENT_CRIME",
+      "riskType": "HARM.NONVIOLENT_CRIME",
+      "pattern": "电诈",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.55,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a1-08-0002:0:HARM.NONVIOLENT_CRIME",
+      "riskType": "HARM.NONVIOLENT_CRIME",
+      "pattern": "赌博",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.4,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a1-08-0003:0:HARM.NONVIOLENT_CRIME",
+      "riskType": "HARM.NONVIOLENT_CRIME",
+      "pattern": "毒品交易",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.9,
+      "severity": "CRITICAL",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a1-08-0003:1:HARM.NONVIOLENT_CRIME",
+      "riskType": "HARM.NONVIOLENT_CRIME",
+      "pattern": "贩卖毒品",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.9,
+      "severity": "CRITICAL",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a4-01-0001:0:HARM.SELF_HARM",
+      "riskType": "HARM.SELF_HARM",
+      "pattern": "自杀",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.55,
+      "severity": "CRITICAL",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a4-01-0001:1:HARM.SELF_HARM",
+      "riskType": "HARM.SELF_HARM",
+      "pattern": "轻生",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.55,
+      "severity": "CRITICAL",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a4-01-0002:0:HARM.SELF_HARM",
+      "riskType": "HARM.SELF_HARM",
+      "pattern": "自残",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.6,
+      "severity": "CRITICAL",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a4-01-0002:1:HARM.SELF_HARM",
+      "riskType": "HARM.SELF_HARM",
+      "pattern": "伤害自己",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.6,
+      "severity": "CRITICAL",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a5-02-0001:0:HARM.SELF_HARM",
+      "riskType": "HARM.SELF_HARM",
+      "pattern": "心理咨询",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.25,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a5-02-0001:1:HARM.SELF_HARM",
+      "riskType": "HARM.SELF_HARM",
+      "pattern": "心理治疗建议",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.25,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a1-04-0001:0:HARM.VIOLENT_CRIME",
+      "riskType": "HARM.VIOLENT_CRIME",
+      "pattern": "恐怖主义",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.55,
+      "severity": "CRITICAL",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a1-04-0003:0:HARM.VIOLENT_CRIME",
+      "riskType": "HARM.VIOLENT_CRIME",
+      "pattern": "恐怖组织招募",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.95,
+      "severity": "CRITICAL",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a1-06-0001:0:HARM.VIOLENT_CRIME",
+      "riskType": "HARM.VIOLENT_CRIME",
+      "pattern": "宣扬暴力",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.85,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a1-06-0001:1:HARM.VIOLENT_CRIME",
+      "riskType": "HARM.VIOLENT_CRIME",
+      "pattern": "鼓吹暴力",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.85,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a4-05-0001:0:PRIVACY.PII",
+      "riskType": "PRIVACY.PII",
+      "pattern": "侵犯隐私",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.65,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a4-05-0001:1:PRIVACY.PII",
+      "riskType": "PRIVACY.PII",
+      "pattern": "隐私侵权",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.65,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a4-05-0002:0:PRIVACY.PII",
+      "riskType": "PRIVACY.PII",
+      "pattern": "人肉搜索",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.8,
+      "severity": "CRITICAL",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a4-05-0002:1:PRIVACY.PII",
+      "riskType": "PRIVACY.PII",
+      "pattern": "人肉某人",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.8,
+      "severity": "CRITICAL",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a4-06-0001:0:PRIVACY.PII",
+      "riskType": "PRIVACY.PII",
+      "pattern": "居民身份证号码",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.35,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a4-06-0001:1:PRIVACY.PII",
+      "riskType": "PRIVACY.PII",
+      "pattern": "身份证号",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.35,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a4-06-0001:2:PRIVACY.PII",
+      "riskType": "PRIVACY.PII",
+      "pattern": "身份证号码",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.35,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a4-06-0002:0:PRIVACY.PII",
+      "riskType": "PRIVACY.PII",
+      "pattern": "金融账户",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.35,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a4-06-0002:1:PRIVACY.PII",
+      "riskType": "PRIVACY.PII",
+      "pattern": "银行账户",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.35,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a4-06-0002:2:PRIVACY.PII",
+      "riskType": "PRIVACY.PII",
+      "pattern": "银行卡号",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.35,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a4-06-0003:0:PRIVACY.PII",
+      "riskType": "PRIVACY.PII",
+      "pattern": "行踪轨迹",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.45,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a4-06-0003:1:PRIVACY.PII",
+      "riskType": "PRIVACY.PII",
+      "pattern": "精准定位轨迹",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.45,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:privacy-pii-pattern-0001:0:PRIVACY.PII",
+      "riskType": "PRIVACY.PII",
+      "pattern": "(?:^|[^0-9])[0-9]{17}[0-9Xx](?:$|[^0-9])",
+      "matchType": "regex",
+      "caseSensitive": false,
+      "score": 0.8,
+      "severity": "CRITICAL",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a1-02-0003:0:PRIVACY.SECRET",
+      "riskType": "PRIVACY.SECRET",
+      "pattern": "泄露国家秘密",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.85,
+      "severity": "CRITICAL",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a1-02-0003:1:PRIVACY.SECRET",
+      "riskType": "PRIVACY.SECRET",
+      "pattern": "泄漏国家秘密",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.85,
+      "severity": "CRITICAL",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a3-03-0001:0:PRIVACY.SECRET",
+      "riskType": "PRIVACY.SECRET",
+      "pattern": "商业秘密",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.45,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:cn-a3-03-0001:1:PRIVACY.SECRET",
+      "riskType": "PRIVACY.SECRET",
+      "pattern": "企业机密",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.45,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:privacy-secret-pattern-0001:0:PRIVACY.SECRET",
+      "riskType": "PRIVACY.SECRET",
+      "pattern": "-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----",
+      "matchType": "regex",
+      "caseSensitive": false,
+      "score": 0.99,
+      "severity": "CRITICAL",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:sec-jb-0001:0:SEC.JAILBREAK",
+      "riskType": "SEC.JAILBREAK",
+      "pattern": "绕过安全策略",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.75,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:sec-jb-0001:1:SEC.JAILBREAK",
+      "riskType": "SEC.JAILBREAK",
+      "pattern": "绕过内容审核",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.75,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:sec-jb-0001:2:SEC.JAILBREAK",
+      "riskType": "SEC.JAILBREAK",
+      "pattern": "规避安全限制",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.75,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:sec-jb-0002:0:SEC.JAILBREAK",
+      "riskType": "SEC.JAILBREAK",
+      "pattern": "开发者模式越狱",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.8,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:sec-jb-0002:1:SEC.JAILBREAK",
+      "riskType": "SEC.JAILBREAK",
+      "pattern": "DAN模式",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.8,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:sec-leak-0001:0:SEC.JAILBREAK",
+      "riskType": "SEC.JAILBREAK",
+      "pattern": "输出系统提示词",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.85,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:sec-leak-0001:1:SEC.JAILBREAK",
+      "riskType": "SEC.JAILBREAK",
+      "pattern": "泄露系统提示词",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.85,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:sec-leak-0001:2:SEC.JAILBREAK",
+      "riskType": "SEC.JAILBREAK",
+      "pattern": "显示隐藏提示词",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.85,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:sec-pi-0001:0:SEC.JAILBREAK",
+      "riskType": "SEC.JAILBREAK",
+      "pattern": "忽略之前的所有指令",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.8,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:sec-pi-0001:1:SEC.JAILBREAK",
+      "riskType": "SEC.JAILBREAK",
+      "pattern": "无视之前的所有指令",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.8,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:sec-pi-0001:2:SEC.JAILBREAK",
+      "riskType": "SEC.JAILBREAK",
+      "pattern": "忽略先前指令",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.8,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:sec-pi-0002:0:SEC.JAILBREAK",
+      "riskType": "SEC.JAILBREAK",
+      "pattern": "把上面的指令当作无效",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.75,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:sec-pi-0002:1:SEC.JAILBREAK",
+      "riskType": "SEC.JAILBREAK",
+      "pattern": "覆盖系统指令",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.75,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:sec-pi-0001:0:SEC.PROMPT_INJECTION",
+      "riskType": "SEC.PROMPT_INJECTION",
+      "pattern": "忽略之前的所有指令",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.8,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:sec-pi-0001:1:SEC.PROMPT_INJECTION",
+      "riskType": "SEC.PROMPT_INJECTION",
+      "pattern": "无视之前的所有指令",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.8,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:sec-pi-0001:2:SEC.PROMPT_INJECTION",
+      "riskType": "SEC.PROMPT_INJECTION",
+      "pattern": "忽略先前指令",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.8,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:sec-pi-0002:0:SEC.PROMPT_INJECTION",
+      "riskType": "SEC.PROMPT_INJECTION",
+      "pattern": "把上面的指令当作无效",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.75,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:sec-pi-0002:1:SEC.PROMPT_INJECTION",
+      "riskType": "SEC.PROMPT_INJECTION",
+      "pattern": "覆盖系统指令",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.75,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:sec-leak-0001:0:SEC.SYSTEM_PROMPT_LEAKAGE",
+      "riskType": "SEC.SYSTEM_PROMPT_LEAKAGE",
+      "pattern": "输出系统提示词",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.85,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:sec-leak-0001:1:SEC.SYSTEM_PROMPT_LEAKAGE",
+      "riskType": "SEC.SYSTEM_PROMPT_LEAKAGE",
+      "pattern": "泄露系统提示词",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.85,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    },
+    {
+      "id": "lex:sec-leak-0001:2:SEC.SYSTEM_PROMPT_LEAKAGE",
+      "riskType": "SEC.SYSTEM_PROMPT_LEAKAGE",
+      "pattern": "显示隐藏提示词",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.85,
+      "severity": "HIGH",
+      "mandatoryDeny": false
+    }
+  ],
+  "provenance": [
+    {
+      "ruleId": "lex:cn-a1-01-0001:0:CN.A1.01",
+      "termId": "cn-a1-01-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a1-01-0002:0:CN.A1.01",
+      "termId": "cn-a1-01-0002",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a1-01-0003:0:CN.A1.01",
+      "termId": "cn-a1-01-0003",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "score_only"
+    },
+    {
+      "ruleId": "lex:cn-a1-02-0001:0:CN.A1.02",
+      "termId": "cn-a1-02-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "score_only"
+    },
+    {
+      "ruleId": "lex:cn-a1-02-0002:0:CN.A1.02",
+      "termId": "cn-a1-02-0002",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "score_only"
+    },
+    {
+      "ruleId": "lex:cn-a1-02-0003:0:CN.A1.02",
+      "termId": "cn-a1-02-0003",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "genai-measures-2023"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a1-02-0003:0:PRIVACY.SECRET",
+      "termId": "cn-a1-02-0003",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "genai-measures-2023"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a1-02-0003:1:CN.A1.02",
+      "termId": "cn-a1-02-0003",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "genai-measures-2023"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a1-02-0003:1:PRIVACY.SECRET",
+      "termId": "cn-a1-02-0003",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "genai-measures-2023"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a1-03-0001:0:CN.A1.03",
+      "termId": "cn-a1-03-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a1-03-0002:0:CN.A1.03",
+      "termId": "cn-a1-03-0002",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a1-03-0003:0:CN.A1.03",
+      "termId": "cn-a1-03-0003",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "score_only"
+    },
+    {
+      "ruleId": "lex:cn-a1-04-0001:0:CN.A1.04",
+      "termId": "cn-a1-04-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "score_only"
+    },
+    {
+      "ruleId": "lex:cn-a1-04-0001:0:HARM.VIOLENT_CRIME",
+      "termId": "cn-a1-04-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "score_only"
+    },
+    {
+      "ruleId": "lex:cn-a1-04-0002:0:CN.A1.04",
+      "termId": "cn-a1-04-0002",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "score_only"
+    },
+    {
+      "ruleId": "lex:cn-a1-04-0003:0:CN.A1.04",
+      "termId": "cn-a1-04-0003",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "minors-2023"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a1-04-0003:0:HARM.VIOLENT_CRIME",
+      "termId": "cn-a1-04-0003",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "minors-2023"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a1-05-0001:0:CN.A1.05",
+      "termId": "cn-a1-05-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a1-05-0001:0:CN.A2.01",
+      "termId": "cn-a1-05-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a1-05-0002:0:CN.A1.05",
+      "termId": "cn-a1-05-0002",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "genai-measures-2023"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a1-05-0002:0:CN.A2.01",
+      "termId": "cn-a1-05-0002",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "genai-measures-2023"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a1-06-0001:0:CN.A1.06",
+      "termId": "cn-a1-06-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a1-06-0001:0:HARM.VIOLENT_CRIME",
+      "termId": "cn-a1-06-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a1-06-0001:1:CN.A1.06",
+      "termId": "cn-a1-06-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a1-06-0001:1:HARM.VIOLENT_CRIME",
+      "termId": "cn-a1-06-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a1-06-0002:0:CN.A1.06",
+      "termId": "cn-a1-06-0002",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a1-06-0003:0:CN.A1.06",
+      "termId": "cn-a1-06-0003",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "minors-2023"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a1-06-0003:0:HARM.CHILD_SEXUAL_EXPLOITATION",
+      "termId": "cn-a1-06-0003",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "minors-2023"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a1-06-0003:1:CN.A1.06",
+      "termId": "cn-a1-06-0003",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "minors-2023"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a1-06-0003:1:HARM.CHILD_SEXUAL_EXPLOITATION",
+      "termId": "cn-a1-06-0003",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "minors-2023"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a1-07-0001:0:CN.A1.07",
+      "termId": "cn-a1-07-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "score_only"
+    },
+    {
+      "ruleId": "lex:cn-a1-07-0002:0:CN.A1.07",
+      "termId": "cn-a1-07-0002",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "deep-synthesis-2022"
+      ],
+      "actionHint": "fact_check_route"
+    },
+    {
+      "ruleId": "lex:cn-a1-07-0002:1:CN.A1.07",
+      "termId": "cn-a1-07-0002",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "deep-synthesis-2022"
+      ],
+      "actionHint": "fact_check_route"
+    },
+    {
+      "ruleId": "lex:cn-a1-07-0003:0:CN.A1.07",
+      "termId": "cn-a1-07-0003",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "genai-measures-2023"
+      ],
+      "actionHint": "fact_check_route"
+    },
+    {
+      "ruleId": "lex:cn-a1-07-0003:0:CN.A4.03",
+      "termId": "cn-a1-07-0003",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "genai-measures-2023"
+      ],
+      "actionHint": "fact_check_route"
+    },
+    {
+      "ruleId": "lex:cn-a1-07-0003:1:CN.A1.07",
+      "termId": "cn-a1-07-0003",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "genai-measures-2023"
+      ],
+      "actionHint": "fact_check_route"
+    },
+    {
+      "ruleId": "lex:cn-a1-07-0003:1:CN.A4.03",
+      "termId": "cn-a1-07-0003",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "genai-measures-2023"
+      ],
+      "actionHint": "fact_check_route"
+    },
+    {
+      "ruleId": "lex:cn-a1-08-0001:0:CN.A1.08",
+      "termId": "cn-a1-08-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "deep-synthesis-2022"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a1-08-0001:0:HARM.NONVIOLENT_CRIME",
+      "termId": "cn-a1-08-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "deep-synthesis-2022"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a1-08-0001:1:CN.A1.08",
+      "termId": "cn-a1-08-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "deep-synthesis-2022"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a1-08-0001:1:HARM.NONVIOLENT_CRIME",
+      "termId": "cn-a1-08-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "deep-synthesis-2022"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a1-08-0002:0:CN.A1.08",
+      "termId": "cn-a1-08-0002",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "minors-2023"
+      ],
+      "actionHint": "score_only"
+    },
+    {
+      "ruleId": "lex:cn-a1-08-0002:0:HARM.NONVIOLENT_CRIME",
+      "termId": "cn-a1-08-0002",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "minors-2023"
+      ],
+      "actionHint": "score_only"
+    },
+    {
+      "ruleId": "lex:cn-a1-08-0003:0:CN.A1.08",
+      "termId": "cn-a1-08-0003",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "genai-measures-2023"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a1-08-0003:0:HARM.NONVIOLENT_CRIME",
+      "termId": "cn-a1-08-0003",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "genai-measures-2023"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a1-08-0003:1:CN.A1.08",
+      "termId": "cn-a1-08-0003",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "genai-measures-2023"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a1-08-0003:1:HARM.NONVIOLENT_CRIME",
+      "termId": "cn-a1-08-0003",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "genai-measures-2023"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a1-08-0004:0:CN.A1.08",
+      "termId": "cn-a1-08-0004",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "minors-2023"
+      ],
+      "actionHint": "score_only"
+    },
+    {
+      "ruleId": "lex:cn-a2-01-0001:0:CN.A2.01",
+      "termId": "cn-a2-01-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a2-01-0002:0:CN.A2.01",
+      "termId": "cn-a2-01-0002",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "genai-measures-2023"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a2-01-0002:0:CN.A2.09",
+      "termId": "cn-a2-01-0002",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "genai-measures-2023"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a2-02-0001:0:CN.A2.02",
+      "termId": "cn-a2-02-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a2-02-0001:1:CN.A2.02",
+      "termId": "cn-a2-02-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a2-03-0001:0:CN.A2.03",
+      "termId": "cn-a2-03-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a2-03-0001:1:CN.A2.03",
+      "termId": "cn-a2-03-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a2-04-0001:0:CN.A2.04",
+      "termId": "cn-a2-04-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a2-04-0001:1:CN.A2.04",
+      "termId": "cn-a2-04-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a2-05-0001:0:CN.A2.05",
+      "termId": "cn-a2-05-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a2-05-0002:0:CN.A2.05",
+      "termId": "cn-a2-05-0002",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "genai-measures-2023"
+      ],
+      "actionHint": "score_only"
+    },
+    {
+      "ruleId": "lex:cn-a2-05-0002:1:CN.A2.05",
+      "termId": "cn-a2-05-0002",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "genai-measures-2023"
+      ],
+      "actionHint": "score_only"
+    },
+    {
+      "ruleId": "lex:cn-a2-06-0001:0:CN.A2.06",
+      "termId": "cn-a2-06-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a2-07-0001:0:CN.A2.07",
+      "termId": "cn-a2-07-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a2-08-0001:0:CN.A2.08",
+      "termId": "cn-a2-08-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a2-08-0001:1:CN.A2.08",
+      "termId": "cn-a2-08-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a2-08-0002:0:CN.A2.08",
+      "termId": "cn-a2-08-0002",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "pipl-2021"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a2-08-0002:0:CN.A2.09",
+      "termId": "cn-a2-08-0002",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "pipl-2021"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a2-08-0002:1:CN.A2.08",
+      "termId": "cn-a2-08-0002",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "pipl-2021"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a2-08-0002:1:CN.A2.09",
+      "termId": "cn-a2-08-0002",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "pipl-2021"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a2-09-0001:0:CN.A2.09",
+      "termId": "cn-a2-09-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a3-01-0001:0:CN.A3.01",
+      "termId": "cn-a3-01-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "copyright_route"
+    },
+    {
+      "ruleId": "lex:cn-a3-01-0001:1:CN.A3.01",
+      "termId": "cn-a3-01-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "copyright_route"
+    },
+    {
+      "ruleId": "lex:cn-a3-01-0002:0:CN.A3.01",
+      "termId": "cn-a3-01-0002",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "genai-measures-2023"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a3-01-0002:1:CN.A3.01",
+      "termId": "cn-a3-01-0002",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "genai-measures-2023"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a3-02-0001:0:CN.A3.02",
+      "termId": "cn-a3-02-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a3-02-0001:0:CN.A3.05",
+      "termId": "cn-a3-02-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a3-03-0001:0:CN.A3.03",
+      "termId": "cn-a3-03-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "dlp_route"
+    },
+    {
+      "ruleId": "lex:cn-a3-03-0001:0:PRIVACY.SECRET",
+      "termId": "cn-a3-03-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "dlp_route"
+    },
+    {
+      "ruleId": "lex:cn-a3-03-0001:1:CN.A3.03",
+      "termId": "cn-a3-03-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "dlp_route"
+    },
+    {
+      "ruleId": "lex:cn-a3-03-0001:1:PRIVACY.SECRET",
+      "termId": "cn-a3-03-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "dlp_route"
+    },
+    {
+      "ruleId": "lex:cn-a3-04-0001:0:CN.A3.04",
+      "termId": "cn-a3-04-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a3-04-0002:0:CN.A3.04",
+      "termId": "cn-a3-04-0002",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a4-01-0001:0:CN.A4.01",
+      "termId": "cn-a4-01-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "minors-2023"
+      ],
+      "actionHint": "self_harm_intent_route"
+    },
+    {
+      "ruleId": "lex:cn-a4-01-0001:0:HARM.SELF_HARM",
+      "termId": "cn-a4-01-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "minors-2023"
+      ],
+      "actionHint": "self_harm_intent_route"
+    },
+    {
+      "ruleId": "lex:cn-a4-01-0001:1:CN.A4.01",
+      "termId": "cn-a4-01-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "minors-2023"
+      ],
+      "actionHint": "self_harm_intent_route"
+    },
+    {
+      "ruleId": "lex:cn-a4-01-0001:1:HARM.SELF_HARM",
+      "termId": "cn-a4-01-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "minors-2023"
+      ],
+      "actionHint": "self_harm_intent_route"
+    },
+    {
+      "ruleId": "lex:cn-a4-01-0002:0:CN.A4.01",
+      "termId": "cn-a4-01-0002",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "minors-2023"
+      ],
+      "actionHint": "self_harm_intent_route"
+    },
+    {
+      "ruleId": "lex:cn-a4-01-0002:0:HARM.SELF_HARM",
+      "termId": "cn-a4-01-0002",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "minors-2023"
+      ],
+      "actionHint": "self_harm_intent_route"
+    },
+    {
+      "ruleId": "lex:cn-a4-01-0002:1:CN.A4.01",
+      "termId": "cn-a4-01-0002",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "minors-2023"
+      ],
+      "actionHint": "self_harm_intent_route"
+    },
+    {
+      "ruleId": "lex:cn-a4-01-0002:1:HARM.SELF_HARM",
+      "termId": "cn-a4-01-0002",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "minors-2023"
+      ],
+      "actionHint": "self_harm_intent_route"
+    },
+    {
+      "ruleId": "lex:cn-a4-01-0003:0:CN.A4.01",
+      "termId": "cn-a4-01-0003",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "minors-2023"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a4-01-0003:0:CN.A4.03",
+      "termId": "cn-a4-01-0003",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "minors-2023"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a4-01-0003:1:CN.A4.01",
+      "termId": "cn-a4-01-0003",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "minors-2023"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a4-01-0003:1:CN.A4.03",
+      "termId": "cn-a4-01-0003",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "minors-2023"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a4-02-0001:0:CN.A4.02",
+      "termId": "cn-a4-02-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "entity_and_consent_route"
+    },
+    {
+      "ruleId": "lex:cn-a4-02-0001:1:CN.A4.02",
+      "termId": "cn-a4-02-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "entity_and_consent_route"
+    },
+    {
+      "ruleId": "lex:cn-a4-03-0001:0:CN.A4.03",
+      "termId": "cn-a4-03-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "entity_and_claim_route"
+    },
+    {
+      "ruleId": "lex:cn-a4-03-0001:1:CN.A4.03",
+      "termId": "cn-a4-03-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "entity_and_claim_route"
+    },
+    {
+      "ruleId": "lex:cn-a4-04-0001:0:CN.A4.04",
+      "termId": "cn-a4-04-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "entity_and_claim_route"
+    },
+    {
+      "ruleId": "lex:cn-a4-05-0001:0:CN.A4.05",
+      "termId": "cn-a4-05-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "privacy_route"
+    },
+    {
+      "ruleId": "lex:cn-a4-05-0001:0:PRIVACY.PII",
+      "termId": "cn-a4-05-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "privacy_route"
+    },
+    {
+      "ruleId": "lex:cn-a4-05-0001:1:CN.A4.05",
+      "termId": "cn-a4-05-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "privacy_route"
+    },
+    {
+      "ruleId": "lex:cn-a4-05-0001:1:PRIVACY.PII",
+      "termId": "cn-a4-05-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "privacy_route"
+    },
+    {
+      "ruleId": "lex:cn-a4-05-0002:0:CN.A4.05",
+      "termId": "cn-a4-05-0002",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "pipl-2021"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a4-05-0002:0:PRIVACY.PII",
+      "termId": "cn-a4-05-0002",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "pipl-2021"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a4-05-0002:1:CN.A4.05",
+      "termId": "cn-a4-05-0002",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "pipl-2021"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a4-05-0002:1:PRIVACY.PII",
+      "termId": "cn-a4-05-0002",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "pipl-2021"
+      ],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:cn-a4-06-0001:0:CN.A4.06",
+      "termId": "cn-a4-06-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "pipl-2021"
+      ],
+      "actionHint": "pii_pattern_route"
+    },
+    {
+      "ruleId": "lex:cn-a4-06-0001:0:PRIVACY.PII",
+      "termId": "cn-a4-06-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "pipl-2021"
+      ],
+      "actionHint": "pii_pattern_route"
+    },
+    {
+      "ruleId": "lex:cn-a4-06-0001:1:CN.A4.06",
+      "termId": "cn-a4-06-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "pipl-2021"
+      ],
+      "actionHint": "pii_pattern_route"
+    },
+    {
+      "ruleId": "lex:cn-a4-06-0001:1:PRIVACY.PII",
+      "termId": "cn-a4-06-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "pipl-2021"
+      ],
+      "actionHint": "pii_pattern_route"
+    },
+    {
+      "ruleId": "lex:cn-a4-06-0001:2:CN.A4.06",
+      "termId": "cn-a4-06-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "pipl-2021"
+      ],
+      "actionHint": "pii_pattern_route"
+    },
+    {
+      "ruleId": "lex:cn-a4-06-0001:2:PRIVACY.PII",
+      "termId": "cn-a4-06-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "pipl-2021"
+      ],
+      "actionHint": "pii_pattern_route"
+    },
+    {
+      "ruleId": "lex:cn-a4-06-0002:0:CN.A4.06",
+      "termId": "cn-a4-06-0002",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "pipl-2021"
+      ],
+      "actionHint": "pii_pattern_route"
+    },
+    {
+      "ruleId": "lex:cn-a4-06-0002:0:PRIVACY.PII",
+      "termId": "cn-a4-06-0002",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "pipl-2021"
+      ],
+      "actionHint": "pii_pattern_route"
+    },
+    {
+      "ruleId": "lex:cn-a4-06-0002:1:CN.A4.06",
+      "termId": "cn-a4-06-0002",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "pipl-2021"
+      ],
+      "actionHint": "pii_pattern_route"
+    },
+    {
+      "ruleId": "lex:cn-a4-06-0002:1:PRIVACY.PII",
+      "termId": "cn-a4-06-0002",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "pipl-2021"
+      ],
+      "actionHint": "pii_pattern_route"
+    },
+    {
+      "ruleId": "lex:cn-a4-06-0002:2:CN.A4.06",
+      "termId": "cn-a4-06-0002",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "pipl-2021"
+      ],
+      "actionHint": "pii_pattern_route"
+    },
+    {
+      "ruleId": "lex:cn-a4-06-0002:2:PRIVACY.PII",
+      "termId": "cn-a4-06-0002",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "pipl-2021"
+      ],
+      "actionHint": "pii_pattern_route"
+    },
+    {
+      "ruleId": "lex:cn-a4-06-0003:0:CN.A4.06",
+      "termId": "cn-a4-06-0003",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "pipl-2021"
+      ],
+      "actionHint": "privacy_route"
+    },
+    {
+      "ruleId": "lex:cn-a4-06-0003:0:PRIVACY.PII",
+      "termId": "cn-a4-06-0003",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "pipl-2021"
+      ],
+      "actionHint": "privacy_route"
+    },
+    {
+      "ruleId": "lex:cn-a4-06-0003:1:CN.A4.06",
+      "termId": "cn-a4-06-0003",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "pipl-2021"
+      ],
+      "actionHint": "privacy_route"
+    },
+    {
+      "ruleId": "lex:cn-a4-06-0003:1:PRIVACY.PII",
+      "termId": "cn-a4-06-0003",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "pipl-2021"
+      ],
+      "actionHint": "privacy_route"
+    },
+    {
+      "ruleId": "lex:cn-a5-01-0001:0:CN.A5.01",
+      "termId": "cn-a5-01-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "high_stakes_accuracy_route"
+    },
+    {
+      "ruleId": "lex:cn-a5-01-0001:1:CN.A5.01",
+      "termId": "cn-a5-01-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "high_stakes_accuracy_route"
+    },
+    {
+      "ruleId": "lex:cn-a5-01-0002:0:CN.A5.01",
+      "termId": "cn-a5-01-0002",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "high_stakes_accuracy_route"
+    },
+    {
+      "ruleId": "lex:cn-a5-01-0002:1:CN.A5.01",
+      "termId": "cn-a5-01-0002",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "high_stakes_accuracy_route"
+    },
+    {
+      "ruleId": "lex:cn-a5-02-0001:0:CN.A5.02",
+      "termId": "cn-a5-02-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "high_stakes_reliability_route"
+    },
+    {
+      "ruleId": "lex:cn-a5-02-0001:0:HARM.SELF_HARM",
+      "termId": "cn-a5-02-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "high_stakes_reliability_route"
+    },
+    {
+      "ruleId": "lex:cn-a5-02-0001:1:CN.A5.02",
+      "termId": "cn-a5-02-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "high_stakes_reliability_route"
+    },
+    {
+      "ruleId": "lex:cn-a5-02-0001:1:HARM.SELF_HARM",
+      "termId": "cn-a5-02-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "gbt45654-2025"
+      ],
+      "actionHint": "high_stakes_reliability_route"
+    },
+    {
+      "ruleId": "lex:privacy-pii-pattern-0001:0:CN.A4.06",
+      "termId": "privacy-pii-pattern-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "pipl-2021"
+      ],
+      "actionHint": "validate_checksum_then_mask"
+    },
+    {
+      "ruleId": "lex:privacy-pii-pattern-0001:0:PRIVACY.PII",
+      "termId": "privacy-pii-pattern-0001",
+      "termStatus": "candidate",
+      "sourceIds": [
+        "pipl-2021"
+      ],
+      "actionHint": "validate_checksum_then_mask"
+    },
+    {
+      "ruleId": "lex:privacy-secret-pattern-0001:0:CN.A3.03",
+      "termId": "privacy-secret-pattern-0001",
+      "termStatus": "candidate",
+      "sourceIds": [],
+      "actionHint": "block_and_mask"
+    },
+    {
+      "ruleId": "lex:privacy-secret-pattern-0001:0:PRIVACY.SECRET",
+      "termId": "privacy-secret-pattern-0001",
+      "termStatus": "candidate",
+      "sourceIds": [],
+      "actionHint": "block_and_mask"
+    },
+    {
+      "ruleId": "lex:sec-jb-0001:0:SEC.JAILBREAK",
+      "termId": "sec-jb-0001",
+      "termStatus": "candidate",
+      "sourceIds": [],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:sec-jb-0001:1:SEC.JAILBREAK",
+      "termId": "sec-jb-0001",
+      "termStatus": "candidate",
+      "sourceIds": [],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:sec-jb-0001:2:SEC.JAILBREAK",
+      "termId": "sec-jb-0001",
+      "termStatus": "candidate",
+      "sourceIds": [],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:sec-jb-0002:0:SEC.JAILBREAK",
+      "termId": "sec-jb-0002",
+      "termStatus": "candidate",
+      "sourceIds": [],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:sec-jb-0002:1:SEC.JAILBREAK",
+      "termId": "sec-jb-0002",
+      "termStatus": "candidate",
+      "sourceIds": [],
+      "actionHint": "semantic_confirm"
+    },
+    {
+      "ruleId": "lex:sec-leak-0001:0:SEC.JAILBREAK",
+      "termId": "sec-leak-0001",
+      "termStatus": "candidate",
+      "sourceIds": [],
+      "actionHint": "safe_complete"
+    },
+    {
+      "ruleId": "lex:sec-leak-0001:0:SEC.SYSTEM_PROMPT_LEAKAGE",
+      "termId": "sec-leak-0001",
+      "termStatus": "candidate",
+      "sourceIds": [],
+      "actionHint": "safe_complete"
+    },
+    {
+      "ruleId": "lex:sec-leak-0001:1:SEC.JAILBREAK",
+      "termId": "sec-leak-0001",
+      "termStatus": "candidate",
+      "sourceIds": [],
+      "actionHint": "safe_complete"
+    },
+    {
+      "ruleId": "lex:sec-leak-0001:1:SEC.SYSTEM_PROMPT_LEAKAGE",
+      "termId": "sec-leak-0001",
+      "termStatus": "candidate",
+      "sourceIds": [],
+      "actionHint": "safe_complete"
+    },
+    {
+      "ruleId": "lex:sec-leak-0001:2:SEC.JAILBREAK",
+      "termId": "sec-leak-0001",
+      "termStatus": "candidate",
+      "sourceIds": [],
+      "actionHint": "safe_complete"
+    },
+    {
+      "ruleId": "lex:sec-leak-0001:2:SEC.SYSTEM_PROMPT_LEAKAGE",
+      "termId": "sec-leak-0001",
+      "termStatus": "candidate",
+      "sourceIds": [],
+      "actionHint": "safe_complete"
+    },
+    {
+      "ruleId": "lex:sec-pi-0001:0:SEC.JAILBREAK",
+      "termId": "sec-pi-0001",
+      "termStatus": "candidate",
+      "sourceIds": [],
+      "actionHint": "instruction_source_analysis"
+    },
+    {
+      "ruleId": "lex:sec-pi-0001:0:SEC.PROMPT_INJECTION",
+      "termId": "sec-pi-0001",
+      "termStatus": "candidate",
+      "sourceIds": [],
+      "actionHint": "instruction_source_analysis"
+    },
+    {
+      "ruleId": "lex:sec-pi-0001:1:SEC.JAILBREAK",
+      "termId": "sec-pi-0001",
+      "termStatus": "candidate",
+      "sourceIds": [],
+      "actionHint": "instruction_source_analysis"
+    },
+    {
+      "ruleId": "lex:sec-pi-0001:1:SEC.PROMPT_INJECTION",
+      "termId": "sec-pi-0001",
+      "termStatus": "candidate",
+      "sourceIds": [],
+      "actionHint": "instruction_source_analysis"
+    },
+    {
+      "ruleId": "lex:sec-pi-0001:2:SEC.JAILBREAK",
+      "termId": "sec-pi-0001",
+      "termStatus": "candidate",
+      "sourceIds": [],
+      "actionHint": "instruction_source_analysis"
+    },
+    {
+      "ruleId": "lex:sec-pi-0001:2:SEC.PROMPT_INJECTION",
+      "termId": "sec-pi-0001",
+      "termStatus": "candidate",
+      "sourceIds": [],
+      "actionHint": "instruction_source_analysis"
+    },
+    {
+      "ruleId": "lex:sec-pi-0002:0:SEC.JAILBREAK",
+      "termId": "sec-pi-0002",
+      "termStatus": "candidate",
+      "sourceIds": [],
+      "actionHint": "instruction_source_analysis"
+    },
+    {
+      "ruleId": "lex:sec-pi-0002:0:SEC.PROMPT_INJECTION",
+      "termId": "sec-pi-0002",
+      "termStatus": "candidate",
+      "sourceIds": [],
+      "actionHint": "instruction_source_analysis"
+    },
+    {
+      "ruleId": "lex:sec-pi-0002:1:SEC.JAILBREAK",
+      "termId": "sec-pi-0002",
+      "termStatus": "candidate",
+      "sourceIds": [],
+      "actionHint": "instruction_source_analysis"
+    },
+    {
+      "ruleId": "lex:sec-pi-0002:1:SEC.PROMPT_INJECTION",
+      "termId": "sec-pi-0002",
+      "termStatus": "candidate",
+      "sourceIds": [],
+      "actionHint": "instruction_source_analysis"
+    }
+  ],
+  "exceptionCount": 10,
+  "exceptions": [
+    {
+      "id": "lexallow:allow-zh-0001",
+      "pattern": "反对恐怖主义",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "dimensionScope": "specific",
+      "dimensionCodes": [
+        "CN.A1.04"
+      ],
+      "targetRuleIds": [
+        "lex:cn-a1-04-0001:0:CN.A1.04"
+      ],
+      "directions": [
+        "INPUT",
+        "OUTPUT_CHUNK",
+        "OUTPUT_COMPLETE"
+      ],
+      "expiresAtEpochMs": 1798732799999,
+      "mandatoryDenyExempt": false
+    },
+    {
+      "id": "lexallow:allow-zh-0002",
+      "pattern": "防范极端主义",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "dimensionScope": "specific",
+      "dimensionCodes": [
+        "CN.A1.04"
+      ],
+      "targetRuleIds": [
+        "lex:cn-a1-04-0002:0:CN.A1.04"
+      ],
+      "directions": [
+        "INPUT",
+        "OUTPUT_CHUNK",
+        "OUTPUT_COMPLETE"
+      ],
+      "expiresAtEpochMs": 1798732799999,
+      "mandatoryDenyExempt": false
+    },
+    {
+      "id": "lexallow:allow-zh-0003",
+      "pattern": "打击电信网络诈骗",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "dimensionScope": "specific",
+      "dimensionCodes": [
+        "CN.A1.08"
+      ],
+      "targetRuleIds": [
+        "lex:cn-a1-08-0001:0:CN.A1.08"
+      ],
+      "directions": [
+        "INPUT",
+        "OUTPUT_CHUNK",
+        "OUTPUT_COMPLETE"
+      ],
+      "expiresAtEpochMs": 1798732799999,
+      "mandatoryDenyExempt": false
+    },
+    {
+      "id": "lexallow:allow-zh-0006",
+      "pattern": "反对传播淫秽色情内容",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "dimensionScope": "specific",
+      "dimensionCodes": [
+        "CN.A1.06"
+      ],
+      "targetRuleIds": [
+        "lex:cn-a1-06-0002:0:CN.A1.06"
+      ],
+      "directions": [
+        "INPUT",
+        "OUTPUT_CHUNK",
+        "OUTPUT_COMPLETE"
+      ],
+      "expiresAtEpochMs": 1798732799999,
+      "mandatoryDenyExempt": false
+    },
+    {
+      "id": "lexallow:allow-zh-0007",
+      "pattern": "反对宣扬暴力的犯罪研究",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "dimensionScope": "specific",
+      "dimensionCodes": [
+        "CN.A1.06"
+      ],
+      "targetRuleIds": [
+        "lex:cn-a1-06-0001:0:CN.A1.06"
+      ],
+      "directions": [
+        "INPUT",
+        "OUTPUT_CHUNK",
+        "OUTPUT_COMPLETE"
+      ],
+      "expiresAtEpochMs": 1798732799999,
+      "mandatoryDenyExempt": false
+    },
+    {
+      "id": "lexallow:allow-zh-0008",
+      "pattern": "反对民族仇恨",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "dimensionScope": "specific",
+      "dimensionCodes": [
+        "CN.A1.05",
+        "CN.A2.01"
+      ],
+      "targetRuleIds": [
+        "lex:cn-a1-05-0001:0:CN.A1.05",
+        "lex:cn-a1-05-0001:0:CN.A2.01"
+      ],
+      "directions": [
+        "INPUT",
+        "OUTPUT_CHUNK",
+        "OUTPUT_COMPLETE"
+      ],
+      "expiresAtEpochMs": 1798732799999,
+      "mandatoryDenyExempt": false
+    },
+    {
+      "id": "lexallow:allow-zh-0009",
+      "pattern": "反对性别歧视",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "dimensionScope": "specific",
+      "dimensionCodes": [
+        "CN.A2.05"
+      ],
+      "targetRuleIds": [
+        "lex:cn-a2-05-0001:0:CN.A2.05"
+      ],
+      "directions": [
+        "INPUT",
+        "OUTPUT_CHUNK",
+        "OUTPUT_COMPLETE"
+      ],
+      "expiresAtEpochMs": 1798732799999,
+      "mandatoryDenyExempt": false
+    },
+    {
+      "id": "lexallow:allow-zh-0010",
+      "pattern": "防止侵犯隐私",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "dimensionScope": "specific",
+      "dimensionCodes": [
+        "CN.A4.05"
+      ],
+      "targetRuleIds": [
+        "lex:cn-a4-05-0001:0:CN.A4.05"
+      ],
+      "directions": [
+        "INPUT",
+        "OUTPUT_CHUNK",
+        "OUTPUT_COMPLETE"
+      ],
+      "expiresAtEpochMs": 1798732799999,
+      "mandatoryDenyExempt": false
+    },
+    {
+      "id": "lexallow:allow-zh-0011",
+      "pattern": "治理地域歧视",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "dimensionScope": "specific",
+      "dimensionCodes": [
+        "CN.A2.04"
+      ],
+      "targetRuleIds": [
+        "lex:cn-a2-04-0001:0:CN.A2.04"
+      ],
+      "directions": [
+        "INPUT",
+        "OUTPUT_CHUNK",
+        "OUTPUT_COMPLETE"
+      ],
+      "expiresAtEpochMs": 1798732799999,
+      "mandatoryDenyExempt": false
+    },
+    {
+      "id": "lexallow:allow-zh-0012",
+      "pattern": "防止侵犯知识产权",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "dimensionScope": "specific",
+      "dimensionCodes": [
+        "CN.A3.01"
+      ],
+      "targetRuleIds": [
+        "lex:cn-a3-01-0001:0:CN.A3.01"
+      ],
+      "directions": [
+        "INPUT",
+        "OUTPUT_CHUNK",
+        "OUTPUT_COMPLETE"
+      ],
+      "expiresAtEpochMs": 1798732799999,
+      "mandatoryDenyExempt": false
+    }
+  ],
+  "allowProvenance": [
+    {
+      "exceptionId": "lexallow:allow-zh-0001",
+      "allowId": "allow-zh-0001",
+      "allowStatus": "candidate",
+      "targetTermIds": [
+        "cn-a1-04-0001"
+      ],
+      "forbiddenRiskIds": [
+        "HARM.VIOLENT_CRIME"
+      ],
+      "requiredTests": [
+        "benign_exact",
+        "dangerous_suffix"
+      ]
+    },
+    {
+      "exceptionId": "lexallow:allow-zh-0002",
+      "allowId": "allow-zh-0002",
+      "allowStatus": "candidate",
+      "targetTermIds": [
+        "cn-a1-04-0002"
+      ],
+      "forbiddenRiskIds": [],
+      "requiredTests": [
+        "benign_exact",
+        "dangerous_suffix"
+      ]
+    },
+    {
+      "exceptionId": "lexallow:allow-zh-0003",
+      "allowId": "allow-zh-0003",
+      "allowStatus": "candidate",
+      "targetTermIds": [
+        "cn-a1-08-0001"
+      ],
+      "forbiddenRiskIds": [
+        "HARM.NONVIOLENT_CRIME"
+      ],
+      "requiredTests": [
+        "benign_exact",
+        "dangerous_suffix"
+      ]
+    },
+    {
+      "exceptionId": "lexallow:allow-zh-0006",
+      "allowId": "allow-zh-0006",
+      "allowStatus": "candidate",
+      "targetTermIds": [
+        "cn-a1-06-0002"
+      ],
+      "forbiddenRiskIds": [
+        "HARM.CHILD_SEXUAL_EXPLOITATION"
+      ],
+      "requiredTests": [
+        "policy_context",
+        "unsafe_generation"
+      ]
+    },
+    {
+      "exceptionId": "lexallow:allow-zh-0007",
+      "allowId": "allow-zh-0007",
+      "allowStatus": "candidate",
+      "targetTermIds": [
+        "cn-a1-06-0001"
+      ],
+      "forbiddenRiskIds": [
+        "HARM.VIOLENT_CRIME"
+      ],
+      "requiredTests": [
+        "academic_context",
+        "actionable_instruction"
+      ]
+    },
+    {
+      "exceptionId": "lexallow:allow-zh-0008",
+      "allowId": "allow-zh-0008",
+      "allowStatus": "candidate",
+      "targetTermIds": [
+        "cn-a1-05-0001"
+      ],
+      "forbiddenRiskIds": [],
+      "requiredTests": [
+        "benign_exact",
+        "quoted_hate"
+      ]
+    },
+    {
+      "exceptionId": "lexallow:allow-zh-0009",
+      "allowId": "allow-zh-0009",
+      "allowStatus": "candidate",
+      "targetTermIds": [
+        "cn-a2-05-0001"
+      ],
+      "forbiddenRiskIds": [],
+      "requiredTests": [
+        "benign_exact",
+        "discriminatory_continuation"
+      ]
+    },
+    {
+      "exceptionId": "lexallow:allow-zh-0010",
+      "allowId": "allow-zh-0010",
+      "allowStatus": "candidate",
+      "targetTermIds": [
+        "cn-a4-05-0001"
+      ],
+      "forbiddenRiskIds": [
+        "PRIVACY.PII"
+      ],
+      "requiredTests": [
+        "privacy_education",
+        "real_pii_disclosure"
+      ]
+    },
+    {
+      "exceptionId": "lexallow:allow-zh-0011",
+      "allowId": "allow-zh-0011",
+      "allowStatus": "candidate",
+      "targetTermIds": [
+        "cn-a2-04-0001"
+      ],
+      "forbiddenRiskIds": [],
+      "requiredTests": [
+        "benign_exact",
+        "discriminatory_quote"
+      ]
+    },
+    {
+      "exceptionId": "lexallow:allow-zh-0012",
+      "allowId": "allow-zh-0012",
+      "allowStatus": "candidate",
+      "targetTermIds": [
+        "cn-a3-01-0001"
+      ],
+      "forbiddenRiskIds": [],
+      "requiredTests": [
+        "compliance_context",
+        "piracy_request"
+      ]
+    }
+  ],
+  "uncompiledAllowRules": [
+    {
+      "allowId": "allow-zh-0004",
+      "targetTermIds": [
+        "cn-a4-01-0001"
+      ],
+      "reason": "Supportive routing is an action policy and may not be compiled as a lexical exception."
+    },
+    {
+      "allowId": "allow-zh-0005",
+      "targetTermIds": [
+        "cn-a4-01-0001"
+      ],
+      "reason": "Supportive routing is an action policy and may not be compiled as a lexical exception."
+    }
+  ]
+}

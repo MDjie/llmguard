@@ -1,5 +1,6 @@
 import type {
   ContextEnvelope,
+  Direction,
   EvidenceRef,
   GuardAction,
   GuardDecision,
@@ -121,7 +122,20 @@ export interface RuleSpec {
   readonly caseSensitive: boolean;
   readonly score: number;
   readonly severity?: RiskLevel;
+  readonly ruleVersion?: string;
   readonly mandatoryDeny?: boolean;
+  readonly canonicalTermId?: string;
+  readonly variantId?: string;
+  readonly dictionaryReleaseId?: string;
+  readonly dictionaryVersion?: string;
+  readonly owner?: string;
+  readonly locale?: string;
+  readonly direction?: Direction | 'BOTH';
+  readonly industry?: string;
+  readonly contexts?: readonly string[];
+  readonly validFromEpochMs?: number;
+  readonly validToEpochMs?: number;
+  readonly evidenceRequirement?: string;
 }
 
 export interface RuleExceptionSpec {
@@ -131,6 +145,12 @@ export interface RuleExceptionSpec {
   readonly caseSensitive: boolean;
   readonly dimensionScope: 'all' | 'specific';
   readonly dimensionCodes: readonly string[];
+  readonly targetRuleIds?: readonly string[];
+  readonly directions?: readonly Direction[];
+  readonly validFromEpochMs?: number;
+  readonly expiresAtEpochMs?: number;
+  readonly approvalStatus?: 'approved';
+  readonly approvedBy?: string;
 }
 
 export type {

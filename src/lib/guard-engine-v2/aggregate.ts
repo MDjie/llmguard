@@ -89,6 +89,12 @@ export function aggregateGuardDecision(params: {
     : degradedBlock
       ? 'FAIL_CLOSED'
       : 'DEGRADED';
+  const reasonCodes = [...new Set([
+    ...matches.flatMap((observation) => observation.reasonCode ? [observation.reasonCode] : []),
+    ...params.requiredDetectorFailures,
+    ...degradationReasons,
+  ])].sort();
+  const latencyMs = Math.min(600_000, Math.max(0, Math.round(params.latencyMs)));
   const evidenceComplete = matches.every((observation) =>
     observation.evidence.length > 0 &&
     observation.evidence.every((evidence) =>
@@ -115,7 +121,10 @@ export function aggregateGuardDecision(params: {
               : 'score-threshold',
     ],
     bundleId: params.policy.bundleId,
-    latencyMs: Math.min(600_000, Math.max(0, Math.round(params.latencyMs))),
+    latencyMs,
+    latencyBreakdown: { totalMs: latencyMs },
+    degraded: degradationReasons.length > 0,
+    reasonCodes,
     degradationReasons,
     ...(modelVersions.length > 0 ? { modelVersions } : {}),
     failMode,

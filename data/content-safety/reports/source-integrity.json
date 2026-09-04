@@ -1,0 +1,92 @@
+{
+  "schema": "content-safety-source-integrity-report/v1",
+  "generatedAt": "2026-09-04T15:12:11.100Z",
+  "lockPath": "data/content-safety/sources/sources.lock.json",
+  "passed": true,
+  "sourceCount": 3,
+  "fileCount": 9,
+  "errors": [],
+  "files": [
+    {
+      "sourceId": "fwwdn-sensitive-stop-words",
+      "path": "data/content-safety/sources/raw/fwwdn-files/广告.txt",
+      "expectedBytes": 1327,
+      "expectedSha256": "5978fb1c0f47e8849215c586682a3447a22990db0dc5ae17c1a5d07302ad4eb1",
+      "ok": true,
+      "actualBytes": 1327,
+      "actualSha256": "5978fb1c0f47e8849215c586682a3447a22990db0dc5ae17c1a5d07302ad4eb1"
+    },
+    {
+      "sourceId": "fwwdn-sensitive-stop-words",
+      "path": "data/content-safety/sources/raw/fwwdn-files/色情类.txt",
+      "expectedBytes": 2651,
+      "expectedSha256": "2f846d586eb3f0099b1fbb53b0afee0148f09e4394912162b31eb02aee7db1d2",
+      "ok": true,
+      "actualBytes": 2651,
+      "actualSha256": "2f846d586eb3f0099b1fbb53b0afee0148f09e4394912162b31eb02aee7db1d2"
+    },
+    {
+      "sourceId": "fwwdn-sensitive-stop-words",
+      "path": "data/content-safety/sources/raw/fwwdn-files/涉枪涉爆违法信息关键词.txt",
+      "expectedBytes": 8823,
+      "expectedSha256": "82a319f9d2c03e6033ce51b15e03d0a18396c09d24998212c578d3056bba0dd4",
+      "ok": true,
+      "actualBytes": 8823,
+      "actualSha256": "82a319f9d2c03e6033ce51b15e03d0a18396c09d24998212c578d3056bba0dd4"
+    },
+    {
+      "sourceId": "fwwdn-sensitive-stop-words",
+      "path": "data/content-safety/sources/raw/fwwdn-files/政治类.txt",
+      "expectedBytes": 3330,
+      "expectedSha256": "bb4079468345a5ed1e630c82a43ab947828ae2c263e8702a6432bfe253d70f90",
+      "ok": true,
+      "actualBytes": 3330,
+      "actualSha256": "bb4079468345a5ed1e630c82a43ab947828ae2c263e8702a6432bfe253d70f90"
+    },
+    {
+      "sourceId": "fwwdn-sensitive-stop-words",
+      "path": "data/content-safety/sources/raw/fwwdn-files/LICENSE",
+      "expectedBytes": 11310,
+      "expectedSha256": "552e63d5bb2e8a2fcf52b57caa146429a63215d3590121fb2cac0345a4c1ea7a",
+      "ok": true,
+      "actualBytes": 11310,
+      "actualSha256": "552e63d5bb2e8a2fcf52b57caa146429a63215d3590121fb2cac0345a4c1ea7a"
+    },
+    {
+      "sourceId": "mlcommons-ailuminate",
+      "path": "data/content-safety/sources/raw/mlcommons-files/airr_official_1.0_demo_en_us_prompt_set_release.csv",
+      "expectedBytes": 322200,
+      "expectedSha256": "63e2b654325c5405096fabf28ef5f057b0ad674904b1839fd1f52b523e324d02",
+      "ok": true,
+      "actualBytes": 322200,
+      "actualSha256": "63e2b654325c5405096fabf28ef5f057b0ad674904b1839fd1f52b523e324d02"
+    },
+    {
+      "sourceId": "mlcommons-ailuminate",
+      "path": "data/content-safety/sources/raw/mlcommons-files/LICENSE.md",
+      "expectedBytes": 10174,
+      "expectedSha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594",
+      "ok": true,
+      "actualBytes": 10174,
+      "actualSha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594"
+    },
+    {
+      "sourceId": "mlcommons-ailuminate",
+      "path": "data/content-safety/sources/raw/mlcommons-files/README.md",
+      "expectedBytes": 6146,
+      "expectedSha256": "8e6d5fd820e51bd5a6b5c75daae7899151d15694dce15f31ffd8948e90669263",
+      "ok": true,
+      "actualBytes": 6146,
+      "actualSha256": "8e6d5fd820e51bd5a6b5c75daae7899151d15694dce15f31ffd8948e90669263"
+    },
+    {
+      "sourceId": "unicode-tr39",
+      "path": "data/content-safety/sources/raw/unicode-confusables.txt",
+      "expectedBytes": 745683,
+      "expectedSha256": "091c7f82fc39ef208faf8f94d29c244de99254675e09de163160c810d13ef22a",
+      "ok": true,
+      "actualBytes": 745683,
+      "actualSha256": "091c7f82fc39ef208faf8f94d29c244de99254675e09de163160c810d13ef22a"
+    }
+  ]
+}

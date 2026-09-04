@@ -1,8 +1,8 @@
 // Generated from model/guard-v1.schema.json. Do not edit.
-// Source SHA-256: 95d5f83807849b342487326076ea8dc4a664878ff7689e6ec89ce665d1316faf
+// Source SHA-256: 2da2dcd7e08805684ff47b35f29d160f2d583db74671af14c64f4a86b7911962
 
 export const GUARD_CONTRACT_VERSION = '1.0' as const;
-export const GUARD_CONTRACT_SOURCE_SHA256 = '95d5f83807849b342487326076ea8dc4a664878ff7689e6ec89ce665d1316faf' as const;
+export const GUARD_CONTRACT_SOURCE_SHA256 = '2da2dcd7e08805684ff47b35f29d160f2d583db74671af14c64f4a86b7911962' as const;
 
 export type Direction = "INPUT" | "OUTPUT_COMPLETE" | "OUTPUT_CHUNK" | "RAG_INGEST" | "RAG_CONTEXT" | "TOOL_REQUEST" | "TOOL_RESULT";
 
@@ -31,6 +31,11 @@ export interface ContextEnvelope {
   readonly tenantId: string;
   readonly applicationId: string;
   readonly sessionId?: string;
+  readonly modality?: ArtifactKind;
+  readonly artifactId?: string;
+  readonly page?: number;
+  readonly timeRangeMs?: readonly number[];
+  readonly region?: readonly number[];
   readonly sourceType: SourceType;
   readonly sourceId: string;
   readonly trustLevel: TrustLevel;
@@ -67,6 +72,10 @@ export interface RequestContext {
   readonly tenantId: string;
   readonly applicationId: string;
   readonly sessionId?: string;
+  readonly sourceType?: SourceType;
+  readonly locale?: string;
+  readonly jurisdiction?: string;
+  readonly industry?: string;
   readonly direction: Direction;
   readonly absoluteDeadlineEpochMs: number;
   readonly policyBundleId: string;
@@ -111,12 +120,21 @@ export interface EvidenceRef {
   readonly tokenStart?: number;
   readonly tokenEnd?: number;
   readonly tokenizerId?: string;
+  readonly normalizedStart?: number;
+  readonly normalizedEnd?: number;
+  readonly normalizationTransforms?: readonly string[];
 }
 
 export interface Observation {
   readonly detectorId: string;
   readonly detectorVersion: string;
   readonly riskType: string;
+  readonly category?: string;
+  readonly confidence?: number;
+  readonly ruleId?: string;
+  readonly ruleVersion?: string;
+  readonly dictionaryReleaseId?: string;
+  readonly dictionaryVersion?: string;
   readonly score: number;
   readonly severity: RiskLevel;
   readonly evidence: readonly EvidenceRef[];
@@ -125,6 +143,14 @@ export interface Observation {
   readonly modelVersion?: string;
   readonly configurationDigest?: string;
   readonly failMode?: GuardFailMode;
+}
+
+export interface LatencyBreakdown {
+  readonly normalizationMs?: number;
+  readonly detectionMs?: number;
+  readonly aggregationMs?: number;
+  readonly interventionMs?: number;
+  readonly totalMs: number;
 }
 
 export interface GuardDecision {
@@ -137,6 +163,9 @@ export interface GuardDecision {
   readonly policyPath: readonly string[];
   readonly bundleId: string;
   readonly latencyMs: number;
+  readonly latencyBreakdown?: LatencyBreakdown;
+  readonly degraded?: boolean;
+  readonly reasonCodes?: readonly string[];
   readonly degradationReasons: readonly string[];
   readonly transformedText?: string;
   readonly modelVersions?: readonly string[];

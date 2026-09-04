@@ -63,6 +63,25 @@ describe('TASK-R1-001 Guard v1 contract source', () => {
     expect(source.$defs.EvidenceRef.properties.tokenStart).toBeDefined();
     expect(source.$defs.Observation.properties.modelVersion).toBeDefined();
     expect(source.$defs.Observation.properties.failMode.$ref).toBe('#/$defs/GuardFailMode');
+    expect(source.$defs.RequestContext.properties).toEqual(expect.objectContaining({
+      locale: expect.any(Object),
+      jurisdiction: expect.any(Object),
+      industry: expect.any(Object),
+      sourceType: expect.any(Object),
+    }));
+    expect(source.$defs.ContextEnvelope.properties).toEqual(expect.objectContaining({
+      modality: expect.any(Object),
+      artifactId: expect.any(Object),
+      page: expect.any(Object),
+      timeRangeMs: expect.any(Object),
+      region: expect.any(Object),
+    }));
+    expect(source.$defs.Observation.properties.dictionaryVersion).toBeDefined();
+    expect(source.$defs.Observation.properties.ruleVersion).toBeDefined();
+    expect(source.$defs.GuardDecision.properties.degraded).toBeDefined();
+    expect(source.$defs.GuardDecision.properties.reasonCodes).toBeDefined();
+    expect(source.$defs.GuardDecision.properties.latencyBreakdown.$ref)
+      .toBe('#/$defs/LatencyBreakdown');
   });
 
   it('blocks removed fields and newly required fields', () => {

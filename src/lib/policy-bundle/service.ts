@@ -9,6 +9,7 @@ import {
 import { getPolicyConfig } from '@/lib/detection/dynamic-engine';
 import { scopePredicate, type TenantScope } from '@/lib/tenancy';
 import { compilePolicyBundle } from './compiler';
+import { loadGovernedPolicyArtifacts } from './governance';
 import { policySigningKeyId, signPolicyBundle, signingPrivateKey } from './crypto';
 import {
   evaluationGateViolations,
@@ -68,6 +69,7 @@ export async function compileAndStorePolicyBundle(
   if (!config) {
     throw new PolicyBundleTransitionError('POLICY_NOT_AVAILABLE', 'Policy cannot be compiled');
   }
+  const governance = await loadGovernedPolicyArtifacts(scope, policyId);
   return db.transaction(async (transaction) => {
     await transaction.execute(sql`select pg_advisory_xact_lock(hashtext(${`${scope.tenantId}:${scope.applicationId}:${policyId}`}))`);
     const [latest] = await transaction.select({ version: policyBundles.version })
@@ -79,6 +81,7 @@ export async function compileAndStorePolicyBundle(
     const signed = signPolicyBundle(compilePolicyBundle(config, version, {
       semanticClassifier: parseSemanticClassifierBuildConfig(),
       resourceAdmission: parseGuardResourceAdmissionBuildConfig(),
+      governance,
     }), {
       privateKey: signingPrivateKey(),
       signingKeyId: policySigningKeyId(),

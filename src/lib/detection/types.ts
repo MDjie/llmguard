@@ -71,6 +71,14 @@ export interface WhitelistRule {
   // 维度范围
   dimensionScope: 'all' | 'specific';  // 'all'=全部维度, 'specific'=指定维度
   dimensionCodes: string[];  // 当 dimensionScope = 'specific' 时，适用的维度编码列表
+  // 可选的目标规则范围；存在时白名单只能抑制这些规则的局部命中
+  targetRuleIds?: string[];
+  directions?: Array<'INPUT' | 'OUTPUT_COMPLETE' | 'OUTPUT_CHUNK' | 'RAG_INGEST' | 'RAG_CONTEXT' | 'TOOL_REQUEST' | 'TOOL_RESULT'>;
+  validFromEpochMs?: number;
+  expiresAtEpochMs?: number;
+  approvalStatus?: 'pending' | 'approved' | 'rejected' | 'retired';
+  approvedBy?: string;
+  approvedAtEpochMs?: number;
   // 优先级
   priority: number;
   // 匹配规则
@@ -92,7 +100,7 @@ export interface WhitelistMatched {
   dimensionCodes: string[];
   pattern: string;
   matchType: string;
-  effect: 'skip_all_detection' | 'skip_selected_dimensions';
+  effect: 'skip_all_detection' | 'skip_selected_dimensions' | 'suppress_target_rule_match';
 }
 
 // 被跳过的维度信息

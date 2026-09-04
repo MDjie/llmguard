@@ -533,7 +533,94 @@ export const keywordCategories = pgTable(
 );
 
 // ============================================
-// 5. 自定义关键词规则表
+// 5. 受治理词典发布与响应模板
+// ============================================
+export const dictionaryReleases = pgTable(
+	"dictionary_releases",
+	{
+		...tenantScopeColumns(),
+		id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+		dictionaryId: varchar("dictionary_id", { length: 128 }).notNull(),
+		version: varchar("version", { length: 64 }).notNull(),
+		state: varchar("state", { length: 32 }).notNull().default("draft"),
+		canonicalManifest: jsonb("canonical_manifest").$type<Record<string, unknown>>().notNull(),
+		contentHash: varchar("content_hash", { length: 64 }).notNull(),
+		signature: text("signature").notNull(),
+		signatureAlgorithm: varchar("signature_algorithm", { length: 32 }).notNull().default("Ed25519"),
+		signingKeyId: varchar("signing_key_id", { length: 128 }).notNull(),
+		entryCount: integer("entry_count").notNull().default(0),
+		statistics: jsonb("statistics").$type<Record<string, unknown>>().notNull().default({}),
+		submittedBy: varchar("submitted_by", { length: 100 }).notNull(),
+		approvedBy: varchar("approved_by", { length: 100 }),
+		approvedAt: timestamp("approved_at", { withTimezone: true }),
+		activatedAt: timestamp("activated_at", { withTimezone: true }),
+		rolledBackAt: timestamp("rolled_back_at", { withTimezone: true }),
+		rollbackOfId: uuid("rollback_of_id"),
+		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+	},
+	(table) => [
+		uniqueIndex("dictionary_releases_scope_dictionary_version_uq")
+			.on(table.tenantId, table.applicationId, table.dictionaryId, table.version),
+		index("dictionary_releases_scope_state_idx")
+			.on(table.tenantId, table.applicationId, table.state),
+		index("dictionary_releases_content_hash_idx").on(table.contentHash),
+	]
+);
+
+export const dictionaryReleaseTransitions = pgTable(
+	"dictionary_release_transitions",
+	{
+		...tenantScopeColumns(),
+		id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+		releaseId: uuid("release_id").notNull().references(() => dictionaryReleases.id, { onDelete: "restrict" }),
+		fromState: varchar("from_state", { length: 32 }),
+		toState: varchar("to_state", { length: 32 }).notNull(),
+		action: varchar("action", { length: 32 }).notNull(),
+		actorId: varchar("actor_id", { length: 100 }).notNull(),
+		reason: varchar("reason", { length: 500 }),
+		manifestHash: varchar("manifest_hash", { length: 64 }).notNull(),
+		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+	},
+	(table) => [
+		index("dictionary_release_transitions_release_idx").on(table.releaseId, table.createdAt),
+		index("dictionary_release_transitions_scope_idx").on(table.tenantId, table.applicationId, table.createdAt),
+	]
+);
+
+export const responseTemplates = pgTable(
+	"response_templates",
+	{
+		...tenantScopeColumns(),
+		id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+		templateKey: varchar("template_key", { length: 128 }).notNull(),
+		riskCategory: varchar("risk_category", { length: 128 }).notNull(),
+		action: varchar("action", { length: 32 }).notNull(),
+		locale: varchar("locale", { length: 64 }).notNull().default("zh-CN"),
+		industry: varchar("industry", { length: 128 }).notNull().default("general"),
+		templateText: text("template_text").notNull(),
+		allowedVariables: jsonb("allowed_variables").$type<string[]>().notNull().default([]),
+		version: integer("version").notNull(),
+		contentHash: varchar("content_hash", { length: 64 }).notNull(),
+		signatureDigest: varchar("signature_digest", { length: 64 }).notNull(),
+		approvalStatus: varchar("approval_status", { length: 32 }).notNull().default("pending"),
+		createdBy: varchar("created_by", { length: 100 }).notNull(),
+		approvedBy: varchar("approved_by", { length: 100 }),
+		approvedAt: timestamp("approved_at", { withTimezone: true }),
+		validFrom: timestamp("valid_from", { withTimezone: true }).defaultNow().notNull(),
+		validTo: timestamp("valid_to", { withTimezone: true }),
+		enabled: boolean("enabled").notNull().default(false),
+		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+	},
+	(table) => [
+		uniqueIndex("response_templates_scope_key_version_uq")
+			.on(table.tenantId, table.applicationId, table.templateKey, table.version),
+		index("response_templates_scope_status_idx")
+			.on(table.tenantId, table.applicationId, table.approvalStatus, table.enabled),
+	]
+);
+
+// ============================================
+// 5.1 自定义关键词规则表
 // ============================================
 export const keywordRules = pgTable(
 	"keyword_rules",
@@ -542,8 +629,21 @@ export const keywordRules = pgTable(
 		id: varchar("id", { length: 36 }).primaryKey().default(sql`gen_random_uuid()`),
 		policyId: varchar("policy_id", { length: 36 }).notNull().references(() => policyProfiles.id, { onDelete: "cascade" }),
 		categoryId: varchar("category_id", { length: 36 }).references(() => keywordCategories.id, { onDelete: "set null" }),
+		releaseId: uuid("release_id").references(() => dictionaryReleases.id, { onDelete: "restrict" }),
 		dimension: varchar("dimension", { length: 50 }).notNull(),
 		keyword: varchar("keyword", { length: 500 }).notNull(),
+		canonicalTerm: varchar("canonical_term", { length: 500 }),
+		variantType: varchar("variant_type", { length: 32 }).notNull().default("canonical"),
+		locale: varchar("locale", { length: 64 }).notNull().default("und"),
+		direction: varchar("direction", { length: 32 }).notNull().default("BOTH"),
+		industry: varchar("industry", { length: 128 }).notNull().default("general"),
+		contexts: jsonb("contexts").$type<string[]>().notNull().default([]),
+		severity: varchar("severity", { length: 20 }).notNull().default("MEDIUM"),
+		mandatoryDeny: boolean("mandatory_deny").notNull().default(false),
+		validFrom: timestamp("valid_from", { withTimezone: true }).defaultNow().notNull(),
+		validTo: timestamp("valid_to", { withTimezone: true }),
+		owner: varchar("owner", { length: 100 }),
+		evidenceRequirement: varchar("evidence_requirement", { length: 500 }),
 		score: decimal("score", { precision: 5, scale: 2 }).default("90.00").notNull(),
 		matchType: varchar("match_type", { length: 20 }).default("exact").notNull(), // 'exact', 'prefix', 'suffix', 'regex'
 		caseSensitive: boolean("case_sensitive").default(false).notNull(),
@@ -551,12 +651,72 @@ export const keywordRules = pgTable(
 		description: text("description"),
 		tags: jsonb("tags").$type<string[]>().default([]),
 		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+		updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 	},
 	(table) => [
 		index("keyword_rules_policy_id_idx").on(table.policyId),
 		index("keyword_rules_category_id_idx").on(table.categoryId),
 		index("keyword_rules_dimension_idx").on(table.dimension),
 		index("keyword_rules_keyword_idx").on(table.keyword),
+		index("keyword_rules_release_idx").on(table.releaseId),
+		index("keyword_rules_validity_idx").on(table.validFrom, table.validTo),
+	]
+);
+
+export const detectorCalibrations = pgTable(
+	"detector_calibrations",
+	{
+		...tenantScopeColumns(),
+		id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+		detectorId: varchar("detector_id", { length: 128 }).notNull(),
+		detectorVersion: varchar("detector_version", { length: 64 }).notNull(),
+		riskType: varchar("risk_type", { length: 128 }).notNull(),
+		locale: varchar("locale", { length: 64 }).notNull().default("und"),
+		industry: varchar("industry", { length: 128 }).notNull().default("general"),
+		threshold: decimal("threshold", { precision: 6, scale: 5 }).notNull(),
+		confidenceFloor: decimal("confidence_floor", { precision: 6, scale: 5 }).notNull(),
+		metrics: jsonb("metrics").$type<Record<string, number>>().notNull().default({}),
+		datasetHash: varchar("dataset_hash", { length: 64 }).notNull(),
+		bundleId: varchar("bundle_id", { length: 36 }),
+		approvedBy: varchar("approved_by", { length: 100 }).notNull(),
+		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+	},
+	(table) => [
+		uniqueIndex("detector_calibrations_scope_identity_uq").on(
+			table.tenantId,
+			table.applicationId,
+			table.detectorId,
+			table.detectorVersion,
+			table.riskType,
+			table.locale,
+			table.industry,
+		),
+		index("detector_calibrations_scope_detector_idx")
+			.on(table.tenantId, table.applicationId, table.detectorId),
+	]
+);
+
+export const badcaseFeedback = pgTable(
+	"badcase_feedback",
+	{
+		...tenantScopeColumns(),
+		id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+		requestHash: varchar("request_hash", { length: 64 }).notNull(),
+		decisionId: varchar("decision_id", { length: 128 }),
+		riskType: varchar("risk_type", { length: 128 }).notNull(),
+		predictedAction: varchar("predicted_action", { length: 32 }).notNull(),
+		expectedAction: varchar("expected_action", { length: 32 }).notNull(),
+		evidenceHmacs: jsonb("evidence_hmacs").$type<string[]>().notNull().default([]),
+		classification: varchar("classification", { length: 32 }).notNull(),
+		status: varchar("status", { length: 32 }).notNull().default("open"),
+		reviewerId: varchar("reviewer_id", { length: 100 }),
+		disposition: varchar("disposition", { length: 500 }),
+		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+		resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+	},
+	(table) => [
+		index("badcase_feedback_scope_status_idx").on(table.tenantId, table.applicationId, table.status),
+		index("badcase_feedback_request_hash_idx").on(table.requestHash),
 	]
 );
 
@@ -860,6 +1020,15 @@ export const whitelistRules = pgTable(
 		policyScope: varchar("policy_scope", { length: 20 }).default("specific").notNull(), // 'all' | 'specific'
 		dimensionScope: varchar("dimension_scope", { length: 20 }).default("specific").notNull(), // 'all' | 'specific'
 		dimensionCodes: jsonb("dimension_codes").$type<string[]>().default([]),
+		targetRuleIds: jsonb("target_rule_ids").$type<string[]>().default([]).notNull(),
+		directions: jsonb("directions").$type<Array<
+			'INPUT' | 'OUTPUT_COMPLETE' | 'OUTPUT_CHUNK' | 'RAG_INGEST' | 'RAG_CONTEXT' | 'TOOL_REQUEST' | 'TOOL_RESULT'
+		>>().default([]).notNull(),
+		validFrom: timestamp("valid_from", { withTimezone: true }).defaultNow().notNull(),
+		expiresAt: timestamp("expires_at", { withTimezone: true }),
+		approvalStatus: varchar("approval_status", { length: 32 }).default("pending").notNull(),
+		approvedBy: varchar("approved_by", { length: 100 }),
+		approvedAt: timestamp("approved_at", { withTimezone: true }),
 		priority: integer("priority").default(100).notNull(),
 		// 匹配规则
 		pattern: text("pattern").notNull(),
@@ -876,6 +1045,8 @@ export const whitelistRules = pgTable(
 		index("whitelist_rules_dimension_scope_idx").on(table.dimensionScope),
 		index("whitelist_rules_enabled_idx").on(table.enabled),
 		index("whitelist_rules_priority_idx").on(table.priority),
+		index("whitelist_rules_expires_at_idx").on(table.expiresAt),
+		index("whitelist_rules_approval_idx").on(table.approvalStatus, table.validFrom),
 	]
 );
 
@@ -1305,6 +1476,10 @@ export const guardSessionRiskStates = pgTable(
 		lastEventSequence: bigint("last_event_sequence", { mode: "number" }).notNull().default(0),
 		turnCount: integer("turn_count").notNull().default(1),
 		stateVersion: integer("state_version").notNull().default(1),
+		riskVector: jsonb("risk_vector").$type<Record<string, number>>().notNull().default({}),
+		recentRiskTypes: jsonb("recent_risk_types").$type<string[]>().notNull().default([]),
+		escalationLevel: integer("escalation_level").notNull().default(0),
+		lastRequestId: varchar("last_request_id", { length: 128 }),
 		expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
 		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 		updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),

@@ -15,7 +15,7 @@ if (!localHosts.has(parsedUrl.hostname) || !parsedUrl.pathname.slice(1).startsWi
 }
 
 const root = resolve(import.meta.dirname, '../..');
-const sqlFiles = [
+const allSqlFiles = [
   'scripts/init-database-new.sql',
   'scripts/init-database-supplement.sql',
   ...readdirSync(resolve(root, 'drizzle'))
@@ -23,6 +23,12 @@ const sqlFiles = [
     .sort()
     .map((name) => `drizzle/${name}`),
 ];
+const sqlFiles = process.argv.includes('--policy-governance-schema-only')
+  ? [
+      'drizzle/0037_targeted_whitelist_rules.sql',
+      'drizzle/0038_policy_governance.sql',
+    ]
+  : allSqlFiles;
 const client = new pg.Client({
   connectionString: databaseUrl,
   ssl: false,
@@ -42,6 +48,9 @@ try {
   const lineageSql = readFileSync(resolve(root, 'tests/integration/data-lineage.sql'), 'utf8')
     .replace(/^\\set[^\n]*\r?\n/u, '');
   await client.query(lineageSql);
+  const policyGovernanceSql = readFileSync(resolve(root, 'tests/integration/policy-governance.sql'), 'utf8')
+    .replace(/^\\set[^\n]*\r?\n/u, '');
+  await client.query(policyGovernanceSql);
 
   const requiredRelations = [
     'security_audit_events',
@@ -56,6 +65,11 @@ try {
     'audit_evidence_timestamps',
     'data_lineage_edges',
     'data_deletion_proofs',
+    'dictionary_releases',
+    'dictionary_release_transitions',
+    'response_templates',
+    'detector_calibrations',
+    'badcase_feedback',
   ];
   const relations = await client.query(
     'select tablename from pg_tables where schemaname = current_schema() and tablename = any($1::text[])',
@@ -65,6 +79,30 @@ try {
   const missingRelations = requiredRelations.filter((name) => !foundRelations.has(name));
   if (missingRelations.length > 0) {
     throw new Error(`Missing required migrated relations: ${missingRelations.join(', ')}`);
+  }
+
+  const requiredScopeConstraints = [
+    'dictionary_releases_application_scope_fk',
+    'dictionary_release_transitions_application_scope_fk',
+    'dictionary_release_transitions_scope_fk',
+    'dictionary_releases_rollback_scope_fk',
+    'response_templates_application_scope_fk',
+    'keyword_rules_release_scope_fk',
+    'detector_calibrations_application_scope_fk',
+    'badcase_feedback_application_scope_fk',
+  ];
+  const scopeConstraints = await client.query(
+    'select conname from pg_constraint where conname = any($1::text[])',
+    [requiredScopeConstraints],
+  );
+  const foundScopeConstraints = new Set(scopeConstraints.rows.map((row) => String(row.conname)));
+  const missingScopeConstraints = requiredScopeConstraints.filter(
+    (name) => !foundScopeConstraints.has(name),
+  );
+  if (missingScopeConstraints.length > 0) {
+    throw new Error(
+      `Missing policy governance scope constraints: ${missingScopeConstraints.join(', ')}`,
+    );
   }
 
   const appendOnlyTrigger = await client.query(
@@ -86,6 +124,8 @@ try {
     tenancyIsolation: 'PASS',
     dataLineageConstraints: 'PASS',
     appendOnlyAudit: 'PASS',
+    policyGovernanceConstraints: 'PASS',
+    policyGovernanceScopeConstraints: requiredScopeConstraints.length,
   }) + '\n');
 } finally {
   await client.end();

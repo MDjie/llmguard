@@ -19,6 +19,7 @@ export {
   loadLatestVerifiedPolicyBundleForPolicy,
   loadRuntimePolicyBundle,
   loadVerifiedPolicyBundle,
+  parseCompiledPolicyBundlePayload,
   selectBoundBundleId,
 } from './runtime';
 export type { RuntimePolicyBundle } from './runtime';
@@ -54,3 +55,25 @@ export {
 export type { BootstrapPayloadSummary, PolicyBootstrapSummary } from './bootstrap';
 export { inspectPolicyReadiness, resolvePolicyReleaseAssurance } from './readiness';
 export type { PolicyReadinessReport } from './readiness';
+export {
+  builtInTokenizerManifest,
+  loadGovernedPolicyArtifacts,
+  PolicyGovernanceValidationError,
+  validateGovernedKeywordRulesForCompilation,
+  validateGovernedPolicyArtifacts,
+} from './governance';
+export type {
+  DetectorCalibrationManifest,
+  DictionaryReleaseManifest,
+  FailurePolicyManifest,
+  GovernedKeywordRule,
+  GovernedPolicyArtifacts,
+  ModelDigestManifest,
+  ResponseTemplateManifest,
+  TokenizerManifest,
+} from './governance';
+export {
+  policyIntegritySecurityEvent,
+  recordPolicyIntegrityFailure,
+} from './integrity-events';
+export type { PolicyIntegrityFailure, PolicyIntegrityFailureInput } from './integrity-events';
