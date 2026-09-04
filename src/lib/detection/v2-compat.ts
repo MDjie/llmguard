@@ -8,6 +8,7 @@ import type {
 } from '@guardllm/contracts';
 import { createEngineForPolicyBundle } from '@/lib/guard-engine-v2';
 import {
+  isPolicyBundleRuntimeError,
   loadLatestVerifiedPolicyBundleForPolicy,
   type CompiledPolicyBundle,
 } from '@/lib/policy-bundle';
@@ -111,6 +112,15 @@ function maskSegment(segment: string): string {
   return segment[0] + '*'.repeat(segment.length - 2) + segment.at(-1);
 }
 
+const LEGACY_DIMENSION_CODES: Readonly<Record<string, string>> = {
+  'business.secret': 'business_sensitive',
+  'credential.secret': 'credential_secret_leak',
+};
+
+export function legacyDimensionCode(riskType: string): string {
+  return LEGACY_DIMENSION_CODES[riskType] ?? riskType;
+}
+
 function findingName(riskType: string, bundle: CompiledPolicyBundle): string {
   return bundle.dimensions.find((dimension) => dimension.code === riskType)?.name ?? riskType;
 }
@@ -127,12 +137,13 @@ function observationFinding(
     ? observation.reasonCode.slice('RULE_'.length)
     : undefined;
   const rule = ruleId ? bundle.rules.find((candidate) => candidate.id === ruleId) : undefined;
+  const dimensionCode = legacyDimensionCode(observation.riskType);
   return {
-    dimension: observation.riskType,
-    dimensionCode: observation.riskType,
-    dimensionName: findingName(observation.riskType, bundle),
+    dimension: dimensionCode,
+    dimensionCode,
+    dimensionName: findingName(dimensionCode, bundle),
     dimensionId: bundle.dimensions.find(
-      (dimension) => dimension.code === observation.riskType,
+      (dimension) => dimension.code === dimensionCode,
     )?.id,
     score: Math.round(observation.score * 100),
     confidence: observation.score,
@@ -217,10 +228,11 @@ export async function detectWithGuardEngineV2(
   try {
     bundle = await loadLatestVerifiedPolicyBundleForPolicy(scope, policyId, {
       allowPreRelease: options.allowPreRelease,
+      routingKey: options.sessionId ?? options.subjectId ?? policyId,
     });
   } catch (error) {
     throw new DetectionPolicyError(
-      'POLICY_LOAD_FAILED',
+      isPolicyBundleRuntimeError(error) ? error.code : 'POLICY_LOAD_FAILED',
       'No signed executable policy bundle is available',
       { cause: error },
     );

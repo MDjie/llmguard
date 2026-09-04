@@ -81,3 +81,6 @@ temp
 # Coze project files
 .cozeproj
 .coze
+
+# Host-managed policy signing material must never enter an image layer
+.guardllm

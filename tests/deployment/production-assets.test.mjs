@@ -122,6 +122,37 @@ describe('production deployment invariants', () => {
     }
   });
 
+  it('mounts only policy verification material and gates readiness on a verified bundle', () => {
+    const compose = read('docker-compose.yml');
+    const values = read('deploy/helm/guardllm/values.yaml');
+    const workloads = read('deploy/helm/guardllm/templates/workloads.yaml');
+    const schema = JSON.parse(read('deploy/helm/guardllm/values.schema.json'));
+    const gitignore = read('.gitignore');
+    const dockerignore = read('.dockerignore');
+
+    expect(compose).toContain('POLICY_SIGNING_PUBLIC_KEY_FILE: /run/secrets/guardllm-policy-signing/public.pem');
+    expect(compose).toContain('./.guardllm/policy-signing/public:/run/secrets/guardllm-policy-signing:ro');
+    expect(compose).not.toMatch(/POLICY_SIGNING_PRIVATE_KEY(?:_FILE)?/);
+    expect(compose).toContain('/app/.next/cache:size=256m,uid=1000,gid=1000,mode=0750');
+    expect(compose).toContain("fetch('http://127.0.0.1:5000/api/health/policy')");
+    expect(values).toContain('GUARDLLM_DEPLOYMENT_PROFILE: production');
+    expect(values).toContain('POLICY_LKG_MAX_AGE_MS: "300000"');
+    expect(values).toContain('readinessPath: /api/health/policy');
+    expect(values).toContain('livenessPath: /api/health/live');
+    expect(workloads).toContain('name: POLICY_SIGNING_PUBLIC_KEY_FILE');
+    expect(workloads).toContain('name: POLICY_SIGNING_KEY_ID');
+    expect(workloads).toContain('default $workload.healthPath $workload.readinessPath');
+    expect(workloads).toContain('default $workload.healthPath $workload.livenessPath');
+    expect(workloads).toContain('name: policy-verification');
+    expect(workloads).toContain('readOnly: true');
+    expect(workloads).not.toMatch(/POLICY_SIGNING_PRIVATE_KEY(?:_FILE)?/);
+    expect(schema.required).toContain('policyVerification');
+    expect(schema.properties.policyVerification.properties.signingKeyId.pattern)
+      .toBe('^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$');
+    expect(gitignore).toContain('.guardllm/');
+    expect(dockerignore).toContain('.guardllm');
+  });
+
   it('keeps local runtime commands cross-platform and standalone assets deployable', () => {
     const packageJson = JSON.parse(read('package.json'));
     const developmentLauncher = read('scripts/dev.mjs');

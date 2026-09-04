@@ -1,7 +1,7 @@
 import type { DetectorDagSpec, SemanticClassifierSpec } from './types';
 
 export const DEFAULT_DETECTOR_DAG: DetectorDagSpec = {
-  version: 'guard-default-dag-1',
+  version: 'guard-default-dag-2',
   maximumCostUnits: 10,
   nodes: [
     {
@@ -49,6 +49,17 @@ export const DEFAULT_DETECTOR_DAG: DetectorDagSpec = {
       failurePolicy: 'FAIL_CLOSED',
     },
     {
+      id: 'l0-content-safety-intent',
+      detectorId: 'content-safety-intent-baseline',
+      tier: 'L0',
+      dependsOn: [],
+      runCondition: 'ALWAYS',
+      timeoutMs: 1_500,
+      maxAttempts: 1,
+      costUnits: 1,
+      failurePolicy: 'FAIL_CLOSED',
+    },
+    {
       id: 'l0-policy-rules',
       detectorId: 'rules',
       tier: 'L0',
@@ -68,6 +79,7 @@ export const DEFAULT_DETECTOR_DAG: DetectorDagSpec = {
         'l0-structured-dlp',
         'l0-resource-abuse',
         'l0-insurance-compliance',
+        'l0-content-safety-intent',
         'l0-policy-rules',
       ],
       runCondition: 'WHEN_NO_BLOCKING_MATCH',

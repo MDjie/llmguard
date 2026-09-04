@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "auth:bootstrap": "tsx scripts/bootstrap-admin.ts",
+    "policy:keygen": "tsx scripts/generate-policy-signing-key.ts",
+    "policy:bootstrap": "tsx scripts/bootstrap-policy-bundle.ts --allow-local-development",
     "build": "next build",
     "contracts:check": "node packages/contracts/scripts/generate.mjs --check && node packages/contracts/scripts/check-compatibility.mjs && pnpm appliance:contracts:check",
     "contracts:generate": "node packages/contracts/scripts/generate.mjs && pnpm appliance:contracts:generate",

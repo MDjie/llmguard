@@ -1,5 +1,6 @@
 import { safeRegexMatches } from '@/lib/detection/safe-regex';
 import { mapViewRange } from './normalization';
+import { isDefensiveEducationalContext } from './intent-context';
 import type {
   GuardDetector,
   GuardDetectorContext,
@@ -9,6 +10,22 @@ import type {
   RuleExceptionSpec,
   RuleSpec,
 } from './types';
+
+const CONTEXTUAL_RISK_TYPES = new Set([
+  'prompt_injection',
+  'malicious_code',
+  'violence_hate',
+  'illegal_content',
+  'sensitive_compliance',
+  'adult_content',
+  'self_harm',
+  'fraud_scam',
+  'misinformation',
+  'copyright_risk',
+  'output_leak',
+  'spam_detection',
+  'ad_detection',
+]);
 
 function riskLevel(score: number, mandatoryDeny: boolean): RiskLevel {
   if (mandatoryDeny || score >= 0.9) return 'CRITICAL';
@@ -67,8 +84,14 @@ export class RuleDetector implements GuardDetector {
 
   async detect(context: GuardDetectorContext): Promise<readonly Observation[]> {
     const observations: Observation[] = [];
+    const defensiveContext = isDefensiveEducationalContext(
+      context.request.content.text ?? '',
+    );
     for (const rule of this.rules) {
       if (context.signal.aborted) throw context.signal.reason;
+      if (!rule.mandatoryDeny && defensiveContext && CONTEXTUAL_RISK_TYPES.has(rule.riskType)) {
+        continue;
+      }
       const isExcepted = !rule.mandatoryDeny && this.exceptions.some((exception) => {
         const appliesToRisk = exception.dimensionScope === 'all' ||
           exception.dimensionCodes.includes(rule.riskType);

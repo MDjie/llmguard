@@ -30,6 +30,8 @@ images:
 
 config:
   NODE_ENV: production
+  GUARDLLM_DEPLOYMENT_PROFILE: production
+  POLICY_LKG_MAX_AGE_MS: "300000"
   LOG_LEVEL: info
   GUARD_GATEWAY_MODE: enforce
   GUARD_REDIS_URI: rediss://redis.guard-data-access.svc.cluster.local:6380
@@ -65,6 +67,12 @@ config:
   MULTIMODAL_BLOCK_THRESHOLD: "0.8"
   MULTIMODAL_CROSS_MODAL_WINDOW_MS: "30000"
 secretRef: guardllm-runtime-secrets
+policyVerification:
+  secretName: guardllm-policy-verification
+  publicKeySecretKey: public.pem
+  publicKeyFile: public.pem
+  mountPath: /var/run/secrets/guardllm/policy-verification
+  signingKeyId: production-ed25519-v1
 
 serviceMesh:
   enabled: true
@@ -115,6 +123,8 @@ workloads:
     port: 5000
     service: true
     healthPath: /api/health/live
+    readinessPath: /api/health/policy
+    livenessPath: /api/health/live
     command: []
     args: []
     resources:

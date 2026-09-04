@@ -108,8 +108,12 @@ spec:
                 name: {{ include "guardllm.fullname" $root }}-{{ $name }}-config
             - secretRef:
                 name: {{ $root.Values.secretRef }}
-          {{- if and (eq $name "gateway") $root.Values.gatewayDirectTls.enabled }}
           env:
+            - name: POLICY_SIGNING_PUBLIC_KEY_FILE
+              value: "{{ $root.Values.policyVerification.mountPath }}/{{ $root.Values.policyVerification.publicKeyFile }}"
+            - name: POLICY_SIGNING_KEY_ID
+              value: {{ $root.Values.policyVerification.signingKeyId | quote }}
+          {{- if and (eq $name "gateway") $root.Values.gatewayDirectTls.enabled }}
             - { name: GATEWAY_MTLS_REQUIRED, value: "true" }
             - { name: GATEWAY_TRUST_CERTIFICATE, value: "{{ $root.Values.gatewayDirectTls.mountPath }}/ca.crt" }
             - { name: GATEWAY_CLIENT_CERTIFICATE, value: "{{ $root.Values.gatewayDirectTls.mountPath }}/tls.crt" }
@@ -123,7 +127,6 @@ spec:
             - { name: GUARD_GRPC_SERVER_PRIVATE_KEY, value: "{{ $root.Values.gatewayGrpc.mountPath }}/tls.key" }
             {{- end }}
           {{- else if and (eq $name "gateway") $root.Values.gatewayGrpc.enabled }}
-          env:
             - { name: GUARD_GRPC_ENABLED, value: "true" }
             - { name: GUARD_GRPC_PORT, value: {{ $root.Values.gatewayGrpc.port | quote }} }
             - { name: GUARD_GRPC_MTLS_REQUIRED, value: {{ $root.Values.gatewayGrpc.tlsRequired | quote }} }
@@ -131,13 +134,11 @@ spec:
             - { name: GUARD_GRPC_SERVER_CERTIFICATE, value: "{{ $root.Values.gatewayGrpc.mountPath }}/tls.crt" }
             - { name: GUARD_GRPC_SERVER_PRIVATE_KEY, value: "{{ $root.Values.gatewayGrpc.mountPath }}/tls.key" }
           {{- else if eq $name "multimodal" }}
-          env:
             - name: MULTIMODAL_ANALYZER_BASE_URL
               value: "http://{{ include "guardllm.fullname" $root }}-analyzer.{{ $root.Values.namespaces.media }}.svc.cluster.local:8090"
             - name: MULTIMODAL_ANALYZER_ALLOWED_PRIVATE_HOSTS
               value: "{{ include "guardllm.fullname" $root }}-analyzer.{{ $root.Values.namespaces.media }}.svc.cluster.local"
           {{- else if or (eq $name "media") (eq $name "marking") }}
-          env:
             - name: MEDIA_ANALYZER_BASE_URL
               value: "http://{{ include "guardllm.fullname" $root }}-analyzer.{{ $root.Values.namespaces.media }}.svc.cluster.local:8090"
             - name: MEDIA_ANALYZER_ALLOWED_PRIVATE_HOSTS
@@ -157,13 +158,13 @@ spec:
               protocol: TCP
             {{- end }}
           readinessProbe:
-            httpGet: { path: {{ $workload.healthPath }}, port: http }
+            httpGet: { path: {{ default $workload.healthPath $workload.readinessPath }}, port: http }
             initialDelaySeconds: 10
             periodSeconds: 5
             timeoutSeconds: 2
             failureThreshold: 6
           livenessProbe:
-            httpGet: { path: {{ $workload.healthPath }}, port: http }
+            httpGet: { path: {{ default $workload.healthPath $workload.livenessPath }}, port: http }
             initialDelaySeconds: 30
             periodSeconds: 10
             timeoutSeconds: 2
@@ -176,6 +177,9 @@ spec:
               mountPath: /tmp
             - name: next-cache
               mountPath: /app/.next/cache
+            - name: policy-verification
+              mountPath: {{ $root.Values.policyVerification.mountPath }}
+              readOnly: true
             {{- if and (eq $name "gateway") $root.Values.gatewayDirectTls.enabled }}
             - name: gateway-mtls
               mountPath: {{ $root.Values.gatewayDirectTls.mountPath }}
@@ -196,6 +200,13 @@ spec:
           emptyDir: { sizeLimit: 1Gi }
         - name: next-cache
           emptyDir: { sizeLimit: 512Mi }
+        - name: policy-verification
+          secret:
+            secretName: {{ $root.Values.policyVerification.secretName }}
+            defaultMode: 0444
+            items:
+              - key: {{ $root.Values.policyVerification.publicKeySecretKey }}
+                path: {{ $root.Values.policyVerification.publicKeyFile }}
         {{- if and (eq $name "gateway") $root.Values.gatewayDirectTls.enabled }}
         - name: gateway-mtls
           secret:

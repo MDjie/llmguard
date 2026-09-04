@@ -197,6 +197,7 @@ CREATE TABLE policy_dimension_config (
   auto_rewrite BOOLEAN NOT NULL DEFAULT FALSE,
   custom_weight DECIMAL(5,2),
   action_config JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE(policy_id, dimension_id)
 );
 

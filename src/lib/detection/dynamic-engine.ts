@@ -61,7 +61,7 @@ import {
   type RiskAction,
 } from './decision';
 import {
-  compileSafeRegex,
+  validateSafeRegexPattern,
   safeRegexMatches,
   safeRegexTest,
   UnsafeRegexError,
@@ -323,13 +323,13 @@ function validatePolicyPatterns(config: CachedPolicyConfig): void {
   for (const rules of config.rules.values()) {
     for (const rule of rules) {
       if (rule.matchType === 'regex' && rule.pattern) {
-        compileSafeRegex(rule.pattern, rule.caseSensitive ? '' : 'i');
+        validateSafeRegexPattern(rule.pattern, rule.caseSensitive ? '' : 'i');
       }
     }
   }
   for (const exception of config.whitelists) {
     if (exception.matchType === 'regex') {
-      compileSafeRegex(exception.pattern, exception.caseSensitive ? '' : 'i');
+      validateSafeRegexPattern(exception.pattern, exception.caseSensitive ? '' : 'i');
     }
   }
 }

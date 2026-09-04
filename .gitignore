@@ -164,3 +164,6 @@ Desktop.ini
 # Misc
 .coze-logs
 .preview
+
+# Local runtime key material and generated operational state
+.guardllm/

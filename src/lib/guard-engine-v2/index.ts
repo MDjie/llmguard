@@ -13,6 +13,7 @@ export type { SemanticClassifierInvoker } from './semantic-classifier';
 export type { DetectorDagResult } from './dag';
 export { createEngineForPolicyBundle } from './from-policy-bundle';
 export {
+  ContentSafetyIntentDetector,
   InsuranceComplianceDetector,
   PromptAttackDetector,
   ResourceAbuseDetector,
@@ -20,6 +21,7 @@ export {
   validUnifiedSocialCreditCode,
   validVehicleIdentificationNumber,
 } from './builtin-detectors';
+export { isDefensiveEducationalContext } from './intent-context';
 export { buildNormalizedViews, mapViewRange } from './normalization';
 export { RuleDetector } from './rule-detector';
 export { ReasoningAttackDetector } from './reasoning-attack-detector';

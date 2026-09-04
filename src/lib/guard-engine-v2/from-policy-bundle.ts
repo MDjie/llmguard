@@ -2,6 +2,7 @@ import type { RuntimePolicyBundle } from '@/lib/policy-bundle/runtime';
 import { buildDefaultDetectorDag } from './default-dag';
 import { createGuardEngine } from './engine';
 import {
+  ContentSafetyIntentDetector,
   InsuranceComplianceDetector,
   PromptAttackDetector,
   ResourceAbuseDetector,
@@ -50,6 +51,7 @@ export function createEngineForPolicyBundle(
       new StructuredDlpDetector(),
       new ResourceAbuseDetector(),
       new InsuranceComplianceDetector(),
+      new ContentSafetyIntentDetector(),
       new RuleDetector(
         bundle.payload.rules,
         `policy-${bundle.payload.policyVersion}`,

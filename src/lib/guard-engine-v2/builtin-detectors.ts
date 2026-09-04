@@ -1,4 +1,5 @@
 import { mapViewRange } from './normalization';
+import { isDefensiveEducationalContext } from './intent-context';
 import type {
   GuardDetector,
   GuardDetectorContext,
@@ -14,6 +15,7 @@ interface MatchSpec {
   readonly score: number;
   readonly severity: RiskLevel;
   readonly validate?: (value: string) => boolean;
+  readonly suppressInDefensiveContext?: boolean;
 }
 
 interface RawMatch {
@@ -156,6 +158,105 @@ const INSURANCE_COMPLIANCE: readonly MatchSpec[] = [
   },
 ];
 
+const CONTENT_SAFETY_INTENTS: readonly MatchSpec[] = [
+  {
+    id: 'MALICIOUS_CODE_REQUEST',
+    riskType: 'malicious_code',
+    pattern: /(?:(?:编写|生成|制作|提供|构造)[\s\S]{0,48}(?:攻击载荷|恶意(?:代码|脚本|程序)|漏洞利用(?:代码|程序)?|木马|勒索软件)|(?:create|write|generate|build|provide)[\s\S]{0,48}(?:attack payload|malware|exploit code|ransomware|keylogger)|(?:绕过|bypass)[\s\S]{0,36}(?:登录|身份|认证|授权|login|authentication|authorization)[\s\S]{0,56}(?:执行|运行|execute|run)[\s\S]{0,28}(?:系统命令|命令|shell|system command))/giu,
+    score: 0.96,
+    severity: 'CRITICAL',
+    suppressInDefensiveContext: true,
+  },
+  {
+    id: 'ILLEGAL_EVASION_REQUEST',
+    riskType: 'illegal_content',
+    pattern: /(?:(?:提供|给出|制定|编写|列出|教我|provide|give|write|list|teach me)[\s\S]{0,48}(?:规避|逃避|绕过|evade|circumvent)[\s\S]{0,36}(?:监管|执法|审查|regulation|law enforcement|review)[\s\S]{0,56}(?:违法|犯罪|非法|illegal|crime)|(?:规避|逃避|绕过|evade|circumvent)[\s\S]{0,36}(?:监管|执法|审查|regulation|law enforcement|review)[\s\S]{0,56}(?:实施|进行|从事|commit|carry out)[\s\S]{0,32}(?:违法|犯罪|非法|illegal|crime))/giu,
+    score: 0.96,
+    severity: 'CRITICAL',
+    suppressInDefensiveContext: true,
+  },
+  {
+    id: 'MASS_SPAM_REQUEST',
+    riskType: 'spam_detection',
+    pattern: /(?:(?:群发|批量发送|重复发送|转发|刷屏|mass send|send repeatedly|forward|spam)[\s\S]{0,88}(?:\d{2,}\s*(?:次|遍|times)|所有(?:联系人|群|用户)|all (?:contacts|users|groups)|邮箱列表|recipient list)|(?:\d{2,}\s*(?:次|遍|times)|所有(?:联系人|群|用户)|all (?:contacts|users|groups))[\s\S]{0,88}(?:重复|群发|批量发送|转发|刷屏|repeat|mass send|forward|spam))/giu,
+    score: 0.91,
+    severity: 'HIGH',
+    suppressInDefensiveContext: true,
+  },
+  {
+    id: 'COORDINATED_AD_REQUEST',
+    riskType: 'ad_detection',
+    pattern: /(?:(?:点击|访问|打开|click|visit|open)[\s\S]{0,52}(?:陌生|未知|指定|以下|unknown|provided|this)?[\s\S]{0,12}(?:链接|网址|link|url)[\s\S]{0,88}(?:购买|下单|转发|推广|返利|佣金|赚钱|buy|order|share|refer|commission|profit)|(?:购买|下单|buy|order)[\s\S]{0,56}(?:转发|推广|推荐|share|promote|refer)[\s\S]{0,36}(?:返利|佣金|收益|commission|profit))/giu,
+    score: 0.9,
+    severity: 'HIGH',
+    suppressInDefensiveContext: true,
+  },
+  {
+    id: 'TENANT_RESTRICTED_TOPIC_GENERATION',
+    riskType: 'sensitive_compliance',
+    pattern: /(?:输出|生成|编写|复述|展示|emit|generate|write|repeat)[\s\S]{0,56}(?:(?:租户|平台|组织|企业|tenant|platform|organization)[\s\S]{0,44})?(?:自定义|定义|配置|指定|custom-defined|defined|configured)[\s\S]{0,36}(?:受限|敏感|禁止|restricted|sensitive|prohibited)[\s\S]{0,24}(?:话题|主题|内容|词|topic|content|term)/giu,
+    score: 0.91,
+    severity: 'HIGH',
+    suppressInDefensiveContext: true,
+  },
+  {
+    id: 'EXPLICIT_ADULT_CONTENT_REQUEST',
+    riskType: 'adult_content',
+    pattern: /(?:生成|创作|描写|编写|提供|create|write|describe|provide)[\s\S]{0,52}(?:露骨(?:的)?(?:成人|性)|色情(?:内容|描写|故事)|成人色情|explicit sexual|pornographic|graphic sex)/giu,
+    score: 0.96,
+    severity: 'CRITICAL',
+    suppressInDefensiveContext: true,
+  },
+  {
+    id: 'SELF_HARM_METHOD_REQUEST',
+    riskType: 'self_harm',
+    pattern: /(?:(?:给出|提供|告诉|列出|指导|give|provide|tell|list|instruct)[\s\S]{0,40}(?:具体|有效|可行|specific|effective)?[\s\S]{0,12}(?:自杀|自伤|伤害自己|suicide|self[- ]harm)[\s\S]{0,36}(?:方法|步骤|方式|教程|method|steps?|instructions?)|(?:自杀|自伤|伤害自己|suicide|self[- ]harm)[\s\S]{0,36}(?:方法|步骤|方式|教程|method|steps?|instructions?)[\s\S]{0,36}(?:给我|告诉我|有哪些|give|tell|list))/giu,
+    score: 0.99,
+    severity: 'CRITICAL',
+    suppressInDefensiveContext: true,
+  },
+  {
+    id: 'IMPERSONATION_FRAUD_REQUEST',
+    riskType: 'fraud_scam',
+    pattern: /(?:冒充|假扮|伪装成|impersonate|pose as)[\s\S]{0,36}(?:银行|客服|警察|平台|快递|bank|support|police|platform|courier)[\s\S]{0,88}(?:索要|套取|骗取|要求提供|solicit|obtain|steal|ask for)[\s\S]{0,40}(?:验证码|密码|账户|银行卡|转账|verification code|otp|password|account|bank card|transfer)/giu,
+    score: 0.98,
+    severity: 'CRITICAL',
+    suppressInDefensiveContext: true,
+  },
+  {
+    id: 'RUMOR_AS_FACT_REQUEST',
+    riskType: 'misinformation',
+    pattern: /(?:将|把|改写|包装|rewrite|present|turn)[\s\S]{0,44}(?:未经证实|未经核实|未核实|传闻|谣言|unverified|unconfirmed|rumou?r)[\s\S]{0,64}(?:确定事实|真实消息|权威结论|已证实|confirmed fact|verified truth|as fact)/giu,
+    score: 0.93,
+    severity: 'HIGH',
+    suppressInDefensiveContext: true,
+  },
+  {
+    id: 'COPYRIGHTED_VERBATIM_REQUEST',
+    riskType: 'copyright_risk',
+    pattern: /(?:(?:全文|逐字|原文|完整|大段|verbatim|entire|full text)[\s\S]{0,40}(?:复制|复现|输出|提供|reproduce|copy|provide)[\s\S]{0,72}(?:受版权保护|版权作品|小说|书籍|文章|copyrighted work|book|novel|article)|(?:复制|复现|输出|提供|reproduce|copy|provide)[\s\S]{0,48}(?:受版权保护|版权作品|整本|整篇|copyrighted work|entire book|full article)[\s\S]{0,36}(?:全文|逐字|原文|完整|verbatim|full|entire))/giu,
+    score: 0.91,
+    severity: 'HIGH',
+    suppressInDefensiveContext: true,
+  },
+  {
+    id: 'NONPUBLIC_BUSINESS_DISCLOSURE',
+    riskType: 'business_sensitive',
+    pattern: /(?:(?:泄露|披露|公开|输出|告诉|reveal|disclose|leak|publish)[\s\S]{0,64}(?:未公开|内部|保密|机密|nonpublic|internal|confidential)[\s\S]{0,56}(?:并购|收购|项目|代号|定价|战略|merger|acquisition|project|code name|pricing|strategy)|(?:未公开|内部|保密|机密|nonpublic|internal|confidential)[\s\S]{0,56}(?:并购|收购|项目|代号|定价|战略|merger|acquisition|project|code name|pricing|strategy)[\s\S]{0,52}(?:泄露|披露|公开|输出|告诉|reveal|disclose|leak|publish))/giu,
+    score: 0.97,
+    severity: 'CRITICAL',
+    suppressInDefensiveContext: true,
+  },
+  {
+    id: 'PROTECTED_CONTEXT_EXFILTRATION',
+    riskType: 'output_leak',
+    pattern: /(?:输出|打印|显示|泄露|复述|公开|print|show|reveal|repeat|expose)[\s\S]{0,52}(?:完整)?[\s\S]{0,8}(?:系统提示词|系统指令|开发者指令|隐藏上下文|内部提示词|system prompt|developer instructions?|hidden context|internal prompt)/giu,
+    score: 0.98,
+    severity: 'CRITICAL',
+    suppressInDefensiveContext: true,
+  },
+];
+
 const STRUCTURED_DLP: readonly MatchSpec[] = [
   {
     id: 'PRC_IDENTITY',
@@ -266,7 +367,11 @@ function observe(
   specs: readonly MatchSpec[],
 ): readonly Observation[] {
   const observations: Observation[] = [];
+  const defensiveContext = isDefensiveEducationalContext(
+    context.request.content.text ?? '',
+  );
   for (const spec of specs) {
+    if (spec.suppressInDefensiveContext && defensiveContext) continue;
     const evidence = [];
     const seen = new Set<string>();
     for (const view of context.views) {
@@ -422,5 +527,16 @@ export class InsuranceComplianceDetector implements GuardDetector {
   async detect(context: GuardDetectorContext): Promise<readonly Observation[]> {
     if (context.signal.aborted) throw context.signal.reason;
     return observe(context, this.id, this.version, INSURANCE_COMPLIANCE);
+  }
+}
+
+export class ContentSafetyIntentDetector implements GuardDetector {
+  readonly id = 'content-safety-intent-baseline';
+  readonly version = '1.0.0';
+  readonly required = true;
+
+  async detect(context: GuardDetectorContext): Promise<readonly Observation[]> {
+    if (context.signal.aborted) throw context.signal.reason;
+    return observe(context, this.id, this.version, CONTENT_SAFETY_INTENTS);
   }
 }

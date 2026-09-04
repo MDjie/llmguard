@@ -9,7 +9,7 @@ import {
 import { getPolicyConfig } from '@/lib/detection/dynamic-engine';
 import { scopePredicate, type TenantScope } from '@/lib/tenancy';
 import { compilePolicyBundle } from './compiler';
-import { signPolicyBundle, signingPrivateKey } from './crypto';
+import { policySigningKeyId, signPolicyBundle, signingPrivateKey } from './crypto';
 import {
   evaluationGateViolations,
   nextPolicyBundleState,
@@ -81,7 +81,7 @@ export async function compileAndStorePolicyBundle(
       resourceAdmission: parseGuardResourceAdmissionBuildConfig(),
     }), {
       privateKey: signingPrivateKey(),
-      signingKeyId: process.env.POLICY_SIGNING_KEY_ID ?? 'default-ed25519',
+      signingKeyId: policySigningKeyId(),
     });
     const [created] = await transaction.insert(policyBundles).values({
       ...scope,

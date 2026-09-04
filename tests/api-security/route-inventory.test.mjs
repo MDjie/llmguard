@@ -6,6 +6,7 @@ const apiRoot = join(process.cwd(), 'src', 'app', 'api');
 const publicRoutes = new Set([
   'auth/login/route.ts',
   'health/db/route.ts',
+  'health/policy/route.ts',
   'health/live/route.ts',
   'health/route.ts',
 ]);

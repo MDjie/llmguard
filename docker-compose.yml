@@ -3,6 +3,7 @@ x-runtime-environment: &runtime-environment
   DATABASE_SSL_MODE: "${DATABASE_SSL_MODE:-disable}"
   DATABASE_PLAINTEXT_ALLOWED_HOSTS: "${DATABASE_PLAINTEXT_ALLOWED_HOSTS:-postgres}"
   NODE_ENV: production
+  GUARDLLM_DEPLOYMENT_PROFILE: local-compose
   GUARDLLM_ENABLE_EXPERIMENTAL_LABS: "${GUARDLLM_ENABLE_EXPERIMENTAL_LABS:-false}"
   JWT_SECRET: "${JWT_SECRET:?JWT_SECRET is required}"
   SECRET_MASTER_KEY: "${SECRET_MASTER_KEY:?SECRET_MASTER_KEY is required}"
@@ -15,6 +16,9 @@ x-runtime-environment: &runtime-environment
   CONTENT_MARKING_KEY_ID: "${CONTENT_MARKING_KEY_ID:-content-mark-hmac-v1}"
   CONTENT_MARKING_PROVIDER_CODE: "${CONTENT_MARKING_PROVIDER_CODE:?CONTENT_MARKING_PROVIDER_CODE is required}"
   METRICS_BEARER_TOKEN: "${METRICS_BEARER_TOKEN:?METRICS_BEARER_TOKEN is required}"
+  POLICY_SIGNING_PUBLIC_KEY_FILE: /run/secrets/guardllm-policy-signing/public.pem
+  POLICY_SIGNING_KEY_ID: "${POLICY_SIGNING_KEY_ID:-local-ed25519-v1}"
+  POLICY_LKG_MAX_AGE_MS: "${POLICY_LKG_MAX_AGE_MS:-300000}"
   RAG_PROVENANCE_KEY: "${RAG_PROVENANCE_KEY:-}"
   TOOL_PERMIT_SIGNING_KEY: "${TOOL_PERMIT_SIGNING_KEY:-}"
   MULTIMODAL_ANALYZER_BASE_URL: "http://media-analyzer:8090"
@@ -43,6 +47,8 @@ x-worker-service: &worker-service
     media-analyzer:
       condition: service_started
   environment: *runtime-environment
+  volumes:
+    - ./.guardllm/policy-signing/public:/run/secrets/guardllm-policy-signing:ro
   networks: [guardllm-network]
   read_only: true
   tmpfs:
@@ -99,6 +105,7 @@ services:
       - ./drizzle/0033_operational_security_domains.sql:/docker-entrypoint-initdb.d/42-operational-security-domains.sql:ro
       - ./drizzle/0034_security_scanning.sql:/docker-entrypoint-initdb.d/43-security-scanning.sql:ro
       - ./drizzle/0035_guard_quota_ledger.sql:/docker-entrypoint-initdb.d/44-guard-quota-ledger.sql:ro
+      - ./drizzle/0036_policy_dimension_config_created_at.sql:/docker-entrypoint-initdb.d/45-policy-dimension-config-created-at.sql:ro
     ports:
       - "127.0.0.1:${DB_PORT:-5434}:5432"
     healthcheck:
@@ -156,12 +163,15 @@ services:
       <<: *runtime-environment
       PORT: 5000
       SESSION_COOKIE_SECURE: "${SESSION_COOKIE_SECURE:-false}"
+    volumes:
+      - ./.guardllm/policy-signing/public:/run/secrets/guardllm-policy-signing:ro
     ports:
       - "127.0.0.1:${APP_PORT:-58082}:5000"
     networks: [guardllm-network]
     read_only: true
     tmpfs:
       - /tmp:size=256m,mode=1777
+      - /app/.next/cache:size=256m,uid=1000,gid=1000,mode=0750
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
     healthcheck:
@@ -169,7 +179,7 @@ services:
         - CMD
         - node
         - -e
-        - "fetch('http://127.0.0.1:5000/api/health/live').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
+        - "fetch('http://127.0.0.1:5000/api/health/policy').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
       interval: 30s
       timeout: 5s
       retries: 5

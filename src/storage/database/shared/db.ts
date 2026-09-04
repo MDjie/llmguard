@@ -80,5 +80,14 @@ export const db = new Proxy({} as ReturnType<typeof drizzle>, {
   },
 });
 
+export async function closeDatabaseConnection(): Promise<void> {
+  const client = _client;
+  _client = null;
+  _db = null;
+  if (client) {
+    await client.end({ timeout: 5 });
+  }
+}
+
 // 导出 schema
 export * from './schema';

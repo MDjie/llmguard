@@ -1,3 +1,4 @@
+import { createHash, type KeyObject } from 'node:crypto';
 import { and, desc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '@/storage/database/shared/db';
@@ -6,7 +7,12 @@ import {
   policyBundles,
 } from '@/storage/database/shared/schema';
 import { scopePredicate, type TenantScope } from '@/lib/tenancy';
-import { verificationPublicKey, verifyPolicyBundle } from './crypto';
+import { policySigningKeyId, verificationPublicKey, verifyPolicyBundle } from './crypto';
+import {
+  isTransientPolicyDatabaseError,
+  policyLastKnownGoodMaxAgeMs,
+  PolicyBundleRuntimeError,
+} from './runtime-error';
 import type { CompiledPolicyBundle } from './types';
 import { semanticClassifierSpecSchema } from '@/lib/guard-engine-v2/semantic-classifier';
 import { guardResourceAdmissionSpecSchema } from '@/lib/resource-control/admission-config';
@@ -78,10 +84,53 @@ export interface RuntimePolicyBundle {
   readonly payload: CompiledPolicyBundle;
 }
 
-const lastKnownGood = new Map<string, RuntimePolicyBundle>();
+interface CachedRuntimePolicyBundle {
+  readonly bundle: RuntimePolicyBundle;
+  readonly verifiedAt: number;
+}
+
+const lastKnownGood = new Map<string, CachedRuntimePolicyBundle>();
 
 function cacheKey(scope: TenantScope, routingKey: string): string {
   return `${scope.tenantId}:${scope.applicationId}:${routingKey}`;
+}
+
+function databaseFailure(error: unknown): PolicyBundleRuntimeError {
+  return new PolicyBundleRuntimeError(
+    'POLICY_DATABASE_UNAVAILABLE',
+    'Policy storage is unavailable',
+    isTransientPolicyDatabaseError(error),
+    { cause: error },
+  );
+}
+
+function requireTrustedSigningMetadata(row: {
+  readonly signatureAlgorithm: string;
+  readonly signingKeyId: string;
+}): void {
+  if (row.signatureAlgorithm !== 'Ed25519') {
+    throw new PolicyBundleRuntimeError(
+      'POLICY_SIGNING_ALGORITHM_UNTRUSTED',
+      'Policy bundle signing algorithm is not trusted',
+    );
+  }
+  let configuredKeyId: string;
+  try {
+    configuredKeyId = policySigningKeyId();
+  } catch (error) {
+    throw new PolicyBundleRuntimeError(
+      'POLICY_SIGNING_KEY_UNTRUSTED',
+      'Policy verification key identity is unavailable',
+      false,
+      { cause: error },
+    );
+  }
+  if (row.signingKeyId !== configuredKeyId) {
+    throw new PolicyBundleRuntimeError(
+      'POLICY_SIGNING_KEY_UNTRUSTED',
+      'Policy bundle signing key is not trusted',
+    );
+  }
 }
 
 export function selectBoundBundleId(
@@ -104,22 +153,49 @@ export async function loadRuntimePolicyBundle(
 ): Promise<RuntimePolicyBundle> {
   const key = cacheKey(scope, routingKey);
   try {
-    const [binding] = await db.select().from(applicationPolicyBindings)
-      .where(scopePredicate(applicationPolicyBindings, scope)).limit(1);
-    if (!binding) throw new Error('No policy binding exists');
-    const bundleId = selectBoundBundleId(binding, routingKey);
-    const generation = binding.generation;
-    if (requestedBundleId && requestedBundleId !== bundleId) {
-      throw new Error('Requested policy bundle does not match the data-plane selection');
+    let binding: typeof applicationPolicyBindings.$inferSelect | undefined;
+    try {
+      [binding] = await db.select().from(applicationPolicyBindings)
+        .where(scopePredicate(applicationPolicyBindings, scope)).limit(1);
+    } catch (error) {
+      throw databaseFailure(error);
     }
-    if (!bundleId) throw new Error('No active policy bundle');
+    if (!binding) {
+      throw new PolicyBundleRuntimeError('POLICY_BINDING_MISSING', 'No policy binding exists');
+    }
+    const bundleId = selectBoundBundleId(binding, routingKey);
+    if (requestedBundleId && requestedBundleId !== bundleId) {
+      throw new PolicyBundleRuntimeError(
+        'POLICY_BUNDLE_POLICY_MISMATCH',
+        'Requested policy bundle does not match the data-plane selection',
+      );
+    }
+    if (!bundleId) {
+      throw new PolicyBundleRuntimeError('POLICY_BUNDLE_MISSING', 'No active policy bundle exists');
+    }
     const verified = await loadVerifiedPolicyBundle(scope, bundleId);
-    const result = { ...verified, generation };
-    lastKnownGood.set(key, result);
+    const result = { ...verified, generation: binding.generation };
+    lastKnownGood.set(key, { bundle: result, verifiedAt: Date.now() });
     return result;
   } catch (error) {
-    const cached = lastKnownGood.get(key);
-    if (cached) return cached;
+    if (
+      error instanceof PolicyBundleRuntimeError &&
+      error.code === 'POLICY_DATABASE_UNAVAILABLE' &&
+      error.recoverable
+    ) {
+      const cached = lastKnownGood.get(key);
+      if (cached && Date.now() - cached.verifiedAt <= policyLastKnownGoodMaxAgeMs()) {
+        return cached.bundle;
+      }
+      if (cached) {
+        throw new PolicyBundleRuntimeError(
+          'POLICY_LAST_KNOWN_GOOD_EXPIRED',
+          'The last verified policy bundle has expired',
+          false,
+          { cause: error },
+        );
+      }
+    }
     throw error;
   }
 }
@@ -129,23 +205,59 @@ export async function loadVerifiedPolicyBundle(
   bundleId: string,
   options: { readonly allowPreRelease?: boolean } = {},
 ): Promise<RuntimePolicyBundle> {
-  const [row] = await db.select().from(policyBundles).where(and(
-    eq(policyBundles.id, bundleId),
-    scopePredicate(policyBundles, scope),
-  )).limit(1);
+  let row: typeof policyBundles.$inferSelect | undefined;
+  try {
+    [row] = await db.select().from(policyBundles).where(and(
+      eq(policyBundles.id, bundleId),
+      scopePredicate(policyBundles, scope),
+    )).limit(1);
+  } catch (error) {
+    throw databaseFailure(error);
+  }
+  if (!row) {
+    throw new PolicyBundleRuntimeError('POLICY_BUNDLE_MISSING', 'Policy bundle does not exist');
+  }
   const allowedStates = options.allowPreRelease
     ? ['draft', 'testing', 'pending_approval', 'approved', 'shadow', 'canary', 'active', 'retired']
     : ['approved', 'shadow', 'canary', 'active', 'retired'];
-  if (!row || !allowedStates.includes(row.state)) {
-    throw new Error('Policy bundle is unavailable');
+  if (!allowedStates.includes(row.state)) {
+    throw new PolicyBundleRuntimeError(
+      'POLICY_BUNDLE_STATE_INVALID',
+      'Policy bundle state is not executable',
+    );
   }
-  const payload = payloadSchema.parse(row.canonicalJson) as CompiledPolicyBundle;
+  requireTrustedSigningMetadata(row);
+  let payload: CompiledPolicyBundle;
+  try {
+    payload = payloadSchema.parse(row.canonicalJson) as CompiledPolicyBundle;
+  } catch (error) {
+    throw new PolicyBundleRuntimeError(
+      'POLICY_BUNDLE_SCHEMA_INVALID',
+      'Policy bundle schema validation failed',
+      false,
+      { cause: error },
+    );
+  }
+  let publicKey: KeyObject;
+  try {
+    publicKey = verificationPublicKey();
+  } catch (error) {
+    throw new PolicyBundleRuntimeError(
+      'POLICY_SIGNING_KEY_UNTRUSTED',
+      'Policy verification key is unavailable',
+      false,
+      { cause: error },
+    );
+  }
   if (!verifyPolicyBundle({
     payload,
     contentHash: row.contentHash,
     signature: row.signature,
-  }, verificationPublicKey())) {
-    throw new Error('Policy bundle signature verification failed');
+  }, publicKey)) {
+    throw new PolicyBundleRuntimeError(
+      'POLICY_SIGNATURE_INVALID',
+      'Policy bundle signature verification failed',
+    );
   }
   return { id: row.id, generation: 0, payload };
 }
@@ -153,24 +265,47 @@ export async function loadVerifiedPolicyBundle(
 export async function loadLatestVerifiedPolicyBundleForPolicy(
   scope: TenantScope,
   policyId: string,
-  options: { readonly allowPreRelease?: boolean } = {},
+  options: { readonly allowPreRelease?: boolean; readonly routingKey?: string } = {},
 ): Promise<RuntimePolicyBundle> {
-  const allowedStates = new Set(options.allowPreRelease
-    ? ['draft', 'testing', 'pending_approval', 'approved', 'shadow', 'canary', 'active']
-    : ['approved', 'shadow', 'canary', 'active']);
-  const rows = await db.select({
-    id: policyBundles.id,
-    state: policyBundles.state,
-  }).from(policyBundles).where(and(
-    eq(policyBundles.policyId, policyId),
-    scopePredicate(policyBundles, scope),
-  )).orderBy(desc(policyBundles.version));
+  if (!options.allowPreRelease) {
+    const selected = await loadRuntimePolicyBundle(scope, undefined, options.routingKey ?? policyId);
+    if (selected.payload.policyId !== policyId) {
+      throw new PolicyBundleRuntimeError(
+        'POLICY_BUNDLE_POLICY_MISMATCH',
+        'The active policy bundle does not contain the requested policy',
+      );
+    }
+    return selected;
+  }
+
+  const allowedStates = new Set([
+    'draft',
+    'testing',
+    'pending_approval',
+    'approved',
+    'shadow',
+    'canary',
+    'active',
+  ]);
+  let rows: Array<{ readonly id: string; readonly state: string }>;
+  try {
+    rows = await db.select({
+      id: policyBundles.id,
+      state: policyBundles.state,
+    }).from(policyBundles).where(and(
+      eq(policyBundles.policyId, policyId),
+      scopePredicate(policyBundles, scope),
+    )).orderBy(desc(policyBundles.version));
+  } catch (error) {
+    throw databaseFailure(error);
+  }
   const selected = rows.find((row) => allowedStates.has(row.state));
-  if (!selected) throw new Error('Policy bundle is unavailable');
+  if (!selected) {
+    throw new PolicyBundleRuntimeError('POLICY_BUNDLE_MISSING', 'Policy bundle is unavailable');
+  }
   return loadVerifiedPolicyBundle(scope, selected.id, options);
 }
 
 export function clearRuntimePolicyBundleCache(): void {
   lastKnownGood.clear();
 }
-import { createHash } from 'node:crypto';
