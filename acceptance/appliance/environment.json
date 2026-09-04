@@ -1,0 +1,44 @@
+{
+  "schemaVersion": "1.0",
+  "planId": "GUARDLLM-VERSION-B-2026",
+  "sourceBaseline": "28cc709455b557553b14f5d42f86a0bfd61ee790",
+  "capturedOn": "2026-09-04",
+  "status": "BLOCKED_EXTERNAL",
+  "ownerRole": "appliance-architecture",
+  "approverRoles": [
+    "product-owner",
+    "customer-network-owner",
+    "independent-qa"
+  ],
+  "requiredFields": {
+    "commercialSkuApproval": null,
+    "targetHardwareModel": null,
+    "targetCpu": null,
+    "targetAccelerator": null,
+    "targetNic": null,
+    "targetBypassController": null,
+    "targetOperatingSystem": null,
+    "targetDataPlane": null,
+    "targetIpsEngine": null,
+    "targetAntivirusEngine": null,
+    "targetNetworkTopology": null,
+    "targetPortProfile": null,
+    "targetTrafficProfile": null,
+    "targetTlsProfile": null,
+    "targetHaProfile": null,
+    "targetKmsOrHsm": null,
+    "regulatoryScope": null
+  },
+  "blockingReasons": [
+    "Version B commercial SKU is not approved",
+    "Target appliance hardware and port profile are not frozen",
+    "Target network topology and traffic profile are not frozen",
+    "Network data-plane, IPS and antivirus technology selections are pending",
+    "Regulatory, TLS interception and certification scopes are not approved"
+  ],
+  "policy": {
+    "sourceControlledCodeIsNotTargetAcceptance": true,
+    "virtualLabEvidenceIsNotHardwareCertification": true,
+    "unfrozenMetricsMustNotBePublished": true
+  }
+}

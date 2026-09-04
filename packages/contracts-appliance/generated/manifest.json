@@ -1,0 +1,12 @@
+{
+  "contractVersion": "1.0",
+  "source": "model/appliance-v1.schema.json",
+  "sourceSha256": "b10daf922dd2098768c989fea3284fa56fc6ebacadb8d35520c6fcec29f5a080",
+  "outputs": {
+    "generated/typescript/appliance-v1.ts": "2a17b045aef8d58903e32e98b4028586f21cbdd88e9010ce39b390b0e4a4ab2b",
+    "generated/java/io/guardllm/appliance/contracts/v1/ApplianceContracts.java": "7a7d098aa7183e7c50cba6983a9286c58dc6a074530d64282f79c6cf7f4efaa3",
+    "generated/python/appliance_contracts_v1.py": "d960669be56cb0a0d9d247669e49321200e2e1b2e8f1f67cc528eb7fe43dcc69",
+    "generated/go/appliancev1/contracts.go": "99e1242e7ce5a820845a868a3c13520e5c67a027d10843713e682ca1d5536c30",
+    "proto/appliance/v1/appliance.proto": "602ada1af39f7ff48c7549dbc59726f5b674e0d60db2c1748f7fcf49aeaf7cab"
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "1.0",
+  "status": "BLOCKED_EXTERNAL",
+  "ownerRole": "network-data-plane-owner",
+  "target": {
+    "siteId": null,
+    "networkDiagramDigest": null,
+    "managementNetwork": null,
+    "businessNetworks": null,
+    "haSynchronizationNetwork": null,
+    "bmcNetwork": null,
+    "modelServiceNetwork": null,
+    "evidenceExportNetwork": null,
+    "routingAndVlanPlan": null,
+    "protectedPathInventory": null
+  },
+  "deploymentModes": [
+    {
+      "id": "REVERSE_PROXY",
+      "required": true,
+      "status": "CODE_BASELINE",
+      "canEnforceInline": true,
+      "evidence": ["services/guard-gateway"]
+    },
+    {
+      "id": "TRANSPARENT_INLINE",
+      "required": true,
+      "status": "BLOCKED_EXTERNAL",
+      "canEnforceInline": true,
+      "evidence": []
+    },
+    {
+      "id": "TAP_MIRROR",
+      "required": true,
+      "status": "DESIGN_ONLY",
+      "canEnforceInline": false,
+      "evidence": []
+    },
+    {
+      "id": "HA_PAIR",
+      "required": true,
+      "status": "BLOCKED_EXTERNAL",
+      "canEnforceInline": true,
+      "evidence": []
+    }
+  ],
+  "securityPolicy": {
+    "protectedTrafficFailClosed": true,
+    "unknownPolicyFailClosed": true,
+    "tapModeMustNotClaimInlineEnforcement": true,
+    "bypassRequiresAsymmetricSignature": true,
+    "bypassRequiresDistinctApprovers": 2,
+    "bypassMustBeTimeBound": true,
+    "directModelPathsMustBeClosed": true
+  },
+  "blockingReasons": [
+    "No customer-approved target network diagram",
+    "No approved port, VLAN, route and protected-path inventory",
+    "No target HA switching and physical bypass behavior"
+  ]
+}

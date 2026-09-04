@@ -1,0 +1,298 @@
+{
+  "schemaVersion": "1.0",
+  "updatedOn": "2026-09-04",
+  "sourcePlan": "输出/代码分析与升级/16_GuardLLM_B版本升级详细设计方案与执行计划_V1.0_2026-09-04.md",
+  "statusPolicy": "COMPLETE requires all acceptance evidence, no blocking inputs and signed target-environment evidence where hardware, network or third-party engines are involved.",
+  "workPackages": [
+    {
+      "id": "B-WP00",
+      "name": "product and acceptance freeze",
+      "status": "IN_PROGRESS_EXTERNAL",
+      "ownerRole": "product-owner",
+      "rollbackOwnerRole": "release-manager",
+      "dependencies": [],
+      "acceptanceCriteria": "SKU, target environment, BOM, topology, metrics, owners and claims are approved and immutable.",
+      "acceptanceEvidence": [
+        "acceptance/appliance/environment.json",
+        "acceptance/appliance/bom.json",
+        "acceptance/appliance/topology.json",
+        "acceptance/appliance/metrics.json"
+      ],
+      "blockingInputs": [
+        "commercial approval",
+        "target BOM",
+        "target topology",
+        "named customer approver"
+      ]
+    },
+    {
+      "id": "B-WP01",
+      "name": "network data-plane and OEM selection",
+      "status": "IN_PROGRESS_EXTERNAL",
+      "ownerRole": "network-data-plane-owner",
+      "rollbackOwnerRole": "chief-architect",
+      "dependencies": [
+        "B-WP00"
+      ],
+      "acceptanceCriteria": "A target-hardware POC, license review, supply-chain review and approved selection ADR exist.",
+      "acceptanceEvidence": [
+        "docs/architecture/adr-004-version-b-data-plane-selection.md"
+      ],
+      "blockingInputs": [
+        "candidate products",
+        "commercial license terms",
+        "target hardware",
+        "target traffic generator"
+      ]
+    },
+    {
+      "id": "B-WP02",
+      "name": "appliance-v1 contracts and PAL v2",
+      "status": "CODE_IMPLEMENTED_ACCEPTANCE_PENDING",
+      "ownerRole": "contract-architecture",
+      "rollbackOwnerRole": "network-data-plane-owner",
+      "dependencies": [
+        "B-WP00"
+      ],
+      "acceptanceCriteria": "Flow, frame, decision, capability, health, receipt and bypass contracts are generated, compatible and fail safely.",
+      "acceptanceEvidence": [
+        "packages/contracts-appliance/model/appliance-v1.schema.json",
+        "packages/contracts-appliance/generated/manifest.json",
+        "tests/contracts/appliance-contracts.test.mjs",
+        "tests/appliance/pal-v2.test.ts"
+      ],
+      "blockingInputs": [
+        "cross-language OEM consumer acceptance"
+      ]
+    },
+    {
+      "id": "B-WP03",
+      "name": "network fast path",
+      "status": "REFERENCE_BASELINE",
+      "ownerRole": "network-data-plane-owner",
+      "rollbackOwnerRole": "appliance-release-manager",
+      "dependencies": [
+        "B-WP01",
+        "B-WP02"
+      ],
+      "acceptanceCriteria": "Target data plane provides bounded bridging, ACL, connection control, reinjection and telemetry.",
+      "acceptanceEvidence": [
+        "src/lib/appliance/fast-path-reference.ts",
+        "src/lib/appliance/virtual-lab.ts",
+        "tests/appliance/fast-path-reference.test.ts",
+        "tests/appliance/virtual-lab.test.ts"
+      ],
+      "blockingInputs": [
+        "approved data-plane selection",
+        "target NIC"
+      ]
+    },
+    {
+      "id": "B-WP04",
+      "name": "TLS and protocol proxy",
+      "status": "PARTIAL_BASELINE",
+      "ownerRole": "protocol-security-owner",
+      "rollbackOwnerRole": "network-data-plane-owner",
+      "dependencies": [
+        "B-WP02",
+        "B-WP03"
+      ],
+      "acceptanceCriteria": "TLS and all scoped protocols preserve message boundaries and resist evasion before forwarding.",
+      "acceptanceEvidence": [
+        "src/lib/appliance/protocol-framing.ts",
+        "src/lib/stream-gate/sse.ts",
+        "tests/appliance/protocol-framing.test.ts",
+        "tests/stream-gate/sse-gate.test.ts"
+      ],
+      "blockingInputs": [
+        "enterprise CA policy",
+        "cryptographic profile",
+        "target protocol corpus"
+      ]
+    },
+    {
+      "id": "B-WP05",
+      "name": "inspection fabric and network engines",
+      "status": "PARTIAL_BASELINE",
+      "ownerRole": "security-engine-owner",
+      "rollbackOwnerRole": "security-release-manager",
+      "dependencies": [
+        "B-WP01",
+        "B-WP02",
+        "B-WP04"
+      ],
+      "acceptanceCriteria": "ACL, IPS, AV, DoS, DLP and AI engines emit unified observations and one enforceable decision.",
+      "acceptanceEvidence": [
+        "src/lib/appliance/inspection-fabric.ts",
+        "src/lib/appliance/enforcement-token.ts",
+        "tests/appliance/inspection-fabric.test.ts"
+      ],
+      "blockingInputs": [
+        "approved IPS engine",
+        "approved antivirus engine",
+        "licensed rule feeds"
+      ]
+    },
+    {
+      "id": "B-WP06",
+      "name": "file restoration and multimodal isolation",
+      "status": "PARTIAL_BASELINE",
+      "ownerRole": "artifact-security-owner",
+      "rollbackOwnerRole": "media-platform-lead",
+      "dependencies": [
+        "B-WP02",
+        "B-WP05"
+      ],
+      "acceptanceCriteria": "Files are reconstructed, bounded, quarantined, scanned and provenance-bound before release.",
+      "acceptanceEvidence": [
+        "src/lib/appliance/artifact-isolation.ts",
+        "src/lib/artifacts/security-gate.ts",
+        "src/lib/multimodal/fusion.ts",
+        "tests/appliance/artifact-isolation.test.ts",
+        "tests/artifacts/security-gate.test.ts",
+        "tests/multimodal/fusion.test.ts"
+      ],
+      "blockingInputs": [
+        "approved AV and file analyzers",
+        "target malicious-file corpus"
+      ]
+    },
+    {
+      "id": "B-WP07",
+      "name": "appliance guard runtime",
+      "status": "PARTIAL_BASELINE",
+      "ownerRole": "guard-runtime-owner",
+      "rollbackOwnerRole": "guard-runtime-lead",
+      "dependencies": [
+        "B-WP02"
+      ],
+      "acceptanceCriteria": "One stateless Guard Runtime provides authoritative input, output, RAG, Agent and multimodal decisions without a mutable control-plane dependency.",
+      "acceptanceEvidence": [
+        "src/lib/guard-engine-v2/engine.ts",
+        "src/lib/appliance/guard-runtime-adapter.ts",
+        "tests/appliance/guard-runtime-adapter.test.ts"
+      ],
+      "blockingInputs": [
+        "target model and tokenizer",
+        "target accelerator runtime"
+      ]
+    },
+    {
+      "id": "B-WP08",
+      "name": "atomic appliance bundle distribution",
+      "status": "PARTIAL_BASELINE",
+      "ownerRole": "policy-release-owner",
+      "rollbackOwnerRole": "release-manager",
+      "dependencies": [
+        "B-WP02"
+      ],
+      "acceptanceCriteria": "Signed network, TLS, engine and AI artifacts activate atomically and roll back with receipts.",
+      "acceptanceEvidence": [
+        "src/lib/appliance/appliance-bundle.ts",
+        "src/lib/appliance/capability.ts",
+        "src/lib/appliance/bundle-rollout.ts",
+        "tests/appliance/capability-bundle.test.ts",
+        "tests/appliance/bundle-rollout.test.ts"
+      ],
+      "blockingInputs": [
+        "target KMS or HSM",
+        "production device identity registry"
+      ]
+    },
+    {
+      "id": "B-WP09",
+      "name": "HAL and appliance lifecycle",
+      "status": "PARTIAL_BASELINE",
+      "ownerRole": "appliance-platform-owner",
+      "rollbackOwnerRole": "appliance-release-manager",
+      "dependencies": [
+        "B-WP00",
+        "B-WP02"
+      ],
+      "acceptanceCriteria": "Target hardware identity, health, installation, upgrade, rollback and replacement are controlled and evidenced.",
+      "acceptanceEvidence": [
+        "src/lib/appliance/hardware-hal.ts",
+        "src/lib/appliance/capability.ts",
+        "src/lib/appliance/system-update.ts",
+        "tests/appliance/pal-hal.test.ts",
+        "tests/appliance/capability-bundle.test.ts",
+        "tests/appliance/system-update.test.ts"
+      ],
+      "blockingInputs": [
+        "target BOM",
+        "BMC access",
+        "driver and firmware packages"
+      ]
+    },
+    {
+      "id": "B-WP10",
+      "name": "dual-node high availability",
+      "status": "PARTIAL_BASELINE",
+      "ownerRole": "site-reliability-lead",
+      "rollbackOwnerRole": "appliance-release-manager",
+      "dependencies": [
+        "B-WP03",
+        "B-WP09"
+      ],
+      "acceptanceCriteria": "Witnessed failover prevents split brain and recovers traffic within the frozen HA profile.",
+      "acceptanceEvidence": [
+        "src/lib/appliance/ha-controller.ts",
+        "tests/appliance/ha-controller.test.ts"
+      ],
+      "blockingInputs": [
+        "two target appliances",
+        "witness network",
+        "approved HA profile"
+      ]
+    },
+    {
+      "id": "B-WP11",
+      "name": "four-domain evidence and operations",
+      "status": "PARTIAL_BASELINE",
+      "ownerRole": "security-operations-owner",
+      "rollbackOwnerRole": "site-reliability-lead",
+      "dependencies": [
+        "B-WP05",
+        "B-WP08",
+        "B-WP09"
+      ],
+      "acceptanceCriteria": "Audit, runtime, network-security and model-security evidence survives export outages, failover and upgrades.",
+      "acceptanceEvidence": [
+        "src/lib/appliance/evidence-wal.ts",
+        "src/lib/appliance/evidence-file-store.ts",
+        "tests/appliance/evidence-wal.test.ts",
+        "tests/appliance/evidence-file-store.test.ts"
+      ],
+      "blockingInputs": [
+        "target SOC, SIEM and TONE contracts",
+        "approved retention policy"
+      ]
+    },
+    {
+      "id": "B-WP12",
+      "name": "target performance, security and field acceptance",
+      "status": "PARTIAL_BASELINE",
+      "ownerRole": "independent-qa",
+      "rollbackOwnerRole": "product-owner",
+      "dependencies": [
+        "B-WP04",
+        "B-WP05",
+        "B-WP06",
+        "B-WP07",
+        "B-WP08",
+        "B-WP10",
+        "B-WP11"
+      ],
+      "acceptanceCriteria": "The full appliance passes signed functional, PCAP, performance, 72-hour, fault, disaster-recovery, security and field acceptance.",
+      "acceptanceEvidence": [
+        "scripts/acceptance/run-appliance-baseline.mjs",
+        "acceptance/appliance/generated/software-baseline-evidence.json"
+      ],
+      "blockingInputs": [
+        "frozen target environment",
+        "sealed corpora",
+        "customer acceptance window"
+      ]
+    }
+  ]
+}

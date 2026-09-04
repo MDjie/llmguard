@@ -1,0 +1,22 @@
+[Unit]
+Description=GuardLLM appliance policy and evidence agent
+After=network-online.target container-runtime.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/guardllm/runtime.env
+ExecStartPre=/usr/local/libexec/guardllm-verify-image appliance-agent
+ExecStart=/usr/bin/podman run --rm --name guardllm-appliance-agent --network none --read-only --cap-drop ALL --security-opt no-new-privileges --tmpfs /tmp:rw,noexec,nosuid,size=64m --env-file /etc/guardllm/runtime.env -v /etc/guardllm:/etc/guardllm:ro,Z -v /var/lib/guardllm:/var/lib/guardllm:rw,Z ${GUARDLLM_APPLIANCE_AGENT_IMAGE}
+ExecStop=/usr/bin/podman stop --time 30 guardllm-appliance-agent
+Restart=always
+RestartSec=5
+TimeoutStopSec=45
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/guardllm
+
+[Install]
+WantedBy=guardllm.target

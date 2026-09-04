@@ -1,0 +1,105 @@
+{
+  "schemaVersion": "1.0",
+  "status": "BLOCKED_EXTERNAL",
+  "ownerRole": "appliance-platform-owner",
+  "approverRoles": [
+    "appliance-architecture",
+    "supply-chain-security",
+    "customer-platform-owner"
+  ],
+  "components": [
+    {
+      "id": "chassis",
+      "category": "CHASSIS",
+      "required": true,
+      "status": "PENDING_SELECTION",
+      "selection": null,
+      "requiredEvidence": ["manufacturer declaration", "asset identity", "support lifecycle"]
+    },
+    {
+      "id": "cpu",
+      "category": "CPU",
+      "required": true,
+      "status": "PENDING_SELECTION",
+      "selection": null,
+      "requiredEvidence": ["exact model", "microcode digest", "benchmark report"]
+    },
+    {
+      "id": "memory",
+      "category": "MEMORY",
+      "required": true,
+      "status": "PENDING_SELECTION",
+      "selection": null,
+      "requiredEvidence": ["capacity", "ECC capability", "burn-in report"]
+    },
+    {
+      "id": "storage",
+      "category": "STORAGE",
+      "required": true,
+      "status": "PENDING_SELECTION",
+      "selection": null,
+      "requiredEvidence": ["exact model", "capacity", "SMART capability", "endurance profile"]
+    },
+    {
+      "id": "raid",
+      "category": "RAID",
+      "required": true,
+      "status": "PENDING_SELECTION",
+      "selection": null,
+      "requiredEvidence": ["controller identity", "firmware digest", "rebuild test"]
+    },
+    {
+      "id": "network-interface",
+      "category": "NIC",
+      "required": true,
+      "status": "PENDING_SELECTION",
+      "selection": null,
+      "requiredEvidence": ["exact model", "driver digest", "firmware digest", "line-rate report"]
+    },
+    {
+      "id": "ai-accelerator",
+      "category": "ACCELERATOR",
+      "required": true,
+      "status": "PENDING_SELECTION",
+      "selection": null,
+      "requiredEvidence": ["exact model", "runtime digest", "driver digest", "model compatibility report"]
+    },
+    {
+      "id": "baseboard-management-controller",
+      "category": "BMC",
+      "required": true,
+      "status": "PENDING_SELECTION",
+      "selection": null,
+      "requiredEvidence": ["firmware digest", "management protocol", "credential rotation test"]
+    },
+    {
+      "id": "power-supply",
+      "category": "POWER",
+      "required": true,
+      "status": "PENDING_SELECTION",
+      "selection": null,
+      "requiredEvidence": ["redundancy profile", "failure alarm test"]
+    },
+    {
+      "id": "physical-bypass",
+      "category": "BYPASS",
+      "required": true,
+      "status": "PENDING_SELECTION",
+      "selection": null,
+      "requiredEvidence": ["exact controller", "driver digest", "fail-open and fail-close behavior report"]
+    },
+    {
+      "id": "trusted-key-device",
+      "category": "TPM_HSM",
+      "required": true,
+      "status": "PENDING_SELECTION",
+      "selection": null,
+      "requiredEvidence": ["exact model", "supported algorithms", "key lifecycle report"]
+    }
+  ],
+  "policy": {
+    "selectedComponentsRequireImmutableIdentity": true,
+    "driverAndFirmwareChangesInvalidateEvidence": true,
+    "onePlatformResultMustNotCertifyAnotherPlatform": true
+  }
+}

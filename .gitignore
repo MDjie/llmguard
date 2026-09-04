@@ -23,6 +23,7 @@ __pycache__/
 .cache
 coverage
 storybook-static
+.artifact-build/
 
 # Package manager artifacts
 .pnp*

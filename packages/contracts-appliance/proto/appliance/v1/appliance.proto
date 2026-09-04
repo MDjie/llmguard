@@ -1,0 +1,403 @@
+// Generated from model/appliance-v1.schema.json. Do not edit.
+// Source SHA-256: b10daf922dd2098768c989fea3284fa56fc6ebacadb8d35520c6fcec29f5a080
+syntax = "proto3";
+
+package guardllm.appliance.contracts.v1;
+
+import "google/protobuf/struct.proto";
+
+option java_package = "io.guardllm.appliance.contracts.v1.proto";
+option java_multiple_files = true;
+
+enum TransportProtocol {
+  TRANSPORT_PROTOCOL_UNSPECIFIED = 0;
+  TRANSPORT_PROTOCOL_TCP = 1;
+  TRANSPORT_PROTOCOL_UDP = 2;
+}
+
+enum ApplicationProtocol {
+  APPLICATION_PROTOCOL_UNSPECIFIED = 0;
+  APPLICATION_PROTOCOL_UNKNOWN = 1;
+  APPLICATION_PROTOCOL_TLS = 2;
+  APPLICATION_PROTOCOL_HTTP_1_1 = 3;
+  APPLICATION_PROTOCOL_HTTP_2 = 4;
+  APPLICATION_PROTOCOL_HTTPS = 5;
+  APPLICATION_PROTOCOL_SSE = 6;
+  APPLICATION_PROTOCOL_WEBSOCKET = 7;
+  APPLICATION_PROTOCOL_GRPC = 8;
+  APPLICATION_PROTOCOL_OPENAI_API = 9;
+  APPLICATION_PROTOCOL_MQTT = 10;
+  APPLICATION_PROTOCOL_MCP = 11;
+}
+
+enum TrafficDirection {
+  TRAFFIC_DIRECTION_UNSPECIFIED = 0;
+  TRAFFIC_DIRECTION_CLIENT_TO_SERVER = 1;
+  TRAFFIC_DIRECTION_SERVER_TO_CLIENT = 2;
+}
+
+enum ProtocolStage {
+  PROTOCOL_STAGE_UNSPECIFIED = 0;
+  PROTOCOL_STAGE_FLOW_METADATA = 1;
+  PROTOCOL_STAGE_TLS_HANDSHAKE = 2;
+  PROTOCOL_STAGE_HEADERS = 3;
+  PROTOCOL_STAGE_MESSAGE = 4;
+  PROTOCOL_STAGE_ARTIFACT = 5;
+  PROTOCOL_STAGE_TRAILERS = 6;
+}
+
+enum DeploymentMode {
+  DEPLOYMENT_MODE_UNSPECIFIED = 0;
+  DEPLOYMENT_MODE_REVERSE_PROXY = 1;
+  DEPLOYMENT_MODE_TRANSPARENT_INLINE = 2;
+  DEPLOYMENT_MODE_TAP_MIRROR = 3;
+  DEPLOYMENT_MODE_HA_PAIR = 4;
+}
+
+enum AdmissionAction {
+  ADMISSION_ACTION_UNSPECIFIED = 0;
+  ADMISSION_ACTION_INSPECT = 1;
+  ADMISSION_ACTION_ALLOW_METADATA_ONLY = 2;
+  ADMISSION_ACTION_BLOCK = 3;
+  ADMISSION_ACTION_MIRROR_ONLY = 4;
+}
+
+enum EnforcementAction {
+  ENFORCEMENT_ACTION_UNSPECIFIED = 0;
+  ENFORCEMENT_ACTION_ALLOW = 1;
+  ENFORCEMENT_ACTION_BLOCK = 2;
+  ENFORCEMENT_ACTION_RESET = 3;
+  ENFORCEMENT_ACTION_RATE_LIMIT = 4;
+  ENFORCEMENT_ACTION_REDIRECT = 5;
+  ENFORCEMENT_ACTION_MASK = 6;
+  ENFORCEMENT_ACTION_REWRITE = 7;
+  ENFORCEMENT_ACTION_QUARANTINE = 8;
+  ENFORCEMENT_ACTION_MIRROR_ONLY = 9;
+}
+
+enum HealthAction {
+  HEALTH_ACTION_UNSPECIFIED = 0;
+  HEALTH_ACTION_HEALTHY = 1;
+  HEALTH_ACTION_DEGRADE = 2;
+  HEALTH_ACTION_DRAIN = 3;
+  HEALTH_ACTION_ISOLATE = 4;
+  HEALTH_ACTION_FAILOVER = 5;
+}
+
+enum ReceiptStatus {
+  RECEIPT_STATUS_UNSPECIFIED = 0;
+  RECEIPT_STATUS_APPLIED = 1;
+  RECEIPT_STATUS_REJECTED = 2;
+  RECEIPT_STATUS_EXPIRED = 3;
+  RECEIPT_STATUS_DUPLICATE = 4;
+}
+
+enum BundleActivationStatus {
+  BUNDLE_ACTIVATION_STATUS_UNSPECIFIED = 0;
+  BUNDLE_ACTIVATION_STATUS_PREPARED = 1;
+  BUNDLE_ACTIVATION_STATUS_ACTIVE = 2;
+  BUNDLE_ACTIVATION_STATUS_REJECTED = 3;
+  BUNDLE_ACTIVATION_STATUS_ROLLED_BACK = 4;
+}
+
+enum EngineType {
+  ENGINE_TYPE_UNSPECIFIED = 0;
+  ENGINE_TYPE_FAST_PATH = 1;
+  ENGINE_TYPE_PROTOCOL_PROXY = 2;
+  ENGINE_TYPE_IPS = 3;
+  ENGINE_TYPE_ANTIVIRUS = 4;
+  ENGINE_TYPE_DOS = 5;
+  ENGINE_TYPE_DLP = 6;
+  ENGINE_TYPE_AI_GUARD = 7;
+  ENGINE_TYPE_FILE_ANALYZER = 8;
+  ENGINE_TYPE_HARDWARE_AGENT = 9;
+}
+
+message NetworkEndpoint {
+  string ip = 1;
+  int64 port = 2;
+  optional string mac = 3;
+  optional string zone = 4;
+}
+
+message TlsContext {
+  bool intercepted = 1;
+  string version = 2;
+  string server_name = 3;
+  optional string alpn = 4;
+  optional string cipher_suite = 5;
+  string peer_certificate_sha256 = 6;
+  optional string client_certificate_sha256 = 7;
+}
+
+message FlowEnvelope {
+  string contract_version = 1;
+  string device_id = 2;
+  string device_group_id = 3;
+  string flow_id = 4;
+  int64 flow_seq = 5;
+  string tenant_id = 6;
+  string application_id = 7;
+  optional string session_id = 8;
+  DeploymentMode deployment_mode = 9;
+  string ingress_interface = 10;
+  string egress_interface = 11;
+  optional int64 vlan_id = 12;
+  NetworkEndpoint source = 13;
+  NetworkEndpoint destination = 14;
+  TransportProtocol transport = 15;
+  ApplicationProtocol application_protocol = 16;
+  TrafficDirection direction = 17;
+  bool protected_traffic = 18;
+  int64 opened_at_epoch_ms = 19;
+  int64 absolute_deadline_epoch_ms = 20;
+  string policy_bundle_id = 21;
+  optional TlsContext tls = 22;
+}
+
+message FlowAdmission {
+  string flow_id = 1;
+  int64 flow_seq = 2;
+  AdmissionAction action = 3;
+  string reason_code = 4;
+  string policy_bundle_id = 5;
+  int64 expires_at_epoch_ms = 6;
+}
+
+message ContentReference {
+  string uri = 1;
+  string sha256 = 2;
+  optional string authorization_id = 3;
+  int64 expires_at_epoch_ms = 4;
+}
+
+message FrameEnvelope {
+  string contract_version = 1;
+  string flow_id = 2;
+  string frame_id = 3;
+  int64 flow_seq = 4;
+  int64 frame_seq = 5;
+  TrafficDirection direction = 6;
+  ApplicationProtocol application_protocol = 7;
+  ProtocolStage protocol_stage = 8;
+  string media_type = 9;
+  optional string content_encoding = 10;
+  int64 size_bytes = 11;
+  string sha256 = 12;
+  int64 stream_offset_start = 13;
+  int64 stream_offset_end = 14;
+  int64 absolute_deadline_epoch_ms = 15;
+  string policy_bundle_id = 16;
+  optional string inline_payload_base64 = 17;
+  optional ContentReference content_reference = 18;
+}
+
+message NetworkObservation {
+  string engine_id = 1;
+  EngineType engine_type = 2;
+  string engine_version = 3;
+  string rule_version = 4;
+  string status = 5;
+  string risk_type = 6;
+  string severity = 7;
+  double score = 8;
+  optional string reason_code = 9;
+  string evidence_digest = 10;
+  optional string masked_preview = 11;
+}
+
+message EnforcementDecision {
+  string contract_version = 1;
+  string decision_id = 2;
+  string flow_id = 3;
+  string frame_id = 4;
+  int64 flow_seq = 5;
+  int64 frame_seq = 6;
+  string content_sha256 = 7;
+  EnforcementAction action = 8;
+  bool terminal = 9;
+  string reason_code = 10;
+  string policy_bundle_id = 11;
+  optional string guard_decision_id = 12;
+  repeated NetworkObservation observations = 13;
+  int64 issued_at_epoch_ms = 14;
+  int64 expires_at_epoch_ms = 15;
+  bool evidence_complete = 16;
+  optional string transformed_payload_base64 = 17;
+  string enforcement_token = 18;
+}
+
+message EnforcementReceipt {
+  string receipt_id = 1;
+  string decision_id = 2;
+  string device_id = 3;
+  string flow_id = 4;
+  string frame_id = 5;
+  EnforcementAction action = 6;
+  ReceiptStatus status = 7;
+  optional string reason_code = 8;
+  int64 executed_at_epoch_ms = 9;
+  int64 bytes_forwarded_before_decision = 10;
+  string receipt_digest = 11;
+}
+
+message ArtifactEnvelope {
+  string contract_version = 1;
+  string flow_id = 2;
+  string frame_id = 3;
+  string artifact_id = 4;
+  string media_type = 5;
+  optional string file_name = 6;
+  int64 size_bytes = 7;
+  string sha256 = 8;
+  ContentReference content_reference = 9;
+  int64 absolute_deadline_epoch_ms = 10;
+  string policy_bundle_id = 11;
+}
+
+message FlowClose {
+  string flow_id = 1;
+  int64 flow_seq = 2;
+  int64 closed_at_epoch_ms = 3;
+  string reason_code = 4;
+}
+
+message FlowReceipt {
+  string flow_id = 1;
+  int64 flow_seq = 2;
+  ReceiptStatus status = 3;
+  int64 closed_at_epoch_ms = 4;
+  string receipt_digest = 5;
+}
+
+message EngineCapability {
+  string engine_id = 1;
+  EngineType engine_type = 2;
+  string version = 3;
+  string artifact_sha256 = 4;
+  repeated ApplicationProtocol protocols = 5;
+  repeated EnforcementAction actions = 6;
+}
+
+message HardwareCapability {
+  string cpu_architecture = 1;
+  string cpu_model = 2;
+  int64 memory_bytes = 3;
+  repeated string nic_models = 4;
+  repeated string accelerator_models = 5;
+  repeated string driver_digests = 6;
+  repeated string firmware_digests = 7;
+  bool physical_bypass_available = 8;
+  bool trusted_key_device_available = 9;
+}
+
+message CapabilityManifest {
+  string contract_version = 1;
+  string device_id = 2;
+  string device_group_id = 3;
+  int64 generation = 4;
+  int64 reported_at_epoch_ms = 5;
+  string software_version = 6;
+  string software_digest = 7;
+  repeated DeploymentMode deployment_modes = 8;
+  repeated EngineCapability engines = 9;
+  HardwareCapability hardware = 10;
+  string manifest_digest = 11;
+}
+
+message HealthComponent {
+  string component_id = 1;
+  HealthAction action = 2;
+  repeated string reason_codes = 3;
+  optional double utilization = 4;
+  optional int64 queue_depth = 5;
+  optional double temperature_celsius = 6;
+}
+
+message HealthSnapshot {
+  string device_id = 1;
+  int64 generation = 2;
+  int64 captured_at_epoch_ms = 3;
+  HealthAction action = 4;
+  repeated HealthComponent components = 5;
+  string snapshot_digest = 6;
+}
+
+message BundleActivationReceipt {
+  string device_id = 1;
+  string bundle_id = 2;
+  int64 generation = 3;
+  string bundle_digest = 4;
+  BundleActivationStatus status = 5;
+  optional string reason_code = 6;
+  google.protobuf.Value component_digests = 7;
+  int64 recorded_at_epoch_ms = 8;
+  string receipt_digest = 9;
+}
+
+message NetworkBypassPermitPayloadV2 {
+  string version = 1;
+  string permit_id = 2;
+  string device_group_id = 3;
+  string tenant_id = 4;
+  string application_id = 5;
+  repeated string port_pairs = 6;
+  repeated ApplicationProtocol protocols = 7;
+  int64 maximum_connections = 8;
+  int64 maximum_bytes = 9;
+  string reason = 10;
+  string change_ticket_id = 11;
+  repeated string approver_ids = 12;
+  string policy_bundle_id = 13;
+  int64 issued_at_epoch_ms = 14;
+  int64 expires_at_epoch_ms = 15;
+}
+
+message SignedNetworkBypassPermitV2 {
+  string key_id = 1;
+  string algorithm = 2;
+  NetworkBypassPermitPayloadV2 payload = 3;
+  string signature = 4;
+}
+
+message CapabilityAck {
+  string device_id = 1;
+  int64 generation = 2;
+  bool accepted = 3;
+  string reason_code = 4;
+}
+
+message HealthAck {
+  string device_id = 1;
+  int64 generation = 2;
+  bool accepted = 3;
+  HealthAction required_action = 4;
+}
+
+message BundleAck {
+  string device_id = 1;
+  string bundle_id = 2;
+  int64 generation = 3;
+  bool accepted = 4;
+  string reason_code = 5;
+}
+
+message ReceiptAck {
+  string receipt_id = 1;
+  bool accepted = 2;
+  string reason_code = 3;
+}
+
+service ApplianceInspectionService {
+  rpc OpenFlow(FlowEnvelope) returns (FlowAdmission);
+  rpc InspectFrame(stream FrameEnvelope) returns (stream EnforcementDecision);
+  rpc CompleteArtifact(ArtifactEnvelope) returns (EnforcementDecision);
+  rpc CloseFlow(FlowClose) returns (FlowReceipt);
+  rpc RecordEnforcement(EnforcementReceipt) returns (ReceiptAck);
+}
+
+service ApplianceControlService {
+  rpc ReportCapability(CapabilityManifest) returns (CapabilityAck);
+  rpc ReportHealth(stream HealthSnapshot) returns (stream HealthAck);
+  rpc AckBundle(BundleActivationReceipt) returns (BundleAck);
+}

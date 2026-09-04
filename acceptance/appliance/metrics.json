@@ -1,0 +1,122 @@
+{
+  "schemaVersion": "1.0",
+  "status": "PROPOSED_NOT_FROZEN",
+  "ownerRole": "independent-qa",
+  "definitions": [
+    {
+      "id": "B-METRIC-THROUGHPUT",
+      "name": "bidirectional forwarding throughput",
+      "unit": "Gbps",
+      "direction": "MINIMUM",
+      "target": null,
+      "status": "BLOCKED_EXTERNAL",
+      "requiredDimensions": ["packet size", "protocol", "TLS mode", "inspection profile"],
+      "blockingInput": "target port and traffic profile"
+    },
+    {
+      "id": "B-METRIC-PACKET-LOSS",
+      "name": "unexpected packet loss ratio",
+      "unit": "ratio",
+      "direction": "MAXIMUM",
+      "target": null,
+      "status": "BLOCKED_EXTERNAL",
+      "requiredDimensions": ["packet size", "load step", "duration"],
+      "blockingInput": "target traffic and overload profile"
+    },
+    {
+      "id": "B-METRIC-CONNECTION-RATE",
+      "name": "new connections per second",
+      "unit": "connections_per_second",
+      "direction": "MINIMUM",
+      "target": null,
+      "status": "BLOCKED_EXTERNAL",
+      "requiredDimensions": ["TCP", "TLS", "HTTP/2"],
+      "blockingInput": "target connection profile"
+    },
+    {
+      "id": "B-METRIC-CONCURRENT-CONNECTIONS",
+      "name": "sustained concurrent connections",
+      "unit": "connections",
+      "direction": "MINIMUM",
+      "target": null,
+      "status": "BLOCKED_EXTERNAL",
+      "requiredDimensions": ["short lived", "long lived", "streaming"],
+      "blockingInput": "target connection profile"
+    },
+    {
+      "id": "B-METRIC-L7-LATENCY-P99",
+      "name": "non-AI L7 added latency p99",
+      "unit": "milliseconds",
+      "direction": "MAXIMUM",
+      "target": null,
+      "status": "BLOCKED_EXTERNAL",
+      "requiredDimensions": ["protocol", "payload size", "TLS mode"],
+      "blockingInput": "target latency budget"
+    },
+    {
+      "id": "B-METRIC-AI-LATENCY-P99",
+      "name": "full AI guard added latency p99",
+      "unit": "milliseconds",
+      "direction": "MAXIMUM",
+      "target": null,
+      "status": "BLOCKED_EXTERNAL",
+      "requiredDimensions": ["detector DAG", "model", "tokenizer", "context length"],
+      "blockingInput": "target model, accelerator and latency budget"
+    },
+    {
+      "id": "B-METRIC-UNSAFE-PRECOMMIT-BYTES",
+      "name": "unsafe bytes emitted before decision",
+      "unit": "bytes",
+      "direction": "MAXIMUM",
+      "target": 0,
+      "status": "FROZEN_SAFETY_INVARIANT",
+      "requiredDimensions": ["SSE", "WebSocket", "gRPC"],
+      "blockingInput": null
+    },
+    {
+      "id": "B-METRIC-UNDECLARED-BYPASS",
+      "name": "protected flows forwarded without an enforceable decision",
+      "unit": "flows",
+      "direction": "MAXIMUM",
+      "target": 0,
+      "status": "FROZEN_SAFETY_INVARIANT",
+      "requiredDimensions": ["normal", "timeout", "engine failure", "overload", "failover"],
+      "blockingInput": null
+    },
+    {
+      "id": "B-METRIC-STABILITY",
+      "name": "continuous target-load stability",
+      "unit": "hours",
+      "direction": "MINIMUM",
+      "target": 72,
+      "status": "FROZEN_ENGINEERING_GATE",
+      "requiredDimensions": ["resource trend", "decision errors", "evidence continuity"],
+      "blockingInput": null
+    },
+    {
+      "id": "B-METRIC-FAILOVER-RTO",
+      "name": "new-flow failover recovery time",
+      "unit": "seconds",
+      "direction": "MAXIMUM",
+      "target": null,
+      "status": "BLOCKED_EXTERNAL",
+      "requiredDimensions": ["process", "NIC", "node", "power", "network partition"],
+      "blockingInput": "customer-approved HA profile"
+    },
+    {
+      "id": "B-METRIC-EVIDENCE-LOSS",
+      "name": "required evidence records lost",
+      "unit": "records",
+      "direction": "MAXIMUM",
+      "target": 0,
+      "status": "FROZEN_SAFETY_INVARIANT",
+      "requiredDimensions": ["export outage", "disk pressure", "failover", "upgrade"],
+      "blockingInput": null
+    }
+  ],
+  "policy": {
+    "blockedMetricsMustNotBePublished": true,
+    "aggregateResultsRequireP50P95P99": true,
+    "everyResultRequiresEnvironmentAndArtifactBindings": true
+  }
+}

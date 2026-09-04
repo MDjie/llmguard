@@ -1,0 +1,14 @@
+{
+  "listenHost": "127.0.0.1",
+  "port": 8091,
+  "capabilityManifestPath": "/etc/guardllm/capability-manifest.json",
+  "policyPublicKeyPaths": {
+    "policy-key-production": "/etc/guardllm/keys/policy-ed25519-public.pem"
+  },
+  "evidencePrivateKeyPath": "/etc/guardllm/keys/evidence-ed25519-private.pem",
+  "evidenceSigningKeyId": "evidence-key-device",
+  "evidenceWalPath": "/var/lib/guardllm/evidence/appliance-events.wal",
+  "evidenceMaximumFileBytes": 10737418240,
+  "evidenceMaximumRecords": 100000,
+  "statePath": "/var/lib/guardllm/state/appliance-agent.json"
+}
