@@ -1,5 +1,5 @@
 // Generated from model/guard-v1.schema.json. Do not edit.
-// Source SHA-256: 32b8c5030e767e6f7063b464069f01b32b4e5b0c790e55b9384f0c1eff544d8d
+// Source SHA-256: 5e535f81fcd1a87d610f5e1876c5bff2db310e6e050872e15995b940fdbe4776
 package io.guardllm.contracts.v1;
 
 import java.util.List;
@@ -7,7 +7,7 @@ import java.util.Map;
 
 public final class GuardContracts {
   public static final String CONTRACT_VERSION = "1.0";
-  public static final String SOURCE_SHA256 = "32b8c5030e767e6f7063b464069f01b32b4e5b0c790e55b9384f0c1eff544d8d";
+  public static final String SOURCE_SHA256 = "5e535f81fcd1a87d610f5e1876c5bff2db310e6e050872e15995b940fdbe4776";
   private GuardContracts() {}
 
   public enum Direction { INPUT, OUTPUT_COMPLETE, OUTPUT_CHUNK, RAG_INGEST, RAG_CONTEXT, TOOL_REQUEST, TOOL_RESULT }
@@ -90,7 +90,9 @@ public final class GuardContracts {
     String subjectId,
     String authContextId,
     String tokenizerId,
-    ProcessingStage stage
+    ProcessingStage stage,
+    String businessLine,
+    String legalDisclaimerVersion
   ) {}
 
   public record ArtifactRef(
@@ -182,7 +184,11 @@ public final class GuardContracts {
     String transformedText,
     List<String> modelVersions,
     GuardFailMode failMode,
-    Boolean evidenceComplete
+    Boolean evidenceComplete,
+    Double score,
+    Double confidence,
+    ComplianceContext compliance,
+    DecisionTransform transform
   ) {}
 
   public record GuardError(
@@ -207,6 +213,39 @@ public final class GuardContracts {
     Long expiresAtEpochMs,
     String signature,
     String signatureKeyId
+  ) {}
+
+  public enum DlpTransformOperation { PARTIAL_MASK, FULL_MASK, TOKENIZE, REDACT, BLOCK }
+
+  public enum DecisionTransformType { MASK, REWRITE, SAFE_RESPONSE, REQUIRE_REVIEW, BLOCK }
+
+  public record DecisionTransformRange(
+    String entityType,
+    DlpTransformOperation operation,
+    long start,
+    long end,
+    long outputStart,
+    long outputEnd,
+    String maskedPreview,
+    String contentHmac
+  ) {}
+
+  public record DecisionTransform(
+    DecisionTransformType type,
+    List<DecisionTransformRange> ranges,
+    String templateId,
+    Long templateVersion,
+    String outputHash,
+    String recheckDecisionId
+  ) {}
+
+  public record ComplianceContext(
+    String locale,
+    String jurisdiction,
+    String industry,
+    String businessLine,
+    String policyVersion,
+    String legalDisclaimerVersion
   ) {}
 
 }

@@ -18,6 +18,7 @@ export {
 export type { SemanticClassifierInvoker } from './semantic-classifier';
 export type { DetectorDagResult } from './dag';
 export { createEngineForPolicyBundle } from './from-policy-bundle';
+export type { PolicyBundleEngineRuntimeOptions } from './from-policy-bundle';
 export {
   ContentSafetyIntentDetector,
   InsuranceComplianceDetector,

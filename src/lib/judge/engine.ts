@@ -76,10 +76,10 @@ export function prepareTextForJudge(
   providerIsPrivate: boolean
 ): {
   processedText: string;
-  maskedItems: Array<{ type: string; original: string; action: string }>;
+  maskedItems: Array<{ type: string; maskedPreview: string; action: string }>;
   blockedExternal: boolean;
 } {
-  const maskedItems: Array<{ type: string; original: string; action: string }> = [];
+  const maskedItems: Array<{ type: string; maskedPreview: string; action: string }> = [];
   let processedText = text;
   let blockedExternal = false;
 
@@ -100,29 +100,29 @@ export function prepareTextForJudge(
         processedText = '[REDACTED_SECRET_CONTENT]';
       }
       for (const match of matches) {
-        maskedItems.push({ type, original: match.slice(0, 4) + '***', action: blockedExternal ? 'blocked_external' : 'masked' });
+        maskedItems.push({ type, maskedPreview: match.slice(0, 4) + '***', action: blockedExternal ? 'blocked_external' : 'masked' });
       }
     }
   }
 
   if (config.maskPiiBeforeJudge && !blockedExternal) {
     processedText = processedText.replace(/1[3-9]\d{9}/g, (match) => {
-      maskedItems.push({ type: '手机号', original: match, action: 'masked' });
+      maskedItems.push({ type: '手机号', maskedPreview: match.slice(0, 3) + '****' + match.slice(-4), action: 'masked' });
       return match.slice(0, 3) + '****' + match.slice(-4);
     });
     processedText = processedText.replace(/\d{17}[\dXx]/g, (match) => {
-      maskedItems.push({ type: '身份证', original: match.slice(0, 6) + '***', action: 'masked' });
+      maskedItems.push({ type: '身份证', maskedPreview: match.slice(0, 6) + '***' + match.slice(-4), action: 'masked' });
       return match.slice(0, 6) + '********' + match.slice(-4);
     });
     processedText = processedText.replace(/\d{16,19}/g, (match) => {
-      maskedItems.push({ type: '银行卡', original: match.slice(0, 4) + '***', action: 'masked' });
+      maskedItems.push({ type: '银行卡', maskedPreview: match.slice(0, 4) + '***' + match.slice(-4), action: 'masked' });
       return match.slice(0, 4) + '****' + match.slice(-4);
     });
     processedText = processedText.replace(
       /([a-zA-Z0-9_.+-]+)@([a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)/g,
       (match, local, domain) => {
         const maskedLocal = local.length > 2 ? local[0] + '***' + local[local.length - 1] : '***';
-        maskedItems.push({ type: '邮箱', original: match, action: 'masked' });
+        maskedItems.push({ type: '邮箱', maskedPreview: `${maskedLocal}@${domain}`, action: 'masked' });
         return `${maskedLocal}@${domain}`;
       }
     );

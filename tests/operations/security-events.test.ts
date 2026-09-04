@@ -5,6 +5,7 @@ import {
   validateOperationalSecurityEvent,
   type OperationalSecurityEvent,
 } from '../../src/lib/operations';
+import { outputControlFailureEvent } from '../../src/lib/output-control';
 
 const base: OperationalSecurityEvent = {
   id: 'event-1',
@@ -49,6 +50,37 @@ describe('four-domain operational security events', () => {
       ...base,
       evidenceDigest: 'not-a-digest',
     })).toThrow('OPERATIONAL_EVENT_DIGEST_INVALID');
+  });
+
+  it('builds a critical output-recheck event without copying output or PII', () => {
+    const event = outputControlFailureEvent({
+      tenantId: 'tenant-1',
+      applicationId: 'app-1',
+      traceId: 'trace-output-event-1',
+      requestId: 'request-output-event-1',
+      policyBundleId: 'bundle-output-1',
+      action: 'BLOCK',
+      reasonCode: 'OUTPUT_RECHECK_REDLINE_MATCH',
+      riskType: 'output.credential.secret',
+      templateId: 'platform-output-safe-response-v1',
+      templateVersion: 1,
+      recheckDecisionId: 'decision-recheck-1',
+      contentHmac: 'c'.repeat(64),
+    }, new Date('2026-09-05T00:00:00.000Z'));
+
+    expect(() => validateOperationalSecurityEvent(event)).not.toThrow();
+    expect(event).toMatchObject({
+      domain: 'MODEL_SECURITY',
+      eventType: 'OUTPUT.INTERVENTION.FAILURE',
+      severity: 'CRITICAL',
+      outcome: 'BLOCKED',
+      source: 'output-control',
+      model: { policyBundleId: 'bundle-output-1' },
+      attributes: { reasonCode: 'OUTPUT_RECHECK_REDLINE_MATCH' },
+    });
+    expect(event.evidenceDigest).toMatch(/^[a-f0-9]{64}$/);
+    expect(JSON.stringify(event)).not.toContain('rawContent');
+    expect(JSON.stringify(event)).not.toContain('13812345678');
   });
 
   it('maps API audits without copying request content', () => {

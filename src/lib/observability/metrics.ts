@@ -227,6 +227,34 @@ export function observeResourceControl(input: {
   }
 }
 
+export function observeOutputControl(input: {
+  readonly domain: string;
+  readonly action: string;
+  readonly locale: string;
+  readonly jurisdiction: string;
+  readonly industry: string;
+  readonly recheck: 'completed' | 'failed' | 'not_required';
+  readonly latencyMs: number;
+  readonly entityTypes: readonly string[];
+}): void {
+  const labels = {
+    domain: input.domain.slice(0, 64),
+    action: input.action.slice(0, 24),
+    locale: input.locale.slice(0, 32),
+    jurisdiction: input.jurisdiction.slice(0, 64),
+    industry: input.industry.slice(0, 64),
+    recheck: input.recheck,
+  };
+  increment('guardllm_output_control_decisions_total', labels);
+  observe('guardllm_output_control_duration_ms', labels, input.latencyMs);
+  for (const entityType of new Set(input.entityTypes)) {
+    increment('guardllm_dlp_entities_total', {
+      entity_type: entityType.slice(0, 128),
+      action: labels.action,
+    });
+  }
+}
+
 export function renderPrometheusMetrics(): string {
   const lines: string[] = [];
   for (const [name, family] of [...counters.entries()].sort(([a], [b]) => a.localeCompare(b))) {

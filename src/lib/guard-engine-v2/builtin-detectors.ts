@@ -547,6 +547,11 @@ export class StructuredDlpDetector implements GuardDetector {
 
   async detect(context: GuardDetectorContext): Promise<readonly Observation[]> {
     if (context.signal.aborted) throw context.signal.reason;
+    if (
+      context.request.context.direction === 'OUTPUT_COMPLETE' ||
+      context.request.context.direction === 'OUTPUT_CHUNK' ||
+      context.request.context.direction === 'TOOL_RESULT'
+    ) return [];
     return observe(context, this.id, this.version, STRUCTURED_DLP);
   }
 }
@@ -569,6 +574,11 @@ export class InsuranceComplianceDetector implements GuardDetector {
 
   async detect(context: GuardDetectorContext): Promise<readonly Observation[]> {
     if (context.signal.aborted) throw context.signal.reason;
+    if (
+      context.request.context.direction === 'OUTPUT_COMPLETE' ||
+      context.request.context.direction === 'OUTPUT_CHUNK' ||
+      context.request.context.direction === 'TOOL_RESULT'
+    ) return [];
     return observe(context, this.id, this.version, INSURANCE_COMPLIANCE);
   }
 }

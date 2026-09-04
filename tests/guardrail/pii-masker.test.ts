@@ -17,6 +17,7 @@ describe('PII masking', () => {
 
     expect(result.hasMasked).toBe(true);
     expect(types).toEqual(new Set(['phone', 'idcard', 'bankcard', 'email', 'ip', 'apikey']));
+    expect(result.maskedItems.every((item) => !Object.hasOwn(item, 'original'))).toBe(true);
     for (const secret of [
       '13812345678',
       '110101199001011234',

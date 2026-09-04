@@ -73,6 +73,8 @@ export const guardRequestSchema = z.object({
     locale: z.string().min(2).max(64).optional(),
     jurisdiction: z.string().min(2).max(128).optional(),
     industry: z.string().min(2).max(128).optional(),
+    businessLine: z.string().min(2).max(128).optional(),
+    legalDisclaimerVersion: z.string().min(1).max(128).optional(),
     direction: z.enum([
       'INPUT',
       'OUTPUT_COMPLETE',
@@ -147,6 +149,10 @@ export const observationSchema = z.object({
   modelVersion: z.string().min(1).max(256).optional(),
   configurationDigest: sha256.optional(),
   failMode: z.enum(['NORMAL', 'FAIL_CLOSED', 'DEGRADED', 'FAIL_OPEN']).optional(),
+  canonicalTermId: z.string().min(1).max(256).optional(),
+  variantId: z.string().min(1).max(256).optional(),
+  dictionaryLayer: z.enum(['PLATFORM_REDLINE', 'INDUSTRY', 'TENANT', 'APPLICATION', 'INCIDENT']).optional(),
+  contextRole: z.enum(['mention', 'quotation', 'news', 'legal', 'research', 'education', 'medical', 'instruction', 'transaction', 'endorsement', 'disclosure']).optional(),
 }).strict();
 
 const latencyBreakdownSchema = z.object({
@@ -155,6 +161,35 @@ const latencyBreakdownSchema = z.object({
   aggregationMs: z.number().int().min(0).max(600_000).optional(),
   interventionMs: z.number().int().min(0).max(600_000).optional(),
   totalMs: z.number().int().min(0).max(600_000),
+}).strict();
+
+export const decisionTransformRangeSchema = z.object({
+  entityType: id,
+  operation: z.enum(['PARTIAL_MASK', 'FULL_MASK', 'TOKENIZE', 'REDACT', 'BLOCK']),
+  start: z.number().int().nonnegative(),
+  end: z.number().int().nonnegative(),
+  outputStart: z.number().int().nonnegative(),
+  outputEnd: z.number().int().nonnegative(),
+  maskedPreview: z.string().max(512),
+  contentHmac: sha256,
+}).strict().refine((range) => range.end > range.start, 'transform range must be non-empty');
+
+export const decisionTransformSchema = z.object({
+  type: z.enum(['MASK', 'REWRITE', 'SAFE_RESPONSE', 'REQUIRE_REVIEW', 'BLOCK']),
+  ranges: z.array(decisionTransformRangeSchema).max(100),
+  templateId: id.optional(),
+  templateVersion: z.number().int().positive().optional(),
+  outputHash: sha256,
+  recheckDecisionId: id.optional(),
+}).strict();
+
+export const complianceContextSchema = z.object({
+  locale: z.string().min(2).max(64),
+  jurisdiction: z.string().min(2).max(128),
+  industry: z.string().min(2).max(128),
+  businessLine: z.string().min(2).max(128),
+  policyVersion: id,
+  legalDisclaimerVersion: id,
 }).strict();
 
 export const guardDecisionSchema = z.object({
@@ -175,6 +210,10 @@ export const guardDecisionSchema = z.object({
   modelVersions: z.array(z.string().min(1).max(256)).max(64).optional(),
   failMode: z.enum(['NORMAL', 'FAIL_CLOSED', 'DEGRADED', 'FAIL_OPEN']).optional(),
   evidenceComplete: z.boolean().optional(),
+  score: z.number().min(0).max(1).optional(),
+  confidence: z.number().min(0).max(1).optional(),
+  compliance: complianceContextSchema.optional(),
+  transform: decisionTransformSchema.optional(),
 }).strict();
 
 export const guardEventSchema = z.object({

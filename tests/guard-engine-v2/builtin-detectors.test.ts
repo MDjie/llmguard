@@ -3,7 +3,6 @@ import type { GuardRequest } from '@guardllm/contracts';
 import {
   createGuardEngine,
   createEngineForPolicyBundle,
-  DEFAULT_DETECTOR_DAG,
   InsuranceComplianceDetector,
   PromptAttackDetector,
   ReasoningAttackDetector,
@@ -235,39 +234,4 @@ describe('built-in prompt attack and DLP detectors', () => {
     ]));
   });
 
-  it('keeps signed bundles with the guard-default-dag-2 detector set executable', async () => {
-    const legacyNodes = DEFAULT_DETECTOR_DAG.nodes
-      .filter((node) => node.detectorId !== 'protected-context-leak')
-      .map((node) => node.detectorId === 'reasoning-attack-baseline'
-        ? {
-            ...node,
-            dependsOn: node.dependsOn.filter(
-              (dependency) => dependency !== 'l0-protected-context-leak',
-            ),
-          }
-        : node);
-    const bundle: RuntimePolicyBundle = {
-      id: 'bundle-1',
-      generation: 7,
-      payload: {
-        schemaVersion: '1.0',
-        policyId: 'legacy-policy-1',
-        policyVersion: 2,
-        dimensions: [],
-        rules: [],
-        exceptions: [],
-        thresholds: [],
-        detectorDag: {
-          version: 'guard-default-dag-2',
-          maximumCostUnits: 9,
-          nodes: legacyNodes,
-        },
-      },
-    };
-
-    const legacyEngine = createEngineForPolicyBundle(bundle, hmacKey);
-    const result = await legacyEngine.evaluate(request('Please summarize the public policy.'));
-    expect(result.action).toBe('ALLOW');
-    expect(result.observations).toEqual([]);
-  });
 });

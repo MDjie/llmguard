@@ -55,15 +55,28 @@ export function aggregateGuardDecision(params: {
   const degradedBlock =
     params.policy.failClosedOnRequiredDetectorFailure &&
     params.requiredDetectorFailures.length > 0;
-  const override = matches.reduce<GuardDecision['action'] | undefined>((selected, item) => {
+  const outputDirection = params.request.context.direction === 'OUTPUT_COMPLETE' ||
+    params.request.context.direction === 'OUTPUT_CHUNK' ||
+    params.request.context.direction === 'TOOL_RESULT';
+  const applicableOverride = (item: Observation): GuardDecision['action'] | undefined => {
     const candidate = params.policy.actionOverrides?.[item.riskType];
     const threshold = params.policy.actionOverrideThresholds?.[item.riskType]
       ?? params.policy.warnThreshold;
-    if (!candidate || item.score < threshold) return selected;
+    return candidate && item.score >= threshold ? candidate : undefined;
+  };
+  const override = matches.reduce<GuardDecision['action'] | undefined>((selected, item) => {
+    const candidate = applicableOverride(item);
+    if (!candidate) return selected;
     return !selected || actionOrder[candidate] > actionOrder[selected] ? candidate : selected;
   }, undefined);
-  const thresholdBlock = maximumScore >= params.policy.blockThreshold;
-  const action = mandatoryDeny || degradedBlock || thresholdBlock
+  // Input thresholds remain terminal for compatibility. Output policies are independent:
+  // an explicit MASK/REWRITE/REVIEW/SAFE_RESPONSE action may process a high-confidence
+  // match, while unclassified high-confidence findings and explicit BLOCK overrides
+  // still fail closed.
+  const thresholdBlock = matches.some((item) =>
+    item.score >= params.policy.blockThreshold &&
+    (!outputDirection || applicableOverride(item) === undefined || applicableOverride(item) === 'BLOCK'));
+  const action = mandatoryDeny || degradedBlock || thresholdBlock || override === 'BLOCK'
     ? 'BLOCK'
     : override ?? (maximumScore >= params.policy.warnThreshold ? 'WARN' : 'ALLOW');
   const riskLevel = degradedBlock && riskOrder[maximumRisk] < riskOrder.HIGH

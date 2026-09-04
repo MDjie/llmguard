@@ -15,8 +15,6 @@ export interface MaskResult {
 export interface MaskedItem {
   /** PII类型 */
   type: 'phone' | 'idcard' | 'bankcard' | 'email' | 'ip' | 'apikey' | 'address'
-  /** 原始值 */
-  original: string
   /** 脱敏后的值 */
   masked: string
   /** 在原文中的位置 */
@@ -52,7 +50,6 @@ function maskPhone(text: string): { text: string; items: MaskedItem[] } {
     
     items.unshift({
       type: 'phone',
-      original,
       masked,
       position: { start: m.index, end: m.index + original.length }
     })
@@ -85,7 +82,6 @@ function maskIdCard(text: string): { text: string; items: MaskedItem[] } {
     
     items.unshift({
       type: 'idcard',
-      original,
       masked,
       position: { start: m.index, end: m.index + original.length }
     })
@@ -118,7 +114,6 @@ function maskBankCard(text: string): { text: string; items: MaskedItem[] } {
     
     items.unshift({
       type: 'bankcard',
-      original,
       masked,
       position: { start: m.index, end: m.index + original.length }
     })
@@ -154,7 +149,6 @@ function maskEmail(text: string): { text: string; items: MaskedItem[] } {
     
     items.unshift({
       type: 'email',
-      original: m.original,
       masked,
       position: { start: m.index, end: m.index + m.original.length }
     })
@@ -188,7 +182,6 @@ function maskIP(text: string): { text: string; items: MaskedItem[] } {
     
     items.unshift({
       type: 'ip',
-      original,
       masked,
       position: { start: m.index, end: m.index + original.length }
     })
@@ -229,8 +222,7 @@ function maskApiKey(text: string): { text: string; items: MaskedItem[] } {
       
       items.unshift({
         type: 'apikey',
-        original,
-        masked,
+          masked,
         position: { start: m.index, end: m.index + original.length }
       })
     }

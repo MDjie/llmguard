@@ -16,6 +16,7 @@ const SHA256_PATTERN = /^[a-f0-9]{64}$/;
 const ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
 const VARIABLE_PATTERN = /^[A-Za-z][A-Za-z0-9_]{0,63}$/;
 const PLACEHOLDER_PATTERN = /\{\{\s*([A-Za-z][A-Za-z0-9_]*)\s*\}\}/g;
+const FORBIDDEN_TEMPLATE_VARIABLE = /(?:raw|text|content|prompt|instruction|attack|secret|password|token|credential|pii|identity|health|medical|evidence|original|input|output|payload)/i;
 
 export interface DictionaryReleaseManifest {
   readonly id: string;
@@ -38,6 +39,10 @@ export interface ResponseTemplateManifest {
   readonly action: Exclude<GuardAction, 'ALLOW'>;
   readonly locale: string;
   readonly industry: string;
+  readonly jurisdiction?: string;
+  readonly businessLine?: string;
+  readonly legalDisclaimerVersion?: string;
+  readonly templateScope?: 'PLATFORM' | 'TENANT';
   readonly templateText: string;
   readonly allowedVariables: readonly string[];
   readonly version: number;
@@ -150,7 +155,8 @@ function validateTemplate(template: ResponseTemplateManifest): void {
   }
   const allowedVariables = [...template.allowedVariables];
   if (new Set(allowedVariables).size !== allowedVariables.length ||
-      allowedVariables.some((variable) => !VARIABLE_PATTERN.test(variable))) {
+      allowedVariables.some((variable) =>
+        !VARIABLE_PATTERN.test(variable) || FORBIDDEN_TEMPLATE_VARIABLE.test(variable))) {
     throw new PolicyGovernanceValidationError(
       'TEMPLATE_VARIABLE_ALLOWLIST_INVALID',
       'Template variable allowlist is invalid',
@@ -162,6 +168,27 @@ function validateTemplate(template: ResponseTemplateManifest): void {
     throw new PolicyGovernanceValidationError(
       'TEMPLATE_VARIABLE_NOT_ALLOWED',
       'Template contains a variable outside its allowlist',
+    );
+  }
+  for (const selector of [
+    template.locale,
+    template.industry,
+    template.jurisdiction ?? 'global',
+    template.businessLine ?? 'general',
+    template.legalDisclaimerVersion ?? 'none',
+  ]) {
+    requireIdentifier(selector, 'template selector');
+  }
+  if (template.templateScope !== undefined &&
+      !['PLATFORM', 'TENANT'].includes(template.templateScope)) {
+    throw new PolicyGovernanceValidationError('TEMPLATE_SCOPE_INVALID', 'Template scope is invalid');
+  }
+  if (template.templateScope === 'PLATFORM' &&
+      template.riskCategory.startsWith('platform.redline') &&
+      template.action !== 'BLOCK') {
+    throw new PolicyGovernanceValidationError(
+      'PLATFORM_REDLINE_TEMPLATE_WEAKENED',
+      'Platform redline templates must keep the BLOCK action',
     );
   }
   const actualHash = createHash('sha256').update(template.templateText, 'utf8').digest('hex');
@@ -276,7 +303,13 @@ export function validateGovernedPolicyArtifacts(
   requireUnique(artifacts.responseTemplates, (item) => item.id, 'responseTemplates');
   requireUnique(
     artifacts.responseTemplates,
-    (item) => `${item.templateKey}:${item.locale}:${item.industry}`,
+    (item) => [
+      item.templateKey,
+      item.locale,
+      item.industry,
+      item.jurisdiction ?? 'global',
+      item.businessLine ?? 'general',
+    ].join(':'),
     'response template selectors',
   );
   requireUnique(
@@ -450,6 +483,10 @@ export async function loadGovernedPolicyArtifacts(
       action: row.action as ResponseTemplateManifest['action'],
       locale: row.locale,
       industry: row.industry,
+      jurisdiction: row.jurisdiction,
+      businessLine: row.businessLine,
+      legalDisclaimerVersion: row.legalDisclaimerVersion,
+      templateScope: row.templateScope as ResponseTemplateManifest['templateScope'],
       templateText: row.templateText,
       allowedVariables: row.allowedVariables,
       version: row.version,

@@ -492,6 +492,16 @@
           },
           "stage": {
             "$ref": "#/components/schemas/ProcessingStage"
+          },
+          "businessLine": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 128
+          },
+          "legalDisclaimerVersion": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
           }
         }
       },
@@ -956,6 +966,22 @@
           },
           "evidenceComplete": {
             "type": "boolean"
+          },
+          "score": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "compliance": {
+            "$ref": "#/components/schemas/ComplianceContext"
+          },
+          "transform": {
+            "$ref": "#/components/schemas/DecisionTransform"
           }
         }
       },
@@ -1095,6 +1121,157 @@
             "maxLength": 4096
           },
           "signatureKeyId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        }
+      },
+      "DlpTransformOperation": {
+        "type": "string",
+        "enum": [
+          "PARTIAL_MASK",
+          "FULL_MASK",
+          "TOKENIZE",
+          "REDACT",
+          "BLOCK"
+        ]
+      },
+      "DecisionTransformType": {
+        "type": "string",
+        "enum": [
+          "MASK",
+          "REWRITE",
+          "SAFE_RESPONSE",
+          "REQUIRE_REVIEW",
+          "BLOCK"
+        ]
+      },
+      "DecisionTransformRange": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "entityType",
+          "operation",
+          "start",
+          "end",
+          "outputStart",
+          "outputEnd",
+          "maskedPreview",
+          "contentHmac"
+        ],
+        "properties": {
+          "entityType": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "operation": {
+            "$ref": "#/components/schemas/DlpTransformOperation"
+          },
+          "start": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "end": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "outputStart": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "outputEnd": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "maskedPreview": {
+            "type": "string",
+            "maxLength": 512
+          },
+          "contentHmac": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        }
+      },
+      "DecisionTransform": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "ranges",
+          "outputHash"
+        ],
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/DecisionTransformType"
+          },
+          "ranges": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "$ref": "#/components/schemas/DecisionTransformRange"
+            }
+          },
+          "templateId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "templateVersion": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "outputHash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "recheckDecisionId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        }
+      },
+      "ComplianceContext": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "locale",
+          "jurisdiction",
+          "industry",
+          "businessLine",
+          "policyVersion",
+          "legalDisclaimerVersion"
+        ],
+        "properties": {
+          "locale": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 64
+          },
+          "jurisdiction": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 128
+          },
+          "industry": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 128
+          },
+          "businessLine": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 128
+          },
+          "policyVersion": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "legalDisclaimerVersion": {
             "type": "string",
             "minLength": 1,
             "maxLength": 128

@@ -27,6 +27,7 @@ const sqlFiles = process.argv.includes('--policy-governance-schema-only')
   ? [
       'drizzle/0037_targeted_whitelist_rules.sql',
       'drizzle/0038_policy_governance.sql',
+      'drizzle/0040_output_control_governance.sql',
     ]
   : allSqlFiles;
 const client = new pg.Client({
@@ -157,6 +158,66 @@ try {
     throw new Error(`Missing P3 constraints: ${missingP3Constraints.join(', ')}`);
   }
 
+  const requiredP4Columns = [
+    ['response_templates', 'jurisdiction'],
+    ['response_templates', 'business_line'],
+    ['response_templates', 'legal_disclaimer_version'],
+    ['response_templates', 'template_scope'],
+  ];
+  const p4Columns = await client.query(
+    `select table_name, column_name, is_nullable
+       from information_schema.columns
+      where table_schema = current_schema()
+        and table_name = 'response_templates'
+        and column_name = any($1::text[])`,
+    [requiredP4Columns.map(([, column]) => column)],
+  );
+  const foundP4Columns = new Map(p4Columns.rows.map(
+    (row) => [`${String(row.table_name)}:${String(row.column_name)}`, String(row.is_nullable)],
+  ));
+  const missingP4Columns = requiredP4Columns.filter(
+    ([table, column]) => !foundP4Columns.has(`${table}:${column}`),
+  );
+  if (missingP4Columns.length > 0) {
+    throw new Error(`Missing P4 migrated columns: ${missingP4Columns
+      .map(([table, column]) => `${table}.${column}`).join(', ')}`);
+  }
+  const nullableP4Columns = requiredP4Columns.filter(
+    ([table, column]) => foundP4Columns.get(`${table}:${column}`) !== 'NO',
+  );
+  if (nullableP4Columns.length > 0) {
+    throw new Error(`Nullable P4 governed columns: ${nullableP4Columns
+      .map(([table, column]) => `${table}.${column}`).join(', ')}`);
+  }
+
+  const p4Constraint = await client.query(
+    "select 1 from pg_constraint where conname = 'response_templates_scope_check'",
+  );
+  if (p4Constraint.rowCount !== 1) {
+    throw new Error('P4 response-template scope constraint is missing');
+  }
+  const p4Index = await client.query(
+    `select indexdef
+       from pg_indexes
+      where schemaname = current_schema()
+        and indexname = 'response_templates_runtime_selector_idx'`,
+  );
+  const indexDefinition = String(p4Index.rows[0]?.indexdef ?? '');
+  for (const column of [
+    'tenant_id',
+    'application_id',
+    'action',
+    'locale',
+    'industry',
+    'jurisdiction',
+    'business_line',
+    'enabled',
+  ]) {
+    if (!indexDefinition.includes(column)) {
+      throw new Error(`P4 response-template selector index is missing ${column}`);
+    }
+  }
+
   const appendOnlyTrigger = await client.query(
     `select 1
        from pg_trigger trigger
@@ -180,6 +241,9 @@ try {
     policyGovernanceScopeConstraints: requiredScopeConstraints.length,
     p3SchemaColumns: requiredP3Columns.length,
     p3SchemaConstraints: requiredP3Constraints.length,
+    p4SchemaColumns: requiredP4Columns.length,
+    p4SchemaConstraints: 1,
+    p4SelectorIndex: 'PASS',
   }) + '\n');
 } finally {
   await client.end();

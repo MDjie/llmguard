@@ -1,5 +1,5 @@
 // Generated from model/guard-v1.schema.json. Do not edit.
-// Source SHA-256: 32b8c5030e767e6f7063b464069f01b32b4e5b0c790e55b9384f0c1eff544d8d
+// Source SHA-256: 5e535f81fcd1a87d610f5e1876c5bff2db310e6e050872e15995b940fdbe4776
 syntax = "proto3";
 
 package guardllm.contracts.v1;
@@ -191,6 +191,8 @@ message RequestContext {
   optional string auth_context_id = 14;
   optional string tokenizer_id = 15;
   optional ProcessingStage stage = 16;
+  optional string business_line = 17;
+  optional string legal_disclaimer_version = 18;
 }
 
 message ArtifactRef {
@@ -283,6 +285,10 @@ message GuardDecision {
   repeated string model_versions = 15;
   optional GuardFailMode fail_mode = 16;
   optional bool evidence_complete = 17;
+  optional double score = 18;
+  optional double confidence = 19;
+  optional ComplianceContext compliance = 20;
+  optional DecisionTransform transform = 21;
 }
 
 message GuardError {
@@ -307,6 +313,53 @@ message GuardEvent {
   optional int64 expires_at_epoch_ms = 10;
   optional string signature = 11;
   optional string signature_key_id = 12;
+}
+
+enum DlpTransformOperation {
+  DLP_TRANSFORM_OPERATION_UNSPECIFIED = 0;
+  DLP_TRANSFORM_OPERATION_PARTIAL_MASK = 1;
+  DLP_TRANSFORM_OPERATION_FULL_MASK = 2;
+  DLP_TRANSFORM_OPERATION_TOKENIZE = 3;
+  DLP_TRANSFORM_OPERATION_REDACT = 4;
+  DLP_TRANSFORM_OPERATION_BLOCK = 5;
+}
+
+enum DecisionTransformType {
+  DECISION_TRANSFORM_TYPE_UNSPECIFIED = 0;
+  DECISION_TRANSFORM_TYPE_MASK = 1;
+  DECISION_TRANSFORM_TYPE_REWRITE = 2;
+  DECISION_TRANSFORM_TYPE_SAFE_RESPONSE = 3;
+  DECISION_TRANSFORM_TYPE_REQUIRE_REVIEW = 4;
+  DECISION_TRANSFORM_TYPE_BLOCK = 5;
+}
+
+message DecisionTransformRange {
+  string entity_type = 1;
+  DlpTransformOperation operation = 2;
+  int64 start = 3;
+  int64 end = 4;
+  int64 output_start = 5;
+  int64 output_end = 6;
+  string masked_preview = 7;
+  string content_hmac = 8;
+}
+
+message DecisionTransform {
+  DecisionTransformType type = 1;
+  repeated DecisionTransformRange ranges = 2;
+  optional string template_id = 3;
+  optional int64 template_version = 4;
+  string output_hash = 5;
+  optional string recheck_decision_id = 6;
+}
+
+message ComplianceContext {
+  string locale = 1;
+  string jurisdiction = 2;
+  string industry = 3;
+  string business_line = 4;
+  string policy_version = 5;
+  string legal_disclaimer_version = 6;
 }
 
 service GuardService {

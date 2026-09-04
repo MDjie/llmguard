@@ -1,9 +1,9 @@
 # Generated from model/guard-v1.schema.json. Do not edit.
-# Source SHA-256: 32b8c5030e767e6f7063b464069f01b32b4e5b0c790e55b9384f0c1eff544d8d
+# Source SHA-256: 5e535f81fcd1a87d610f5e1876c5bff2db310e6e050872e15995b940fdbe4776
 from typing import Literal, NotRequired, TypedDict
 
 GUARD_CONTRACT_VERSION = '1.0'
-GUARD_CONTRACT_SOURCE_SHA256 = '32b8c5030e767e6f7063b464069f01b32b4e5b0c790e55b9384f0c1eff544d8d'
+GUARD_CONTRACT_SOURCE_SHA256 = '5e535f81fcd1a87d610f5e1876c5bff2db310e6e050872e15995b940fdbe4776'
 
 Direction = Literal["INPUT", "OUTPUT_COMPLETE", "OUTPUT_CHUNK", "RAG_INGEST", "RAG_CONTEXT", "TOOL_REQUEST", "TOOL_RESULT"]
 
@@ -84,6 +84,8 @@ class RequestContext(TypedDict):
     authContextId: NotRequired[str]
     tokenizerId: NotRequired[str]
     stage: NotRequired[ProcessingStage]
+    businessLine: NotRequired[str]
+    legalDisclaimerVersion: NotRequired[str]
 
 class ArtifactRef(TypedDict):
     artifactId: str
@@ -169,6 +171,10 @@ class GuardDecision(TypedDict):
     modelVersions: NotRequired[list[str]]
     failMode: NotRequired[GuardFailMode]
     evidenceComplete: NotRequired[bool]
+    score: NotRequired[float]
+    confidence: NotRequired[float]
+    compliance: NotRequired[ComplianceContext]
+    transform: NotRequired[DecisionTransform]
 
 class GuardError(TypedDict):
     contractVersion: Literal["1.0"]
@@ -191,3 +197,33 @@ class GuardEvent(TypedDict):
     expiresAtEpochMs: NotRequired[int]
     signature: NotRequired[str]
     signatureKeyId: NotRequired[str]
+
+DlpTransformOperation = Literal["PARTIAL_MASK", "FULL_MASK", "TOKENIZE", "REDACT", "BLOCK"]
+
+DecisionTransformType = Literal["MASK", "REWRITE", "SAFE_RESPONSE", "REQUIRE_REVIEW", "BLOCK"]
+
+class DecisionTransformRange(TypedDict):
+    entityType: str
+    operation: DlpTransformOperation
+    start: int
+    end: int
+    outputStart: int
+    outputEnd: int
+    maskedPreview: str
+    contentHmac: str
+
+class DecisionTransform(TypedDict):
+    type: DecisionTransformType
+    ranges: list[DecisionTransformRange]
+    templateId: NotRequired[str]
+    templateVersion: NotRequired[int]
+    outputHash: str
+    recheckDecisionId: NotRequired[str]
+
+class ComplianceContext(TypedDict):
+    locale: str
+    jurisdiction: str
+    industry: str
+    businessLine: str
+    policyVersion: str
+    legalDisclaimerVersion: str

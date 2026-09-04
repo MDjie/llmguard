@@ -1,4 +1,5 @@
 import type { CachedPolicyConfig } from '@/lib/detection/types';
+import { builtInOutputResponseTemplates } from '@/lib/output-control/templates';
 import { validateSafeRegexPattern } from '@/lib/detection/safe-regex';
 import { buildDefaultDetectorDag } from '@/lib/guard-engine-v2/default-dag';
 import type { SemanticClassifierSpec } from '@/lib/guard-engine-v2/types';
@@ -91,7 +92,9 @@ export function compilePolicyBundle(
   const governance = sortedGovernance(validateGovernedPolicyArtifacts({
     dictionaryReleases: governanceInput?.dictionaryReleases ?? [],
     keywordRules: governanceInput?.keywordRules ?? [],
-    responseTemplates: governanceInput?.responseTemplates ?? [],
+    responseTemplates: governanceInput?.responseTemplates?.length
+      ? governanceInput.responseTemplates
+      : builtInOutputResponseTemplates(),
     detectorCalibrations: governanceInput?.detectorCalibrations ?? [],
     modelDigests: mergeModelDigests(
       governanceInput?.modelDigests ?? [],

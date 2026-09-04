@@ -42,15 +42,28 @@ async function stop(
   throw error;
 }
 
+const TRAILING_LEXICAL_TOKEN = /[^\s,，。.;；:：!?！？()\[\]{}"'“”‘’<>《》]+$/u;
+
+function trailingLexicalLength(value: string): number {
+  return value.match(TRAILING_LEXICAL_TOKEN)?.[0].length ?? 0;
+}
+
+function retainInspectionWindow(value: string, rollingWindowChars: number): string {
+  const retained = Math.max(rollingWindowChars, trailingLexicalLength(value));
+  return value.slice(-retained);
+}
+
 function releaseReady(
   held: SseEvent[],
   holdbackChars: number,
 ): SseEvent[] {
   const released: SseEvent[] = [];
-  let semanticChars = held.reduce((sum, event) => sum + event.semanticText.length, 0);
+  const semanticText = held.map((event) => event.semanticText).join('');
+  let semanticChars = semanticText.length;
+  const requiredTail = Math.max(holdbackChars, trailingLexicalLength(semanticText));
   while (held.length > 0) {
     const candidate = held[0];
-    if (candidate.semanticText.length > 0 && semanticChars - candidate.semanticText.length < holdbackChars) break;
+    if (candidate.semanticText.length > 0 && semanticChars - candidate.semanticText.length < requiredTail) break;
     held.shift();
     released.push(candidate);
     semanticChars -= candidate.semanticText.length;
@@ -89,7 +102,7 @@ export async function* gateSseStream(
           // Audit mode never changes traffic; detector availability is reported by its adapter.
         }
       });
-      rolling = candidate.slice(-options.rollingWindowChars);
+      rolling = retainInspectionWindow(candidate, options.rollingWindowChars);
       next = iterator.next();
       continue;
     }
@@ -109,7 +122,7 @@ export async function* gateSseStream(
       if (!isCommittable(decision)) {
         await stop(iterator, new StreamBlockedError(decision), options);
       }
-      rolling = candidate.slice(-options.rollingWindowChars);
+      rolling = retainInspectionWindow(candidate, options.rollingWindowChars);
       for (const released of releaseReady(held, options.holdbackChars)) {
         heldBytes -= released.byteLength;
         yield released.raw;

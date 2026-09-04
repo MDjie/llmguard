@@ -1,8 +1,8 @@
 // Generated from model/guard-v1.schema.json. Do not edit.
-// Source SHA-256: 32b8c5030e767e6f7063b464069f01b32b4e5b0c790e55b9384f0c1eff544d8d
+// Source SHA-256: 5e535f81fcd1a87d610f5e1876c5bff2db310e6e050872e15995b940fdbe4776
 
 export const GUARD_CONTRACT_VERSION = '1.0' as const;
-export const GUARD_CONTRACT_SOURCE_SHA256 = '32b8c5030e767e6f7063b464069f01b32b4e5b0c790e55b9384f0c1eff544d8d' as const;
+export const GUARD_CONTRACT_SOURCE_SHA256 = '5e535f81fcd1a87d610f5e1876c5bff2db310e6e050872e15995b940fdbe4776' as const;
 
 export type Direction = "INPUT" | "OUTPUT_COMPLETE" | "OUTPUT_CHUNK" | "RAG_INGEST" | "RAG_CONTEXT" | "TOOL_REQUEST" | "TOOL_RESULT";
 
@@ -85,6 +85,8 @@ export interface RequestContext {
   readonly authContextId?: string;
   readonly tokenizerId?: string;
   readonly stage?: ProcessingStage;
+  readonly businessLine?: string;
+  readonly legalDisclaimerVersion?: string;
 }
 
 export interface ArtifactRef {
@@ -177,6 +179,10 @@ export interface GuardDecision {
   readonly modelVersions?: readonly string[];
   readonly failMode?: GuardFailMode;
   readonly evidenceComplete?: boolean;
+  readonly score?: number;
+  readonly confidence?: number;
+  readonly compliance?: ComplianceContext;
+  readonly transform?: DecisionTransform;
 }
 
 export interface GuardError {
@@ -201,4 +207,37 @@ export interface GuardEvent {
   readonly expiresAtEpochMs?: number;
   readonly signature?: string;
   readonly signatureKeyId?: string;
+}
+
+export type DlpTransformOperation = "PARTIAL_MASK" | "FULL_MASK" | "TOKENIZE" | "REDACT" | "BLOCK";
+
+export type DecisionTransformType = "MASK" | "REWRITE" | "SAFE_RESPONSE" | "REQUIRE_REVIEW" | "BLOCK";
+
+export interface DecisionTransformRange {
+  readonly entityType: string;
+  readonly operation: DlpTransformOperation;
+  readonly start: number;
+  readonly end: number;
+  readonly outputStart: number;
+  readonly outputEnd: number;
+  readonly maskedPreview: string;
+  readonly contentHmac: string;
+}
+
+export interface DecisionTransform {
+  readonly type: DecisionTransformType;
+  readonly ranges: readonly DecisionTransformRange[];
+  readonly templateId?: string;
+  readonly templateVersion?: number;
+  readonly outputHash: string;
+  readonly recheckDecisionId?: string;
+}
+
+export interface ComplianceContext {
+  readonly locale: string;
+  readonly jurisdiction: string;
+  readonly industry: string;
+  readonly businessLine: string;
+  readonly policyVersion: string;
+  readonly legalDisclaimerVersion: string;
 }

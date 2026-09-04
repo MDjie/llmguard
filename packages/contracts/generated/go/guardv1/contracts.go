@@ -1,9 +1,9 @@
 // Code generated from model/guard-v1.schema.json. DO NOT EDIT.
-// Source SHA-256: 32b8c5030e767e6f7063b464069f01b32b4e5b0c790e55b9384f0c1eff544d8d
+// Source SHA-256: 5e535f81fcd1a87d610f5e1876c5bff2db310e6e050872e15995b940fdbe4776
 package guardv1
 
 const GuardContractVersion = "1.0"
-const GuardContractSourceSHA256 = "32b8c5030e767e6f7063b464069f01b32b4e5b0c790e55b9384f0c1eff544d8d"
+const GuardContractSourceSHA256 = "5e535f81fcd1a87d610f5e1876c5bff2db310e6e050872e15995b940fdbe4776"
 
 type Direction string
 
@@ -199,6 +199,8 @@ type RequestContext struct {
 	AuthContextId *string `json:"authContextId,omitempty"`
 	TokenizerId *string `json:"tokenizerId,omitempty"`
 	Stage *ProcessingStage `json:"stage,omitempty"`
+	BusinessLine *string `json:"businessLine,omitempty"`
+	LegalDisclaimerVersion *string `json:"legalDisclaimerVersion,omitempty"`
 }
 
 type ArtifactRef struct {
@@ -291,6 +293,10 @@ type GuardDecision struct {
 	ModelVersions []string `json:"modelVersions,omitempty"`
 	FailMode *GuardFailMode `json:"failMode,omitempty"`
 	EvidenceComplete *bool `json:"evidenceComplete,omitempty"`
+	Score *float64 `json:"score,omitempty"`
+	Confidence *float64 `json:"confidence,omitempty"`
+	Compliance *ComplianceContext `json:"compliance,omitempty"`
+	Transform *DecisionTransform `json:"transform,omitempty"`
 }
 
 type GuardError struct {
@@ -315,4 +321,53 @@ type GuardEvent struct {
 	ExpiresAtEpochMs *int64 `json:"expiresAtEpochMs,omitempty"`
 	Signature *string `json:"signature,omitempty"`
 	SignatureKeyId *string `json:"signatureKeyId,omitempty"`
+}
+
+type DlpTransformOperation string
+
+const (
+	DlpTransformOperationPartialMask DlpTransformOperation = "PARTIAL_MASK"
+	DlpTransformOperationFullMask DlpTransformOperation = "FULL_MASK"
+	DlpTransformOperationTokenize DlpTransformOperation = "TOKENIZE"
+	DlpTransformOperationRedact DlpTransformOperation = "REDACT"
+	DlpTransformOperationBlock DlpTransformOperation = "BLOCK"
+)
+
+type DecisionTransformType string
+
+const (
+	DecisionTransformTypeMask DecisionTransformType = "MASK"
+	DecisionTransformTypeRewrite DecisionTransformType = "REWRITE"
+	DecisionTransformTypeSafeResponse DecisionTransformType = "SAFE_RESPONSE"
+	DecisionTransformTypeRequireReview DecisionTransformType = "REQUIRE_REVIEW"
+	DecisionTransformTypeBlock DecisionTransformType = "BLOCK"
+)
+
+type DecisionTransformRange struct {
+	EntityType string `json:"entityType"`
+	Operation DlpTransformOperation `json:"operation"`
+	Start int64 `json:"start"`
+	End int64 `json:"end"`
+	OutputStart int64 `json:"outputStart"`
+	OutputEnd int64 `json:"outputEnd"`
+	MaskedPreview string `json:"maskedPreview"`
+	ContentHmac string `json:"contentHmac"`
+}
+
+type DecisionTransform struct {
+	Type DecisionTransformType `json:"type"`
+	Ranges []DecisionTransformRange `json:"ranges"`
+	TemplateId *string `json:"templateId,omitempty"`
+	TemplateVersion *int64 `json:"templateVersion,omitempty"`
+	OutputHash string `json:"outputHash"`
+	RecheckDecisionId *string `json:"recheckDecisionId,omitempty"`
+}
+
+type ComplianceContext struct {
+	Locale string `json:"locale"`
+	Jurisdiction string `json:"jurisdiction"`
+	Industry string `json:"industry"`
+	BusinessLine string `json:"businessLine"`
+	PolicyVersion string `json:"policyVersion"`
+	LegalDisclaimerVersion string `json:"legalDisclaimerVersion"`
 }

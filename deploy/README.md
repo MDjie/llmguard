@@ -9,7 +9,9 @@ namespace.
 
 1. Copy deploy/helm/guardllm/values.yaml to an environment-owned values file.
 2. Replace all placeholder repositories and digests. Create guardllm-runtime-secrets through
-   the organization's secret controller; never commit secret values.
+   the organization's secret controller; never commit secret values. The Secret must include an
+   independent, randomly generated DLP_TOKENIZATION_HMAC_KEY of at least 32 bytes; do not reuse
+   CONTENT_HASH_KEY, audit-chain keys, signing keys or encryption keys.
 3. Run node scripts/release/validate-production-values.mjs with the values file.
 4. Apply the top-level deploy Kustomization, render the signature policy template with the trusted Cosign
    public key, then install with helm upgrade --install --atomic.

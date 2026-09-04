@@ -163,6 +163,8 @@ describe('Judge boundary parsing and fusion', () => {
     expect(prepared.blockedExternal).toBe(true);
     expect(prepared.processedText).toBe('[REDACTED_SECRET_CONTENT]');
     expect(prepared.processedText).not.toContain('super-secret-value');
+    expect(JSON.stringify(prepared.maskedItems)).not.toContain('super-secret-value');
+    expect(prepared.maskedItems.every((item) => !Object.hasOwn(item, 'original'))).toBe(true);
   });
 
   it('aborts a hanging provider at the configured Judge deadline', async () => {
