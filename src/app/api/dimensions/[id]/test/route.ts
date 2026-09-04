@@ -63,13 +63,17 @@ function calculateDimensionScore(
 ): number {
   if (matchedRules.length === 0) return 0;
 
+  // score 以 decimal 字符串形式(如 '90.00')返回,统一转成数字再比较,
+  // 避免 '90.00' !== 90 导致最高分规则被重复计入 extraScore。
+  const ruleScores = matchedRules.map(r => Number(r.score) || 0);
+
   // 取最高分
-  const maxRuleScore = Math.max(...matchedRules.map(r => r.score || 0), 0);
+  const maxRuleScore = Math.max(...ruleScores, 0);
 
   // 其他规则衰减累加
-  const extraScore = matchedRules
-    .filter(r => r.score !== maxRuleScore)
-    .reduce((sum: number, r) => sum + (r.score || 0) * 0.2, 0);
+  const extraScore = ruleScores
+    .filter(s => s !== maxRuleScore)
+    .reduce((sum, s) => sum + s * 0.2, 0);
 
   // 加权计算
   const finalScore = (maxRuleScore + extraScore) * dimensionWeight;
