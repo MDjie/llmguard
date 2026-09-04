@@ -23,67 +23,48 @@ export function shouldInvokeJudge(
   direction: 'input' | 'output',
   ruleScore: number,
   findings: DetectionFinding[],
-  text: string
+  _text: string,
+  blockThreshold = 80,
 ): boolean {
   if (!config.enabled) return false;
   if (direction === 'input' && !config.applyToInput) return false;
   if (direction === 'output' && !config.applyToOutput) return false;
+  if (
+    !Number.isFinite(ruleScore) ||
+    !Number.isFinite(blockThreshold) ||
+    blockThreshold <= config.triggerThreshold ||
+    ruleScore >= blockThreshold ||
+    findings.some((finding) => finding.action === 'block')
+  ) return false;
 
   if (config.enabledDimensions.length > 0) {
-    const hasApplicableDimension = findings.some(f =>
-      config.enabledDimensions.includes(f.dimension)
-    );
-    if (!hasApplicableDimension && config.semanticDimensions.length === 0) {
-      return false;
-    }
+    const hasApplicableDimension = findings.some((finding) =>
+      config.enabledDimensions.includes(finding.dimension));
+    if (!hasApplicableDimension && config.semanticDimensions.length === 0) return false;
   }
 
+  const numericGreyZone = ruleScore >= config.triggerThreshold && ruleScore < blockThreshold;
+  const semanticGreyZone = config.triggerMode === 'risk_or_semantic' &&
+    findings.some((finding) => {
+      const isLocalSemanticFinding = finding.ruleType === 'semantic' ||
+        config.semanticDimensions.includes(finding.dimension);
+      if (!isLocalSemanticFinding) return false;
+      const confidenceScore = finding.confidence === undefined
+        ? finding.score
+        : finding.confidence <= 1
+          ? finding.confidence * 100
+          : finding.confidence;
+      return confidenceScore >= config.triggerThreshold && confidenceScore < blockThreshold;
+    });
   switch (config.triggerMode) {
     case 'always':
-      return true;
     case 'risk_only':
-      return ruleScore >= config.triggerThreshold || findings.length > 0;
+      return numericGreyZone;
     case 'risk_or_semantic':
-      if (ruleScore >= config.triggerThreshold) return true;
-      if (findings.length > 0) return true;
-      return meetsSemanticConditions(text, findings, config);
+      return numericGreyZone || semanticGreyZone;
     default:
       return false;
   }
-}
-
-function meetsSemanticConditions(
-  text: string,
-  findings: DetectionFinding[],
-  config: PolicyJudgeConfig
-): boolean {
-  if (text.length > 500) return true;
-
-  const complexPatterns = [
-    /帮我.*设计.*方案/,
-    /如何.*绕过/,
-    /怎么.*规避/,
-    /有没有.*办法/,
-    /能不能.*帮我/,
-    /帮我.*想办法/,
-    /有没有.*漏洞/,
-    /怎么.*利用/,
-    /如何.*攻击/,
-    /教我.*入侵/,
-    /获取.*账号/,
-    /获取.*密码/,
-    /获取.*聊天记录/,
-    /不惊动.*了解/,
-    /扮演.*角色/,
-    /忽略.*指令/,
-  ];
-
-  for (const pattern of complexPatterns) {
-    if (pattern.test(text)) return true;
-  }
-
-  if (config.semanticDimensions.length > 0) return true;
-  return false;
 }
 
 // ============ PII/密钥外发保护 ============

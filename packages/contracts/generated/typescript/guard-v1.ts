@@ -1,8 +1,8 @@
 // Generated from model/guard-v1.schema.json. Do not edit.
-// Source SHA-256: 2da2dcd7e08805684ff47b35f29d160f2d583db74671af14c64f4a86b7911962
+// Source SHA-256: 32b8c5030e767e6f7063b464069f01b32b4e5b0c790e55b9384f0c1eff544d8d
 
 export const GUARD_CONTRACT_VERSION = '1.0' as const;
-export const GUARD_CONTRACT_SOURCE_SHA256 = '2da2dcd7e08805684ff47b35f29d160f2d583db74671af14c64f4a86b7911962' as const;
+export const GUARD_CONTRACT_SOURCE_SHA256 = '32b8c5030e767e6f7063b464069f01b32b4e5b0c790e55b9384f0c1eff544d8d' as const;
 
 export type Direction = "INPUT" | "OUTPUT_COMPLETE" | "OUTPUT_CHUNK" | "RAG_INGEST" | "RAG_CONTEXT" | "TOOL_REQUEST" | "TOOL_RESULT";
 
@@ -11,6 +11,8 @@ export type GuardAction = "ALLOW" | "WARN" | "BLOCK" | "MASK" | "REWRITE" | "SAF
 export type RiskLevel = "NONE" | "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 
 export type ObservationStatus = "MATCH" | "NO_MATCH" | "TIMEOUT" | "ERROR" | "SKIPPED";
+
+export type ContextRole = "mention" | "quotation" | "news" | "legal" | "research" | "education" | "medical" | "instruction" | "transaction" | "endorsement" | "disclosure";
 
 export type ArtifactKind = "TEXT" | "IMAGE" | "AUDIO" | "VIDEO" | "DOCUMENT" | "TOOL_RESULT" | "RAG_CHUNK";
 
@@ -143,6 +145,10 @@ export interface Observation {
   readonly modelVersion?: string;
   readonly configurationDigest?: string;
   readonly failMode?: GuardFailMode;
+  readonly canonicalTermId?: string;
+  readonly variantId?: string;
+  readonly dictionaryLayer?: "PLATFORM_REDLINE" | "INDUSTRY" | "TENANT" | "APPLICATION" | "INCIDENT";
+  readonly contextRole?: ContextRole;
 }
 
 export interface LatencyBreakdown {

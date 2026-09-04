@@ -810,8 +810,25 @@ export async function detectWithDynamicRules(
   let finalOverallScore = Math.round(maxScore);
   let finalFinalAction = finalAction;
 
+  const dominantFinding = findings.reduce<DetectionFinding | undefined>(
+    (current, finding) => (!current || finding.score > current.score ? finding : current),
+    undefined,
+  );
+  const dominantDimension = dominantFinding
+    ? config.dimensions.find((dimension) => dimension.code === dominantFinding.dimension)
+    : undefined;
+  const dominantConfig = dominantDimension
+    ? config.dimensionConfigs.find((item) => item.dimensionId === dominantDimension.id)
+    : undefined;
   const judgeConfig = await getJudgeConfig(policyId, scope);
-  if (judgeConfig && shouldInvokeJudge(judgeConfig, direction, maxScore, findings, text)) {
+  if (judgeConfig && shouldInvokeJudge(
+    judgeConfig,
+    direction,
+    maxScore,
+    findings,
+    text,
+    dominantConfig?.blockThreshold ?? 80,
+  )) {
     try {
       judgeModelResult = await executeJudgeDetection(
         text,
@@ -831,16 +848,6 @@ export async function detectWithDynamicRules(
         fallbackUsed: true,
       };
     }
-    const dominantFinding = findings.reduce<DetectionFinding | undefined>(
-      (current, finding) => (!current || finding.score > current.score ? finding : current),
-      undefined,
-    );
-    const dominantDimension = dominantFinding
-      ? config.dimensions.find((dimension) => dimension.code === dominantFinding.dimension)
-      : undefined;
-    const dominantConfig = dominantDimension
-      ? config.dimensionConfigs.find((item) => item.dimensionId === dominantDimension.id)
-      : undefined;
     decisionTrace = fuseResults(
       maxScore,
       finalAction,

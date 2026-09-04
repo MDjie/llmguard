@@ -45,9 +45,10 @@ function engine(
 
 describe('content safety intent detector', () => {
   it('is part of the versioned fail-closed baseline DAG', () => {
-    expect(DEFAULT_DETECTOR_DAG.version).toBe('guard-default-dag-2');
+    expect(DEFAULT_DETECTOR_DAG.version).toBe('guard-default-dag-3');
     expect(DEFAULT_DETECTOR_DAG.nodes).toEqual(expect.arrayContaining([
       expect.objectContaining({ detectorId: 'content-safety-intent-baseline', failurePolicy: 'FAIL_CLOSED' }),
+      expect.objectContaining({ detectorId: 'protected-context-leak', failurePolicy: 'FAIL_CLOSED' }),
     ]));
   });
 

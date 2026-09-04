@@ -53,6 +53,10 @@
       "type": "string",
       "enum": ["MATCH", "NO_MATCH", "TIMEOUT", "ERROR", "SKIPPED"]
     },
+    "ContextRole": {
+      "type": "string",
+      "enum": ["mention", "quotation", "news", "legal", "research", "education", "medical", "instruction", "transaction", "endorsement", "disclosure"]
+    },
     "ArtifactKind": {
       "type": "string",
       "enum": ["TEXT", "IMAGE", "AUDIO", "VIDEO", "DOCUMENT", "TOOL_RESULT", "RAG_CHUNK"]
@@ -291,7 +295,14 @@
         "reasonCode": { "type": "string", "minLength": 1, "maxLength": 128 },
         "modelVersion": { "type": "string", "minLength": 1, "maxLength": 256 },
         "configurationDigest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
-        "failMode": { "$ref": "#/$defs/GuardFailMode" }
+        "failMode": { "$ref": "#/$defs/GuardFailMode" },
+        "canonicalTermId": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "variantId": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "dictionaryLayer": {
+          "type": "string",
+          "enum": ["PLATFORM_REDLINE", "INDUSTRY", "TENANT", "APPLICATION", "INCIDENT"]
+        },
+        "contextRole": { "$ref": "#/$defs/ContextRole" }
       }
     },
     "LatencyBreakdown": {

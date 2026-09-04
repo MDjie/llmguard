@@ -1,5 +1,5 @@
 // Generated from model/guard-v1.schema.json. Do not edit.
-// Source SHA-256: 2da2dcd7e08805684ff47b35f29d160f2d583db74671af14c64f4a86b7911962
+// Source SHA-256: 32b8c5030e767e6f7063b464069f01b32b4e5b0c790e55b9384f0c1eff544d8d
 package io.guardllm.contracts.v1;
 
 import java.util.List;
@@ -7,7 +7,7 @@ import java.util.Map;
 
 public final class GuardContracts {
   public static final String CONTRACT_VERSION = "1.0";
-  public static final String SOURCE_SHA256 = "2da2dcd7e08805684ff47b35f29d160f2d583db74671af14c64f4a86b7911962";
+  public static final String SOURCE_SHA256 = "32b8c5030e767e6f7063b464069f01b32b4e5b0c790e55b9384f0c1eff544d8d";
   private GuardContracts() {}
 
   public enum Direction { INPUT, OUTPUT_COMPLETE, OUTPUT_CHUNK, RAG_INGEST, RAG_CONTEXT, TOOL_REQUEST, TOOL_RESULT }
@@ -17,6 +17,8 @@ public final class GuardContracts {
   public enum RiskLevel { NONE, LOW, MEDIUM, HIGH, CRITICAL }
 
   public enum ObservationStatus { MATCH, NO_MATCH, TIMEOUT, ERROR, SKIPPED }
+
+  public enum ContextRole { mention, quotation, news, legal, research, education, medical, instruction, transaction, endorsement, disclosure }
 
   public enum ArtifactKind { TEXT, IMAGE, AUDIO, VIDEO, DOCUMENT, TOOL_RESULT, RAG_CHUNK }
 
@@ -148,7 +150,11 @@ public final class GuardContracts {
     String reasonCode,
     String modelVersion,
     String configurationDigest,
-    GuardFailMode failMode
+    GuardFailMode failMode,
+    String canonicalTermId,
+    String variantId,
+    String dictionaryLayer,
+    ContextRole contextRole
   ) {}
 
   public record LatencyBreakdown(

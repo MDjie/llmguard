@@ -46,7 +46,10 @@ export function createGuardEngine(
       }
       const envelopes = resolveContextEnvelopes(request, startedAt);
       validateActionIntent(request, envelopes, startedAt);
-      const views = buildNormalizedViews(request.content.text ?? '');
+      const views = buildNormalizedViews(
+        request.content.text ?? '',
+        dependencies.normalizationBudget,
+      );
       const deadlineSignal = AbortSignal.timeout(remaining);
       const evidenceHmac = (content: string) =>
         createHmac('sha256', hmacKey).update(content, 'utf8').digest('hex');
@@ -58,6 +61,7 @@ export function createGuardEngine(
           envelopes,
           views,
           evidenceHmac,
+          protectedContextFingerprints: dependencies.protectedContextFingerprints,
         },
         deadlineSignal,
         absoluteDeadlineEpochMs: request.context.absoluteDeadlineEpochMs,

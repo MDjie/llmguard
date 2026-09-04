@@ -1,4 +1,4 @@
-import { mapViewRange } from './normalization';
+import { textEvidence } from './evidence';
 import type {
   EvidenceRef,
   GuardDetector,
@@ -87,18 +87,18 @@ function toEvidence(
   const evidence: EvidenceRef[] = [];
   const seen = new Set<string>();
   for (const signal of [...signals].sort((left, right) => left.start - right.start)) {
-    const origin = mapViewRange(view, signal.start, signal.end);
-    const contentHmac = context.evidenceHmac(signal.value);
-    const key = `${origin.start}:${origin.end}:${contentHmac}`;
+    const item = textEvidence(
+      context,
+      view,
+      signal.start,
+      signal.end,
+      signal.value,
+      mask(signal.value),
+    );
+    const key = `${item.start}:${item.end}:${item.contentHmac}`;
     if (seen.has(key)) continue;
     seen.add(key);
-    evidence.push({
-      viewId: view.id,
-      start: origin.start,
-      end: origin.end,
-      maskedPreview: mask(signal.value),
-      contentHmac,
-    });
+    evidence.push(item);
     if (evidence.length >= MAX_EVIDENCE) break;
   }
   return evidence;
@@ -128,7 +128,7 @@ function cumulativeObservation(
   );
   return {
     detectorId: 'reasoning-attack-baseline',
-    detectorVersion: '1.0.0',
+    detectorVersion: '2.0.0',
     riskType: 'reasoning_attack.cumulative_chain',
     score,
     severity: score >= 0.95 ? 'CRITICAL' : 'HIGH',
@@ -154,7 +154,7 @@ function traceObservation(
   if (signals.length === 0) return null;
   return {
     detectorId: 'reasoning-attack-baseline',
-    detectorVersion: '1.0.0',
+    detectorVersion: '2.0.0',
     riskType: 'reasoning_attack.trace_exfiltration',
     score: 0.94,
     severity: 'CRITICAL',
@@ -179,7 +179,7 @@ function strongest(
 
 export class ReasoningAttackDetector implements GuardDetector {
   readonly id = 'reasoning-attack-baseline';
-  readonly version = '1.0.0';
+  readonly version = '2.0.0';
   readonly required = true;
 
   async detect(context: GuardDetectorContext): Promise<readonly Observation[]> {

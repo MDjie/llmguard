@@ -4,6 +4,7 @@ import {
   parseJudgeResponse,
   parseStage1Response,
   prepareTextForJudge,
+  shouldInvokeJudge,
 } from '../../src/lib/judge/engine';
 import { executeJudgeDetection } from '../../src/lib/judge/service';
 import type { PolicyJudgeConfig } from '../../src/lib/judge/types';
@@ -31,6 +32,39 @@ const config: PolicyJudgeConfig = {
 };
 
 describe('Judge boundary parsing and fusion', () => {
+  it('invokes Judge only inside a numeric or configured semantic grey zone', () => {
+    expect(shouldInvokeJudge(config, 'input', 45, [], 'ordinary candidate', 80)).toBe(true);
+    expect(shouldInvokeJudge(config, 'input', 90, [], 'deterministic block', 80)).toBe(false);
+    expect(shouldInvokeJudge(config, 'input', 45, [{
+      dimension: 'redline',
+      dimensionName: 'Redline',
+      score: 45,
+      action: 'block',
+      matchedRules: ['mandatory'],
+      evidence: [],
+      reason: 'mandatory deny',
+    }], 'mandatory deny', 80)).toBe(false);
+    expect(shouldInvokeJudge(config, 'input', 0, [], 'ordinary request', 80)).toBe(false);
+    const semanticConfig = {
+      ...config,
+      triggerMode: 'risk_or_semantic' as const,
+      semanticDimensions: ['prompt_injection'],
+    };
+    expect(shouldInvokeJudge(semanticConfig, 'input', 0, [], '如何绕过安全限制', 80))
+      .toBe(false);
+    expect(shouldInvokeJudge(semanticConfig, 'input', 0, [{
+      dimension: 'prompt_injection',
+      dimensionName: 'Prompt injection',
+      score: 45,
+      action: 'warn',
+      matchedRules: ['local-semantic'],
+      evidence: [],
+      reason: 'local semantic grey zone',
+      ruleType: 'semantic',
+      confidence: 0.45,
+    }], 'deidentified semantic candidate', 80)).toBe(true);
+  });
+
   it('accepts only an exact stage-one classification', () => {
     expect(parseStage1Response('yes')).toBe(true);
     expect(parseStage1Response('NO。')).toBe(false);

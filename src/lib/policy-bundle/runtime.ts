@@ -51,6 +51,21 @@ const ruleSchema = z.object({
   validFromEpochMs: z.number().int().positive().optional(),
   validToEpochMs: z.number().int().positive().optional(),
   evidenceRequirement: z.string().optional(),
+  approximate: z.object({
+    maxEditDistance: z.union([z.literal(1), z.literal(2)]),
+    maxPatternLength: z.number().int().min(4).max(64),
+    maxCandidates: z.number().int().min(1).max(64),
+  }).strict().optional(),
+  dictionaryLayer: z.enum([
+    'PLATFORM_REDLINE',
+    'INDUSTRY',
+    'TENANT',
+    'APPLICATION',
+    'INCIDENT',
+  ]).optional(),
+  priority: z.number().int().min(-10_000).max(10_000).optional(),
+  jurisdiction: z.string().min(1).max(64).optional(),
+  businessLine: z.string().min(1).max(128).optional(),
 }).strict();
 const detectorDagSchema = z.object({
   version: z.string().min(1).max(128),

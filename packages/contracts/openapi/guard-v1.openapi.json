@@ -89,6 +89,22 @@
           "SKIPPED"
         ]
       },
+      "ContextRole": {
+        "type": "string",
+        "enum": [
+          "mention",
+          "quotation",
+          "news",
+          "legal",
+          "research",
+          "education",
+          "medical",
+          "instruction",
+          "transaction",
+          "endorsement",
+          "disclosure"
+        ]
+      },
       "ArtifactKind": {
         "type": "string",
         "enum": [
@@ -774,6 +790,29 @@
           },
           "failMode": {
             "$ref": "#/components/schemas/GuardFailMode"
+          },
+          "canonicalTermId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "variantId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "dictionaryLayer": {
+            "type": "string",
+            "enum": [
+              "PLATFORM_REDLINE",
+              "INDUSTRY",
+              "TENANT",
+              "APPLICATION",
+              "INCIDENT"
+            ]
+          },
+          "contextRole": {
+            "$ref": "#/components/schemas/ContextRole"
           }
         }
       },

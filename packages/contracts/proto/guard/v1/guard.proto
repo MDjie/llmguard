@@ -1,5 +1,5 @@
 // Generated from model/guard-v1.schema.json. Do not edit.
-// Source SHA-256: 2da2dcd7e08805684ff47b35f29d160f2d583db74671af14c64f4a86b7911962
+// Source SHA-256: 32b8c5030e767e6f7063b464069f01b32b4e5b0c790e55b9384f0c1eff544d8d
 syntax = "proto3";
 
 package guardllm.contracts.v1;
@@ -47,6 +47,21 @@ enum ObservationStatus {
   OBSERVATION_STATUS_TIMEOUT = 3;
   OBSERVATION_STATUS_ERROR = 4;
   OBSERVATION_STATUS_SKIPPED = 5;
+}
+
+enum ContextRole {
+  CONTEXT_ROLE_UNSPECIFIED = 0;
+  CONTEXT_ROLE_mention = 1;
+  CONTEXT_ROLE_quotation = 2;
+  CONTEXT_ROLE_news = 3;
+  CONTEXT_ROLE_legal = 4;
+  CONTEXT_ROLE_research = 5;
+  CONTEXT_ROLE_education = 6;
+  CONTEXT_ROLE_medical = 7;
+  CONTEXT_ROLE_instruction = 8;
+  CONTEXT_ROLE_transaction = 9;
+  CONTEXT_ROLE_endorsement = 10;
+  CONTEXT_ROLE_disclosure = 11;
 }
 
 enum ArtifactKind {
@@ -236,6 +251,10 @@ message Observation {
   optional string model_version = 15;
   optional string configuration_digest = 16;
   optional GuardFailMode fail_mode = 17;
+  optional string canonical_term_id = 18;
+  optional string variant_id = 19;
+  optional string dictionary_layer = 20;
+  optional ContextRole context_role = 21;
 }
 
 message LatencyBreakdown {

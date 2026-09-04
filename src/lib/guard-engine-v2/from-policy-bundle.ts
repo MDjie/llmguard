@@ -8,13 +8,16 @@ import {
   ResourceAbuseDetector,
   StructuredDlpDetector,
 } from './builtin-detectors';
+import { ProtectedContextLeakDetector } from './protected-context';
 import { ReasoningAttackDetector } from './reasoning-attack-detector';
 import { RuleDetector } from './rule-detector';
 import { SemanticClassifierDetector } from './semantic-classifier';
+import type { GuardEngineDependencies } from './types';
 
 export function createEngineForPolicyBundle(
   bundle: RuntimePolicyBundle,
   hmacKey = process.env.CONTENT_HASH_KEY ?? '',
+  protectedContextFingerprints: GuardEngineDependencies['protectedContextFingerprints'] = [],
 ) {
   const warnThreshold = bundle.payload.thresholds.length > 0
     ? Math.min(...bundle.payload.thresholds.map((item) => item.warn))
@@ -33,6 +36,11 @@ export function createEngineForPolicyBundle(
     actionOverrides[riskType] = threshold.autoRewrite ? 'REWRITE' : 'MASK';
     actionOverrideThresholds[riskType] = threshold.warn;
   }
+  const detectorDag = bundle.payload.detectorDag
+    ?? buildDefaultDetectorDag(bundle.payload.semanticClassifier);
+  const protectedContextEnabled = detectorDag.nodes.some(
+    (node) => node.detectorId === 'protected-context-leak',
+  );
   return createGuardEngine(
     {
       id: bundle.payload.policyId,
@@ -42,11 +50,11 @@ export function createEngineForPolicyBundle(
       failClosedOnRequiredDetectorFailure: true,
       actionOverrides,
       actionOverrideThresholds,
-      detectorDag: bundle.payload.detectorDag
-        ?? buildDefaultDetectorDag(bundle.payload.semanticClassifier),
+      detectorDag,
     },
     [
       new PromptAttackDetector(),
+      ...(protectedContextEnabled ? [new ProtectedContextLeakDetector()] : []),
       new ReasoningAttackDetector(),
       new StructuredDlpDetector(),
       new ResourceAbuseDetector(),
@@ -61,6 +69,6 @@ export function createEngineForPolicyBundle(
         ? [new SemanticClassifierDetector(bundle.payload.semanticClassifier)]
         : []),
     ],
-    { hmacKey },
+    { hmacKey, protectedContextFingerprints },
   );
 }

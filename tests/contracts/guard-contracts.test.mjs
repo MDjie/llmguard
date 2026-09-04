@@ -39,6 +39,15 @@ describe('TASK-R1-001 Guard v1 contract source', () => {
     expect(proto).toMatch(/rpc EvaluateStream\(stream GuardRequest\) returns \(stream GuardDecision\)/);
   });
 
+  it('keeps Observation protobuf field numbers wire-compatible', () => {
+    expect(proto).toMatch(/string dictionary_release_id = 8;/);
+    expect(proto).toMatch(/GuardFailMode fail_mode = 17;/);
+    expect(proto).toMatch(/string canonical_term_id = 18;/);
+    expect(proto).toMatch(/string variant_id = 19;/);
+    expect(proto).toMatch(/string dictionary_layer = 20;/);
+    expect(proto).toMatch(/ContextRole context_role = 21;/);
+  });
+
   it('accepts the committed v1 baseline', () => {
     expect(findCompatibilityViolations(source, baseline)).toEqual([]);
   });
@@ -78,6 +87,9 @@ describe('TASK-R1-001 Guard v1 contract source', () => {
     }));
     expect(source.$defs.Observation.properties.dictionaryVersion).toBeDefined();
     expect(source.$defs.Observation.properties.ruleVersion).toBeDefined();
+    expect(source.$defs.Observation.properties.canonicalTermId).toBeDefined();
+    expect(source.$defs.Observation.properties.variantId).toBeDefined();
+    expect(source.$defs.Observation.properties.contextRole.$ref).toBe('#/$defs/ContextRole');
     expect(source.$defs.GuardDecision.properties.degraded).toBeDefined();
     expect(source.$defs.GuardDecision.properties.reasonCodes).toBeDefined();
     expect(source.$defs.GuardDecision.properties.latencyBreakdown.$ref)

@@ -92,9 +92,10 @@ describe('signed policy bundles', () => {
   it('is deterministic and rejects any payload tampering', () => {
     const { privateKey, publicKey } = generateKeyPairSync('ed25519');
     const payload = compilePolicyBundle(config, 4);
-    expect(payload.detectorDag?.version).toBe('guard-default-dag-2');
+    expect(payload.detectorDag?.version).toBe('guard-default-dag-3');
     expect(payload.detectorDag?.nodes).toEqual(expect.arrayContaining([
       expect.objectContaining({ detectorId: 'content-safety-intent-baseline' }),
+      expect.objectContaining({ detectorId: 'protected-context-leak' }),
     ]));
     expect(payload.detectorDag?.nodes.map((node) => node.tier))
       .toEqual(expect.arrayContaining(['L0', 'L3']));

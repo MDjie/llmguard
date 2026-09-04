@@ -1,9 +1,9 @@
 // Code generated from model/guard-v1.schema.json. DO NOT EDIT.
-// Source SHA-256: 2da2dcd7e08805684ff47b35f29d160f2d583db74671af14c64f4a86b7911962
+// Source SHA-256: 32b8c5030e767e6f7063b464069f01b32b4e5b0c790e55b9384f0c1eff544d8d
 package guardv1
 
 const GuardContractVersion = "1.0"
-const GuardContractSourceSHA256 = "2da2dcd7e08805684ff47b35f29d160f2d583db74671af14c64f4a86b7911962"
+const GuardContractSourceSHA256 = "32b8c5030e767e6f7063b464069f01b32b4e5b0c790e55b9384f0c1eff544d8d"
 
 type Direction string
 
@@ -47,6 +47,22 @@ const (
 	ObservationStatusTimeout ObservationStatus = "TIMEOUT"
 	ObservationStatusError ObservationStatus = "ERROR"
 	ObservationStatusSkipped ObservationStatus = "SKIPPED"
+)
+
+type ContextRole string
+
+const (
+	ContextRoleMention ContextRole = "mention"
+	ContextRoleQuotation ContextRole = "quotation"
+	ContextRoleNews ContextRole = "news"
+	ContextRoleLegal ContextRole = "legal"
+	ContextRoleResearch ContextRole = "research"
+	ContextRoleEducation ContextRole = "education"
+	ContextRoleMedical ContextRole = "medical"
+	ContextRoleInstruction ContextRole = "instruction"
+	ContextRoleTransaction ContextRole = "transaction"
+	ContextRoleEndorsement ContextRole = "endorsement"
+	ContextRoleDisclosure ContextRole = "disclosure"
 )
 
 type ArtifactKind string
@@ -243,6 +259,10 @@ type Observation struct {
 	ModelVersion *string `json:"modelVersion,omitempty"`
 	ConfigurationDigest *string `json:"configurationDigest,omitempty"`
 	FailMode *GuardFailMode `json:"failMode,omitempty"`
+	CanonicalTermId *string `json:"canonicalTermId,omitempty"`
+	VariantId *string `json:"variantId,omitempty"`
+	DictionaryLayer *string `json:"dictionaryLayer,omitempty"`
+	ContextRole *ContextRole `json:"contextRole,omitempty"`
 }
 
 type LatencyBreakdown struct {

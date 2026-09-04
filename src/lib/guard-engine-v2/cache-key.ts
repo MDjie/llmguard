@@ -1,5 +1,8 @@
 import { createHash } from 'node:crypto';
-import { buildNormalizedViews } from './normalization';
+import {
+  buildNormalizedViews,
+  NORMALIZATION_ALGORITHM_VERSION,
+} from './normalization';
 import type { Direction } from '@guardllm/contracts';
 import type { TenantScope } from '@/lib/tenancy';
 
@@ -8,6 +11,9 @@ export interface GuardCacheIdentity {
   readonly direction: Direction;
   readonly content: string;
   readonly policyBundleId: string;
+  readonly policyGeneration: number;
+  readonly locale: string;
+  readonly normalizationVersion?: string;
   readonly detectorVersions: Readonly<Record<string, string>>;
   readonly modelVersions: readonly string[];
   readonly tokenizerId: string;
@@ -25,6 +31,9 @@ export function buildGuardCacheKey(identity: GuardCacheIdentity): string {
     direction: identity.direction,
     normalizedContentHash,
     policyBundleId: identity.policyBundleId,
+    policyGeneration: identity.policyGeneration,
+    locale: identity.locale,
+    normalizationVersion: identity.normalizationVersion ?? NORMALIZATION_ALGORITHM_VERSION,
     detectorVersions: Object.entries(identity.detectorVersions)
       .sort(([left], [right]) => left.localeCompare(right)),
     modelVersions: [...identity.modelVersions].sort(),

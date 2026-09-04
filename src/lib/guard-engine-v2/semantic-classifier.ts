@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import { safeFetchJson, type SafeFetchDependencies } from '@/lib/egress/safe-fetch';
 import { canonicalJson } from '@/lib/policy-bundle/canonical';
-import { mapViewRange } from './normalization';
+import { textEvidence } from './evidence';
 import type {
   GuardDetector,
   GuardDetectorContext,
@@ -130,19 +130,13 @@ export class SemanticClassifierDetector implements GuardDetector {
           if (!label) throw new Error('SEMANTIC_CLASSIFIER_LABEL_UNKNOWN');
           const score = calibratedConfidence(prediction.confidence, this.spec.temperature);
           if (score < label.threshold) continue;
-          const range = mapViewRange(view, 0, view.text.length);
           observations.push({
             detectorId: this.id,
             detectorVersion: this.version,
             riskType: label.riskType,
             score,
             severity: label.severity,
-            evidence: [{
-              viewId: view.id,
-              start: range.start,
-              end: range.end,
-              contentHmac: context.evidenceHmac(view.text),
-            }],
+            evidence: [textEvidence(context, view, 0, view.text.length, view.text)],
             status: this.spec.mode === 'ENFORCE' ? 'MATCH' as const : 'NO_MATCH' as const,
             reasonCode: this.spec.mode === 'ENFORCE'
               ? 'SEMANTIC_CLASSIFIER_MATCH'

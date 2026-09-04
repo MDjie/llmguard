@@ -1,9 +1,9 @@
 # Generated from model/guard-v1.schema.json. Do not edit.
-# Source SHA-256: 2da2dcd7e08805684ff47b35f29d160f2d583db74671af14c64f4a86b7911962
+# Source SHA-256: 32b8c5030e767e6f7063b464069f01b32b4e5b0c790e55b9384f0c1eff544d8d
 from typing import Literal, NotRequired, TypedDict
 
 GUARD_CONTRACT_VERSION = '1.0'
-GUARD_CONTRACT_SOURCE_SHA256 = '2da2dcd7e08805684ff47b35f29d160f2d583db74671af14c64f4a86b7911962'
+GUARD_CONTRACT_SOURCE_SHA256 = '32b8c5030e767e6f7063b464069f01b32b4e5b0c790e55b9384f0c1eff544d8d'
 
 Direction = Literal["INPUT", "OUTPUT_COMPLETE", "OUTPUT_CHUNK", "RAG_INGEST", "RAG_CONTEXT", "TOOL_REQUEST", "TOOL_RESULT"]
 
@@ -12,6 +12,8 @@ GuardAction = Literal["ALLOW", "WARN", "BLOCK", "MASK", "REWRITE", "SAFE_RESPONS
 RiskLevel = Literal["NONE", "LOW", "MEDIUM", "HIGH", "CRITICAL"]
 
 ObservationStatus = Literal["MATCH", "NO_MATCH", "TIMEOUT", "ERROR", "SKIPPED"]
+
+ContextRole = Literal["mention", "quotation", "news", "legal", "research", "education", "medical", "instruction", "transaction", "endorsement", "disclosure"]
 
 ArtifactKind = Literal["TEXT", "IMAGE", "AUDIO", "VIDEO", "DOCUMENT", "TOOL_RESULT", "RAG_CHUNK"]
 
@@ -137,6 +139,10 @@ class Observation(TypedDict):
     modelVersion: NotRequired[str]
     configurationDigest: NotRequired[str]
     failMode: NotRequired[GuardFailMode]
+    canonicalTermId: NotRequired[str]
+    variantId: NotRequired[str]
+    dictionaryLayer: NotRequired[Literal["PLATFORM_REDLINE", "INDUSTRY", "TENANT", "APPLICATION", "INCIDENT"]]
+    contextRole: NotRequired[ContextRole]
 
 class LatencyBreakdown(TypedDict):
     normalizationMs: NotRequired[int]

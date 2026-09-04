@@ -1,12 +1,23 @@
 import type { DetectorDagSpec, SemanticClassifierSpec } from './types';
 
 export const DEFAULT_DETECTOR_DAG: DetectorDagSpec = {
-  version: 'guard-default-dag-2',
+  version: 'guard-default-dag-3',
   maximumCostUnits: 10,
   nodes: [
     {
       id: 'l0-prompt-attack',
       detectorId: 'prompt-attack-baseline',
+      tier: 'L0',
+      dependsOn: [],
+      runCondition: 'ALWAYS',
+      timeoutMs: 1_500,
+      maxAttempts: 1,
+      costUnits: 1,
+      failurePolicy: 'FAIL_CLOSED',
+    },
+    {
+      id: 'l0-protected-context-leak',
+      detectorId: 'protected-context-leak',
       tier: 'L0',
       dependsOn: [],
       runCondition: 'ALWAYS',
@@ -76,6 +87,7 @@ export const DEFAULT_DETECTOR_DAG: DetectorDagSpec = {
       tier: 'L3',
       dependsOn: [
         'l0-prompt-attack',
+        'l0-protected-context-leak',
         'l0-structured-dlp',
         'l0-resource-abuse',
         'l0-insurance-compliance',

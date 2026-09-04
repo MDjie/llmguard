@@ -1,6 +1,8 @@
 import { safeRegexMatches } from '@/lib/detection/safe-regex';
+import { textEvidence } from './evidence';
+import { classifyContextRole, type ContextRole } from './intent-context';
+import { LexicalMatcher, type LexicalMatch } from './lexical-matcher';
 import { mapViewRange } from './normalization';
-import { isDefensiveEducationalContext } from './intent-context';
 import type {
   GuardDetector,
   GuardDetectorContext,
@@ -27,6 +29,14 @@ const CONTEXTUAL_RISK_TYPES = new Set([
   'ad_detection',
 ]);
 
+const LAYER_PRIORITY: Readonly<Record<NonNullable<RuleSpec['dictionaryLayer']>, number>> = {
+  PLATFORM_REDLINE: 500,
+  INCIDENT: 400,
+  APPLICATION: 300,
+  TENANT: 200,
+  INDUSTRY: 100,
+};
+
 function riskLevel(score: number, mandatoryDeny: boolean): RiskLevel {
   if (mandatoryDeny || score >= 0.9) return 'CRITICAL';
   if (score >= 0.75) return 'HIGH';
@@ -35,12 +45,12 @@ function riskLevel(score: number, mandatoryDeny: boolean): RiskLevel {
   return 'NONE';
 }
 
-function occurrences(
+function simpleOccurrences(
   view: NormalizedView,
   rule: Pick<RuleSpec, 'pattern' | 'matchType' | 'caseSensitive'>,
 ): Array<{ raw: string; index: number }> {
-  const candidate = rule.caseSensitive ? view.text : view.text.toLowerCase();
-  const pattern = rule.caseSensitive ? rule.pattern : rule.pattern.toLowerCase();
+  const candidate = rule.caseSensitive ? view.text : view.text.toLocaleLowerCase('und');
+  const pattern = rule.caseSensitive ? rule.pattern : rule.pattern.toLocaleLowerCase('und');
   if (rule.matchType === 'regex') {
     return safeRegexMatches(view.text, rule.pattern, rule.caseSensitive);
   }
@@ -69,12 +79,8 @@ function occurrences(
   return result;
 }
 
-function exceptionAppliesToRisk(
-  exception: RuleExceptionSpec,
-  rule: RuleSpec,
-): boolean {
-  return exception.dimensionScope === 'all' ||
-    exception.dimensionCodes.includes(rule.riskType);
+function exceptionAppliesToRisk(exception: RuleExceptionSpec, rule: RuleSpec): boolean {
+  return exception.dimensionScope === 'all' || exception.dimensionCodes.includes(rule.riskType);
 }
 
 function exceptionIsActiveForRequest(
@@ -122,50 +128,58 @@ function ruleIsActiveForRequest(
 
 function exceptionContainsMatch(
   view: NormalizedView,
-  match: { raw: string; index: number },
+  match: Pick<LexicalMatch, 'raw' | 'index'>,
   exception: RuleExceptionSpec,
 ): boolean {
   const matchEnd = match.index + match.raw.length;
-  return occurrences(view, exception).some((exceptionMatch) =>
+  return simpleOccurrences(view, exception).some((exceptionMatch) =>
     exceptionMatch.index <= match.index &&
-    exceptionMatch.index + exceptionMatch.raw.length >= matchEnd,
-  );
+    exceptionMatch.index + exceptionMatch.raw.length >= matchEnd);
+}
+
+function orderedRules(rules: readonly RuleSpec[]): readonly RuleSpec[] {
+  return rules.map((rule, index) => ({ rule, index })).sort((left, right) => {
+    const leftPriority = (left.rule.priority ?? 0) +
+      (left.rule.dictionaryLayer ? LAYER_PRIORITY[left.rule.dictionaryLayer] : 0);
+    const rightPriority = (right.rule.priority ?? 0) +
+      (right.rule.dictionaryLayer ? LAYER_PRIORITY[right.rule.dictionaryLayer] : 0);
+    return rightPriority - leftPriority || left.index - right.index;
+  }).map(({ rule }) => rule);
 }
 
 export class RuleDetector implements GuardDetector {
   readonly id = 'rules';
   readonly version: string;
   readonly required = true;
+  private readonly matcher: LexicalMatcher;
+  private readonly ordered: readonly RuleSpec[];
 
   constructor(
     private readonly rules: readonly RuleSpec[],
-    version = '2.0.0',
+    version = '3.0.0',
     private readonly exceptions: readonly RuleExceptionSpec[] = [],
     private readonly now: () => number = Date.now,
   ) {
     this.version = version;
+    this.matcher = new LexicalMatcher(rules);
+    this.ordered = orderedRules(rules);
   }
 
   async detect(context: GuardDetectorContext): Promise<readonly Observation[]> {
     const observations: Observation[] = [];
-    const defensiveContext = isDefensiveEducationalContext(
-      context.request.content.text ?? '',
-    );
     const evaluationTime = this.now();
-    for (const rule of this.rules) {
+    const lexicalMatches = new Map(
+      context.views.map((view) => [view.id, this.matcher.find(view)]),
+    );
+    for (const rule of this.ordered) {
       if (context.signal.aborted) throw context.signal.reason;
       if (!ruleIsActiveForRequest(rule, context, evaluationTime)) continue;
-      if (!rule.mandatoryDeny && defensiveContext && CONTEXTUAL_RISK_TYPES.has(rule.riskType)) {
-        continue;
-      }
       const isExcepted = !rule.mandatoryDeny && this.exceptions.some((exception) => {
         const isLegacyDimensionException = exception.targetRuleIds === undefined;
         return isLegacyDimensionException &&
           exceptionAppliesToRisk(exception, rule) &&
           exceptionIsActiveForRequest(exception, context, evaluationTime) &&
-          context.views.some(
-          (view) => occurrences(view, exception).length > 0,
-        );
+          context.views.some((view) => simpleOccurrences(view, exception).length > 0);
       });
       if (isExcepted) continue;
       const targetedExceptions = rule.mandatoryDeny
@@ -174,32 +188,54 @@ export class RuleDetector implements GuardDetector {
             exception.targetRuleIds !== undefined &&
             exception.targetRuleIds.includes(rule.id) &&
             exceptionAppliesToRisk(exception, rule) &&
-            exceptionIsActiveForRequest(exception, context, evaluationTime),
-          );
+            exceptionIsActiveForRequest(exception, context, evaluationTime));
       const evidence = [];
+      const roles = new Set<ContextRole>();
+      let strongestViewConfidence = 0;
+      let approximate = false;
       for (const view of context.views) {
-        for (const match of occurrences(view, rule)) {
+        const viewMatches = rule.matchType === 'regex'
+          ? simpleOccurrences(view, rule).map((match): LexicalMatch => ({
+              ruleId: rule.id,
+              ...match,
+              approximate: false,
+            }))
+          : lexicalMatches.get(view.id)?.get(rule.id) ?? [];
+        for (const match of viewMatches) {
           if (targetedExceptions.some((exception) =>
-            exceptionContainsMatch(view, match, exception),
-          )) {
-            continue;
-          }
+            exceptionContainsMatch(view, match, exception))) continue;
           const origin = mapViewRange(view, match.index, match.index + match.raw.length);
-          evidence.push({
-            viewId: view.id,
-            start: origin.start,
-            end: origin.end,
-            maskedPreview: match.raw.length <= 2
+          const contextRole = classifyContextRole(
+            context.request.content.text ?? '',
+            origin,
+          );
+          if (
+            !rule.mandatoryDeny &&
+            CONTEXTUAL_RISK_TYPES.has(rule.riskType) &&
+            contextRole.suppressLexicalBlock
+          ) continue;
+          roles.add(contextRole.role);
+          approximate ||= match.approximate;
+          strongestViewConfidence = Math.max(strongestViewConfidence, view.confidence ?? 1);
+          evidence.push(textEvidence(
+            context,
+            view,
+            match.index,
+            match.index + match.raw.length,
+            match.raw,
+            match.raw.length <= 2
               ? '*'.repeat(match.raw.length)
               : `${match.raw[0]}***${match.raw.at(-1)}`,
-            contentHmac: context.evidenceHmac(match.raw),
-          });
+          ));
           if (evidence.length >= 100) break;
         }
         if (evidence.length >= 100) break;
       }
       if (evidence.length === 0) continue;
-      const score = Math.min(1, Math.max(0, rule.score));
+      const baseScore = Math.min(1, Math.max(0, rule.score));
+      const score = rule.mandatoryDeny
+        ? 1
+        : Math.max(0, Math.min(1, baseScore * strongestViewConfidence * (approximate ? 0.94 : 1)));
       observations.push({
         detectorId: this.id,
         detectorVersion: this.version,
@@ -208,13 +244,21 @@ export class RuleDetector implements GuardDetector {
         confidence: score,
         ruleId: rule.id,
         ruleVersion: rule.ruleVersion,
+        canonicalTermId: rule.canonicalTermId,
+        variantId: rule.variantId,
         dictionaryReleaseId: rule.dictionaryReleaseId,
         dictionaryVersion: rule.dictionaryVersion,
+        dictionaryLayer: rule.dictionaryLayer,
+        contextRole: [...roles][0],
         score,
         severity: rule.severity ?? riskLevel(score, Boolean(rule.mandatoryDeny)),
         evidence,
         status: 'MATCH',
-        reasonCode: rule.mandatoryDeny ? 'MANDATORY_DENY' : `RULE_${rule.id}`,
+        reasonCode: rule.mandatoryDeny
+          ? 'MANDATORY_DENY'
+          : approximate
+            ? `RULE_APPROXIMATE_${rule.id}`
+            : `RULE_${rule.id}`,
       });
     }
     return observations;

@@ -1,4 +1,10 @@
 export { aggregateGuardDecision, stableObservations } from './aggregate';
+export { generateAttackVariants } from './adversarial-variants';
+export type {
+  AttackPrototype,
+  AttackVariant,
+  AttackVariantKind,
+} from './adversarial-variants';
 export { createGuardEngine } from './engine';
 export { buildGuardCacheKey } from './cache-key';
 export type { GuardCacheIdentity } from './cache-key';
@@ -21,8 +27,28 @@ export {
   validUnifiedSocialCreditCode,
   validVehicleIdentificationNumber,
 } from './builtin-detectors';
-export { isDefensiveEducationalContext } from './intent-context';
-export { buildNormalizedViews, mapViewRange } from './normalization';
+export {
+  classifyContextRole,
+  isDefensiveEducationalContext,
+} from './intent-context';
+export type { ContextClassification, ContextRole } from './intent-context';
+export {
+  buildNormalizedViews,
+  mapViewRange,
+  normalizeWithBudget,
+  normalizationTransformNames,
+  NORMALIZATION_ALGORITHM_VERSION,
+  NORMALIZATION_DECODER_REGISTRY,
+  NormalizationBudgetExceededError,
+} from './normalization';
+export type { NormalizationBudget, NormalizationResult } from './normalization';
+export { LexicalMatcher } from './lexical-matcher';
+export type { LexicalMatch } from './lexical-matcher';
+export {
+  createProtectedContextFingerprint,
+  ProtectedContextLeakDetector,
+} from './protected-context';
+export type { ProtectedContextSource } from './protected-context';
 export { RuleDetector } from './rule-detector';
 export { ReasoningAttackDetector } from './reasoning-attack-detector';
 export {
@@ -35,8 +61,11 @@ export type {
   GuardEngine,
   GuardEngineDependencies,
   GuardEnginePolicy,
+  NormalizationTransform,
   NormalizedView,
   OriginSpan,
+  ProtectedContextFingerprint,
+  ProtectedContextKind,
   RuleSpec,
   RuleExceptionSpec,
   SemanticClassifierSpec,

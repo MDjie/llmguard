@@ -25,6 +25,12 @@ describe('RE2-backed policy patterns', () => {
     expect(() => compileSafeRegex('a(?=b)')).toThrow(UnsafeRegexError);
   });
 
+  it('bounds untrusted input length before regex execution', () => {
+    expect(() => safeRegexMatches('a'.repeat(1_048_577), 'a+', true)).toThrowError(
+      expect.objectContaining({ code: 'INPUT_TOO_LARGE' }),
+    );
+  });
+
   it('bounds untrusted pattern length', () => {
     expect(() => compileSafeRegex('a'.repeat(4_097))).toThrowError(
       expect.objectContaining({ code: 'PATTERN_TOO_LARGE' }),

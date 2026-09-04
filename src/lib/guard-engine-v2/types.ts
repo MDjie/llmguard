@@ -14,10 +14,39 @@ export interface OriginSpan {
   readonly end: number;
 }
 
+export interface NormalizationTransform {
+  readonly method: string;
+  readonly round: number;
+  readonly confidence: number;
+  readonly sourceViewId: string;
+}
+
 export interface NormalizedView {
   readonly id: string;
   readonly text: string;
   readonly originSpans: readonly OriginSpan[];
+  readonly transforms?: readonly NormalizationTransform[];
+  readonly confidence?: number;
+  readonly depth?: number;
+  readonly sourceViewId?: string;
+}
+
+export type ProtectedContextKind =
+  | 'SYSTEM_PROMPT'
+  | 'DEVELOPER_PROMPT'
+  | 'PROTECTED_CONTEXT';
+
+export interface ProtectedContextFingerprint {
+  readonly id: string;
+  readonly kind: ProtectedContextKind;
+  readonly digestVersion: 'guard-protected-context-1';
+  readonly locale?: string;
+  readonly shingleSize: number;
+  readonly minimumMatches: number;
+  readonly canaryHmacs: readonly string[];
+  readonly canaryUnitLengths: readonly number[];
+  readonly shingleHmacs: readonly string[];
+  readonly structureHmacs: readonly string[];
 }
 
 export interface GuardDetectorContext {
@@ -26,6 +55,7 @@ export interface GuardDetectorContext {
   readonly views: readonly NormalizedView[];
   readonly signal: AbortSignal;
   readonly evidenceHmac: (content: string) => string;
+  readonly protectedContextFingerprints?: readonly ProtectedContextFingerprint[];
 }
 
 export interface GuardDetector {
@@ -108,6 +138,17 @@ export interface GuardEnginePolicy {
 export interface GuardEngineDependencies {
   readonly now?: () => number;
   readonly hmacKey: string | Buffer;
+  readonly protectedContextFingerprints?: readonly ProtectedContextFingerprint[];
+  readonly normalizationBudget?: Partial<{
+    readonly maxRounds: number;
+    readonly maxDepth: number;
+    readonly maxViews: number;
+    readonly maxBranchesPerView: number;
+    readonly maxViewChars: number;
+    readonly maxTotalBytes: number;
+    readonly maxExpansionRatio: number;
+    readonly maxCpuMs: number;
+  }>;
 }
 
 export interface GuardEngine {
@@ -136,6 +177,20 @@ export interface RuleSpec {
   readonly validFromEpochMs?: number;
   readonly validToEpochMs?: number;
   readonly evidenceRequirement?: string;
+  readonly approximate?: {
+    readonly maxEditDistance: 1 | 2;
+    readonly maxPatternLength: number;
+    readonly maxCandidates: number;
+  };
+  readonly dictionaryLayer?:
+    | 'PLATFORM_REDLINE'
+    | 'INDUSTRY'
+    | 'TENANT'
+    | 'APPLICATION'
+    | 'INCIDENT';
+  readonly priority?: number;
+  readonly jurisdiction?: string;
+  readonly businessLine?: string;
 }
 
 export interface RuleExceptionSpec {

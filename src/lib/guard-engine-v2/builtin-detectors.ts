@@ -1,4 +1,4 @@
-import { mapViewRange } from './normalization';
+import { textEvidence } from './evidence';
 import { isDefensiveEducationalContext } from './intent-context';
 import type {
   GuardDetector,
@@ -92,6 +92,48 @@ const PROMPT_ATTACKS: readonly MatchSpec[] = [
     riskType: 'prompt_injection.structured_disguise',
     pattern: /(?:(?:"?(?:system|developer|policy|instruction)"?\s*[:=]\s*["']?).{0,80}(?:ignore|override|bypass)|(?:系统|开发者|策略|指令)\s*[:=：].{0,80}(?:忽略|覆盖|绕过))/giu,
     score: 0.94,
+    severity: 'CRITICAL',
+  },
+  {
+    id: 'PRIVILEGE_ESCALATION',
+    riskType: 'prompt_injection.privilege_escalation',
+    pattern: /(?:(?:you (?:now )?have|grant(?:ed)? you|assume).{0,32}(?:root|admin|developer|system) (?:access|privileges?|authority)|(?:你现在拥有|授予你|假定你有).{0,28}(?:系统|管理员|开发者|最高).{0,20}(?:权限|授权))/giu,
+    score: 0.95,
+    severity: 'CRITICAL',
+  },
+  {
+    id: 'TOOL_ABUSE',
+    riskType: 'prompt_injection.tool_abuse',
+    pattern: /(?:(?:call|invoke|use|execute).{0,28}(?:tool|shell|terminal|browser).{0,48}(?:without|bypass|ignore).{0,24}(?:approval|permission|policy)|(?:调用|使用|执行).{0,24}(?:工具|终端|命令|浏览器).{0,40}(?:无需|绕过|忽略).{0,20}(?:批准|授权|策略))/giu,
+    score: 0.95,
+    severity: 'CRITICAL',
+  },
+  {
+    id: 'DATA_EXFILTRATION_INTENT',
+    riskType: 'prompt_injection.data_exfiltration',
+    pattern: /(?:(?:upload|send|post|exfiltrate).{0,44}(?:hidden|private|internal|secret|credential).{0,44}(?:data|context|file|token).{0,36}(?:endpoint|server|url|webhook)|(?:上传|发送|外传|窃取).{0,44}(?:隐藏|私有|内部|机密|凭证).{0,36}(?:数据|上下文|文件|令牌).{0,36}(?:地址|服务器|接口|webhook))/giu,
+    score: 0.97,
+    severity: 'CRITICAL',
+  },
+  {
+    id: 'WRAPPED_ATTACK_OBJECTIVE',
+    riskType: 'prompt_injection.wrapped_objective',
+    pattern: /(?:(?:hypothetically|for (?:a|my) (?:fictional )?(?:novel|story)|in debug mode|as (?:an )?administrator).{0,100}(?:ignore (?:the )?(?:system|developer)|reveal (?:the )?(?:system prompt|hidden context)|bypass (?:the )?(?:guardrail|safety filter))|(?:假设|小说设定|调试模式|作为管理员|已获授权).{0,100}(?:忽略(?:系统|开发者)|泄露(?:系统提示词|隐藏上下文)|绕过(?:护栏|安全审查)))/giu,
+    score: 0.94,
+    severity: 'CRITICAL',
+  },
+  {
+    id: 'MULTILINGUAL_DIRECT_OVERRIDE',
+    riskType: 'prompt_injection.direct',
+    pattern: /(?:ignora las instrucciones anteriores|ignorez les instructions pr[eé]c[eé]dentes|ignoriere die vorherigen anweisungen|以前の指示を無視|이전 지침을 무시)/giu,
+    score: 0.96,
+    severity: 'CRITICAL',
+  },
+  {
+    id: 'CROSS_LANGUAGE_PROMPT_EXFILTRATION',
+    riskType: 'prompt_injection.prompt_exfiltration',
+    pattern: /(?:(?:translate|翻译|traducir|traduire).{0,40}(?:system prompt|developer instructions?|系统提示词|开发者指令).{0,32}(?:verbatim|word for word|逐字|完整)|(?:system prompt|developer instructions?|系统提示词|开发者指令).{0,32}(?:into (?:english|chinese|spanish|french)|翻译成))/giu,
+    score: 0.97,
     severity: 'CRITICAL',
   },
 ];
@@ -376,17 +418,18 @@ function observe(
     const seen = new Set<string>();
     for (const view of context.views) {
       for (const match of matches(view, spec)) {
-        const origin = mapViewRange(view, match.index, match.index + match.value.length);
-        const key = `${origin.start}:${origin.end}:${context.evidenceHmac(match.value)}`;
+        const item = textEvidence(
+          context,
+          view,
+          match.index,
+          match.index + match.value.length,
+          match.value,
+          mask(match.value),
+        );
+        const key = `${item.start}:${item.end}:${item.contentHmac}`;
         if (seen.has(key)) continue;
         seen.add(key);
-        evidence.push({
-          viewId: view.id,
-          start: origin.start,
-          end: origin.end,
-          maskedPreview: mask(match.value),
-          contentHmac: context.evidenceHmac(match.value),
-        });
+        evidence.push(item);
         if (evidence.length >= 100) break;
       }
       if (evidence.length >= 100) break;
@@ -488,7 +531,7 @@ export function validVehicleIdentificationNumber(value: string): boolean {
 
 export class PromptAttackDetector implements GuardDetector {
   readonly id = 'prompt-attack-baseline';
-  readonly version = '1.0.0';
+  readonly version = '2.0.0';
   readonly required = true;
 
   async detect(context: GuardDetectorContext): Promise<readonly Observation[]> {

@@ -1,6 +1,7 @@
 import { RE2 } from 're2-wasm';
 
 const MAX_PATTERN_LENGTH = 4_096;
+const MAX_INPUT_LENGTH = 1_048_576;
 const MAX_REPEAT_COPIES = 4_095;
 const MAX_MATCHES = 10_000;
 const ALLOWED_FLAGS = new Set(['g', 'i', 'm', 's', 'u']);
@@ -8,7 +9,12 @@ const compiledCache = new Map<string, RE2>();
 
 export class UnsafeRegexError extends Error {
   constructor(
-    readonly code: 'PATTERN_EMPTY' | 'PATTERN_TOO_LARGE' | 'FLAGS_UNSUPPORTED' | 'PATTERN_UNSUPPORTED',
+    readonly code:
+      | 'PATTERN_EMPTY'
+      | 'PATTERN_TOO_LARGE'
+      | 'INPUT_TOO_LARGE'
+      | 'FLAGS_UNSUPPORTED'
+      | 'PATTERN_UNSUPPORTED',
     message: string,
   ) {
     super(message);
@@ -134,6 +140,9 @@ export function validateSafeRegexPattern(pattern: string, flags = ''): void {
 }
 
 export function safeRegexTest(text: string, pattern: string, caseSensitive: boolean): boolean {
+  if (text.length > MAX_INPUT_LENGTH) {
+    throw new UnsafeRegexError('INPUT_TOO_LARGE', 'Regular expression input exceeds 1048576 characters');
+  }
   const flags = caseSensitive ? '' : 'i';
   const normalized = validatePatternEnvelope(pattern, flags);
   const minimumRun = repeatedCharacterMinimumRun(normalized);
@@ -150,6 +159,9 @@ export function safeRegexMatches(
   pattern: string,
   caseSensitive: boolean,
 ): Array<{ raw: string; index: number }> {
+  if (text.length > MAX_INPUT_LENGTH) {
+    throw new UnsafeRegexError('INPUT_TOO_LARGE', 'Regular expression input exceeds 1048576 characters');
+  }
   const flags = caseSensitive ? 'g' : 'gi';
   const normalized = validatePatternEnvelope(pattern, flags);
   const minimumRun = repeatedCharacterMinimumRun(normalized);
