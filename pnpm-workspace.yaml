@@ -49,10 +49,10 @@ overrides:
 # packages are direct or framework runtime dependencies; MSW is not required
 # to execute install-time code in this project.
 allowBuilds:
-  '@prisma/engines': set this to true or false
+  '@prisma/engines': true
   bcrypt: true
   esbuild: true
   msw: false
-  prisma: set this to true or false
+  prisma: true
   sharp: true
   unrs-resolver: true
