@@ -1,9 +1,17 @@
-import { readdir } from 'node:fs/promises';
+import { readdir, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { z } from 'zod';
 import { withLoadedArtifact } from './artifact-loader';
 import type { CommandRunner } from './command-runner';
-import type { MediaRequest } from './contracts';
+import type {
+  AnalysisFailure,
+  CodeRegion,
+  MediaRequest,
+  SubtitleSegment,
+  TranscriptSegment,
+  VisualLabel,
+  VisualRisk,
+} from './contracts';
 import {
   classifyAudioAnomalies,
   classifyImage,
@@ -11,7 +19,9 @@ import {
 } from './model-adapters';
 import { runOcr } from './ocr';
 import { mapInBatches } from './batching';
-import type { TranscriptSegment } from './contracts';
+import { readCodes } from './code-reader';
+import { AnalyzerDependencyGuard } from './resilience';
+import { extractSubtitles } from './subtitles';
 
 const probeSchema = z.object({
   format: z.object({
@@ -24,18 +34,72 @@ const probeSchema = z.object({
   }).passthrough()).max(100),
 }).passthrough();
 
+const asrGuard = new AnalyzerDependencyGuard({
+  component: 'ASR', timeoutMs: 300_000, maxAttempts: 2,
+  maximumConcurrent: 2, circuitFailureThreshold: 3, circuitResetMs: 30_000,
+});
+const audioClassifierGuard = new AnalyzerDependencyGuard({
+  component: 'AUDIO_CLASSIFIER', timeoutMs: 300_000, maxAttempts: 2,
+  maximumConcurrent: 2, circuitFailureThreshold: 3, circuitResetMs: 30_000,
+});
+const subtitleGuard = new AnalyzerDependencyGuard({
+  component: 'SUBTITLE', timeoutMs: 120_000, maxAttempts: 2,
+  maximumConcurrent: 2, circuitFailureThreshold: 3, circuitResetMs: 30_000,
+});
+const ocrGuard = new AnalyzerDependencyGuard({
+  component: 'OCR', timeoutMs: 60_000, maxAttempts: 2,
+  maximumConcurrent: 8, circuitFailureThreshold: 3, circuitResetMs: 30_000,
+});
+const visualGuard = new AnalyzerDependencyGuard({
+  component: 'VISUAL', timeoutMs: 120_000, maxAttempts: 2,
+  maximumConcurrent: 4, circuitFailureThreshold: 3, circuitResetMs: 30_000,
+});
+const codeGuard = new AnalyzerDependencyGuard({
+  component: 'CODE_READER', timeoutMs: 30_000, maxAttempts: 2,
+  maximumConcurrent: 4, circuitFailureThreshold: 3, circuitResetMs: 30_000,
+});
+
+function failure(
+  component: AnalysisFailure['component'],
+  required: boolean,
+  error: unknown,
+): AnalysisFailure {
+  const candidate = error instanceof Error ? error.message : '';
+  const code = /^ANALYZER_[A-Z0-9_:.-]+$/u.test(candidate)
+    ? candidate.slice(0, 160)
+    : `ANALYZER_${component}_FAILED`;
+  return { component, required, code };
+}
+
+function uniqueFailures(values: readonly AnalysisFailure[]): AnalysisFailure[] {
+  return [...new Map(values.map((item) => [
+    `${item.component}:${item.required}:${item.code}`,
+    item,
+  ])).values()].slice(0, 100);
+}
+
 async function probe(
   runner: CommandRunner,
   inputPath: string,
   workspace: string,
   timeoutMs: number,
+  signal?: AbortSignal,
 ) {
   const result = await runner.run(process.env.ANALYZER_FFPROBE_COMMAND ?? 'ffprobe', [
     '-v', 'error', '-show_format', '-show_streams', '-of', 'json',
     '-protocol_whitelist', 'file,pipe', inputPath,
-  ], { cwd: workspace, timeoutMs, maxOutputBytes: 4 * 1_024 * 1_024 });
+  ], {
+    cwd: workspace,
+    timeoutMs,
+    maxOutputBytes: 4 * 1_024 * 1_024,
+    signal,
+  });
   let value: unknown;
-  try { value = JSON.parse(result.stdout); } catch { throw new Error('ANALYZER_FFPROBE_JSON_INVALID'); }
+  try {
+    value = JSON.parse(result.stdout);
+  } catch {
+    throw new Error('ANALYZER_FFPROBE_JSON_INVALID');
+  }
   const parsed = probeSchema.parse(value);
   const seconds = Number(parsed.format.duration ??
     parsed.streams.map((stream) => Number(stream.duration ?? 0)).find((item) => item > 0) ?? 0);
@@ -47,7 +111,37 @@ async function probe(
     )),
     hasAudio: parsed.streams.some((stream) => stream.codec_type === 'audio'),
     hasVideo: parsed.streams.some((stream) => stream.codec_type === 'video'),
+    hasSubtitles: parsed.streams.some((stream) => stream.codec_type === 'subtitle'),
   };
+}
+
+export function assertMediaResourceBudget(input: {
+  readonly durationMs: number;
+  readonly maxDurationMs: number;
+  readonly decodedBytes: number;
+  readonly maxDecodedBytes: number;
+}): void {
+  if (
+    !Number.isSafeInteger(input.durationMs) || input.durationMs < 0 ||
+    !Number.isSafeInteger(input.decodedBytes) || input.decodedBytes < 0
+  ) {
+    throw new Error('ANALYZER_MEDIA_BUDGET_INPUT_INVALID');
+  }
+  if (input.maxDurationMs > 0 && input.durationMs > input.maxDurationMs) {
+    throw new Error('ANALYZER_MEDIA_DURATION_LIMIT');
+  }
+  if (input.decodedBytes > input.maxDecodedBytes) {
+    throw new Error('ANALYZER_DECODED_BYTES_LIMIT');
+  }
+}
+
+async function decodedBytes(paths: readonly string[]): Promise<number> {
+  let total = 0;
+  for (const path of new Set(paths)) {
+    total += (await stat(path)).size;
+    if (!Number.isSafeInteger(total)) throw new Error('ANALYZER_DECODED_BYTES_LIMIT');
+  }
+  return total;
 }
 
 async function extractAudio(
@@ -56,12 +150,18 @@ async function extractAudio(
   outputPath: string,
   workspace: string,
   timeoutMs: number,
+  signal?: AbortSignal,
 ) {
   await runner.run(process.env.ANALYZER_FFMPEG_COMMAND ?? 'ffmpeg', [
     '-nostdin', '-v', 'error', '-protocol_whitelist', 'file,pipe',
     '-i', inputPath, '-map', '0:a:0', '-vn', '-ac', '1', '-ar', '16000',
     '-c:a', 'pcm_s16le', '-y', outputPath,
-  ], { cwd: workspace, timeoutMs, maxOutputBytes: 4 * 1_024 * 1_024 });
+  ], {
+    cwd: workspace,
+    timeoutMs,
+    maxOutputBytes: 4 * 1_024 * 1_024,
+    signal,
+  });
 }
 
 type AudioViewId = MediaRequest['audioViews'][number];
@@ -87,6 +187,7 @@ async function materializeAudioViews(input: {
   readonly originalPath: string;
   readonly workspace: string;
   readonly durationMs: number;
+  readonly signal?: AbortSignal;
 }): Promise<AudioView[]> {
   const unique = [...new Set(input.request.audioViews)];
   return mapInBatches(unique, input.request.sampling.batchSize, async (viewId) => {
@@ -109,6 +210,7 @@ async function materializeAudioViews(input: {
       cwd: input.workspace,
       timeoutMs: input.request.sandbox.ffmpegTimeoutMs,
       maxOutputBytes: 4 * 1_024 * 1_024,
+      signal: input.signal,
     });
     return {
       id: viewId,
@@ -116,7 +218,7 @@ async function materializeAudioViews(input: {
       timeScale: viewId === 'speed_0_9' ? 0.9 : viewId === 'speed_1_1' ? 1.1 : 1,
       ...(reverseDurationMs === undefined ? {} : { reverseDurationMs }),
     };
-  });
+  }, input.signal);
 }
 
 export function remapAudioViewSegment(
@@ -170,16 +272,17 @@ export interface VideoSamplingJob {
 export function buildVideoSamplingJobs(
   request: MediaRequest,
   durationMs: number,
+  maximumFrames = request.sampling.maxFrames,
 ): readonly VideoSamplingJob[] {
   const unique = [...new Map(request.sampling.strategies.map((strategy) =>
     [strategy.type, strategy])).values()];
-  let remaining = request.sampling.maxFrames;
+  let remaining = Math.max(0, Math.min(request.sampling.maxFrames, maximumFrames));
   const jobs: VideoSamplingJob[] = [];
   const reserve = (type: VideoSamplingJob['id'], desired: number, filter: string) => {
     if (remaining <= 0 || !unique.some((strategy) => strategy.type === type)) return;
-    const maximumFrames = Math.min(remaining, desired);
-    jobs.push({ id: type, filter, maximumFrames });
-    remaining -= maximumFrames;
+    const maximum = Math.min(remaining, desired);
+    jobs.push({ id: type, filter, maximumFrames: maximum });
+    remaining -= maximum;
   };
   const durationSeconds = Math.max(0, durationMs / 1_000);
   reserve('boundary', 2, `select='lte(t,0.04)+gte(t,${Math.max(0, durationSeconds - 0.04)})'`);
@@ -192,7 +295,7 @@ export function buildVideoSamplingJobs(
     !['boundary', 'midpoint'].includes(strategy.type));
   for (let index = 0; index < remainingTypes.length && remaining > 0; index += 1) {
     const strategy = remainingTypes[index];
-    const maximumFrames = index === remainingTypes.length - 1
+    const maximum = index === remainingTypes.length - 1
       ? remaining
       : Math.max(1, Math.floor(remaining / (remainingTypes.length - index)));
     let filter: string;
@@ -206,42 +309,173 @@ export function buildVideoSamplingJobs(
       const scanFps = Math.min(25, Math.max(1, Number(strategy.parameters.scanFps ?? 25)));
       filter = `fps=${scanFps}`;
     }
-    jobs.push({ id: strategy.type, filter, maximumFrames });
-    remaining -= maximumFrames;
+    jobs.push({ id: strategy.type, filter, maximumFrames: maximum });
+    remaining -= maximum;
   }
   return jobs;
 }
 
-async function extractFrames(
-  request: MediaRequest,
-  runner: CommandRunner,
-  inputPath: string,
-  workspace: string,
-  durationMs: number,
-): Promise<string[]> {
-  const jobs = buildVideoSamplingJobs(request, durationMs);
+interface ExtractedFrame {
+  readonly path: string;
+  readonly timeMs: number;
+}
+
+async function extractFrames(input: {
+  readonly request: MediaRequest;
+  readonly runner: CommandRunner;
+  readonly inputPath: string;
+  readonly workspace: string;
+  readonly durationMs: number;
+  readonly maximumFrames: number;
+  readonly prefix: 'summary' | 'expanded';
+  readonly signal?: AbortSignal;
+}): Promise<ExtractedFrame[]> {
+  const jobs = buildVideoSamplingJobs(input.request, input.durationMs, input.maximumFrames);
   for (const job of jobs) {
-    await runner.run(process.env.ANALYZER_FFMPEG_COMMAND ?? 'ffmpeg', [
+    await input.runner.run(process.env.ANALYZER_FFMPEG_COMMAND ?? 'ffmpeg', [
       '-nostdin', '-v', 'error', '-protocol_whitelist', 'file,pipe',
-      '-i', inputPath, '-vf', job.filter,
+      '-i', input.inputPath, '-vf', job.filter,
       '-frames:v', String(job.maximumFrames), '-vsync', 'vfr',
-      '-y', join(workspace, `frame-${job.id}-%06d.png`),
+      '-y', join(input.workspace, `frame-${input.prefix}-${job.id}-%06d.png`),
     ], {
-      cwd: workspace,
-      timeoutMs: request.sandbox.ffmpegTimeoutMs,
+      cwd: input.workspace,
+      timeoutMs: input.request.sandbox.ffmpegTimeoutMs,
       maxOutputBytes: 4 * 1_024 * 1_024,
+      signal: input.signal,
     });
   }
-  return (await readdir(workspace))
-    .filter((name) => /^frame-[a-z_]+-\d{6}\.png$/u.test(name))
+  const names = (await readdir(input.workspace))
+    .filter((name) => new RegExp(`^frame-${input.prefix}-[a-z_]+-\\d{6}\\.png$`, 'u').test(name))
     .sort()
-    .slice(0, request.sampling.maxFrames)
-    .map((name) => join(workspace, name));
+    .slice(0, input.maximumFrames);
+  const intervalMs = input.durationMs / Math.max(1, names.length - 1);
+  return names.map((name, index) => ({
+    path: join(input.workspace, name),
+    timeMs: Math.min(input.durationMs, Math.round(index * intervalMs)),
+  }));
+}
+
+interface FrameAnalysis {
+  readonly versions: readonly string[];
+  readonly failures: readonly AnalysisFailure[];
+  readonly frame: {
+    readonly frameIndex: number;
+    readonly timeMs: number;
+    readonly ocrText?: string;
+    readonly codes: readonly CodeRegion[];
+    readonly labels: readonly VisualLabel[];
+    readonly risks: readonly VisualRisk[];
+  };
+}
+
+async function analyzeFrames(input: {
+  readonly request: MediaRequest;
+  readonly runner: CommandRunner;
+  readonly files: readonly ExtractedFrame[];
+  readonly workspace: string;
+  readonly indexOffset: number;
+  readonly signal?: AbortSignal;
+}): Promise<FrameAnalysis[]> {
+  return mapInBatches(
+    input.files,
+    input.request.sampling.batchSize,
+    async (file, localIndex) => {
+      const frameIndex = input.indexOffset + localIndex;
+      const viewId = `frame_${frameIndex}`;
+      const [ocrResult, visualResult, codeResult] = await Promise.allSettled([
+        ocrGuard.execute((attemptSignal) => runOcr({
+          runner: input.runner,
+          tesseract: process.env.ANALYZER_TESSERACT_COMMAND ?? 'tesseract',
+          ffprobe: process.env.ANALYZER_FFPROBE_COMMAND ?? 'ffprobe',
+          imagePath: file.path,
+          workspace: input.workspace,
+          viewId,
+          sourceRelation: 'OCR_FROM_VIDEO_FRAME',
+          signal: attemptSignal,
+        }), input.signal),
+        visualGuard.execute((attemptSignal) => classifyImage({
+          runner: input.runner,
+          imagePath: file.path,
+          workspace: input.workspace,
+          viewId,
+          frameIndex,
+          signal: attemptSignal,
+        }), input.signal),
+        codeGuard.execute((attemptSignal) => readCodes({
+          runner: input.runner,
+          imagePath: file.path,
+          workspace: input.workspace,
+          viewId,
+          signal: attemptSignal,
+        }), input.signal),
+      ]);
+      const failures: AnalysisFailure[] = [];
+      const versions: string[] = [];
+      const ocr = ocrResult.status === 'fulfilled'
+        ? ocrResult.value.filter((item) =>
+            item.confidence >= input.request.sampling.minimumConfidence)
+        : [];
+      if (ocrResult.status === 'rejected') failures.push(failure('OCR', true, ocrResult.reason));
+      const visual = visualResult.status === 'fulfilled'
+        ? visualResult.value
+        : { modelVersion: '', labels: [], risks: [] };
+      if (visualResult.status === 'fulfilled') versions.push(visualResult.value.modelVersion);
+      else failures.push(failure('VISUAL', true, visualResult.reason));
+      const codes = codeResult.status === 'fulfilled'
+        ? codeResult.value.map((item) => ({ ...item, frameIndex }))
+        : [];
+      if (codeResult.status === 'rejected') {
+        failures.push(failure('CODE_READER', true, codeResult.reason));
+      }
+      const ocrText = ocr.map((item) => item.text).join(' ').slice(0, 100_000);
+      return {
+        versions,
+        failures,
+        frame: {
+          frameIndex,
+          timeMs: file.timeMs,
+          ...(ocrText ? { ocrText } : {}),
+          codes,
+          labels: visual.labels.filter((item) =>
+            item.score >= input.request.sampling.minimumConfidence),
+          risks: visual.risks.filter((item) =>
+            item.score >= input.request.sampling.minimumConfidence),
+        },
+      };
+    },
+    input.signal,
+  );
+}
+
+export function shouldExpandAdaptiveSampling(input: {
+  readonly frames: readonly FrameAnalysis['frame'][];
+  readonly anomalies: readonly { readonly score: number }[];
+  readonly failures: readonly AnalysisFailure[];
+  readonly threshold: number;
+}): boolean {
+  if (input.failures.some((item) => item.required)) return true;
+  const maximumScore = Math.max(
+    0,
+    ...input.anomalies.map((item) => item.score),
+    ...input.frames.flatMap((frame) => frame.risks.map((item) => item.score)),
+  );
+  if (maximumScore >= input.threshold) return true;
+  const text = input.frames.flatMap((frame) => [
+    frame.ocrText ?? '',
+    ...frame.codes.map((item) => item.text),
+  ]).join(' ').normalize('NFKC');
+  return /(?:ignore|bypass|jailbreak|system\s*prompt|previous\s*instructions?|忽略|绕过|越狱|系统提示|此前指令|角色扮演)/iu.test(text);
+}
+
+function analyzerVersion(versions: ReadonlySet<string>, degraded: boolean): string {
+  const suffix = [...versions].filter(Boolean).sort().join(',') || (degraded ? 'degraded' : 'builtin');
+  return `media-analyzer/1.1+${suffix}`.slice(0, 100);
 }
 
 export async function analyzeAudioVideo(
   request: MediaRequest,
   runner: CommandRunner,
+  signal?: AbortSignal,
 ) {
   const maximum = request.artifact.kind === 'AUDIO'
     ? 500 * 1_024 * 1_024
@@ -249,7 +483,13 @@ export async function analyzeAudioVideo(
   if (request.artifact.sizeBytes > maximum) throw new Error('ANALYZER_ARTIFACT_TOO_LARGE');
   return withLoadedArtifact(request.artifact, async (inputPath, workspace) => {
     const metadata = await probe(
-      runner, inputPath, workspace, request.sandbox.ffprobeTimeoutMs);
+      runner, inputPath, workspace, request.sandbox.ffprobeTimeoutMs, signal);
+    assertMediaResourceBudget({
+      durationMs: metadata.durationMs,
+      maxDurationMs: request.sampling.maxDurationMs,
+      decodedBytes: metadata.hasAudio ? metadata.durationMs * 32 : 0,
+      maxDecodedBytes: request.sandbox.maxDecodedBytes,
+    });
     if (request.artifact.kind === 'AUDIO' && !metadata.hasAudio) {
       throw new Error('ANALYZER_AUDIO_TRACK_MISSING');
     }
@@ -257,101 +497,183 @@ export async function analyzeAudioVideo(
       throw new Error('ANALYZER_VIDEO_TRACK_MISSING');
     }
     const versions = new Set<string>();
-    let transcript: Awaited<ReturnType<typeof transcribeAudio>>['segments'] = [];
+    const failures: AnalysisFailure[] = [];
+    const generatedPaths: string[] = [];
+    let transcript: TranscriptSegment[] = [];
+    let subtitles: SubtitleSegment[] = [];
     let anomalies: Awaited<ReturnType<typeof classifyAudioAnomalies>>['anomalies'] = [];
     if (metadata.hasAudio) {
       const audioPath = join(workspace, 'audio.wav');
       await extractAudio(
-        runner, inputPath, audioPath, workspace, request.sandbox.ffmpegTimeoutMs);
-      const [audioViews, audioRisks] = await Promise.all([
-        materializeAudioViews({
-          request, runner, originalPath: audioPath, workspace, durationMs: metadata.durationMs,
-        }),
-        classifyAudioAnomalies({ runner, audioPath, workspace }),
-      ]);
-      versions.add(audioRisks.modelVersion);
+        runner, inputPath, audioPath, workspace, request.sandbox.ffmpegTimeoutMs, signal);
+      generatedPaths.push(audioPath);
+      const audioViews = await materializeAudioViews({
+        request,
+        runner,
+        originalPath: audioPath,
+        workspace,
+        durationMs: metadata.durationMs,
+        signal,
+      });
+      generatedPaths.push(...audioViews.map((item) => item.path));
+      assertMediaResourceBudget({
+        durationMs: metadata.durationMs,
+        maxDurationMs: request.sampling.maxDurationMs,
+        decodedBytes: await decodedBytes(generatedPaths),
+        maxDecodedBytes: request.sandbox.maxDecodedBytes,
+      });
+      try {
+        const audioRisks = await audioClassifierGuard.execute((attemptSignal) =>
+          classifyAudioAnomalies({
+            runner,
+            audioPath,
+            workspace,
+            signal: attemptSignal,
+          }), signal);
+        versions.add(audioRisks.modelVersion);
+        anomalies = audioRisks.anomalies.filter(
+          (item) => item.score >= request.sampling.minimumConfidence,
+        );
+      } catch (error) {
+        failures.push(failure('AUDIO_CLASSIFIER', true, error));
+      }
       const asrViews = await mapInBatches(
         audioViews,
         request.sampling.batchSize,
-        async (view) => ({
-          view,
-          result: await transcribeAudio({ runner, audioPath: view.path, workspace }),
-        }),
-      );
-      for (const item of asrViews) versions.add(item.result.modelVersion);
-      transcript = mergeTranscriptSegments(asrViews.flatMap(({ view, result }) =>
-        result.segments
-          .filter((segment) => segment.confidence >= request.sampling.minimumConfidence)
-          .map((segment) => remapAudioViewSegment(segment, view))));
-      anomalies = audioRisks.anomalies.filter(
-        (anomaly) => anomaly.score >= request.sampling.minimumConfidence,
-      );
-    }
-    const frames: Array<{
-      frameIndex: number;
-      timeMs: number;
-      ocrText?: string;
-      risks: Awaited<ReturnType<typeof classifyImage>>['risks'];
-    }> = [];
-    if (request.artifact.kind === 'VIDEO') {
-      const files = await extractFrames(
-        request, runner, inputPath, workspace, metadata.durationMs);
-      const intervalMs = metadata.durationMs / Math.max(1, files.length - 1);
-      const analyzedFrames = await mapInBatches(
-        files,
-        request.sampling.batchSize,
-        async (file, index) => {
-          const viewId = `frame_${index}`;
-          const [ocr, visual] = await Promise.all([
-            runOcr({
+        async (view) => {
+          try {
+            const result = await asrGuard.execute((attemptSignal) => transcribeAudio({
               runner,
-              tesseract: process.env.ANALYZER_TESSERACT_COMMAND ?? 'tesseract',
-              ffprobe: process.env.ANALYZER_FFPROBE_COMMAND ?? 'ffprobe',
-              imagePath: file,
+              audioPath: view.path,
               workspace,
-              viewId,
-            }),
-            classifyImage({
-              runner,
-              imagePath: file,
-              workspace,
-              viewId,
-              frameIndex: index,
-            }),
-          ]);
-          return {
-            modelVersion: visual.modelVersion,
-            frame: {
-              frameIndex: index,
-              timeMs: Math.min(metadata.durationMs, Math.round(index * intervalMs)),
-              ...(ocr.some((item) => item.confidence >= request.sampling.minimumConfidence)
-                ? {
-                    ocrText: ocr
-                      .filter((item) => item.confidence >= request.sampling.minimumConfidence)
-                      .map((item) => item.text)
-                      .join(' ')
-                      .slice(0, 100_000),
-                  }
-                : {}),
-              risks: visual.risks.filter(
-                (risk) => risk.score >= request.sampling.minimumConfidence,
-              ),
-            },
-          };
+              signal: attemptSignal,
+            }), signal);
+            return { view, result } as const;
+          } catch (error) {
+            failures.push(failure('ASR', true, error));
+            return undefined;
+          }
         },
+        signal,
       );
-      for (const analyzed of analyzedFrames) {
-        versions.add(analyzed.modelVersion);
-        frames.push(analyzed.frame);
+      for (const item of asrViews) {
+        if (!item) continue;
+        versions.add(item.result.modelVersion);
+      }
+      transcript = mergeTranscriptSegments(asrViews.flatMap((item) => item
+        ? item.result.segments
+            .filter((segment) => segment.confidence >= request.sampling.minimumConfidence)
+            .map((segment) => remapAudioViewSegment({
+              ...segment,
+              source: 'asr',
+              sourceViewId: item.view.id,
+            }, item.view))
+        : []));
+    }
+    if (metadata.hasSubtitles) {
+      try {
+        subtitles = await subtitleGuard.execute((attemptSignal) => extractSubtitles({
+          runner,
+          inputPath,
+          workspace,
+          timeoutMs: request.sandbox.ffmpegTimeoutMs,
+          signal: attemptSignal,
+        }), signal);
+      } catch (error) {
+        failures.push(failure('SUBTITLE', true, error));
       }
     }
+    const frames: FrameAnalysis['frame'][] = [];
+    let samplingPhase: 'summary' | 'expanded' = 'summary';
+    if (request.artifact.kind === 'VIDEO') {
+      const summaryMaximum = request.sampling.adaptive
+        ? Math.min(request.sampling.maxFrames, request.sampling.adaptive.summaryFrames)
+        : request.sampling.maxFrames;
+      const summaryFiles = await extractFrames({
+        request,
+        runner,
+        inputPath,
+        workspace,
+        durationMs: metadata.durationMs,
+        maximumFrames: summaryMaximum,
+        prefix: request.sampling.adaptive ? 'summary' : 'expanded',
+        signal,
+      });
+      generatedPaths.push(...summaryFiles.map((item) => item.path));
+      if (summaryFiles.length === 0) {
+        failures.push({
+          component: 'VISUAL', required: true, code: 'ANALYZER_VIDEO_FRAME_EXTRACTION_EMPTY',
+        });
+      }
+      const summaryAnalysis = await analyzeFrames({
+        request,
+        runner,
+        files: summaryFiles,
+        workspace,
+        indexOffset: 0,
+        signal,
+      });
+      for (const item of summaryAnalysis) {
+        item.versions.forEach((version) => versions.add(version));
+        failures.push(...item.failures);
+        frames.push(item.frame);
+      }
+      const shouldExpand = request.sampling.adaptive &&
+        summaryFiles.length < request.sampling.maxFrames &&
+        shouldExpandAdaptiveSampling({
+          frames,
+          anomalies,
+          failures,
+          threshold: request.sampling.adaptive.expansionThreshold,
+        });
+      if (shouldExpand) {
+        const expandedFiles = await extractFrames({
+          request,
+          runner,
+          inputPath,
+          workspace,
+          durationMs: metadata.durationMs,
+          maximumFrames: request.sampling.maxFrames - summaryFiles.length,
+          prefix: 'expanded',
+          signal,
+        });
+        generatedPaths.push(...expandedFiles.map((item) => item.path));
+        const expandedAnalysis = await analyzeFrames({
+          request,
+          runner,
+          files: expandedFiles,
+          workspace,
+          indexOffset: frames.length,
+          signal,
+        });
+        for (const item of expandedAnalysis) {
+          item.versions.forEach((version) => versions.add(version));
+          failures.push(...item.failures);
+          frames.push(item.frame);
+        }
+        samplingPhase = 'expanded';
+      } else if (!request.sampling.adaptive) {
+        samplingPhase = 'expanded';
+      }
+      assertMediaResourceBudget({
+        durationMs: metadata.durationMs,
+        maxDurationMs: request.sampling.maxDurationMs,
+        decodedBytes: await decodedBytes(generatedPaths),
+        maxDecodedBytes: request.sandbox.maxDecodedBytes,
+      });
+    }
+    const analysisFailures = uniqueFailures(failures);
     return {
-      analyzerVersion: `media-analyzer/1.0+${[...versions].sort().join(',')}`,
+      analyzerVersion: analyzerVersion(versions, analysisFailures.length > 0),
       format: metadata.format,
       durationMs: metadata.durationMs,
       transcript,
-      frames,
+      subtitles,
+      frames: frames.slice(0, request.sampling.maxFrames),
       anomalies,
+      analysisFailures,
+      degraded: analysisFailures.length > 0,
+      samplingPhase,
     };
-  });
+  }, signal);
 }

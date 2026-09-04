@@ -5,6 +5,8 @@ import {
   claimNextGuardJob,
   completeGuardJob,
   failGuardJob,
+  isGuardJobCancellationError,
+  monitorGuardJobCancellation,
   updateGuardJobProgress,
 } from '@/lib/guard-jobs';
 import { loadVerifiedPolicyBundle } from '@/lib/policy-bundle';
@@ -25,22 +27,33 @@ export async function processNextDocumentImageJob() {
   const job = await claimNextGuardJob(['document_image']);
   if (!job) return null;
   const scope = { tenantId: job.tenantId, applicationId: job.applicationId };
+  const cancellation = monitorGuardJobCancellation(job);
   try {
     const [artifact] = await db.select().from(artifacts).where(and(
-      eq(artifacts.id, job.artifactId), eq(artifacts.state, 'accepted'), scopePredicate(artifacts, scope),
+      eq(artifacts.id, job.artifactId),
+      eq(artifacts.state, 'accepted'),
+      scopePredicate(artifacts, scope),
     )).limit(1);
     if (!artifact) throw new Error('Accepted artifact disappeared');
     const parts = await db.select().from(artifactParts).where(and(
-      eq(artifactParts.artifactId, artifact.id), scopePredicate(artifactParts, scope),
+      eq(artifactParts.artifactId, artifact.id),
+      scopePredicate(artifactParts, scope),
     )).orderBy(asc(artifactParts.partNumber));
     const detectionPolicy = loadMultimodalDetectionPolicy();
     await updateGuardJobProgress(job, 'sandbox_analysis', 10);
     const analysis = await analyzeDocumentOrImage({
-      scope, artifact, parts, detectionPolicy,
+      scope,
+      artifact,
+      parts,
+      detectionPolicy,
+      signal: cancellation.signal,
     });
     await updateGuardJobProgress(job, 'ocr_guard', 70, {
       ocrRegions: analysis.ocr.length,
+      decodedCodes: analysis.codes.length,
       visualFindings: analysis.visual.length,
+      analysisFailures: analysis.analysisFailures.length,
+      degraded: analysis.degraded,
     });
     const bundle = await loadVerifiedPolicyBundle(scope, job.bundleId);
     const userText = job.contextArtifactId
@@ -62,11 +75,19 @@ export async function processNextDocumentImageJob() {
         artifactId: artifact.id,
         viewId: item.viewId,
         region: item.region,
+        page: item.page,
+      })),
+      codes: analysis.codes.map((item) => ({
+        ...item,
+        artifactId: artifact.id,
       })),
       visual: analysis.visual.map((item) => ({
         ...item,
         artifactId: artifact.id,
       })),
+      analysisFailures: analysis.analysisFailures,
+      sourceTrust: 'UNTRUSTED',
+      instructionCapability: 'FORBIDDEN',
       anomalyScore,
       reviewThreshold: detectionPolicy.reviewThreshold,
       blockThreshold: detectionPolicy.blockThreshold,
@@ -118,12 +139,17 @@ export async function processNextDocumentImageJob() {
       anomalyScore,
       ...analysis.visual.map((item) => item.score),
       ...fusion.textDecisions.combined.observations.map((item) => item.score),
+      ...fusion.evidence.map((item) => item.score),
       0,
     ) * 100);
     await db.insert(multimodalFindings).values({
       ...scope,
       jobId: job.id,
-      riskType: fusion.cooperativeAttack ? 'cross_modal_cooperative_attack' : 'multimodal_content_risk',
+      riskType: fusion.cooperativeAttack
+        ? 'cross_modal_cooperative_attack'
+        : fusion.degraded
+          ? 'multimodal_analysis_degraded'
+          : 'multimodal_content_risk',
       score,
       action: fusion.action,
       cooperativeAttack: fusion.cooperativeAttack,
@@ -135,18 +161,34 @@ export async function processNextDocumentImageJob() {
       bundleId: bundle.id,
       action: fusion.action,
       cooperativeAttack: fusion.cooperativeAttack,
+      degraded: fusion.degraded,
+      analysisFailures: analysis.analysisFailures,
       textDecisions: fusion.textDecisions,
       evidence: fusion.evidence,
       visual: analysis.visual,
+      labels: analysis.labels,
       anomalies: analysis.anomalies,
-      ocr: analysis.ocr.map((item) => ({ ...item, textHashOnly: true, text: undefined })),
+      documentElements: analysis.documentElements,
+      ocr: analysis.ocr.map(({ text: _sensitiveText, ...item }) => ({
+        ...item,
+        textHashOnly: true,
+      })),
+      codes: analysis.codes.map(({ text: _sensitiveText, ...item }) => ({
+        ...item,
+        textHashOnly: true,
+      })),
       derivatives: analysis.derivatives,
       analyzerVersion: analysis.analyzerVersion,
     };
     await completeGuardJob(job, result as unknown as Record<string, unknown>);
     return { jobId: job.id, status: 'completed' };
   } catch (error) {
+    if (cancellation.signal.aborted || isGuardJobCancellationError(error)) {
+      return { jobId: job.id, status: 'cancelled' };
+    }
     await failGuardJob(job, error);
     return { jobId: job.id, status: job.attempt >= job.maxAttempts ? 'failed' : 'retrying' };
+  } finally {
+    cancellation.stop();
   }
 }

@@ -1546,6 +1546,23 @@ export const guardMemoryRiskLedgers = pgTable(
 			lastSeenAt: string;
 			evidenceHmacs: string[];
 		}>>().notNull().default([]),
+		intentNodes: jsonb("intent_nodes").$type<Array<{
+			id: string;
+			occurredAt: string;
+			lastDecayedAt: string;
+			phases: string[];
+			riskTypes: string[];
+			decayedScore: number;
+			sources: string[];
+			evidenceHmacs: string[];
+			action: string;
+		}>>().notNull().default([]),
+		stateTransitions: jsonb("state_transitions").$type<Array<{
+			from: string;
+			to: string;
+			reasonCode: string;
+			occurredAt: string;
+		}>>().notNull().default([]),
 		sensitivityLabels: jsonb("sensitivity_labels").$type<string[]>().notNull().default([]),
 		sourceEnvelopeIds: jsonb("source_envelope_ids").$type<string[]>().notNull().default([]),
 		lastDecisionId: varchar("last_decision_id", { length: 128 }).notNull(),
@@ -2065,6 +2082,14 @@ export const agentLifecycleBudgets = pgTable(
 		maximumOcrPages: integer("maximum_ocr_pages").notNull().default(500),
 		mediaDurationSeconds: integer("media_duration_seconds").notNull().default(0),
 		maximumMediaDurationSeconds: integer("maximum_media_duration_seconds").notNull().default(3600),
+		mediaFrames: integer("media_frames").notNull().default(0),
+		maximumMediaFrames: integer("maximum_media_frames").notNull().default(10000),
+		decodingBranches: integer("decoding_branches").notNull().default(0),
+		maximumDecodingBranches: integer("maximum_decoding_branches").notNull().default(64),
+		judgeCalls: integer("judge_calls").notNull().default(0),
+		maximumJudgeCalls: integer("maximum_judge_calls").notNull().default(32),
+		decompressedBytes: bigint("decompressed_bytes", { mode: "number" }).notNull().default(0),
+		maximumDecompressedBytes: bigint("maximum_decompressed_bytes", { mode: "number" }).notNull().default(1073741824),
 		guardInferenceTokens: integer("guard_inference_tokens").notNull().default(0),
 		maximumGuardInferenceTokens: integer("maximum_guard_inference_tokens").notNull().default(1000000),
 		state: varchar("state", { length: 24 }).notNull().default("ACTIVE"),

@@ -41,6 +41,7 @@ async function jsonBody(request: IncomingMessage): Promise<unknown> {
 }
 
 function respond(response: ServerResponse, status: number, body: unknown): void {
+  if (response.writableEnded || response.destroyed) return;
   const value = Buffer.from(JSON.stringify(body));
   response.writeHead(status, {
     'content-type': 'application/json',
@@ -59,6 +60,7 @@ async function route(request: IncomingMessage, response: ServerResponse) {
   if (request.method === 'GET' && request.url === '/health/ready') {
     const ready = !stopping && sharedToken.length >= 32 &&
       Boolean(process.env.ANALYZER_VISUAL_COMMAND) &&
+      Boolean(process.env.ANALYZER_CODE_READER_COMMAND) &&
       Boolean(process.env.ANALYZER_ASR_COMMAND) &&
       Boolean(process.env.ANALYZER_AUDIO_CLASSIFIER_COMMAND) &&
       Boolean(process.env.ANALYZER_TTS_COMMAND);
@@ -82,13 +84,19 @@ async function route(request: IncomingMessage, response: ServerResponse) {
     return;
   }
   inFlight += 1;
+  const controller = new AbortController();
+  const cancel = () => controller.abort(new Error('ANALYZER_REQUEST_CANCELLED'));
+  request.once('aborted', cancel);
+  response.once('close', () => {
+    if (!response.writableEnded) cancel();
+  });
   try {
     const body = await jsonBody(request);
-    const runner = new ProcessCommandRunner();
+    const runner = new ProcessCommandRunner(controller.signal);
     const result = request.url === '/v1/analyze/document-image'
-      ? await analyzeDocumentImage(documentImageRequestSchema.parse(body), runner)
+      ? await analyzeDocumentImage(documentImageRequestSchema.parse(body), runner, controller.signal)
       : request.url === '/v1/analyze/audio-video'
-        ? await analyzeAudioVideo(mediaRequestSchema.parse(body), runner)
+        ? await analyzeAudioVideo(mediaRequestSchema.parse(body), runner, controller.signal)
         : await markMedia(mediaMarkRequestSchema.parse(body), runner);
     respond(response, 200, result);
   } catch (error) {
@@ -97,6 +105,7 @@ async function route(request: IncomingMessage, response: ServerResponse) {
       : 'ANALYZER_REQUEST_FAILED';
     respond(response, code.includes('TOO_LARGE') ? 413 : 422, { code });
   } finally {
+    request.removeListener('aborted', cancel);
     inFlight -= 1;
   }
 }

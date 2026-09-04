@@ -41,14 +41,14 @@ describe('secure memory risk ledger', () => {
       evidenceHmacs: ['a'.repeat(64)],
     });
     expect(JSON.stringify(second.entries)).not.toContain('plaintext');
-    expect(second.riskState).toBe('ELEVATED');
+    expect(second.riskState).toBe('WATCH');
   });
 
   it('moves terminal and accumulated risk into restrictive states', () => {
     expect(mergeRiskLedger([], decision('BLOCK', 'CRITICAL', 1), new Date()).riskState)
-      .toBe('BLOCKED');
+      .toBe('LOCKED');
     expect(mergeRiskLedger([], decision('REQUIRE_REVIEW', 'HIGH'), new Date()).riskState)
-      .toBe('REVIEW_REQUIRED');
+      .toBe('ESCALATED');
     const previous = [{
       riskType: 'cumulative',
       maxScore: 0.9,
@@ -59,7 +59,7 @@ describe('secure memory risk ledger', () => {
       evidenceHmacs: [],
     }];
     expect(mergeRiskLedger(previous, decision('ALLOW', 'NONE'), new Date()).riskState)
-      .toBe('RESTRICTED');
+      .toBe('ESCALATED');
   });
 
   it('records fail-safe degradation even without detector matches', () => {

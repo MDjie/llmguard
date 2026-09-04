@@ -212,6 +212,21 @@ export function observeAuditDelivery(input: {
   });
 }
 
+export function observeResourceControl(input: {
+  readonly outcome: 'admitted' | 'rejected' | 'cancelled' | 'timeout' | 'degraded';
+  readonly reasonCode: string;
+  readonly queueDelayMs?: number;
+}): void {
+  const labels = {
+    outcome: input.outcome,
+    reason_code: input.reasonCode.replace(/[^A-Z0-9_]/giu, '_').slice(0, 80),
+  };
+  increment('guardllm_resource_control_total', labels);
+  if (input.queueDelayMs !== undefined) {
+    observe('guardllm_resource_queue_delay_ms', { outcome: input.outcome }, input.queueDelayMs);
+  }
+}
+
 export function renderPrometheusMetrics(): string {
   const lines: string[] = [];
   for (const [name, family] of [...counters.entries()].sort(([a], [b]) => a.localeCompare(b))) {

@@ -27,6 +27,7 @@ export interface GuardResourceAdmissionSpec {
   readonly tokenizerMaximumRequestBytes: number;
   readonly tokenizerMaximumResponseBytes: number;
   readonly maximumInputTokens: number;
+  readonly maximumRequestCostUnits?: number;
   readonly requestedOutputTokens: number;
   readonly sessionReserveTokens: number;
   readonly detectorCostUnits: number;
@@ -37,7 +38,7 @@ export interface GuardResourceAdmissionSpec {
 
 const quotaLimitSchema = z.object({
   scopeType: z.enum([
-    'TENANT', 'APPLICATION', 'USER', 'USER_GROUP', 'CREDENTIAL', 'MODEL', 'API',
+    'TENANT', 'APPLICATION', 'SESSION', 'USER', 'USER_GROUP', 'CREDENTIAL', 'MODEL', 'API',
   ]),
   metric: z.enum([
     'REQUESTS', 'INPUT_TOKENS', 'OUTPUT_TOKENS', 'CONCURRENCY', 'COST_UNITS',
@@ -60,6 +61,7 @@ export function guardResourceAdmissionSpecSchema() {
     tokenizerMaximumRequestBytes: z.number().int().min(1_024).max(4 * 1_024 * 1_024),
     tokenizerMaximumResponseBytes: z.number().int().min(512).max(64 * 1_024),
     maximumInputTokens: z.number().int().min(1).max(1_048_576),
+    maximumRequestCostUnits: z.number().int().min(1).max(1_000_000_000).optional(),
     requestedOutputTokens: z.number().int().min(0).max(1_048_576),
     sessionReserveTokens: z.number().int().min(0).max(1_048_576),
     detectorCostUnits: z.number().int().min(0).max(100_000),
@@ -90,6 +92,9 @@ export function guardResourceAdmissionSpecSchema() {
     ] as const;
     const scopeTypes: readonly QuotaScopeType[] = [
       'TENANT', 'APPLICATION', 'USER', 'USER_GROUP', 'CREDENTIAL', 'MODEL', 'API',
+      ...(value.quotaLimits.some((limit) => limit.scopeType === 'SESSION')
+        ? ['SESSION' as const]
+        : []),
     ];
     const configured = new Set(keys);
     for (const scopeType of scopeTypes) {

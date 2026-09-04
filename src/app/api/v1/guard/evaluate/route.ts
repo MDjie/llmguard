@@ -1,5 +1,6 @@
 import { ApiProblem, withApiSecurity } from '@/lib/api-security';
 import { guardDecisionSchema, guardRequestSchema } from '@/contracts/http/guard-v1';
+import { readSecureMemorySnapshot } from '@/lib/secure-memory';
 import {
   createEngineForPolicyBundle,
   evaluateWithSessionContext,
@@ -28,7 +29,7 @@ export const POST = withApiSecurity(
       scope: 'application',
     },
   },
-  async ({ body, principal }) => {
+  async ({ body, principal, request }) => {
     const scope = requireTenantContext(principal);
     if (
       body.context.tenantId !== scope.tenantId ||
@@ -80,29 +81,42 @@ export const POST = withApiSecurity(
     let admission: GuardResourceAdmission | undefined;
     try {
       if (bundle.payload.resourceAdmission) {
+        const sessionRiskState = body.context.sessionId
+          ? (await readSecureMemorySnapshot(scope, body.context.sessionId)).riskState
+          : undefined;
         admission = await admitGuardRequest({
           spec: bundle.payload.resourceAdmission,
           bundleId: bundle.id,
           scope,
           principal: principal!,
           request: body,
+          signal: request.signal,
+          sessionRiskState,
         });
       }
       return Response.json(await evaluateWithSessionContext(engine, body, scope));
     } catch (error) {
       if (error instanceof GuardResourceAdmissionError) {
-        const status = error.code === 'GUARD_QUOTA_EXCEEDED'
+        const status = error.code === 'GUARD_QUOTA_EXCEEDED' ||
+          error.code === 'GUARD_REQUEST_BUDGET_EXCEEDED'
           ? 429
-          : error.code === 'GUARD_REQUEST_ID_REPLAYED'
-            ? 409
-          : error.code === 'GUARD_INPUT_TOKEN_LIMIT_EXCEEDED'
-            ? 413
-            : 503;
+          : error.code === 'GUARD_SESSION_LOCKED'
+            ? 423
+            : error.code === 'GUARD_REQUEST_ID_REPLAYED'
+              ? 409
+              : error.code === 'GUARD_REQUEST_CANCELLED'
+                ? 499
+                : error.code === 'GUARD_INPUT_TOKEN_LIMIT_EXCEEDED'
+                  ? 413
+                  : 503;
         throw new ApiProblem({
           status,
           code: error.code,
           title: 'Guard resource admission rejected',
           detail: error.message,
+          ...(error.retryAfterMs
+            ? { headers: { 'retry-after': String(Math.ceil(error.retryAfterMs / 1_000)) } }
+            : {}),
         });
       }
       throw error;

@@ -68,6 +68,7 @@ export async function uploadArtifactFile(
 export async function withLoadedArtifact<T>(
   artifact: Artifact,
   operation: (inputPath: string, workspace: string) => Promise<T>,
+  signal?: AbortSignal,
 ): Promise<T> {
   const workspace = await import('node:fs/promises').then(({ mkdtemp }) =>
     mkdtemp(join(tmpdir(), 'guard-analyzer-')));
@@ -82,10 +83,13 @@ export async function withLoadedArtifact<T>(
       throw new Error('ANALYZER_PART_MANIFEST_INVALID');
     }
     for (const part of ordered) {
+      if (signal?.aborted) throw new Error('ANALYZER_REQUEST_CANCELLED');
       const response = await fetch(assertObjectUrl(part.url), {
         headers: part.headers,
         redirect: 'error',
-        signal: AbortSignal.timeout(60_000),
+        signal: signal
+          ? AbortSignal.any([signal, AbortSignal.timeout(60_000)])
+          : AbortSignal.timeout(60_000),
       });
       if (!response.ok) throw new Error('ANALYZER_PART_DOWNLOAD_FAILED');
       const declared = Number(response.headers.get('content-length'));

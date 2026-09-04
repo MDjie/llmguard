@@ -8,7 +8,7 @@ COPY services/media-analyzer services/media-analyzer
 RUN pnpm analyzer:build
 
 FROM node:24.20.0-alpine
-RUN apk add --no-cache ca-certificates ffmpeg font-noto-cjk poppler-utils tesseract-ocr tesseract-ocr-data-eng tesseract-ocr-data-chi_sim
+RUN apk add --no-cache ca-certificates ffmpeg font-noto-cjk poppler-utils tesseract-ocr tesseract-ocr-data-eng tesseract-ocr-data-chi_sim zbar
 RUN addgroup -S analyzer
 RUN adduser -S -G analyzer -u 10002 analyzer
 WORKDIR /app
@@ -20,6 +20,7 @@ ENV ANALYZER_FFMPEG_COMMAND=ffmpeg
 ENV ANALYZER_FFPROBE_COMMAND=ffprobe
 ENV ANALYZER_PDFTOPPM_COMMAND=pdftoppm
 ENV ANALYZER_TESSERACT_COMMAND=tesseract
+ENV ANALYZER_CODE_READER_COMMAND=zbarimg
 USER analyzer
 EXPOSE 8090
 STOPSIGNAL SIGTERM

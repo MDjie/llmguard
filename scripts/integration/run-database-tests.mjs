@@ -105,6 +105,58 @@ try {
     );
   }
 
+  const requiredP3Columns = [
+    ['guard_memory_risk_ledgers', 'intent_nodes'],
+    ['guard_memory_risk_ledgers', 'state_transitions'],
+    ['agent_lifecycle_budgets', 'media_frames'],
+    ['agent_lifecycle_budgets', 'maximum_media_frames'],
+    ['agent_lifecycle_budgets', 'decoding_branches'],
+    ['agent_lifecycle_budgets', 'maximum_decoding_branches'],
+    ['agent_lifecycle_budgets', 'judge_calls'],
+    ['agent_lifecycle_budgets', 'maximum_judge_calls'],
+    ['agent_lifecycle_budgets', 'decompressed_bytes'],
+    ['agent_lifecycle_budgets', 'maximum_decompressed_bytes'],
+  ];
+  const p3Columns = await client.query(
+    `select table_name, column_name
+       from information_schema.columns
+      where table_schema = current_schema()
+        and table_name = any($1::text[])
+        and column_name = any($2::text[])`,
+    [
+      [...new Set(requiredP3Columns.map(([table]) => table))],
+      [...new Set(requiredP3Columns.map(([, column]) => column))],
+    ],
+  );
+  const foundP3Columns = new Set(p3Columns.rows.map(
+    (row) => `${String(row.table_name)}:${String(row.column_name)}`,
+  ));
+  const missingP3Columns = requiredP3Columns.filter(
+    ([table, column]) => !foundP3Columns.has(`${table}:${column}`),
+  );
+  if (missingP3Columns.length > 0) {
+    throw new Error(`Missing P3 migrated columns: ${missingP3Columns
+      .map(([table, column]) => `${table}.${column}`).join(', ')}`);
+  }
+
+  const requiredP3Constraints = [
+    'guard_memory_risk_ledgers_state_check',
+    'guard_memory_risk_ledgers_intent_nodes_array_check',
+    'guard_memory_risk_ledgers_state_transitions_array_check',
+    'agent_lifecycle_budgets_p3_nonnegative_check',
+  ];
+  const p3Constraints = await client.query(
+    'select conname from pg_constraint where conname = any($1::text[])',
+    [requiredP3Constraints],
+  );
+  const foundP3Constraints = new Set(p3Constraints.rows.map((row) => String(row.conname)));
+  const missingP3Constraints = requiredP3Constraints.filter(
+    (name) => !foundP3Constraints.has(name),
+  );
+  if (missingP3Constraints.length > 0) {
+    throw new Error(`Missing P3 constraints: ${missingP3Constraints.join(', ')}`);
+  }
+
   const appendOnlyTrigger = await client.query(
     `select 1
        from pg_trigger trigger
@@ -126,6 +178,8 @@ try {
     appendOnlyAudit: 'PASS',
     policyGovernanceConstraints: 'PASS',
     policyGovernanceScopeConstraints: requiredScopeConstraints.length,
+    p3SchemaColumns: requiredP3Columns.length,
+    p3SchemaConstraints: requiredP3Constraints.length,
   }) + '\n');
 } finally {
   await client.end();

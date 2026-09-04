@@ -2,6 +2,11 @@ export interface MultimodalDetectionPolicy {
   readonly frameBatchSize: number;
   readonly frameIntervalMs?: number;
   readonly maxFrames: number;
+  readonly summaryFrames: number;
+  readonly maxDurationMs: number;
+  readonly maxPixels: number;
+  readonly maxDecodedBytes: number;
+  readonly maxDecompressionRatio: number;
   readonly minimumConfidence: number;
   readonly reviewThreshold: number;
   readonly blockThreshold: number;
@@ -52,6 +57,21 @@ export function loadMultimodalDetectionPolicy(
       : {}),
     maxFrames: numberSetting(
       environment, 'MULTIMODAL_MAX_FRAMES', 10_000, 1, 10_000, true,
+    ),
+    summaryFrames: numberSetting(
+      environment, 'MULTIMODAL_SUMMARY_FRAMES', 24, 1, 256, true,
+    ),
+    maxDurationMs: numberSetting(
+      environment, 'MULTIMODAL_MAX_DURATION_MS', 3_600_000, 1_000, 24 * 60 * 60 * 1_000, true,
+    ),
+    maxPixels: numberSetting(
+      environment, 'MULTIMODAL_MAX_PIXELS', 100_000_000, 1, 500_000_000, true,
+    ),
+    maxDecodedBytes: numberSetting(
+      environment, 'MULTIMODAL_MAX_DECODED_BYTES', 2 * 1_024 * 1_024 * 1_024, 1_024, 50 * 1_024 * 1_024 * 1_024, true,
+    ),
+    maxDecompressionRatio: numberSetting(
+      environment, 'MULTIMODAL_MAX_DECOMPRESSION_RATIO', 100, 1, 1_000, true,
     ),
     minimumConfidence: numberSetting(
       environment, 'MULTIMODAL_MIN_CONFIDENCE', 0.35, 0, 1,

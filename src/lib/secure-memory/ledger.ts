@@ -68,14 +68,13 @@ export function mergeRiskLedger(
     ? decision.riskLevel
     : historicalRisk;
   const riskState: SecureMemoryRiskState = decision.action === 'BLOCK'
-    ? 'BLOCKED'
-    : decision.action === 'REQUIRE_REVIEW'
-      ? 'REVIEW_REQUIRED'
-      : decision.action === 'SAFE_RESPONSE' || maxRiskLevel === 'CRITICAL' || cumulativeScore >= 500
-        ? 'RESTRICTED'
-        : decision.action !== 'ALLOW' || riskRank[maxRiskLevel] >= riskRank.MEDIUM
-          ? 'ELEVATED'
-          : 'NORMAL';
+    ? 'LOCKED'
+    : decision.action === 'REQUIRE_REVIEW' || decision.action === 'SAFE_RESPONSE' ||
+        maxRiskLevel === 'CRITICAL' || cumulativeScore >= 500
+      ? 'ESCALATED'
+      : decision.action !== 'ALLOW' || riskRank[maxRiskLevel] >= riskRank.MEDIUM
+        ? 'WATCH'
+        : 'NORMAL';
   return {
     entries,
     maxRiskLevel,

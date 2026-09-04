@@ -9,6 +9,12 @@ import {
   guardSessionRiskStates,
 } from '@/storage/database/shared/schema';
 import { mergeRiskLedger } from './ledger';
+import {
+  advanceSessionRiskState,
+  closeSessionRiskState,
+  type SessionIntentNode,
+  type SessionStateTransition,
+} from './session-risk-state';
 import type {
   AppendSecureMemoryEvaluationInput,
   RiskLedgerEntry,
@@ -81,6 +87,19 @@ function uniqueBounded(values: readonly string[], maximum: number): string[] {
   return [...new Set(values)].slice(-maximum);
 }
 
+function normalizeRiskState(value: string | undefined): SecureMemorySnapshot['riskState'] {
+  switch (value) {
+    case 'WATCH':
+    case 'ELEVATED': return 'WATCH';
+    case 'ESCALATED':
+    case 'RESTRICTED':
+    case 'REVIEW_REQUIRED': return 'ESCALATED';
+    case 'LOCKED':
+    case 'BLOCKED': return 'LOCKED';
+    default: return 'NORMAL';
+  }
+}
+
 export async function readSecureMemorySnapshot(
   scope: AppendSecureMemoryEvaluationInput['scope'],
   sessionId: string,
@@ -116,9 +135,11 @@ export async function readSecureMemorySnapshot(
     stateVersion: stored?.stateVersion ?? 0,
     lastEventSequence: stored?.lastEventSequence ?? 0,
     riskLedger: activeLedger?.entries ?? [],
-    riskState: (activeLedger?.riskState ?? 'NORMAL') as SecureMemorySnapshot['riskState'],
+    riskState: normalizeRiskState(activeLedger?.riskState),
     maxRiskLevel: (activeLedger?.maxRiskLevel ?? 'NONE') as SecureMemorySnapshot['maxRiskLevel'],
     cumulativeScore: activeLedger?.cumulativeScore ?? 0,
+    intentNodes: (activeLedger?.intentNodes ?? []) as readonly SessionIntentNode[],
+    stateTransitions: (activeLedger?.stateTransitions ?? []) as readonly SessionStateTransition[],
   };
 }
 
@@ -230,17 +251,34 @@ export async function appendSecureMemoryEvaluation(
         ? storedLedger.entries
         : [];
       const ledger = mergeRiskLedger(previousEntries, input.decision, occurredAt);
+      const previousRiskState = normalizeRiskState(storedLedger?.riskState);
+      const riskAssessment = input.riskAssessment ?? advanceSessionRiskState({
+        previousState: previousRiskState,
+        previousNodes: (storedLedger?.intentNodes ?? []) as readonly SessionIntentNode[],
+        previousTransitions: (storedLedger?.stateTransitions ?? []) as readonly SessionStateTransition[],
+        request: input.request,
+        decision: input.decision,
+        occurredAt,
+      });
       const nextLedger = {
         ...input.scope,
         sessionId: input.sessionId,
         stateVersion: (storedLedger?.stateVersion ?? 0) + 1,
-        riskState: ledger.riskState,
+        riskState: riskAssessment.state,
         maxRiskLevel: ledger.maxRiskLevel,
         cumulativeScore: ledger.cumulativeScore,
         entries: ledger.entries.map((entry) => ({
           ...entry,
           evidenceHmacs: [...entry.evidenceHmacs],
         })),
+        intentNodes: riskAssessment.intentNodes.map((node) => ({
+          ...node,
+          phases: [...node.phases],
+          riskTypes: [...node.riskTypes],
+          sources: [...node.sources],
+          evidenceHmacs: [...node.evidenceHmacs],
+        })),
+        stateTransitions: riskAssessment.transitions.map((transition) => ({ ...transition })),
         sensitivityLabels: uniqueBounded([
           ...(storedLedger?.sensitivityLabels ?? []),
           ...sensitivityLabels,
@@ -265,6 +303,8 @@ export async function appendSecureMemoryEvaluation(
           maxRiskLevel: nextLedger.maxRiskLevel,
           cumulativeScore: nextLedger.cumulativeScore,
           entries: nextLedger.entries,
+          intentNodes: nextLedger.intentNodes,
+          stateTransitions: nextLedger.stateTransitions,
           sensitivityLabels: nextLedger.sensitivityLabels,
           sourceEnvelopeIds: nextLedger.sourceEnvelopeIds,
           lastDecisionId: nextLedger.lastDecisionId,
@@ -272,6 +312,17 @@ export async function appendSecureMemoryEvaluation(
           updatedAt: nextLedger.updatedAt,
         },
       });
+      await transaction.update(guardSessionRiskStates).set({
+        riskVector: { ...riskAssessment.riskVector },
+        recentRiskTypes: [...riskAssessment.recentRiskTypes],
+        escalationLevel: riskAssessment.escalationLevel,
+        lastRequestId: input.request.context.requestId,
+        updatedAt: occurredAt,
+      }).where(and(
+        eq(guardSessionRiskStates.tenantId, input.scope.tenantId),
+        eq(guardSessionRiskStates.applicationId, input.scope.applicationId),
+        eq(guardSessionRiskStates.sessionId, input.sessionId),
+      ));
       const graphEdges = (input.request.content.envelopes ?? []).flatMap((envelope) => [
         {
           ...input.scope,
@@ -302,4 +353,50 @@ export async function appendSecureMemoryEvaluation(
   } finally {
     key.bytes.fill(0);
   }
+}
+
+export async function endSecureMemorySession(
+  scope: AppendSecureMemoryEvaluationInput['scope'],
+  sessionId: string,
+  occurredAt = new Date(),
+): Promise<void> {
+  if (!sessionId || sessionId.length > 128) throw new Error('GUARD_SESSION_ID_INVALID');
+  await db.transaction(async (transaction) => {
+    const ledger = await transaction.select().from(guardMemoryRiskLedgers).where(and(
+      eq(guardMemoryRiskLedgers.tenantId, scope.tenantId),
+      eq(guardMemoryRiskLedgers.applicationId, scope.applicationId),
+      eq(guardMemoryRiskLedgers.sessionId, sessionId),
+    )).limit(1).for('update').then((rows) => rows[0]);
+    const closed = closeSessionRiskState({
+      previousState: normalizeRiskState(ledger?.riskState),
+      previousTransitions: (ledger?.stateTransitions ?? []) as readonly SessionStateTransition[],
+      occurredAt,
+    });
+    if (ledger) {
+      await transaction.update(guardMemoryRiskLedgers).set({
+        riskState: closed.state,
+        intentNodes: [],
+        stateTransitions: closed.transitions.map((transition) => ({ ...transition })),
+        cumulativeScore: 0,
+        stateVersion: ledger.stateVersion + 1,
+        expiresAt: occurredAt,
+        updatedAt: occurredAt,
+      }).where(and(
+        eq(guardMemoryRiskLedgers.tenantId, scope.tenantId),
+        eq(guardMemoryRiskLedgers.applicationId, scope.applicationId),
+        eq(guardMemoryRiskLedgers.sessionId, sessionId),
+      ));
+    }
+    await transaction.update(guardSessionRiskStates).set({
+      riskVector: {},
+      recentRiskTypes: [],
+      escalationLevel: 0,
+      expiresAt: occurredAt,
+      updatedAt: occurredAt,
+    }).where(and(
+      eq(guardSessionRiskStates.tenantId, scope.tenantId),
+      eq(guardSessionRiskStates.applicationId, scope.applicationId),
+      eq(guardSessionRiskStates.sessionId, sessionId),
+    ));
+  });
 }

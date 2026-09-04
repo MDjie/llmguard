@@ -1,9 +1,12 @@
 import { createHash } from 'node:crypto';
 import { resolveContextEnvelopes } from '@/lib/context-trust';
 import {
+  advanceSessionRiskState,
   appendSecureMemoryEvaluation,
+  applySessionRiskControl,
   readSecureMemorySnapshot,
   SecureMemoryVersionConflictError,
+  sessionRiskControl,
   type SecureMemorySnapshot,
 } from '@/lib/secure-memory';
 import type { TenantScope } from '@/lib/tenancy';
@@ -112,17 +115,34 @@ export async function evaluateWithSessionContext(
   request: GuardRequest,
   scope: TenantScope,
 ): Promise<GuardDecision> {
+  if (
+    request.context.tenantId !== scope.tenantId ||
+    request.context.applicationId !== scope.applicationId
+  ) {
+    throw new Error('GUARD_SESSION_SCOPE_MISMATCH');
+  }
   const current = await engine.evaluate(request);
   const sessionId = request.context.sessionId;
   if (!sessionId) return current;
   for (let attempt = 0; attempt < 2; attempt += 1) {
     const snapshot = await readSecureMemorySnapshot(scope, sessionId);
-    const selected = snapshot.hasHistory
+    const contextualDecision = snapshot.hasHistory
       ? chooseSessionDecision(
           current,
           await engine.evaluate(requestWithSecureMemory(request, snapshot)),
         )
       : current;
+    const riskAssessment = advanceSessionRiskState({
+      previousState: snapshot.riskState,
+      previousNodes: snapshot.intentNodes,
+      previousTransitions: snapshot.stateTransitions,
+      request,
+      decision: contextualDecision,
+    });
+    const selected = applySessionRiskControl(
+      contextualDecision,
+      sessionRiskControl(riskAssessment),
+    );
     try {
       await appendSecureMemoryEvaluation({
         scope,
@@ -131,6 +151,7 @@ export async function evaluateWithSessionContext(
         request,
         decision: selected,
         tokenizerId: request.context.tokenizerId,
+        riskAssessment,
       });
       return selected;
     } catch (error) {

@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import type { GuardRequest } from '@guardllm/contracts';
 import type { AuthenticatedPrincipal } from '@/lib/api-security';
+import { observeResourceControl } from '@/lib/observability/metrics';
 import { safeFetchJson, type SafeFetchDependencies } from '@/lib/egress';
 import type { TenantScope } from '@/lib/tenancy';
 import { buildQuotaClaims } from './quota-plan';
@@ -32,7 +33,12 @@ export type ExactTokenizerInvoker = (
 ) => Promise<TokenizerResponse>;
 
 export class GuardResourceAdmissionError extends Error {
-  constructor(readonly code: string, message: string) {
+  constructor(
+    readonly code: string,
+    message: string,
+    readonly retryable = false,
+    readonly retryAfterMs?: number,
+  ) {
     super(message);
     this.name = 'GuardResourceAdmissionError';
   }
@@ -78,6 +84,19 @@ function contentSha256(text: string): string {
   return createHash('sha256').update(text, 'utf8').digest('hex');
 }
 
+function metadataNumber(
+  artifact: NonNullable<GuardRequest['content']['artifacts']>[number],
+  key: string,
+): number {
+  const value = artifact.metadata?.[key];
+  return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : 0;
+}
+
+function combinedSignal(external: AbortSignal | undefined, timeoutMs: number): AbortSignal {
+  const timeout = AbortSignal.timeout(timeoutMs);
+  return external ? AbortSignal.any([external, timeout]) : timeout;
+}
+
 export async function admitGuardRequest(input: {
   readonly spec: GuardResourceAdmissionSpec;
   readonly bundleId: string;
@@ -87,7 +106,25 @@ export async function admitGuardRequest(input: {
   readonly quotaStore?: GuardQuotaStore;
   readonly tokenizerInvoker?: ExactTokenizerInvoker;
   readonly safeFetch?: SafeFetchDependencies;
+  readonly signal?: AbortSignal;
+  readonly sessionRiskState?: 'NORMAL' | 'WATCH' | 'ESCALATED' | 'LOCKED';
 }): Promise<GuardResourceAdmission> {
+  if (input.signal?.aborted) {
+    observeResourceControl({ outcome: 'cancelled', reasonCode: 'GUARD_REQUEST_CANCELLED' });
+    throw new GuardResourceAdmissionError(
+      'GUARD_REQUEST_CANCELLED',
+      'The request was cancelled before resource admission completed',
+    );
+  }
+  if (input.sessionRiskState === 'LOCKED') {
+    observeResourceControl({ outcome: 'rejected', reasonCode: 'GUARD_SESSION_LOCKED' });
+    throw new GuardResourceAdmissionError(
+      'GUARD_SESSION_LOCKED',
+      'The session is temporarily restricted by the active security policy',
+      true,
+      60_000,
+    );
+  }
   if (
     input.request.context.tokenizerId &&
     input.request.context.tokenizerId !== input.spec.tokenizerId
@@ -103,15 +140,25 @@ export async function admitGuardRequest(input: {
     throw new GuardResourceAdmissionError('GUARD_ADMISSION_DEADLINE_EXCEEDED', 'Admission deadline expired');
   }
   let measured: TokenizerResponse;
+  const signal = combinedSignal(input.signal, Math.min(remaining, input.spec.tokenizerTimeoutMs));
   try {
-    const signal = AbortSignal.timeout(Math.min(remaining, input.spec.tokenizerTimeoutMs));
     measured = await (input.tokenizerInvoker
       ? input.tokenizerInvoker(input.spec, text, signal)
       : invokeTokenizer(input.spec, text, signal, input.safeFetch ?? {}));
   } catch {
+    if (input.signal?.aborted) {
+      observeResourceControl({ outcome: 'cancelled', reasonCode: 'GUARD_REQUEST_CANCELLED' });
+      throw new GuardResourceAdmissionError(
+        'GUARD_REQUEST_CANCELLED',
+        'The request was cancelled before resource admission completed',
+      );
+    }
+    observeResourceControl({ outcome: 'timeout', reasonCode: 'GUARD_EXACT_TOKENIZER_UNAVAILABLE' });
     throw new GuardResourceAdmissionError(
       'GUARD_EXACT_TOKENIZER_UNAVAILABLE',
       'The exact tokenizer service did not return a verifiable result',
+      true,
+      1_000,
     );
   }
   if (
@@ -131,9 +178,12 @@ export async function admitGuardRequest(input: {
       'The exact input token count exceeds the signed policy limit',
     );
   }
-  const modalities = new Set(
-    (input.request.content.artifacts ?? []).map((artifact) => artifact.kind),
-  ).size;
+  const artifacts = input.request.content.artifacts ?? [];
+  const modalities = new Set(artifacts.map((artifact) => artifact.kind)).size;
+  const totalMetadata = (key: string) => artifacts.reduce(
+    (total, artifact) => total + metadataNumber(artifact, key),
+    0,
+  );
   const complexity = estimateGuardComplexity({
     inputTokens: measured.totalTokens,
     requestedOutputTokens: input.spec.requestedOutputTokens,
@@ -144,10 +194,44 @@ export async function admitGuardRequest(input: {
     modalities,
     detectorCostUnits: input.spec.detectorCostUnits,
     modelCostMultiplier: input.spec.modelCostMultiplier,
+    decodingBranches: totalMetadata('decodingBranches'),
+    decodingDepth: totalMetadata('decodingDepth'),
+    mediaDurationSeconds: totalMetadata('durationSeconds'),
+    mediaFrames: totalMetadata('frameCount'),
+    documentPages: totalMetadata('pageCount'),
+    judgeCalls: totalMetadata('judgeCalls'),
+    decompressedBytes: totalMetadata('decompressedBytes'),
   });
+  if (complexity.costUnits > (input.spec.maximumRequestCostUnits ?? Number.MAX_SAFE_INTEGER)) {
+    observeResourceControl({ outcome: 'rejected', reasonCode: 'GUARD_REQUEST_BUDGET_EXCEEDED' });
+    throw new GuardResourceAdmissionError(
+      'GUARD_REQUEST_BUDGET_EXCEEDED',
+      'The request exceeds the signed resource budget',
+    );
+  }
+  if (input.signal?.aborted) {
+    observeResourceControl({ outcome: 'cancelled', reasonCode: 'GUARD_REQUEST_CANCELLED' });
+    throw new GuardResourceAdmissionError(
+      'GUARD_REQUEST_CANCELLED',
+      'The request was cancelled before resource admission completed',
+    );
+  }
+  if (signal.aborted) {
+    observeResourceControl({ outcome: 'timeout', reasonCode: 'GUARD_EXACT_TOKENIZER_UNAVAILABLE' });
+    throw new GuardResourceAdmissionError(
+      'GUARD_EXACT_TOKENIZER_UNAVAILABLE',
+      'The exact tokenizer exceeded its signed timeout budget',
+      true,
+      1_000,
+    );
+  }
+  const sessionQuotaConfigured = input.spec.quotaLimits.some(
+    (limit) => limit.scopeType === 'SESSION',
+  );
   const claims = buildQuotaClaims({
     tenantId: input.scope.tenantId,
     applicationId: input.scope.applicationId,
+    sessionId: sessionQuotaConfigured ? input.request.context.sessionId : undefined,
     userId: input.principal.authenticationMethod === 'service'
       ? undefined
       : input.principal.subject,
@@ -161,6 +245,11 @@ export async function admitGuardRequest(input: {
     inputTokens: measured.totalTokens,
     outputTokens: input.spec.requestedOutputTokens,
     costUnits: complexity.costUnits,
+    concurrencyUnits: input.sessionRiskState === 'ESCALATED'
+      ? 3
+      : input.sessionRiskState === 'WATCH'
+        ? 2
+        : 1,
   });
   const quotaStore = input.quotaStore ?? new PostgresGuardQuotaStore();
   let reservation;
@@ -175,15 +264,12 @@ export async function admitGuardRequest(input: {
     });
   } catch (error) {
     if (error instanceof QuotaLimitExceededError) {
+      observeResourceControl({ outcome: 'rejected', reasonCode: 'GUARD_QUOTA_EXCEEDED' });
       throw new GuardResourceAdmissionError(
         'GUARD_QUOTA_EXCEEDED',
-        [
-          error.claim.scopeType,
-          error.claim.metric,
-          error.claim.window,
-          error.used,
-          error.limit,
-        ].join(':'),
+        'The request exceeds an active resource policy limit',
+        true,
+        error.claim.window === 'MINUTE' ? 60_000 : 1_000,
       );
     }
     if (error instanceof QuotaRequestReplayError) {
@@ -194,6 +280,7 @@ export async function admitGuardRequest(input: {
     }
     throw error;
   }
+  observeResourceControl({ outcome: 'admitted', reasonCode: 'GUARD_RESOURCE_ADMITTED' });
   let released = false;
   return {
     inputTokens: measured.totalTokens,

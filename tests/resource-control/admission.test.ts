@@ -10,7 +10,7 @@ import {
 } from '../../src/lib/resource-control';
 
 const scopeTypes = [
-  'TENANT', 'APPLICATION', 'USER', 'USER_GROUP', 'CREDENTIAL', 'MODEL', 'API',
+  'TENANT', 'APPLICATION', 'SESSION', 'USER', 'USER_GROUP', 'CREDENTIAL', 'MODEL', 'API',
 ] as const;
 const metricWindows = [
   ['CONCURRENCY', 'INSTANT'],
@@ -42,6 +42,7 @@ function spec(): GuardResourceAdmissionSpec {
     tokenizerMaximumRequestBytes: 2_000_000,
     tokenizerMaximumResponseBytes: 4_096,
     maximumInputTokens: 131_072,
+    maximumRequestCostUnits: 100_000,
     requestedOutputTokens: 2_048,
     sessionReserveTokens: 4_096,
     detectorCostUnits: 10,
@@ -58,6 +59,7 @@ const request = {
     requestId: 'request-12345678',
     tenantId: 'tenant-1',
     applicationId: 'app-1',
+    sessionId: 'session-1',
     direction: 'INPUT' as const,
     absoluteDeadlineEpochMs: Date.now() + 60_000,
     policyBundleId: 'bundle-1',
@@ -68,7 +70,7 @@ const request = {
 
 describe('Guard resource admission', () => {
   it('requires complete quota coverage in the signed configuration', () => {
-    expect(guardResourceAdmissionSpecSchema().parse(spec()).quotaLimits).toHaveLength(42);
+    expect(guardResourceAdmissionSpecSchema().parse(spec()).quotaLimits).toHaveLength(48);
     expect(() => guardResourceAdmissionSpecSchema().parse({
       ...spec(),
       quotaLimits: spec().quotaLimits.slice(1),
@@ -111,7 +113,7 @@ describe('Guard resource admission', () => {
       }),
     });
     expect(admission.inputTokens).toBe(2);
-    expect(reserved).toBe(30);
+    expect(reserved).toBe(36);
     await admission.release();
     await admission.release();
     expect(released).toBe(1);

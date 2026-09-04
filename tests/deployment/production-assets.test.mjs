@@ -116,6 +116,14 @@ describe('production deployment invariants', () => {
     expect(compose).toContain('./drizzle/0035_guard_quota_ledger.sql');
     expect(compose).toContain('./drizzle/0037_targeted_whitelist_rules.sql');
     expect(compose).toContain('./drizzle/0038_policy_governance.sql');
+    expect(compose).toContain('./drizzle/0039_session_risk_and_media_resilience.sql');
+    expect(compose).toContain('MEDIA_ANALYZER_BASE_URL: "http://media-analyzer:8090"');
+    expect(compose).toContain('MULTIMODAL_MAX_DURATION_MS');
+    expect(compose).toContain('pids_limit: 256');
+    expect(analyzerDockerfile).toContain('zbar');
+    expect(analyzerDockerfile).toContain('ANALYZER_CODE_READER_COMMAND=zbarimg');
+    expect(values).toContain('ANALYZER_CODE_READER_COMMAND: /usr/bin/zbarimg');
+    expect(values).toContain('ephemeral-storage: 2Gi');
     expect(compose).toContain('media-analyzer:');
     for (const worker of workers) expect(compose).toContain(`  ${worker}:`);
     for (const dockerfile of [rootDockerfile, analyzerDockerfile, applianceDockerfile]) {

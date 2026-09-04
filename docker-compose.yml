@@ -22,6 +22,21 @@ x-runtime-environment: &runtime-environment
   RAG_PROVENANCE_KEY: "${RAG_PROVENANCE_KEY:-}"
   TOOL_PERMIT_SIGNING_KEY: "${TOOL_PERMIT_SIGNING_KEY:-}"
   MULTIMODAL_ANALYZER_BASE_URL: "http://media-analyzer:8090"
+  MULTIMODAL_ANALYZER_ALLOWED_PRIVATE_HOSTS: "media-analyzer"
+  MEDIA_ANALYZER_BASE_URL: "http://media-analyzer:8090"
+  MEDIA_ANALYZER_ALLOWED_PRIVATE_HOSTS: "media-analyzer"
+  MULTIMODAL_FRAME_BATCH_SIZE: "${MULTIMODAL_FRAME_BATCH_SIZE:-4}"
+  MULTIMODAL_FRAME_INTERVAL_MS: "${MULTIMODAL_FRAME_INTERVAL_MS:-}"
+  MULTIMODAL_MAX_FRAMES: "${MULTIMODAL_MAX_FRAMES:-10000}"
+  MULTIMODAL_SUMMARY_FRAMES: "${MULTIMODAL_SUMMARY_FRAMES:-24}"
+  MULTIMODAL_MAX_DURATION_MS: "${MULTIMODAL_MAX_DURATION_MS:-3600000}"
+  MULTIMODAL_MAX_PIXELS: "${MULTIMODAL_MAX_PIXELS:-100000000}"
+  MULTIMODAL_MAX_DECODED_BYTES: "${MULTIMODAL_MAX_DECODED_BYTES:-2147483648}"
+  MULTIMODAL_MAX_DECOMPRESSION_RATIO: "${MULTIMODAL_MAX_DECOMPRESSION_RATIO:-100}"
+  MULTIMODAL_MIN_CONFIDENCE: "${MULTIMODAL_MIN_CONFIDENCE:-0.35}"
+  MULTIMODAL_REVIEW_THRESHOLD: "${MULTIMODAL_REVIEW_THRESHOLD:-0.65}"
+  MULTIMODAL_BLOCK_THRESHOLD: "${MULTIMODAL_BLOCK_THRESHOLD:-0.8}"
+  MULTIMODAL_CROSS_MODAL_WINDOW_MS: "${MULTIMODAL_CROSS_MODAL_WINDOW_MS:-30000}"
   ANALYZER_SHARED_TOKEN: "${ANALYZER_SHARED_TOKEN:?ANALYZER_SHARED_TOKEN is required}"
   EXPORT_APPROVAL_REQUIRED: "${EXPORT_APPROVAL_REQUIRED:-true}"
   RAW_CONTENT_STORAGE_ENABLED: "${RAW_CONTENT_STORAGE_ENABLED:-false}"
@@ -108,6 +123,7 @@ services:
       - ./drizzle/0036_policy_dimension_config_created_at.sql:/docker-entrypoint-initdb.d/45-policy-dimension-config-created-at.sql:ro
       - ./drizzle/0037_targeted_whitelist_rules.sql:/docker-entrypoint-initdb.d/46-targeted-whitelist-rules.sql:ro
       - ./drizzle/0038_policy_governance.sql:/docker-entrypoint-initdb.d/47-policy-governance.sql:ro
+      - ./drizzle/0039_session_risk_and_media_resilience.sql:/docker-entrypoint-initdb.d/48-session-risk-media-resilience.sql:ro
     ports:
       - "127.0.0.1:${DB_PORT:-5434}:5432"
     healthcheck:
@@ -131,6 +147,18 @@ services:
       ANALYZER_SHARED_TOKEN: "${ANALYZER_SHARED_TOKEN:?ANALYZER_SHARED_TOKEN is required}"
       ANALYZER_OBJECT_STORE_HOSTS: "${ANALYZER_OBJECT_STORE_HOSTS:-}"
       ANALYZER_MAX_IN_FLIGHT: "${ANALYZER_MAX_IN_FLIGHT:-4}"
+      ANALYZER_CODE_READER_COMMAND: "${ANALYZER_CODE_READER_COMMAND:-zbarimg}"
+      ANALYZER_VISUAL_COMMAND: "${ANALYZER_VISUAL_COMMAND:-}"
+      ANALYZER_ASR_COMMAND: "${ANALYZER_ASR_COMMAND:-}"
+      ANALYZER_AUDIO_CLASSIFIER_COMMAND: "${ANALYZER_AUDIO_CLASSIFIER_COMMAND:-}"
+      ANALYZER_TTS_COMMAND: "${ANALYZER_TTS_COMMAND:-}"
+    cpus: "${ANALYZER_CPU_LIMIT:-4.0}"
+    mem_limit: "${ANALYZER_MEMORY_LIMIT:-8g}"
+    pids_limit: 256
+    ulimits:
+      nofile:
+        soft: 1024
+        hard: 2048
     networks: [guardllm-network]
     read_only: true
     tmpfs:

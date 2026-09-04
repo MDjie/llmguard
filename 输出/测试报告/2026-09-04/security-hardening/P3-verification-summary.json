@@ -1,0 +1,50 @@
+{
+  "phase": "P3",
+  "status": "INTERNAL_PASS_EXTERNAL_MODEL_BLOCKED",
+  "executedAt": "2026-09-05T02:04:00+08:00",
+  "tests": {
+    "phaseCore": { "filesPassed": 16, "testsPassed": 52, "testsFailed": 0 },
+    "documentRegression": { "filesPassed": 5, "testsPassed": 18, "testsFailed": 0 },
+    "fullUnit": { "filesPassed": 142, "testsPassed": 655, "testsFailed": 0 },
+    "deployment": { "filesPassed": 2, "testsPassed": 12, "testsFailed": 0 }
+  },
+  "qualityGates": {
+    "typeScript": "PASS",
+    "lintBuild": "PASS",
+    "analyzerBuild": "PASS",
+    "nextProductionBuild": "PASS",
+    "composeConfig": "PASS",
+    "helmLint": "SKIPPED_TOOL_NOT_INSTALLED"
+  },
+  "database": {
+    "isolatedMigrationCount": 41,
+    "p3ColumnsVerified": 10,
+    "p3ConstraintsVerified": 4,
+    "isolatedDatabaseRemoved": true,
+    "deployedDatabaseMigrated": true
+  },
+  "deployment": {
+    "project": "guardllm-r0",
+    "appHealthy": true,
+    "policyReady": true,
+    "policyGeneration": 3,
+    "postgresHealthy": true,
+    "analyzerLive": true,
+    "analyzerReady": false,
+    "workersRunning": 10,
+    "restartCount": 0,
+    "analyzerLimits": {
+      "cpu": 4,
+      "memoryBytes": 8589934592,
+      "pids": 256,
+      "readOnlyRootFilesystem": true
+    }
+  },
+  "externalBlockers": [
+    "production_visual_model",
+    "production_asr_model",
+    "production_audio_classifier_model",
+    "production_tts_model",
+    "approved_production_lexicon_sources"
+  ]
+}

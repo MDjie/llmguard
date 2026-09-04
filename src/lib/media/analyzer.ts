@@ -17,15 +17,40 @@ const mediaAnalysisSchema = z.object({
   transcript: z.array(z.object({
     text: z.string().max(100_000), startMs: z.number().int().nonnegative(),
     endMs: z.number().int().nonnegative(), confidence: z.number().min(0).max(1),
+    source: z.enum(['asr', 'subtitle']).optional(),
+    sourceViewId: z.string().min(1).max(128).optional(),
+    speakerId: z.string().min(1).max(128).optional(),
+    channel: z.number().int().nonnegative().max(64).optional(),
+  }).strict().refine((item) => item.endMs >= item.startMs)).max(100_000),
+  subtitles: z.array(z.object({
+    text: z.string().max(100_000), startMs: z.number().int().nonnegative(),
+    endMs: z.number().int().nonnegative(), confidence: z.number().min(0).max(1),
+    source: z.literal('subtitle'),
   }).strict().refine((item) => item.endMs >= item.startMs)).max(100_000),
   frames: z.array(z.object({
     frameIndex: z.number().int().nonnegative(), timeMs: z.number().int().nonnegative(),
     ocrText: z.string().max(100_000).optional(),
+    codes: z.array(z.object({
+      kind: z.enum(['QR', 'BARCODE', 'DATA_MATRIX']), text: z.string().max(16_384),
+      confidence: z.number().min(0).max(1), viewId: z.string().min(1).max(100),
+      region: region, frameIndex: z.number().int().nonnegative().optional(),
+    }).strict()).max(100),
+    labels: z.array(z.object({
+      viewId: z.string().min(1).max(100), label: z.string().min(1).max(128),
+      score: z.number().min(0).max(1), region: region.optional(),
+      frameIndex: z.number().int().nonnegative().optional(),
+    }).strict()).max(1_000),
     risks: z.array(z.object({
       riskType: z.string().min(1).max(128), score: z.number().min(0).max(1),
       reasonCode: z.string().min(1).max(128), region: region.optional(),
     }).strict()).max(100),
   }).strict()).max(10_000),
+  analysisFailures: z.array(z.object({
+    component: z.enum(['OCR', 'CODE_READER', 'VISUAL', 'ASR', 'AUDIO_CLASSIFIER', 'SUBTITLE']),
+    required: z.boolean(), code: z.string().regex(/^ANALYZER_[A-Z0-9_:.-]+$/u).max(160),
+  }).strict()).max(100),
+  degraded: z.boolean(),
+  samplingPhase: z.enum(['summary', 'expanded']),
   anomalies: z.array(z.object({
     type: z.enum(['noise', 'ultrasonic', 'speed_change', 'reversed_audio', 'short_flash', 'hidden_middle', 'track_mismatch']),
     score: z.number().min(0).max(1), startMs: z.number().int().nonnegative(), endMs: z.number().int().nonnegative(),
@@ -43,6 +68,7 @@ export async function analyzeAudioVideo(input: {
   artifact: typeof artifacts.$inferSelect;
   parts: readonly (typeof artifactParts.$inferSelect)[];
   detectionPolicy?: MultimodalDetectionPolicy;
+  signal?: AbortSignal;
 }): Promise<MediaAnalysis> {
   const baseUrl = process.env.MEDIA_ANALYZER_BASE_URL;
   if (!baseUrl) throw new Error('MEDIA_ANALYZER_BASE_URL is required');
@@ -61,7 +87,8 @@ export async function analyzeAudioVideo(input: {
   });
   const detectionPolicy = input.detectionPolicy ?? loadMultimodalDetectionPolicy();
   const result = await safeFetchJson({
-    baseUrl, path: '/v1/analyze/audio-video', providerType: 'custom', timeoutMs: 300_000,
+    baseUrl, path: '/v1/analyze/audio-video', providerType: 'custom', signal: input.signal,
+    timeoutMs: 300_000,
     maxRequestBytes: 512 * 1_024, maxResponseBytes: 32 * 1_024 * 1_024,
     headers: { 'X-Analyzer-Token': sharedToken },
     body: {
@@ -76,12 +103,16 @@ export async function analyzeAudioVideo(input: {
         disableNetworkProtocols: true, allowedProtocols: ['file', 'pipe'],
       },
       sampling: {
-        ...createVideoSamplingPlan(Number(input.artifact.metadata?.durationMs ?? 0), {
+        ...createVideoSamplingPlan(detectionPolicy.maxDurationMs, {
           intervalMs: detectionPolicy.frameIntervalMs,
           maxFrames: detectionPolicy.maxFrames,
         }),
         batchSize: detectionPolicy.frameBatchSize,
         minimumConfidence: detectionPolicy.minimumConfidence,
+        adaptive: {
+          summaryFrames: detectionPolicy.summaryFrames,
+          expansionThreshold: detectionPolicy.reviewThreshold,
+        },
       },
       audioViews: ['original', 'denoise', 'normalize', 'speed_0_9', 'speed_1_1', 'reverse_probe'],
     },

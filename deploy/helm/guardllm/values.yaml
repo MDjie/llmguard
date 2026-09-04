@@ -55,6 +55,7 @@ config:
   GATEWAY_MTLS_REQUIRED: "false"
   OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.guard-observability.svc:4318
   ANALYZER_VISUAL_COMMAND: /models/bin/visual-classifier
+  ANALYZER_CODE_READER_COMMAND: /usr/bin/zbarimg
   ANALYZER_ASR_COMMAND: /models/bin/asr
   ANALYZER_AUDIO_CLASSIFIER_COMMAND: /models/bin/audio-classifier
   ANALYZER_TTS_COMMAND: /models/bin/tts
@@ -62,6 +63,11 @@ config:
   MULTIMODAL_FRAME_BATCH_SIZE: "4"
   MULTIMODAL_FRAME_INTERVAL_MS: ""
   MULTIMODAL_MAX_FRAMES: "10000"
+  MULTIMODAL_SUMMARY_FRAMES: "24"
+  MULTIMODAL_MAX_DURATION_MS: "3600000"
+  MULTIMODAL_MAX_PIXELS: "100000000"
+  MULTIMODAL_MAX_DECODED_BYTES: "2147483648"
+  MULTIMODAL_MAX_DECOMPRESSION_RATIO: "100"
   MULTIMODAL_MIN_CONFIDENCE: "0.35"
   MULTIMODAL_REVIEW_THRESHOLD: "0.65"
   MULTIMODAL_BLOCK_THRESHOLD: "0.8"
@@ -238,8 +244,8 @@ workloads:
     command: ["node"]
     args: ["/app/server.mjs"]
     resources:
-      requests: { cpu: "2", memory: 4Gi }
-      limits: { cpu: "8", memory: 16Gi }
+      requests: { cpu: "2", memory: 4Gi, ephemeral-storage: 1Gi }
+      limits: { cpu: "8", memory: 16Gi, ephemeral-storage: 2Gi }
     autoscaling: { enabled: false }
   rag:
     enabled: true

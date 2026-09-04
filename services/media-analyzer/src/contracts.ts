@@ -36,6 +36,8 @@ export const documentImageRequestSchema = z.object({
     maxPages: z.number().int().positive().max(5_000),
     maxFrames: z.number().int().positive().max(10_000),
     maxDecodeSeconds: z.number().int().positive().max(3_600),
+    maxDecodedBytes: z.number().int().positive().max(50 * 1_024 * 1_024 * 1_024),
+    maxDecompressionRatio: z.number().int().positive().max(1_000),
     disableExternalReferences: z.literal(true),
     disableActiveContent: z.literal(true),
     batchSize: z.number().int().positive().max(64),
@@ -69,6 +71,10 @@ export const mediaRequestSchema = z.object({
     maxDurationMs: z.number().int().nonnegative(),
     batchSize: z.number().int().positive().max(64),
     minimumConfidence: z.number().min(0).max(1),
+    adaptive: z.object({
+      summaryFrames: z.number().int().positive().max(256),
+      expansionThreshold: z.number().min(0).max(1),
+    }).strict().optional(),
   }).strict(),
   audioViews: z.array(z.enum([
     'original', 'denoise', 'normalize', 'speed_0_9', 'speed_1_1', 'reverse_probe',
@@ -124,6 +130,45 @@ export interface OcrRegion {
   readonly confidence: number;
   readonly region: readonly [number, number, number, number];
   readonly page?: number;
+  readonly blockId?: number;
+  readonly paragraphId?: number;
+  readonly lineId?: number;
+  readonly wordId?: number;
+  readonly sourceRelation: 'OCR_FROM_RENDERED_PAGE' | 'OCR_FROM_IMAGE' | 'OCR_FROM_VIDEO_FRAME';
+}
+
+export interface CodeRegion {
+  readonly kind: 'QR' | 'BARCODE' | 'DATA_MATRIX';
+  readonly text: string;
+  readonly confidence: number;
+  readonly viewId: string;
+  readonly region: readonly [number, number, number, number];
+  readonly page?: number;
+  readonly frameIndex?: number;
+}
+
+export interface VisualLabel {
+  readonly viewId: string;
+  readonly label: string;
+  readonly score: number;
+  readonly region?: readonly [number, number, number, number];
+  readonly frameIndex?: number;
+}
+
+export interface DocumentElement {
+  readonly elementId: string;
+  readonly kind: 'PAGE' | 'PARAGRAPH' | 'LINE' | 'WORD' | 'EMBEDDED_IMAGE';
+  readonly page: number;
+  readonly region: readonly [number, number, number, number];
+  readonly sourceViewId: string;
+  readonly parentElementId?: string;
+  readonly embeddedArtifactId?: string;
+}
+
+export interface AnalysisFailure {
+  readonly component: 'OCR' | 'CODE_READER' | 'VISUAL' | 'ASR' | 'AUDIO_CLASSIFIER' | 'SUBTITLE';
+  readonly required: boolean;
+  readonly code: string;
 }
 
 export interface VisualRisk {
@@ -140,4 +185,12 @@ export interface TranscriptSegment {
   readonly startMs: number;
   readonly endMs: number;
   readonly confidence: number;
+  readonly source?: 'asr' | 'subtitle';
+  readonly sourceViewId?: string;
+  readonly speakerId?: string;
+  readonly channel?: number;
+}
+
+export interface SubtitleSegment extends TranscriptSegment {
+  readonly source: 'subtitle';
 }

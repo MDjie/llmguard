@@ -13,7 +13,8 @@ import {
 
 const zero: AgentResourceVector = {
   toolSteps: 0, recursionDepth: 0, browserTabs: 0, processes: 0, connections: 0,
-  files: 0, ocrPages: 0, mediaDurationSeconds: 0, guardInferenceTokens: 0,
+  files: 0, ocrPages: 0, mediaDurationSeconds: 0, mediaFrames: 0,
+  decodingBranches: 0, judgeCalls: 0, decompressedBytes: 0, guardInferenceTokens: 0,
 };
 
 describe('guard resource control', () => {

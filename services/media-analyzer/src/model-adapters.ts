@@ -1,9 +1,17 @@
 import { z } from 'zod';
 import type { CommandRunner } from './command-runner';
-import type { TranscriptSegment, VisualRisk } from './contracts';
+import type { TranscriptSegment, VisualLabel, VisualRisk } from './contracts';
 
 const visualSchema = z.object({
   modelVersion: z.string().min(1).max(128),
+  labels: z.array(z.object({
+    label: z.string().min(1).max(128),
+    score: z.number().min(0).max(1),
+    region: z.tuple([
+      z.number().min(0).max(1), z.number().min(0).max(1),
+      z.number().min(0).max(1), z.number().min(0).max(1),
+    ]).optional(),
+  }).strict()).max(1_000).optional(),
   risks: z.array(z.object({
     riskType: z.string().min(1).max(128),
     score: z.number().min(0).max(1),
@@ -22,6 +30,8 @@ const asrSchema = z.object({
     startMs: z.number().int().nonnegative(),
     endMs: z.number().int().nonnegative(),
     confidence: z.number().min(0).max(1),
+    speakerId: z.string().min(1).max(128).optional(),
+    channel: z.number().int().nonnegative().max(64).optional(),
   }).strict().refine((item) => item.endMs >= item.startMs)).max(100_000),
 }).strict();
 
@@ -46,12 +56,14 @@ async function jsonCommand<T>(
   workspace: string,
   timeoutMs: number,
   schema: z.ZodType<T>,
+  signal?: AbortSignal,
 ): Promise<T> {
   if (!program) throw new Error(requiredCode);
   const result = await runner.run(program, args, {
     cwd: workspace,
     timeoutMs,
     maxOutputBytes: 32 * 1_024 * 1_024,
+    signal,
   });
   let parsed: unknown;
   try {
@@ -68,7 +80,8 @@ export async function classifyImage(input: {
   workspace: string;
   viewId: string;
   frameIndex?: number;
-}): Promise<{ modelVersion: string; risks: VisualRisk[] }> {
+  signal?: AbortSignal;
+}): Promise<{ modelVersion: string; risks: VisualRisk[]; labels: VisualLabel[] }> {
   const result = await jsonCommand(
     input.runner,
     process.env.ANALYZER_VISUAL_COMMAND,
@@ -77,9 +90,15 @@ export async function classifyImage(input: {
     input.workspace,
     120_000,
     visualSchema,
+    input.signal,
   );
   return {
     modelVersion: result.modelVersion,
+    labels: (result.labels ?? []).map((label) => ({
+      ...label,
+      viewId: input.viewId,
+      ...(input.frameIndex === undefined ? {} : { frameIndex: input.frameIndex }),
+    })),
     risks: result.risks.map((risk) => ({
       ...risk,
       viewId: input.viewId,
@@ -92,6 +111,7 @@ export async function transcribeAudio(input: {
   runner: CommandRunner;
   audioPath: string;
   workspace: string;
+  signal?: AbortSignal;
 }): Promise<{ modelVersion: string; segments: TranscriptSegment[] }> {
   return jsonCommand(
     input.runner,
@@ -101,6 +121,7 @@ export async function transcribeAudio(input: {
     input.workspace,
     300_000,
     asrSchema,
+    input.signal,
   );
 }
 
@@ -108,6 +129,7 @@ export async function classifyAudioAnomalies(input: {
   runner: CommandRunner;
   audioPath: string;
   workspace: string;
+  signal?: AbortSignal;
 }) {
   return jsonCommand(
     input.runner,
@@ -117,5 +139,6 @@ export async function classifyAudioAnomalies(input: {
     input.workspace,
     300_000,
     audioAnomalySchema,
+    input.signal,
   );
 }

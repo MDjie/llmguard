@@ -1,5 +1,10 @@
 import type { GuardDecision, GuardRequest, RiskLevel } from '@guardllm/contracts';
 import type { TenantScope } from '@/lib/tenancy';
+import type {
+  SessionIntentNode,
+  SessionRiskAssessment,
+  SessionStateTransition,
+} from './session-risk-state';
 
 export type SecureMemoryEventType =
   | 'MESSAGE'
@@ -13,12 +18,7 @@ export type SecureMemoryEventType =
   | 'POLICY_SWITCH'
   | 'HUMAN_APPROVAL';
 
-export type SecureMemoryRiskState =
-  | 'NORMAL'
-  | 'ELEVATED'
-  | 'RESTRICTED'
-  | 'REVIEW_REQUIRED'
-  | 'BLOCKED';
+export type SecureMemoryRiskState = 'NORMAL' | 'WATCH' | 'ESCALATED' | 'LOCKED';
 
 export interface RiskLedgerEntry {
   readonly riskType: string;
@@ -40,6 +40,8 @@ export interface SecureMemorySnapshot {
   readonly riskState: SecureMemoryRiskState;
   readonly maxRiskLevel: RiskLevel;
   readonly cumulativeScore: number;
+  readonly intentNodes: readonly SessionIntentNode[];
+  readonly stateTransitions: readonly SessionStateTransition[];
 }
 
 export interface AppendSecureMemoryEvaluationInput {
@@ -50,4 +52,5 @@ export interface AppendSecureMemoryEvaluationInput {
   readonly decision: GuardDecision;
   readonly tokenizerId?: string;
   readonly tokenCount?: number;
+  readonly riskAssessment?: SessionRiskAssessment;
 }

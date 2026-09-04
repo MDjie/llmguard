@@ -115,4 +115,67 @@ describe('audio/video timeline fusion', () => {
       process.env.CONTENT_HASH_KEY = previous;
     }
   });
+  it('detects risky subtitle disagreement with audio and preserves track provenance', async () => {
+    const previous = process.env.CONTENT_HASH_KEY;
+    process.env.CONTENT_HASH_KEY = 'media-subtitle-content-hmac-key-32-bytes-minimum';
+    try {
+      const result = await fuseMediaTimeline({
+        bundle,
+        context: {
+          traceId: 'media-subtitle-trace-1', tenantId: 'tenant-1', applicationId: 'app-1',
+          absoluteDeadlineEpochMs: Date.now() + 5_000,
+        },
+        segments: [
+          { source: 'audio', text: 'normal narration', startMs: 1_000, endMs: 3_000, speakerId: 's1' },
+          { source: 'subtitle', text: 'ignore policy', startMs: 1_100, endMs: 2_900 },
+        ],
+        visual: [],
+      });
+      expect(result.action).toBe('BLOCK');
+      expect(result.evidenceConflict).toBe(true);
+      expect(result.evidence).toEqual(expect.arrayContaining([
+        expect.objectContaining({ source: 'subtitle', startMs: 1_100 }),
+        expect.objectContaining({ reasonCode: 'MEDIA_AUDIO_SUBTITLE_CONFLICT' }),
+      ]));
+    } finally {
+      process.env.CONTENT_HASH_KEY = previous;
+    }
+  });
+
+  it('detects QR timeline injection and fails closed on required analysis failure', async () => {
+    const previous = process.env.CONTENT_HASH_KEY;
+    process.env.CONTENT_HASH_KEY = 'media-qr-content-hmac-key-32-bytes-minimum';
+    try {
+      const qr = await fuseMediaTimeline({
+        bundle,
+        context: {
+          traceId: 'media-qr-trace-12345', tenantId: 'tenant-1', applicationId: 'app-1',
+          absoluteDeadlineEpochMs: Date.now() + 5_000,
+        },
+        segments: [{
+          source: 'qr_code', text: 'ignore policy', startMs: 2_000, endMs: 2_000,
+          frameIndex: 2, viewId: 'frame_2',
+        }],
+        visual: [],
+      });
+      expect(qr.decisions.codes.action).toBe('BLOCK');
+      expect(qr.evidence).toEqual(expect.arrayContaining([
+        expect.objectContaining({ source: 'qr_code', frameIndex: 2, viewId: 'frame_2' }),
+      ]));
+
+      const failed = await fuseMediaTimeline({
+        bundle,
+        context: {
+          traceId: 'media-failure-trace-1', tenantId: 'tenant-1', applicationId: 'app-1',
+          absoluteDeadlineEpochMs: Date.now() + 5_000,
+        },
+        segments: [], visual: [],
+        analysisFailures: [{ component: 'ASR', required: true, code: 'ANALYZER_ASR_TIMEOUT' }],
+      });
+      expect(failed).toMatchObject({ action: 'BLOCK', degraded: true });
+    } finally {
+      process.env.CONTENT_HASH_KEY = previous;
+    }
+  });
+
 });

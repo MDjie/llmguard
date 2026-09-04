@@ -7,6 +7,10 @@ export interface AgentResourceVector {
   readonly files: number;
   readonly ocrPages: number;
   readonly mediaDurationSeconds: number;
+  readonly mediaFrames: number;
+  readonly decodingBranches: number;
+  readonly judgeCalls: number;
+  readonly decompressedBytes: number;
   readonly guardInferenceTokens: number;
 }
 
@@ -28,7 +32,8 @@ export type BudgetReservationResult =
 
 const RESOURCES: readonly AgentResourceName[] = [
   'toolSteps', 'recursionDepth', 'browserTabs', 'processes', 'connections',
-  'files', 'ocrPages', 'mediaDurationSeconds', 'guardInferenceTokens',
+  'files', 'ocrPages', 'mediaDurationSeconds', 'mediaFrames', 'decodingBranches',
+  'judgeCalls', 'decompressedBytes', 'guardInferenceTokens',
 ];
 
 function validateVector(vector: AgentResourceVector, prefix: string): void {

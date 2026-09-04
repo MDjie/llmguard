@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import type { GuardAction, GuardDecision, GuardRequest } from '@guardllm/contracts';
 import { createEngineForPolicyBundle } from '@/lib/guard-engine-v2';
 import type { RuntimePolicyBundle } from '@/lib/policy-bundle';
@@ -7,6 +8,12 @@ export interface OcrFusionRegion {
   readonly artifactId: string;
   readonly viewId: string;
   readonly region: readonly [number, number, number, number];
+  readonly page?: number;
+}
+
+export interface CodeFusionRegion extends OcrFusionRegion {
+  readonly kind: 'QR' | 'BARCODE' | 'DATA_MATRIX';
+  readonly confidence: number;
 }
 
 export interface VisualFusionFinding {
@@ -18,26 +25,33 @@ export interface VisualFusionFinding {
   readonly reasonCode: string;
 }
 
+export interface MultimodalAnalysisFailure {
+  readonly component: string;
+  readonly required: boolean;
+  readonly code: string;
+}
+
+type SegmentSource = 'user_text' | 'image_ocr' | 'qr_code';
 interface SegmentSpan {
   readonly start: number;
   readonly end: number;
-  readonly source: 'user_text' | 'image_ocr';
+  readonly source: SegmentSource;
   readonly artifactId?: string;
   readonly viewId?: string;
   readonly region?: readonly [number, number, number, number];
+  readonly page?: number;
 }
-
 type InputSegment = Omit<SegmentSpan, 'start' | 'end'> & { readonly text: string };
 
 const ACTION_RANK: Readonly<Record<GuardAction, number>> = {
   ALLOW: 0, WARN: 1, MASK: 2, REWRITE: 2, REQUIRE_REVIEW: 3, SAFE_RESPONSE: 4, BLOCK: 5,
 };
 
-function actionForScore(
-  score: number,
-  reviewThreshold: number,
-  blockThreshold: number,
-): GuardAction {
+function stronger(left: GuardAction, right: GuardAction): GuardAction {
+  return ACTION_RANK[right] > ACTION_RANK[left] ? right : left;
+}
+
+function actionForScore(score: number, reviewThreshold: number, blockThreshold: number): GuardAction {
   if (score >= blockThreshold) return 'BLOCK';
   if (score >= reviewThreshold) return 'REQUIRE_REVIEW';
   if (score >= 0.5) return 'WARN';
@@ -48,11 +62,10 @@ function buildText(segments: readonly InputSegment[]) {
   let text = '';
   const spans: SegmentSpan[] = [];
   for (const segment of segments) {
-    const value = segment.text;
-    if (!value) continue;
+    if (!segment.text) continue;
     if (text) text += ' ';
     const start = text.length;
-    text += value;
+    text += segment.text;
     const { text: _text, ...provenance } = segment;
     spans.push({ ...provenance, start, end: text.length });
   }
@@ -69,7 +82,7 @@ async function evaluate(
     contractVersion: '1.0',
     context: {
       ...base,
-      requestId: `${base.traceId}-${requestSuffix}`,
+      requestId: `${base.traceId}-${requestSuffix}`.slice(0, 128),
       direction: 'INPUT',
       policyBundleId: bundle.id,
     },
@@ -77,24 +90,40 @@ async function evaluate(
   });
 }
 
-function mappedEvidence(decision: GuardDecision, spans: readonly SegmentSpan[]) {
+function evidenceIdentity(traceId: string, value: unknown): string {
+  return createHash('sha256')
+    .update(`${traceId}:${JSON.stringify(value)}`, 'utf8')
+    .digest('hex');
+}
+
+function mappedEvidence(
+  decision: GuardDecision,
+  spans: readonly SegmentSpan[],
+  traceId: string,
+) {
   return decision.observations.flatMap((observation) => observation.evidence.map((evidence) => {
     const matched = spans.filter((span) =>
       evidence.start !== undefined && evidence.end !== undefined &&
       evidence.end > span.start && evidence.start < span.end,
     );
-    return {
+    const sources = matched.map((span) => ({
+      source: span.source,
+      artifactId: span.artifactId,
+      viewId: span.viewId,
+      region: span.region,
+      page: span.page,
+    }));
+    const base = {
       riskType: observation.riskType,
       score: observation.score,
+      action: decision.action,
+      reasonCode: observation.reasonCode ?? 'MULTIMODAL_TEXT_RISK',
       contentHmac: evidence.contentHmac,
       maskedPreview: evidence.maskedPreview,
-      sources: matched.map((span) => ({
-        source: span.source,
-        artifactId: span.artifactId,
-        viewId: span.viewId,
-        region: span.region,
-      })),
+      sources,
+      traceId,
     };
+    return { ...base, evidenceRef: evidenceIdentity(traceId, base) };
   }));
 }
 
@@ -104,58 +133,115 @@ export async function fuseMultimodal(input: {
   readonly userText?: string;
   readonly contextArtifactId?: string;
   readonly ocr: readonly OcrFusionRegion[];
+  readonly codes?: readonly CodeFusionRegion[];
   readonly visual: readonly VisualFusionFinding[];
+  readonly analysisFailures?: readonly MultimodalAnalysisFailure[];
+  readonly sourceTrust?: 'TRUSTED' | 'CONTROLLED' | 'UNTRUSTED' | 'UNKNOWN';
+  readonly instructionCapability?: 'ALLOWED' | 'DATA_ONLY' | 'FORBIDDEN' | 'UNKNOWN';
   readonly anomalyScore?: number;
   readonly reviewThreshold?: number;
   readonly blockThreshold?: number;
 }) {
-  const user = buildText(input.userText ? [{
+  const userSegments: InputSegment[] = input.userText ? [{
     text: input.userText,
-    source: 'user_text' as const,
+    source: 'user_text',
     artifactId: input.contextArtifactId,
-  }] : []);
-  const image = buildText(input.ocr.map((region) => ({
+  }] : [];
+  const ocrSegments: InputSegment[] = input.ocr.map((region) => ({
     text: region.text,
-    source: 'image_ocr' as const,
+    source: 'image_ocr',
     artifactId: region.artifactId,
     viewId: region.viewId,
     region: region.region,
-  })));
-  const combined = buildText([
-    ...(input.userText ? [{ text: input.userText, source: 'user_text' as const, artifactId: input.contextArtifactId }] : []),
-    ...input.ocr.map((region) => ({
-      text: region.text, source: 'image_ocr' as const, artifactId: region.artifactId,
-      viewId: region.viewId, region: region.region,
-    })),
-  ]);
-  const [userDecision, imageDecision, combinedDecision] = await Promise.all([
+    page: region.page,
+  }));
+  const codeSegments: InputSegment[] = (input.codes ?? []).map((region) => ({
+    text: region.text,
+    source: 'qr_code',
+    artifactId: region.artifactId,
+    viewId: region.viewId,
+    region: region.region,
+    page: region.page,
+  }));
+  const user = buildText(userSegments);
+  const image = buildText(ocrSegments);
+  const codes = buildText(codeSegments);
+  const combined = buildText([...userSegments, ...ocrSegments, ...codeSegments]);
+  const [userDecision, imageDecision, codeDecision, combinedDecision] = await Promise.all([
     evaluate(input.bundle, input.context, 'user', user.text),
     evaluate(input.bundle, input.context, 'image', image.text),
+    evaluate(input.bundle, input.context, 'codes', codes.text),
     evaluate(input.bundle, input.context, 'combined', combined.text),
   ]);
-  const strongestIndividual = Math.max(ACTION_RANK[userDecision.action], ACTION_RANK[imageDecision.action]);
-  const cooperativeAttack = Boolean(input.userText && input.ocr.length > 0 &&
-    ACTION_RANK[combinedDecision.action] > strongestIndividual);
-  const visualScore = Math.max(input.anomalyScore ?? 0, 0, ...input.visual.map((item) => item.score));
-  const visualAction = actionForScore(
-    visualScore,
-    input.reviewThreshold ?? 0.65,
-    input.blockThreshold ?? 0.8,
+  const strongestIndividual = Math.max(
+    ACTION_RANK[userDecision.action],
+    ACTION_RANK[imageDecision.action],
+    ACTION_RANK[codeDecision.action],
   );
-  const finalAction = ACTION_RANK[visualAction] > ACTION_RANK[combinedDecision.action]
-    ? visualAction : combinedDecision.action;
+  const populatedModalities = [user.text, image.text, codes.text].filter(Boolean).length;
+  const cooperativeAttack = populatedModalities >= 2 &&
+    ACTION_RANK[combinedDecision.action] > strongestIndividual;
+  const reviewThreshold = input.reviewThreshold ?? 0.65;
+  const blockThreshold = input.blockThreshold ?? 0.8;
+  const visualScore = Math.max(input.anomalyScore ?? 0, 0, ...input.visual.map((item) => item.score));
+  const visualAction = actionForScore(visualScore, reviewThreshold, blockThreshold);
+  const failures = input.analysisFailures ?? [];
+  const failureAction: GuardAction = failures.some((item) => item.required)
+    ? 'BLOCK'
+    : failures.length > 0
+      ? 'WARN'
+      : 'ALLOW';
+  const trustAction: GuardAction = input.instructionCapability === 'UNKNOWN'
+    ? 'REQUIRE_REVIEW'
+    : input.sourceTrust === 'UNKNOWN'
+      ? 'REQUIRE_REVIEW'
+      : input.sourceTrust === 'UNTRUSTED' &&
+          input.instructionCapability !== 'FORBIDDEN' && combined.text
+        ? 'WARN'
+        : 'ALLOW';
+  const action = [visualAction, failureAction, trustAction]
+    .reduce(stronger, combinedDecision.action);
+  const visualEvidence = input.visual.map((item) => {
+    const base = {
+      riskType: item.riskType,
+      score: item.score,
+      action: actionForScore(item.score, reviewThreshold, blockThreshold),
+      reasonCode: item.reasonCode,
+      sources: [{
+        source: 'visual' as const,
+        artifactId: item.artifactId,
+        viewId: item.viewId,
+        region: item.region,
+      }],
+      traceId: input.context.traceId,
+    };
+    return { ...base, evidenceRef: evidenceIdentity(input.context.traceId, base) };
+  });
+  const failureEvidence = failures.map((item) => {
+    const base = {
+      riskType: 'system.multimodal_analysis_failure',
+      score: item.required ? 1 : 0.5,
+      action: item.required ? 'BLOCK' as const : 'WARN' as const,
+      reasonCode: item.code,
+      sources: [{ source: 'analysis_component' as const, component: item.component }],
+      traceId: input.context.traceId,
+    };
+    return { ...base, evidenceRef: evidenceIdentity(input.context.traceId, base) };
+  });
   return {
-    action: finalAction,
+    action,
     cooperativeAttack,
-    textDecisions: { user: userDecision, image: imageDecision, combined: combinedDecision },
+    degraded: failures.length > 0,
+    textDecisions: {
+      user: userDecision,
+      image: imageDecision,
+      codes: codeDecision,
+      combined: combinedDecision,
+    },
     evidence: [
-      ...mappedEvidence(combinedDecision, combined.spans),
-      ...input.visual.map((item) => ({
-        riskType: item.riskType,
-        score: item.score,
-        reasonCode: item.reasonCode,
-        sources: [{ source: 'visual', artifactId: item.artifactId, viewId: item.viewId, region: item.region }],
-      })),
+      ...mappedEvidence(combinedDecision, combined.spans, input.context.traceId),
+      ...visualEvidence,
+      ...failureEvidence,
     ],
   };
 }

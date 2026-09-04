@@ -14,6 +14,16 @@ export class GuardJobError extends Error {
   }
 }
 
+export function isGuardJobCancellationError(error: unknown): boolean {
+  return error instanceof GuardJobError && error.code === 'GRD_JOB_CANCELLED_OR_TERMINAL';
+}
+
+export interface GuardJobCancellationMonitor {
+  readonly signal: AbortSignal;
+  stop(): void;
+}
+
+
 function configured(value: string | undefined): string[] {
   return (value ?? '').split(',').map((item) => item.trim()).filter(Boolean);
 }
@@ -142,6 +152,48 @@ export async function claimNextGuardJob(jobTypes?: readonly string[]) {
   });
 }
 
+export function monitorGuardJobCancellation(
+  job: typeof guardJobs.$inferSelect,
+  options: { readonly pollIntervalMs?: number } = {},
+): GuardJobCancellationMonitor {
+  const controller = new AbortController();
+  const scope = { tenantId: job.tenantId, applicationId: job.applicationId };
+  const pollIntervalMs = Math.min(5_000, Math.max(100, options.pollIntervalMs ?? 500));
+  let stopped = false;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const poll = async (): Promise<void> => {
+    if (stopped || controller.signal.aborted) return;
+    try {
+      const current = await db.select({ status: guardJobs.status }).from(guardJobs).where(and(
+        eq(guardJobs.id, job.id),
+        scopePredicate(guardJobs, scope),
+      )).limit(1).then((rows) => rows[0]);
+      if (!current || current.status === 'cancelled') {
+        controller.abort(new GuardJobError(
+          'GRD_JOB_CANCELLED_OR_TERMINAL',
+          'The guard job was cancelled or became terminal',
+        ));
+        return;
+      }
+    } catch {
+      // A transient status-read failure must not manufacture a cancellation.
+    }
+    if (!stopped) {
+      timer = setTimeout(() => { void poll(); }, pollIntervalMs);
+      timer.unref?.();
+    }
+  };
+  timer = setTimeout(() => { void poll(); }, pollIntervalMs);
+  timer.unref?.();
+  return {
+    signal: controller.signal,
+    stop(): void {
+      stopped = true;
+      if (timer) clearTimeout(timer);
+    },
+  };
+}
+
 export async function updateGuardJobProgress(
   job: typeof guardJobs.$inferSelect,
   stage: string,
@@ -150,11 +202,21 @@ export async function updateGuardJobProgress(
 ): Promise<void> {
   const scope = { tenantId: job.tenantId, applicationId: job.applicationId };
   await db.transaction(async (transaction) => {
-    await transaction.update(guardJobs).set({
+    const [updated] = await transaction.update(guardJobs).set({
       stage,
       progress: Math.min(99, Math.max(0, Math.floor(progress))),
       heartbeatAt: new Date(),
-    }).where(and(eq(guardJobs.id, job.id), scopePredicate(guardJobs, scope)));
+    }).where(and(
+      eq(guardJobs.id, job.id),
+      eq(guardJobs.status, 'running'),
+      scopePredicate(guardJobs, scope),
+    )).returning({ id: guardJobs.id });
+    if (!updated) {
+      throw new GuardJobError(
+        'GRD_JOB_CANCELLED_OR_TERMINAL',
+        'The guard job was cancelled or became terminal',
+      );
+    }
     await transaction.insert(guardJobEvents).values({ ...scope, jobId: job.id, eventType: 'job.progress', payload: { stage, progress, ...payload } });
   });
 }
@@ -165,10 +227,20 @@ export async function completeGuardJob(
 ): Promise<void> {
   const scope = { tenantId: job.tenantId, applicationId: job.applicationId };
   await db.transaction(async (transaction) => {
-    await transaction.update(guardJobs).set({
+    const [completed] = await transaction.update(guardJobs).set({
       status: 'completed', stage: 'completed', progress: 100, result,
       heartbeatAt: new Date(), completedAt: new Date(),
-    }).where(and(eq(guardJobs.id, job.id), scopePredicate(guardJobs, scope)));
+    }).where(and(
+      eq(guardJobs.id, job.id),
+      eq(guardJobs.status, 'running'),
+      scopePredicate(guardJobs, scope),
+    )).returning({ id: guardJobs.id });
+    if (!completed) {
+      throw new GuardJobError(
+        'GRD_JOB_CANCELLED_OR_TERMINAL',
+        'The guard job was cancelled or became terminal',
+      );
+    }
     await transaction.insert(guardJobEvents).values({ ...scope, jobId: job.id, eventType: 'job.completed', payload: { resultHash: createHash('sha256').update(canonicalJson(result)).digest('hex') } });
   });
 }
@@ -183,14 +255,20 @@ export async function failGuardJob(job: typeof guardJobs.$inferSelect, error: un
   }];
   const terminal = job.attempt >= job.maxAttempts;
   await db.transaction(async (transaction) => {
-    await transaction.update(guardJobs).set({
+    const [failed] = await transaction.update(guardJobs).set({
       status: terminal ? 'failed' : 'retrying',
       stage: terminal ? 'failed' : 'retry_wait',
       failureHistory: history,
       heartbeatAt: new Date(),
       completedAt: terminal ? new Date() : null,
-    }).where(and(eq(guardJobs.id, job.id), scopePredicate(guardJobs, scope)));
-    await transaction.insert(guardJobEvents).values({ ...scope, jobId: job.id, eventType: terminal ? 'job.failed' : 'job.retrying', payload: history.at(-1) });
+    }).where(and(
+      eq(guardJobs.id, job.id),
+      eq(guardJobs.status, 'running'),
+      scopePredicate(guardJobs, scope),
+    )).returning({ id: guardJobs.id });
+    if (failed) {
+      await transaction.insert(guardJobEvents).values({ ...scope, jobId: job.id, eventType: terminal ? 'job.failed' : 'job.retrying', payload: history.at(-1) });
+    }
   });
 }
 
