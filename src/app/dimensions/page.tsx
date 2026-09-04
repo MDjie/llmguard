@@ -38,6 +38,7 @@ import {
   Eye,
   Pencil,
 } from 'lucide-react';
+import { csrfHeaders } from '@/lib/auth/csrf-client';
 
 interface Dimension {
   id: string;
@@ -146,7 +147,7 @@ export default function DimensionsPage() {
     try {
       const response = await fetch('/api/dimensions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
         body: JSON.stringify({
           ...formData,
           weight: parseFloat(formData.weight),
@@ -198,7 +199,7 @@ export default function DimensionsPage() {
     try {
       const response = await fetch(`/api/dimensions/${editingDimension.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
         body: JSON.stringify({
           name: formData.name,
           description: formData.description,
@@ -227,7 +228,7 @@ export default function DimensionsPage() {
     try {
       const response = await fetch(`/api/dimensions/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
         body: JSON.stringify({ enabled }),
       });
 
@@ -250,6 +251,7 @@ export default function DimensionsPage() {
     try {
       const response = await fetch(`/api/dimensions/${id}`, {
         method: 'DELETE',
+        headers: { ...csrfHeaders() },
       });
 
       const result = await response.json();

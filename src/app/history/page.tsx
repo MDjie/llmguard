@@ -16,6 +16,7 @@ import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import JudgeModelResultCard from '@/components/judge/JudgeModelResultCard';
+import { csrfHeaders } from '@/lib/auth/csrf-client';
 
 interface Finding {
   dimension: string;
@@ -166,7 +167,10 @@ export default function HistoryPage() {
 
   const deleteSession = async (id: string) => {
     try {
-      const res = await fetch(`/api/history?id=${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/history?id=${id}`, {
+        method: 'DELETE',
+        headers: { ...csrfHeaders() },
+      });
       
       if (!res.ok) {
         throw new Error(`HTTP error! status: ${res.status}`);

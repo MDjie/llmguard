@@ -38,6 +38,7 @@ import {
   type TriggerMode,
   type FallbackAction,
 } from '@/lib/judge/types';
+import { csrfHeaders } from '@/lib/auth/csrf-client';
 
 interface JudgeConfigPanelProps {
   policyId: string;
@@ -130,7 +131,7 @@ export function JudgeConfigPanel({ policyId }: JudgeConfigPanelProps) {
     try {
       const res = await fetch(`/api/policies/${policyId}/judge-config`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
         body: JSON.stringify(config),
       });
 
