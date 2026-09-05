@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ChevronLeft, ChevronRight, Play, Loader2, AlertCircle, CheckCircle, AlertTriangle, XCircle, Shield, ArrowRight, GitCompare, Lightbulb, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { toast } from 'sonner';
+import { csrfHeaders } from '@/lib/auth/csrf-client';
 
 // ============ 常量定义 ============
 const MAX_TEST_TEXT_LENGTH = 4000;
@@ -466,7 +467,7 @@ export function ABComparePanel({ currentPolicyId, isOpen, onToggle, showFloating
     try {
       const data = await requestJson<CompareResult>('/api/policies/compare', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
         signal: abortControllerRef.current.signal,
         body: JSON.stringify({
           policyAId,

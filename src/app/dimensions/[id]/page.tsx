@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { csrfHeaders } from '@/lib/auth/csrf-client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -80,15 +81,65 @@ interface Rule {
 interface MatchedTestRule {
   id: string;
   name: string;
-  matches: string[];
-  score: number;
+  type?: string;
+  pattern?: string | null;
+  score?: string | number;
+  confidence?: string | number;
+  matches?: string[];
 }
 
 interface DimensionTestResult {
   score: number;
   matchedCount: number;
-  totalRules: number;
+  ruleCount: number;
   matchedRules: MatchedTestRule[];
+  evidence?: string[];
+}
+
+const RULE_TYPE_LABEL: Record<string, string> = {
+  keyword: '关键词',
+  regex: '正则表达式',
+  semantic: '语义分析',
+  llm: 'LLM 判断',
+};
+
+const MATCH_TYPE_LABEL: Record<string, string> = {
+  contains: '包含',
+  exact: '精确匹配',
+  prefix: '前缀匹配',
+  suffix: '后缀匹配',
+  regex: '正则表达式',
+};
+
+// 接口返回的是 detection_rules 原始行(蛇形命名 match_type/case_sensitive...),
+// 这里统一映射成前端 Rule 形状,避免读取 matchType/caseSensitive 等字段为空。
+function mapRuleRow(row: Record<string, unknown>): Rule {
+  return {
+    id: String(row.id ?? ''),
+    dimensionId: String(row.dimension_id ?? ''),
+    groupId: row.group_id ? String(row.group_id) : null,
+    name: String(row.name ?? ''),
+    type: String(row.type ?? ''),
+    pattern: row.pattern != null ? String(row.pattern) : null,
+    matchType: row.match_type ? String(row.match_type) : 'contains',
+    caseSensitive: Boolean(row.case_sensitive),
+    score: String(row.score ?? '0'),
+    confidence: String(row.confidence ?? '0'),
+    priority: Number(row.priority ?? 100),
+    enabled: Boolean(row.enabled),
+    description: row.description != null ? String(row.description) : null,
+    config: (row.config && typeof row.config === 'object' ? row.config : {}) as Record<string, unknown>,
+    tags: Array.isArray(row.tags) ? (row.tags as string[]) : [],
+    groupName: row.group_name ? String(row.group_name) : undefined,
+    suggestion: row.suggestion != null ? String(row.suggestion) : null,
+  };
+}
+
+function testSeverity(score: number): { label: string; variant: 'destructive' | 'secondary' | 'outline' | 'default'; textColor: string } {
+  if (score >= 70) return { label: '高风险', variant: 'destructive', textColor: 'text-red-600' };
+  if (score >= 40) return { label: '中风险', variant: 'secondary', textColor: 'text-amber-600' };
+  if (score > 0) return { label: '低风险', variant: 'secondary', textColor: 'text-yellow-600' };
+  return { label: '未命中', variant: 'outline', textColor: 'text-green-600' };
 }
 
 export default function DimensionDetailPage() {
@@ -126,7 +177,10 @@ export default function DimensionDetailPage() {
       const result = await response.json();
       if (result.success) {
         setDimension(result.data);
-        setRules(result.data.rules || []);
+        const rawRules: Record<string, unknown>[] = Array.isArray(result.data.rules)
+          ? result.data.rules
+          : [];
+        setRules(rawRules.map(mapRuleRow));
       }
     } catch (error) {
       console.error('获取维度详情失败:', error);
@@ -154,7 +208,7 @@ export default function DimensionDetailPage() {
     try {
       const response = await fetch(`/api/dimensions/${dimensionId}/rules`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
         body: JSON.stringify({
           ...ruleForm,
           score: parseFloat(ruleForm.score),
@@ -220,7 +274,7 @@ export default function DimensionDetailPage() {
     try {
       const response = await fetch(`/api/dimensions/${dimensionId}/rules/${editingRule.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
         body: JSON.stringify({
           ...ruleForm,
           score: parseFloat(ruleForm.score),
@@ -262,6 +316,7 @@ export default function DimensionDetailPage() {
     try {
       const response = await fetch(`/api/dimensions/${dimensionId}/rules/${ruleId}`, {
         method: 'DELETE',
+        headers: { ...csrfHeaders() },
       });
 
       const result = await response.json();
@@ -287,13 +342,23 @@ export default function DimensionDetailPage() {
     try {
       const response = await fetch(`/api/dimensions/${dimensionId}/test`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
         body: JSON.stringify({ text: testText }),
       });
 
       const result = await response.json();
       if (result.success) {
-        setTestResult(result.data);
+        // 后端返回结构:score / matchedCount / ruleCount / matchedRules[] / evidence[],
+        // 与旧版 totalRules/matches 不同,这里统一做一次归一化,避免渲染崩溃。
+        const data = result.data ?? {};
+        const matchedRules: MatchedTestRule[] = Array.isArray(data.matchedRules) ? data.matchedRules : [];
+        setTestResult({
+          score: Number(data.score) || 0,
+          matchedCount: Number(data.matchedCount ?? matchedRules.length) || 0,
+          ruleCount: Number(data.ruleCount ?? data.totalRules) || 0,
+          matchedRules,
+          evidence: Array.isArray(data.evidence) ? data.evidence : [],
+        });
       } else {
         toast.error(result.error || '测试失败');
       }
@@ -409,9 +474,9 @@ export default function DimensionDetailPage() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <code className="text-xs bg-muted px-2 py-1 rounded">
-                            {rule.pattern ? (rule.pattern.length > 30 ? rule.pattern.slice(0, 30) + '...' : rule.pattern) : '-'}
-                          </code>
+                          <Badge variant="secondary" className="text-xs">
+                            {MATCH_TYPE_LABEL[rule.matchType] ?? rule.matchType ?? '-'}
+                          </Badge>
                         </TableCell>
                         <TableCell>{rule.score}</TableCell>
                         <TableCell>
@@ -794,12 +859,19 @@ export default function DimensionDetailPage() {
 
             {testResult && (
               <div className="space-y-4 mt-4 border-t pt-4">
-                <div className="flex items-center gap-4">
-                  <div className="text-2xl font-bold">
-                    风险分: {testResult.score}
+                {/* 汇总:风险分 + 命中统计 */}
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-sm text-muted-foreground">风险分</span>
+                    <span className={`text-3xl font-bold ${testSeverity(testResult.score).textColor}`}>
+                      {testResult.score}
+                    </span>
+                    <Badge variant={testSeverity(testResult.score).variant}>
+                      {testSeverity(testResult.score).label}
+                    </Badge>
                   </div>
-                  <Badge>
-                    命中 {testResult.matchedCount} / {testResult.totalRules} 条规则
+                  <Badge variant="outline" className="text-base">
+                    命中 {testResult.matchedCount} / {testResult.ruleCount || testResult.matchedRules.length} 条规则
                   </Badge>
                 </div>
 
@@ -808,18 +880,35 @@ export default function DimensionDetailPage() {
                     <Label>命中的规则</Label>
                     <div className="space-y-2">
                       {testResult.matchedRules.map((rule) => (
-                        <div key={rule.id} className="flex items-center justify-between p-2 bg-muted rounded">
-                          <div>
-                            <p className="font-medium">{rule.name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              匹配: {rule.matches.join(', ')}
+                        <div
+                          key={rule.id}
+                          className="flex items-start justify-between gap-3 p-3 rounded border bg-muted/40"
+                        >
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="font-medium">{rule.name}</p>
+                              <Badge variant="secondary" className="text-xs">
+                                {RULE_TYPE_LABEL[rule.type ?? ''] ?? rule.type ?? '规则'}
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1 break-all">
+                              命中内容: {rule.matches?.length ? rule.matches.join('、') : rule.pattern || '-'}
                             </p>
                           </div>
-                          <Badge variant="outline">分数: {rule.score}</Badge>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <Badge variant="outline">分数 {rule.score ?? '-'}</Badge>
+                            <Badge variant="outline">置信度 {rule.confidence ?? '-'}</Badge>
+                          </div>
                         </div>
                       ))}
                     </div>
                   </div>
+                )}
+
+                {testResult.evidence && testResult.evidence.length > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    匹配文本片段: {testResult.evidence.join('、')}
+                  </p>
                 )}
               </div>
             )}

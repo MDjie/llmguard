@@ -128,7 +128,6 @@ export function AppLayout({
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
-  const hasCheckedRef = useRef(false);
   const visibleNavigationGroups = navigationGroups
     .map((group) => ({
       ...group,
@@ -194,10 +193,11 @@ export function AppLayout({
     checkAuth();
   }, [pathname, isAuthPage, router]);
 
-  // 只在首次访问时检查数据库状态
+  // 数据库状态检查:登录后立即探测,并按固定间隔刷新。
+  // 注意:后端 /api/health/db 成功时返回 { status: 'ready' },不下发 connected 字段,
+  // 因此必须按 status==='ready' 判定“已连接”,而不能读 data.connected。
   useEffect(() => {
-    if (hasCheckedRef.current || isAuthPage || authStatus !== 'authenticated') return;
-    hasCheckedRef.current = true;
+    if (isAuthPage || authStatus !== 'authenticated') return;
 
     const checkDbStatus = async () => {
       try {
@@ -205,19 +205,16 @@ export function AppLayout({
           method: 'GET',
           cache: 'no-store'
         });
-
-        if (res.ok) {
-          const data = await res.json();
-          setDbStatus(data.connected ? 'connected' : 'disconnected');
-        } else {
-          setDbStatus('disconnected');
-        }
+        const data = await res.json();
+        setDbStatus(res.ok && data.status === 'ready' ? 'connected' : 'disconnected');
       } catch {
         setDbStatus('disconnected');
       }
     };
 
     checkDbStatus();
+    const intervalId = setInterval(checkDbStatus, 30_000);
+    return () => clearInterval(intervalId);
   }, [isAuthPage, authStatus]);
 
   // 点击外部关闭用户菜单

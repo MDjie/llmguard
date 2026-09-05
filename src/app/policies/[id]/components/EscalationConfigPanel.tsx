@@ -25,6 +25,7 @@ import {
   Loader2,
   Info,
 } from 'lucide-react';
+import { csrfHeaders } from '@/lib/auth/csrf-client';
 
 interface EscalationConfigPanelProps {
   policyId: string;
@@ -104,7 +105,7 @@ export function EscalationConfigPanel({ policyId }: EscalationConfigPanelProps) 
     try {
       const response = await fetch(`/api/policies/${policyId}/escalation`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
         body: JSON.stringify(config),
       });
 

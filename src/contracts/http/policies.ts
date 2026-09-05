@@ -3,6 +3,10 @@ import { z } from 'zod';
 const boundedId = z.string().min(1).max(128);
 const dimensionCode = z.string().min(1).max(64).regex(/^[a-z][a-z0-9_]*$/);
 const tags = z.array(z.string().trim().min(1).max(64)).max(50);
+const policyThreshold = z.union([
+  z.number(),
+  z.string().trim().regex(/^\d+(?:\.\d+)?$/).transform(Number),
+]).pipe(z.number().int().min(0).max(100));
 
 export const policyParamsSchema = z.object({ id: boundedId });
 
@@ -15,6 +19,12 @@ export const createPolicySchema = z
   })
   .strict();
 
+// GET /api/policies/[id] 合并返回的规则行会附带 policy_id / created_at /
+// tenant_id / application_id / dimension_name 等额外字段, 前端"保存更改"会原样
+// 回传给 PUT /api/policies。因此这里(1)不做 .strict(), 让额外字段被剥离,
+// 而不是 400 拒绝(否则前端会看到"保存失败: undefined"); (2) DB 层 NUMERIC(5,2)
+// 阈值(如 warn_threshold)会以 "50.00" 字符串返回并随 GET 回传。
+// 仅接受数字与十进制数字字符串，避免 null、布尔值、数组或空字符串被转换成阈值。
 export const policyDimensionRuleSchema = z
   .object({
     id: boundedId.nullable().optional(),
@@ -23,12 +33,11 @@ export const policyDimensionRuleSchema = z
     enabled: z.boolean().default(true),
     warn_enabled: z.boolean().default(true),
     block_enabled: z.boolean().default(true),
-    warn_threshold: z.number().int().min(0).max(100).default(50),
-    block_threshold: z.number().int().min(0).max(100).default(80),
+    warn_threshold: policyThreshold.default(50),
+    block_threshold: policyThreshold.default(80),
     auto_mask: z.boolean().default(false),
     auto_rewrite: z.boolean().default(false),
   })
-  .strict()
   .refine((value) => value.warn_threshold <= value.block_threshold, {
     message: 'warn_threshold must not exceed block_threshold',
     path: ['warn_threshold'],

@@ -199,7 +199,7 @@ services:
     volumes:
       - ./.guardllm/policy-signing/public:/run/secrets/guardllm-policy-signing:ro
     ports:
-      - "127.0.0.1:${APP_PORT:-58082}:5000"
+      - "${APP_BIND_HOST:-127.0.0.1}:${APP_PORT:-58082}:5000"
     networks: [guardllm-network]
     read_only: true
     tmpfs:

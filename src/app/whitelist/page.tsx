@@ -38,6 +38,7 @@ import {
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
+import { csrfHeaders } from '@/lib/auth/csrf-client';
 
 // 白名单规则类型
 interface WhitelistRule {
@@ -281,7 +282,7 @@ export default function WhitelistPage() {
     try {
       const response = await fetch('/api/whitelist-rules', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
         body: JSON.stringify(formData),
       });
 
@@ -354,7 +355,7 @@ export default function WhitelistPage() {
     try {
       const response = await fetch('/api/whitelist-rules', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
         body: JSON.stringify({
           id: editingRule.id,
           ...formData,
@@ -382,7 +383,7 @@ export default function WhitelistPage() {
     try {
       const response = await fetch('/api/whitelist-rules', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
         body: JSON.stringify({
           ...rule,
           enabled: !rule.enabled,
@@ -409,6 +410,7 @@ export default function WhitelistPage() {
     try {
       const response = await fetch(`/api/whitelist-rules?id=${id}`, {
         method: 'DELETE',
+        headers: { ...csrfHeaders() },
       });
 
       const result = await response.json();
@@ -437,7 +439,7 @@ export default function WhitelistPage() {
     try {
       const response = await fetch('/api/whitelist-rules/test', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
         body: JSON.stringify(testFormData),
       });
 

@@ -86,7 +86,7 @@ describe('production deployment invariants', () => {
     expect(ascend).toContain('kubernetes.io/arch: arm64');
   });
 
-  it('keeps local Compose complete, loopback-only, and explicit about HTTP/TLS exceptions', () => {
+  it('keeps local Compose complete, loopback by default, and explicit about HTTP/TLS exceptions', () => {
     const compose = read('docker-compose.yml');
     const rootDockerfile = read('Dockerfile');
     const values = read('deploy/helm/guardllm/values.yaml');
@@ -105,7 +105,8 @@ describe('production deployment invariants', () => {
       'audit-timestamp-worker',
     ];
 
-    expect(compose).toContain('127.0.0.1:${APP_PORT:-58082}:5000');
+    expect(compose).toContain('${APP_BIND_HOST:-127.0.0.1}:${APP_PORT:-58082}:5000');
+    expect(read('.env.example')).toContain('APP_BIND_HOST=127.0.0.1');
     expect(compose).toContain('SESSION_COOKIE_SECURE: "${SESSION_COOKIE_SECURE:-false}"');
     expect(compose).toContain('DATABASE_PLAINTEXT_ALLOWED_HOSTS: "${DATABASE_PLAINTEXT_ALLOWED_HOSTS:-postgres}"');
     expect(compose).toContain('GUARDLLM_ENABLE_EXPERIMENTAL_LABS: "${GUARDLLM_ENABLE_EXPERIMENTAL_LABS:-false}"');

@@ -42,6 +42,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
+import { csrfHeaders } from '@/lib/auth/csrf-client';
 import {
   Plus,
   MoreVertical,
@@ -151,7 +152,7 @@ export default function PoliciesPage() {
     try {
       const res = await fetch('/api/policies', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
         body: JSON.stringify({
           name: formData.name,
           description: formData.description,
@@ -184,7 +185,7 @@ export default function PoliciesPage() {
     try {
       const res = await fetch(`/api/policies/${selectedPolicy.id}/clone`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
         body: JSON.stringify({ name: formData.name }),
       });
 
@@ -213,7 +214,7 @@ export default function PoliciesPage() {
     try {
       const res = await fetch(`/api/policies/${selectedPolicy.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
         body: JSON.stringify({
           name: formData.name,
           description: formData.description,
@@ -242,6 +243,7 @@ export default function PoliciesPage() {
     try {
       const res = await fetch(`/api/policies?id=${selectedPolicy.id}`, {
         method: 'DELETE',
+        headers: { ...csrfHeaders() },
       });
 
       const data = await res.json();
@@ -263,7 +265,7 @@ export default function PoliciesPage() {
     try {
       const res = await fetch(`/api/policies/${policy.id}/toggle`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
         body: JSON.stringify({ isActive: !policy.isActive }),
       });
 
@@ -284,6 +286,7 @@ export default function PoliciesPage() {
     try {
       const res = await fetch(`/api/policies/${policy.id}/set-default`, {
         method: 'PUT',
+        headers: { ...csrfHeaders() },
       });
 
       const data = await res.json();

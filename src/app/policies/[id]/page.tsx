@@ -55,6 +55,7 @@ import {
 import { ABComparePanel } from './components/ABComparePanel';
 import { JudgeConfigPanel } from './components/JudgeConfigPanel';
 import { EscalationConfigPanel } from './components/EscalationConfigPanel';
+import { csrfHeaders } from '@/lib/auth/csrf-client';
 
 interface PolicyDetail {
   id: string;
@@ -188,7 +189,7 @@ export default function PolicyDetailPage() {
     try {
       const res = await fetch('/api/policies', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
         body: JSON.stringify({
           policyId: policy.id,
           rules: policy.rules,
@@ -200,7 +201,14 @@ export default function PolicyDetailPage() {
         toast.success('规则配置已更新');
         loadPolicy();
       } else {
-        toast.error('保存失败: ' + data.error);
+        // 后端校验失败时返回 RFC7807 problem(RFC 7807 problem: 无 success/error 字段),
+        // 依序取 error/detail/errors 里的可读信息, 避免显示 "保存失败: undefined"
+        const reason =
+          data?.error ??
+          data?.detail ??
+          data?.errors?.[0]?.message ??
+          `请求被拒绝 (${res.status})`;
+        toast.error('保存失败: ' + reason);
       }
     } catch (error) {
       toast.error('保存失败: 网络错误');
@@ -238,7 +246,7 @@ export default function PolicyDetailPage() {
     try {
       const res = await fetch(`/api/policies/${policyId}/keywords`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
         body: JSON.stringify({
           ...keywordForm,
           categoryId: categoryId || undefined,
@@ -290,7 +298,7 @@ export default function PolicyDetailPage() {
     try {
       const res = await fetch(`/api/policies/${policyId}/keywords/batch`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
         body: JSON.stringify({
           keywords,
           categoryId: categoryId || undefined,
@@ -317,6 +325,7 @@ export default function PolicyDetailPage() {
     try {
       const res = await fetch(`/api/policies/${policyId}/keywords?keywordId=${keywordId}`, {
         method: 'DELETE',
+        headers: { ...csrfHeaders() },
       });
 
       const data = await res.json();

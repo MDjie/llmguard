@@ -213,7 +213,7 @@ export default function SimulatePage() {
         try {
           const chatResponse = await fetch('/api/chat', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
             body: JSON.stringify({
               providerId: selectedProvider,
               text: userInput,

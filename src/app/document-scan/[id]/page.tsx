@@ -42,6 +42,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { csrfHeaders } from '@/lib/auth/csrf-client';
 
 // ============================================
 // 类型定义
@@ -641,7 +642,7 @@ export default function DocumentScanDetailPage() {
         `/api/document-scan/${taskId}/findings/${findingToIgnore.id}`,
         {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
           body: JSON.stringify({
             status: 'ignored',
             ignoreReason,
@@ -680,7 +681,7 @@ export default function DocumentScanDetailPage() {
         `/api/document-scan/${taskId}/findings/${finding.id}`,
         {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
           body: JSON.stringify({ status: 'accepted' }),
         }
       );
@@ -714,6 +715,7 @@ export default function DocumentScanDetailPage() {
       toast.info('正在重新检测...');
       const response = await fetch(`/api/document-scan/${taskId}/rescan`, {
         method: 'POST',
+        headers: { ...csrfHeaders() },
       });
       const data = await response.json();
       if (data.success) {

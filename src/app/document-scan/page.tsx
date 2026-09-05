@@ -62,6 +62,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { csrfHeaders } from '@/lib/auth/csrf-client';
 
 // ============================================
 // 类型定义
@@ -367,6 +368,7 @@ export default function DocumentScanPage() {
 
       const response = await fetch('/api/document-scan', {
         method: 'POST',
+        headers: { ...csrfHeaders() },
         body: formData,
       });
 
@@ -397,6 +399,7 @@ export default function DocumentScanPage() {
       toast.info('正在重新检测...');
       const response = await fetch(`/api/document-scan/${taskId}/rescan`, {
         method: 'POST',
+        headers: { ...csrfHeaders() },
       });
       const data = await response.json();
       if (data.success) {
@@ -415,7 +418,10 @@ export default function DocumentScanPage() {
     if (!taskToDelete) return;
     
     try {
-      const response = await fetch(`/api/document-scan/${taskToDelete}`, { method: 'DELETE' });
+      const response = await fetch(`/api/document-scan/${taskToDelete}`, {
+        method: 'DELETE',
+        headers: { ...csrfHeaders() },
+      });
       const data = await response.json();
       if (data.success) {
         toast.success('任务已删除');
