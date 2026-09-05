@@ -36,6 +36,7 @@ export function calculateEvaluationMetrics(items: readonly EvaluationMetricInput
   const recall = safeDivide(truePositive, truePositive + falseNegative);
   const latencies = items.map((item) => item.latencyMs).sort((a, b) => a - b);
   return {
+    metricVersion: 'legacy-action-proxy-1.0' as const,
     total: items.length,
     exactMatches,
     confusionMatrix: { truePositive, trueNegative, falsePositive, falseNegative },

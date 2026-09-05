@@ -1,6 +1,6 @@
 import { ApiProblem, withApiSecurity } from '@/lib/api-security';
 import { guardDecisionSchema, guardRequestSchema } from '@/contracts/http/guard-v1';
-import { readSecureMemorySnapshot } from '@/lib/secure-memory';
+import { readSecureMemorySnapshot, readSecureMemoryReplay, SecureMemoryReplayError, SecureMemoryVersionConflictError } from '@/lib/secure-memory';
 import {
   createEngineForPolicyBundle,
   evaluateWithSessionContext,
@@ -80,6 +80,10 @@ export const POST = withApiSecurity(
     const engine = createEngineForPolicyBundle(bundle);
     let admission: GuardResourceAdmission | undefined;
     try {
+      if(body.context.sessionId) {
+        const replay=await readSecureMemoryReplay(scope,body);
+        if(replay)return Response.json(replay);
+      }
       if (bundle.payload.resourceAdmission) {
         const sessionRiskState = body.context.sessionId
           ? (await readSecureMemorySnapshot(scope, body.context.sessionId)).riskState
@@ -96,6 +100,11 @@ export const POST = withApiSecurity(
       }
       return Response.json(await evaluateWithSessionContext(engine, body, scope));
     } catch (error) {
+      if(error instanceof SecureMemoryReplayError || error instanceof SecureMemoryVersionConflictError) {
+        throw new ApiProblem({status:error instanceof SecureMemoryReplayError && error.code==='SECURE_MEMORY_RECEIPT_KEY_UNAVAILABLE' ? 503 : 409,
+          code:error instanceof SecureMemoryReplayError ? error.code : 'SECURE_MEMORY_VERSION_CONFLICT',
+          title:'Session request cannot be replayed',detail:'Refresh the session or use a new request ID for a genuinely new request.'});
+      }
       if (error instanceof GuardResourceAdmissionError) {
         const status = error.code === 'GUARD_QUOTA_EXCEEDED' ||
           error.code === 'GUARD_REQUEST_BUDGET_EXCEEDED'

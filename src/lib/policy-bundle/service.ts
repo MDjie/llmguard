@@ -22,6 +22,7 @@ import {
 import { clearRuntimePolicyBundleCache } from './runtime';
 import { parseSemanticClassifierBuildConfig } from '@/lib/guard-engine-v2/semantic-classifier';
 import { parseGuardResourceAdmissionBuildConfig } from '@/lib/resource-control/admission-config';
+import { loadJudgeDraft } from '@/lib/judge/draft-service';
 
 export { PolicyBundleTransitionError } from './lifecycle';
 export type { BundleTransition } from './lifecycle';
@@ -70,6 +71,7 @@ export async function compileAndStorePolicyBundle(
     throw new PolicyBundleTransitionError('POLICY_NOT_AVAILABLE', 'Policy cannot be compiled');
   }
   const governance = await loadGovernedPolicyArtifacts(scope, policyId);
+  const judgeDraft = await loadJudgeDraft(scope, policyId);
   return db.transaction(async (transaction) => {
     await transaction.execute(sql`select pg_advisory_xact_lock(hashtext(${`${scope.tenantId}:${scope.applicationId}:${policyId}`}))`);
     const [latest] = await transaction.select({ version: policyBundles.version })
@@ -80,6 +82,8 @@ export async function compileAndStorePolicyBundle(
     const version = (latest?.version ?? 0) + 1;
     const signed = signPolicyBundle(compilePolicyBundle(config, version, {
       semanticClassifier: parseSemanticClassifierBuildConfig(),
+      judgeProfiles:judgeDraft.profilesV2,decisionPolicyVersion:judgeDraft.decisionPolicyVersion,
+      semanticDecisionMode:judgeDraft.semanticDecisionMode,semanticCoverage:judgeDraft.semanticCoverage,
       resourceAdmission: parseGuardResourceAdmissionBuildConfig(),
       governance,
     }), {

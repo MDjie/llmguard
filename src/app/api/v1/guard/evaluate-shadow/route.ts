@@ -1,7 +1,7 @@
 import { and, eq } from 'drizzle-orm';
 import { guardDecisionSchema, guardRequestSchema } from '@/contracts/http/guard-v1';
 import { ApiProblem, withApiSecurity } from '@/lib/api-security';
-import { createEngineForPolicyBundle } from '@/lib/guard-engine-v2';
+import { createEngineForPolicyBundle, evaluateWithSessionContext } from '@/lib/guard-engine-v2';
 import { loadVerifiedPolicyBundle } from '@/lib/policy-bundle';
 import { requireTenantContext, scopePredicate } from '@/lib/tenancy';
 import { db } from '@/storage/database/shared/db';
@@ -49,7 +49,7 @@ export const POST = withApiSecurity(
     }
     try {
       const bundle = await loadVerifiedPolicyBundle(scope, body.context.policyBundleId);
-      return Response.json(await createEngineForPolicyBundle(bundle).evaluate(body));
+      return Response.json(await evaluateWithSessionContext(createEngineForPolicyBundle(bundle),body,scope,{readOnly:true}));
     } catch {
       throw new ApiProblem({
         status: 503,

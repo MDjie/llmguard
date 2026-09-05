@@ -2,8 +2,15 @@ import { z } from 'zod';
 import { safeFetchJson, type ProviderType } from '@/lib/egress';
 import { getSecretProvider, type SecretProvider } from '@/lib/secrets';
 import type { llmProviders } from '@/storage/database/shared/schema';
+import { privateEndpointApproved } from '@/lib/judge/profile-registry';
+import { readProviderDeployment } from './deployment';
 
 type ProviderRecord = typeof llmProviders.$inferSelect;
+export type ProviderConnection = Pick<ProviderRecord, 'tenantId' | 'applicationId' | 'providerType' | 'baseUrl' | 'secretRef' | 'apiKeyEncrypted' | 'defaultModel'> & {
+  readonly deploymentMode?: 'private' | 'cloud';
+  readonly dataBoundaryPolicyId?: string;
+  readonly configJson?: unknown;
+};
 
 const providerTypes = new Set<ProviderType>([
   'openai_compatible',
@@ -29,8 +36,9 @@ const defaultBaseUrls: Readonly<Partial<Record<ProviderType, string>>> = {
 const providerResponseSchema = z
   .object({
     id: z.string().optional(),
+    model: z.string().optional(),
     choices: z
-      .array(z.object({ message: z.object({ content: z.string() }) }).passthrough())
+      .array(z.object({ message: z.object({ content: z.string(), refusal: z.string().nullable().optional() }), finish_reason: z.string().nullable().optional() }).passthrough())
       .optional(),
     message: z.object({ content: z.string() }).optional(),
     usage: z
@@ -50,7 +58,12 @@ export interface ProviderChatMessage {
 
 export interface ProviderChatOptions {
   readonly model?: string;
-  readonly temperature?: number;
+  readonly temperature?: number | null;
+  readonly path?: string;
+  readonly authMode?: 'bearer' | 'none';
+  readonly responseFormat?: 'json_object'|'json_schema';
+  readonly responseSchema?: Record<string,unknown>;
+  readonly thinkingMode?: 'enabled' | 'disabled';
   readonly maxTokens?: number;
   readonly signal?: AbortSignal;
   readonly timeoutMs?: number;
@@ -60,6 +73,8 @@ export interface ProviderChatOptions {
 export interface ProviderChatResult {
   readonly id: string;
   readonly content: string;
+  readonly reportedModel?: string;
+  readonly finishReason?: string | null;
   readonly latencyMs: number;
   readonly usage?: {
     readonly promptTokens: number;
@@ -98,11 +113,16 @@ function chatPath(baseUrl: string): string {
 }
 
 export async function resolveProviderSecret(
-  provider: ProviderRecord,
+  provider: ProviderConnection,
   secretProvider?: SecretProvider,
+  authMode?: 'bearer' | 'none',
 ): Promise<string | undefined> {
   const providerType = parseProviderType(provider.providerType);
-  if (providerType === 'ollama') return undefined;
+  if (authMode === 'none') {
+    if (provider.deploymentMode !== 'private' || !provider.baseUrl || !provider.dataBoundaryPolicyId || !privateEndpointApproved({ ...provider, baseUrl: provider.baseUrl, dataBoundaryPolicyId: provider.dataBoundaryPolicyId })) throw new ProviderConfigurationError('PRIVATE_NO_AUTH_NOT_APPROVED', 'No-auth requires an approved private endpoint');
+    return undefined;
+  }
+  if (providerType === 'ollama' && !authMode && !provider.secretRef) return undefined;
   if (provider.secretRef) {
     const scopedSecretProvider = secretProvider ?? getSecretProvider({
       tenantId: provider.tenantId,
@@ -120,22 +140,31 @@ export async function resolveProviderSecret(
 }
 
 export async function callProviderChat(
-  provider: ProviderRecord,
+  provider: ProviderConnection,
   messages: readonly ProviderChatMessage[],
   options: ProviderChatOptions = {},
 ): Promise<ProviderChatResult> {
   const startedAt = Date.now();
+  if(options.responseFormat==='json_schema'&&!options.responseSchema)throw new ProviderConfigurationError('PROVIDER_RESPONSE_SCHEMA_REQUIRED','JSON Schema mode requires a schema');
+  const deployment = readProviderDeployment(provider.configJson);
   const providerType = parseProviderType(provider.providerType);
   const baseUrl = providerBaseUrl(providerType, provider.baseUrl);
-  const apiKey = await resolveProviderSecret(provider, options.secretProvider);
+  const connection = deployment ? {...provider, ...deployment, baseUrl} : provider;
+  const apiKey = await resolveProviderSecret(connection, options.secretProvider, options.authMode ?? deployment?.authMode);
   const payload = await safeFetchJson({
     baseUrl,
-    path: chatPath(baseUrl),
+    path: options.path ?? chatPath(baseUrl),
     providerType,
     body: {
       model: options.model || provider.defaultModel,
       messages,
-      temperature: options.temperature ?? 0.3,
+      ...(options.temperature === null ? {} : { temperature: options.temperature ?? 0.3 }),
+      ...(options.responseFormat ? { response_format: options.responseFormat==='json_schema'
+        ? {type:'json_schema',json_schema:{name:'guard_response',strict:true,schema:options.responseSchema}}
+        : {type:options.responseFormat} } : {}),
+      ...(options.thinkingMode ? (providerType === 'ollama'
+        ? {reasoning_effort: options.thinkingMode === 'disabled' ? 'none' : 'medium'}
+        : { thinking: { type: options.thinkingMode } }) : {}),
       max_tokens: options.maxTokens ?? 2_048,
       stream: false,
     },
@@ -148,6 +177,7 @@ export async function callProviderChat(
     throw new ProviderConfigurationError('PROVIDER_RESPONSE_INVALID', 'Provider response schema is invalid');
   }
   const content = parsed.data.choices?.[0]?.message.content ?? parsed.data.message?.content;
+  if (parsed.data.choices?.[0]?.message.refusal) throw new ProviderConfigurationError('PROVIDER_REFUSAL', 'Provider refused classification');
   if (!content) {
     throw new ProviderConfigurationError('PROVIDER_RESPONSE_EMPTY', 'Provider response content is empty');
   }
@@ -156,6 +186,8 @@ export async function callProviderChat(
   return {
     id: parsed.data.id ?? 'provider-response',
     content,
+    reportedModel: parsed.data.model,
+    finishReason: parsed.data.choices?.[0]?.finish_reason,
     latencyMs: Date.now() - startedAt,
     ...(usage
       ? {

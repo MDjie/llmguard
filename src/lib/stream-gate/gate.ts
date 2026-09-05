@@ -7,8 +7,8 @@ import {
   type StreamInspection,
 } from './types';
 
-function isCommittable(decision: StreamInspection): boolean {
-  return decision.action === 'ALLOW' || decision.action === 'WARN';
+function isCommittable(decision: StreamInspection,options:StreamGateOptions): boolean {
+  return (decision.action === 'ALLOW' || decision.action === 'WARN')&&(!options.requireSemanticCoverage||decision.semanticCoverage==='COMPLETE');
 }
 
 function validateOptions(options: StreamGateOptions): void {
@@ -21,6 +21,9 @@ function validateOptions(options: StreamGateOptions): void {
   if (options.maxBufferedBytes < 1 || options.inspectionTimeoutMs < 1) {
     throw new Error('buffer and timeout limits must be positive');
   }
+  for(const limit of [options.upstreamIdleTimeoutMs??30000,options.totalTimeoutMs??300000]){
+    if(!Number.isSafeInteger(limit)||limit<1||limit>3600000)throw new Error('STREAM_TIME_BUDGET_INVALID');
+  }
 }
 
 async function inspect(
@@ -29,8 +32,14 @@ async function inspect(
   final: boolean,
   options: StreamGateOptions,
 ): Promise<StreamInspection> {
-  const signal = AbortSignal.timeout(options.inspectionTimeoutMs);
-  return options.inspector(text, { sequence, final, signal });
+  const signal = AbortSignal.any([AbortSignal.timeout(options.inspectionTimeoutMs),...(options.signal?[options.signal]:[])]);
+  if(signal.aborted)throw new Error('STREAM_INSPECTION_ABORTED');
+  return new Promise<StreamInspection>((resolve,reject)=>{
+    const aborted=()=>reject(new Error('STREAM_INSPECTION_ABORTED'));
+    signal.addEventListener('abort',aborted,{once:true});
+    Promise.resolve().then(()=>options.inspector(text,{sequence,final,signal,absoluteDeadlineEpochMs:Date.now()+options.inspectionTimeoutMs}))
+      .then(resolve,reject).finally(()=>signal.removeEventListener('abort',aborted));
+  });
 }
 
 async function stop(
@@ -39,7 +48,8 @@ async function stop(
   options: StreamGateOptions,
 ): Promise<never> {
   options.abortUpstream?.(error);
-  await iterator.return?.();
+  // A broken upstream may ignore abort and never settle return(). Never await it unbounded.
+  void iterator.return?.().catch(()=>{});
   throw error;
 }
 
@@ -77,18 +87,42 @@ export async function* gateSseStream(
   options: StreamGateOptions,
 ): AsyncGenerator<string> {
   validateOptions(options);
-  const iterator = parseSseEvents(source)[Symbol.asyncIterator]();
+  let completed=false;
+  const totalSignal=AbortSignal.any([AbortSignal.timeout(options.totalTimeoutMs??300000),...(options.signal?[options.signal]:[])]);
+  const sourceIterator=source[Symbol.asyncIterator]();
+  const boundedSource:AsyncIterable<Uint8Array|string>={async *[Symbol.asyncIterator](){
+    try{while(true){
+      const signal=AbortSignal.any([totalSignal,AbortSignal.timeout(options.upstreamIdleTimeoutMs??30000)]);
+      const item=await new Promise<IteratorResult<Uint8Array|string>>((resolve,reject)=>{
+        const aborted=()=>reject(new Error('STREAM_UPSTREAM_TIMEOUT_OR_CANCELLED'));
+        if(signal.aborted){aborted();return;}
+        signal.addEventListener('abort',aborted,{once:true});
+        Promise.resolve().then(()=>sourceIterator.next()).then(resolve,reject).finally(()=>signal.removeEventListener('abort',aborted));
+      });
+      if(item.done)return;yield item.value;
+    }}finally{void sourceIterator.return?.().catch(()=>{});}
+  }};
+  try{yield* runGateSseStream(boundedSource,{...options,signal:totalSignal});completed=true;}
+  finally{void sourceIterator.return?.().catch(()=>{});if(!completed)options.abortUpstream?.(new Error('STREAM_GATE_TERMINATED'));}
+}
+async function* runGateSseStream(source:AsyncIterable<Uint8Array|string>,options:StreamGateOptions):AsyncGenerator<string>{
+  validateOptions(options);
+  const iterator = parseSseEvents(source,options.maxBufferedBytes)[Symbol.asyncIterator]();
   const held: SseEvent[] = [];
   let heldBytes = 0;
   let rolling = '';
   let sequence = 0;
+  let sawCompletion=false;
   let auditChain = Promise.resolve();
-  let next = iterator.next();
+  const nextEvent=()=>{const pending=iterator.next();void pending.catch(()=>{});return pending;};
+  let next = nextEvent();
   while (true) {
     const item = await next;
     if (item.done) break;
-    if (options.mode === 'parallel') next = iterator.next();
+    if (options.mode === 'parallel') next = nextEvent();
     const event = item.value;
+    if(sawCompletion&&event.semanticText)await stop(iterator,new StreamBlockedError({action:'BLOCK',decisionId:'stream-content-after-completion'}),options);
+    sawCompletion=sawCompletion||event.completed;
     sequence += 1;
     const candidate = `${rolling}${event.semanticText}`;
 
@@ -105,7 +139,7 @@ export async function* gateSseStream(
         }
       });
       rolling = retainInspectionWindow(candidate, options.rollingWindowChars);
-      next = iterator.next();
+      next = nextEvent();
       continue;
     }
 
@@ -123,7 +157,7 @@ export async function* gateSseStream(
         observeSafetyAlert('STREAM_COMMIT_GATE_FAILURE');
         decision = { action: 'BLOCK', decisionId: `stream-detector-failure-${sequence}` };
       }
-      if (!isCommittable(decision)) {
+      if (!isCommittable(decision,options)) {
         await stop(iterator, new StreamBlockedError(decision), options);
       }
       rolling = retainInspectionWindow(candidate, options.rollingWindowChars);
@@ -132,13 +166,14 @@ export async function* gateSseStream(
         yield released.raw;
       }
     }
-    if (options.mode !== 'parallel') next = iterator.next();
+    if (options.mode !== 'parallel') next = nextEvent();
   }
 
   if (options.mode === 'audit') {
     await auditChain;
     return;
   }
+  if(options.requireUpstreamCompletion&&!sawCompletion)await stop(iterator,new StreamBlockedError({action:'BLOCK',decisionId:'stream-upstream-incomplete'}),options);
   const finalText = options.mode === 'complete'
     ? held.map((event) => event.semanticText).join('')
     : rolling;
@@ -149,7 +184,7 @@ export async function* gateSseStream(
     observeSafetyAlert('STREAM_COMMIT_GATE_FAILURE');
     finalDecision = { action: 'BLOCK', decisionId: 'stream-final-detector-failure' };
   }
-  if (!isCommittable(finalDecision)) {
+  if (!isCommittable(finalDecision,options)) {
     await stop(iterator, new StreamBlockedError(finalDecision), options);
   }
   for (const event of held) yield event.raw;

@@ -1,12 +1,14 @@
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { ApiProblem, withApiSecurity } from '@/lib/api-security';
 import { EgressPolicyError, ProviderEndpointPolicy } from '@/lib/egress';
 import { parseProviderType, providerBaseUrl } from '@/lib/providers';
 import { getSecretProvider } from '@/lib/secrets';
 import { db } from '@/storage/database/shared/db';
-import { llmProviders } from '@/storage/database/shared/schema';
+import { llmProviders, policyBundles } from '@/storage/database/shared/schema';
 import { requireTenantContext, scopePredicate } from '@/lib/tenancy';
+import { providerDeploymentSchema, readProviderDeployment, type ProviderDeployment } from '@/lib/providers/deployment';
+import { privateEndpointApproved } from '@/lib/judge/profile-registry';
 
 type ProviderRecord = typeof llmProviders.$inferSelect;
 
@@ -37,6 +39,7 @@ const providerOutputSchema = z.object({
   lastTestSuccess: z.boolean().nullable(),
   hasSecret: z.boolean(),
   requiresSecretMigration: z.boolean(),
+  deploymentConfig: providerDeploymentSchema.nullable(),
   createdAt: z.string(),
   updatedAt: z.string().nullable(),
 });
@@ -50,6 +53,7 @@ const createBodySchema = z
     apiKey: z.string().min(1).max(16_384).nullable().optional(),
     defaultModel: z.string().trim().min(1).max(100).nullable().optional(),
     useCase: useCaseSchema.default('both'),
+    deploymentConfig: providerDeploymentSchema.optional(),
   })
   .strict();
 
@@ -65,6 +69,7 @@ const updateBodySchema = z
     isEnabled: z.boolean().optional(),
     isDefaultTarget: z.boolean().optional(),
     isDefaultJudge: z.boolean().optional(),
+    deploymentConfig: providerDeploymentSchema.optional(),
   })
   .strict()
   .refine((body) => Object.keys(body).length > 0, { message: 'At least one field is required' });
@@ -89,6 +94,7 @@ function serializeProvider(provider: ProviderRecord) {
     lastTestSuccess: provider.lastTestSuccess,
     hasSecret: Boolean(provider.secretRef),
     requiresSecretMigration: Boolean(provider.apiKeyEncrypted && !provider.secretRef),
+    deploymentConfig: readProviderDeployment(provider.configJson) ?? null,
     createdAt: provider.createdAt.toISOString(),
     updatedAt: provider.updatedAt?.toISOString() ?? null,
   };
@@ -97,6 +103,15 @@ function serializeProvider(provider: ProviderRecord) {
 const listResponseSchema = z.object({ success: z.literal(true), data: z.array(providerOutputSchema) });
 const providerResponseSchema = z.object({ success: z.literal(true), data: providerOutputSchema });
 const successResponseSchema = z.object({ success: z.literal(true) });
+
+function assertDeployment(deployment: ProviderDeployment | undefined, scope: {tenantId:string;applicationId:string}, baseUrl: string) {
+  if (deployment?.deploymentMode === 'cloud' && new URL(baseUrl).protocol !== 'https:') {
+    throw new ApiProblem({status:400,code:'CLOUD_HTTPS_REQUIRED',title:'云服务必须使用 HTTPS',detail:'请配置带有效证书的 HTTPS 端点。'});
+  }
+  if (deployment?.deploymentMode === 'private' && !privateEndpointApproved({...scope,baseUrl,dataBoundaryPolicyId:deployment.dataBoundaryPolicyId})) {
+    throw new ApiProblem({status:400,code:'PRIVATE_BOUNDARY_NOT_APPROVED',title:'私有端点未获批准',detail:'请由部署管理员批准该服务地址和客户数据边界。'});
+  }
+}
 
 async function validatedBaseUrl(providerTypeValue: string, configured: string | null): Promise<string> {
   const providerType = parseProviderType(providerTypeValue);
@@ -146,7 +161,7 @@ export const POST = withApiSecurity(
   async ({ body, principal }) => {
     if (!principal) throw new Error('Authenticated principal missing after authorization');
     const scope = requireTenantContext(principal);
-    if (body.providerType !== 'ollama' && !body.apiKey) {
+    if ((body.deploymentConfig ? body.deploymentConfig.authMode !== 'none' : body.providerType !== 'ollama') && !body.apiKey) {
       throw new ApiProblem({
         status: 400,
         code: 'PROVIDER_SECRET_REQUIRED',
@@ -172,6 +187,7 @@ export const POST = withApiSecurity(
     }
 
     const effectiveBaseUrl = await validatedBaseUrl(body.providerType, body.baseUrl ?? null);
+    assertDeployment(body.deploymentConfig, scope, effectiveBaseUrl);
     const secretProvider = body.apiKey ? getSecretProvider(scope) : null;
     const secretRef = body.apiKey && secretProvider ? await secretProvider.put(body.apiKey) : null;
     try {
@@ -188,6 +204,7 @@ export const POST = withApiSecurity(
           apiKeyEncrypted: null,
           defaultModel: body.defaultModel ?? null,
           useCase: body.useCase,
+          ...(body.deploymentConfig ? {configJson:{deployment:body.deploymentConfig}} : {}),
           isEnabled: true,
           createdBy: principal.subject,
           updatedAt: new Date(),
@@ -228,14 +245,16 @@ export const PUT = withApiSecurity(
     }
 
     const providerType = body.providerType ?? parseProviderType(existing.providerType);
+    const deployment = body.deploymentConfig ?? readProviderDeployment(existing.configJson);
     const endpointChanged = body.providerType !== undefined || body.baseUrl !== undefined;
-    const mustValidateEndpoint = endpointChanged || (body.isEnabled === true && !existing.isEnabled);
+    const mustValidateEndpoint = endpointChanged || body.deploymentConfig !== undefined || (body.isEnabled === true && !existing.isEnabled);
     const baseUrl = mustValidateEndpoint
       ? await validatedBaseUrl(providerType, body.baseUrl ?? existing.baseUrl)
       : existing.baseUrl;
     const retainsSecret =
       typeof body.apiKey === 'string' || (body.apiKey === undefined && Boolean(existing.secretRef));
-    if (providerType !== 'ollama' && !retainsSecret) {
+    if (mustValidateEndpoint) assertDeployment(deployment, scope, baseUrl ?? providerBaseUrl(providerType, null));
+    if ((deployment ? deployment.authMode !== 'none' : providerType !== 'ollama') && !retainsSecret) {
       throw new ApiProblem({
         status: 400,
         code: 'PROVIDER_SECRET_REQUIRED',
@@ -261,6 +280,7 @@ export const PUT = withApiSecurity(
           baseUrl,
           ...(body.defaultModel !== undefined ? { defaultModel: body.defaultModel } : {}),
           ...(body.useCase !== undefined ? { useCase: body.useCase } : {}),
+          ...(body.deploymentConfig ? {configJson:{...(typeof existing.configJson === 'object' && existing.configJson !== null ? existing.configJson : {}),deployment:body.deploymentConfig}} : {}),
           ...(body.isEnabled !== undefined ? { isEnabled: body.isEnabled } : {}),
           ...(body.isDefaultTarget !== undefined ? { isDefaultTarget: body.isDefaultTarget } : {}),
           ...(body.isDefaultJudge !== undefined ? { isDefaultJudge: body.isDefaultJudge } : {}),
@@ -279,11 +299,8 @@ export const PUT = withApiSecurity(
       if (newSecretRef && secretProvider) await secretProvider.delete(newSecretRef).catch(() => undefined);
       throw error;
     }
-    if ((newSecretRef !== undefined || removeSecret) && existing.secretRef && secretProvider) {
-      await secretProvider.delete(existing.secretRef).catch(() => {
-        console.error('Failed to remove superseded Provider secret');
-      });
-    }
+    // Signed bundles pin secretRef. Preserve superseded secret versions so active
+    // and rollback bundles remain executable; retire through a separate audited purge.
     return Response.json({ success: true as const, data: serializeProvider(updated) });
   },
 );
@@ -299,6 +316,11 @@ export const DELETE = withApiSecurity(
   },
   async ({ query, principal }) => {
     const scope = requireTenantContext(principal);
+    const [reference] = await db.select({id:policyBundles.id}).from(policyBundles).where(and(
+      scopePredicate(policyBundles,scope),
+      sql`${policyBundles.canonicalJson} @> ${JSON.stringify({judgeProfiles:[{providerId:query.id}]})}::jsonb`,
+    )).limit(1);
+    if (reference) throw new ApiProblem({status:409,code:'PROVIDER_PINNED_BY_BUNDLE',title:'模型服务被签名策略包引用',detail:'请保留该模型服务以支持在用策略及回滚；使用新服务记录进行迁移。'});
     const [deleted] = await db
       .delete(llmProviders)
       .where(and(

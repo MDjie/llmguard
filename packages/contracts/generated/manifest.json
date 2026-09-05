@@ -1,14 +1,14 @@
 {
   "contractVersion": "1.0",
   "source": "model/guard-v1.schema.json",
-  "sourceSha256": "5e535f81fcd1a87d610f5e1876c5bff2db310e6e050872e15995b940fdbe4776",
+  "sourceSha256": "01bb211282221f91e3fb858d2d0b4c19d0904d24c50e9d5d83e8326500e5aa3a",
   "outputs": {
-    "generated/typescript/guard-v1.ts": "3c89dfa64eb0258eaad4b3348f021d9ebdbff2cb3790bb21f282068b041b73e6",
-    "generated/java/io/guardllm/contracts/v1/GuardContracts.java": "2e61513876fdb9a2bfe8ed21259e5a554be2f51338b2029264ecfc6ffafb5d0a",
-    "generated/python/guard_contracts_v1.py": "fafdb44bbb7ed0d8d25edf7fbd258b7bc563c4c2c8a8e0720aaa71cc27e4701a",
-    "generated/go/guardv1/contracts.go": "37c0d98271411fdead576f706aab22e95955f03ccba82c59bb651463ff230e05",
-    "openapi/guard-v1.openapi.json": "b8772aad7b2e9c823b4c16878b685951613ca20b1e6d809434799579434b1f0f",
-    "proto/guard/v1/guard.proto": "2c151b461df559876d861ec9746024c5219b95e22cb07e91fe929c51ee433755",
-    "../../services/guard-gateway/src/main/proto/guard/v1/guard.proto": "2c151b461df559876d861ec9746024c5219b95e22cb07e91fe929c51ee433755"
+    "generated/typescript/guard-v1.ts": "3dd43cac0262a6140e0af73291ad950594c2ce2a1c1515cc16e3e97106b6762b",
+    "generated/java/io/guardllm/contracts/v1/GuardContracts.java": "5092a8b1a6bbed172bdaa56604ddf3e2fd6a472527c90e29dd203237385a3a0f",
+    "generated/python/guard_contracts_v1.py": "bebcdb4bd8db86c23798041d6589b002408ac01b7bb50617d2d23086b6f994e8",
+    "generated/go/guardv1/contracts.go": "668126660b7e625c5cca7c52e60b1433795776e9c0f044189cad4b393f264028",
+    "openapi/guard-v1.openapi.json": "a724f1f7a244c0fd94f2ef419d749f2ec7498179ae83a84398847c1555f7e78e",
+    "proto/guard/v1/guard.proto": "442e1b3866553c59d86e893c4089950147e4d2ec3d874c19b7c4d06aedf778bc",
+    "../../services/guard-gateway/src/main/proto/guard/v1/guard.proto": "442e1b3866553c59d86e893c4089950147e4d2ec3d874c19b7c4d06aedf778bc"
   }
 }

@@ -106,6 +106,7 @@ export async function processNextAudioVideoJob() {
         frameIndex: frame.frameIndex,
       }))),
       analysisFailures: analysis.analysisFailures,
+      analysisCoverage:analysis.coverage,artifactSha256:artifact.verifiedSha256??undefined,
       sourceTrust: 'UNTRUSTED',
       instructionCapability: 'FORBIDDEN',
       anomalyScore,

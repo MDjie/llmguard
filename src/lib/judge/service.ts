@@ -19,6 +19,7 @@ import {
   prepareTextForJudge,
 } from './engine';
 import { callProviderChat } from '@/lib/providers';
+import { providerIsApprovedPrivate } from '@/lib/providers/deployment-policy';
 import { logger } from '@/lib/observability/logger';
 import { z } from 'zod';
 import { scopePredicate, type TenantScope } from '@/lib/tenancy';
@@ -88,14 +89,14 @@ async function getProviderChat(
           throw new Error('Provider is disabled');
         },
         defaultModel: allProviders[0].defaultModel || '',
-        isPrivate: allProviders[0].providerType === 'ollama',
+        isPrivate: providerIsApprovedPrivate(allProviders[0]),
         disabled: true,
       };
     }
 
     const provider = allProviders[0];
 
-    const isPrivate = provider.providerType === 'ollama';
+    const isPrivate = providerIsApprovedPrivate(provider);
 
     const chat = async (request: {
       model: string;

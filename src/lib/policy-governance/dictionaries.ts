@@ -138,6 +138,9 @@ async function scopedReleaseForUpdate(
       404,
     );
   }
+  if (row.releaseSetId) {
+    throw new PolicyGovernanceOperationError('DICTIONARY_SET_MEMBER', 'Operate on the entire dictionary release set, not an individual shard.', 409);
+  }
   return row;
 }
 
@@ -166,9 +169,22 @@ export async function createDictionaryDraft(
   actorId: string,
   input: CreateDictionaryDraft,
 ) {
+  if (/\.part-\d+$/u.test(input.dictionaryId)) {
+    throw new PolicyGovernanceOperationError('DICTIONARY_SET_NAMESPACE', 'Shard identifiers are reserved for atomic release-set imports.', 422);
+  }
+  return db.transaction(transaction=>insertDictionaryDraft(transaction,scope,actorId,input));
+}
+
+/** Internal transaction primitive: callers must commit the full release set in one transaction. */
+export async function insertDictionaryDraft(
+  transaction: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  scope: TenantScope,
+  actorId: string,
+  input: CreateDictionaryDraft,
+  membership?: {releaseSetId:string;partNumber:number},
+) {
   const manifest = dictionaryManifestSchema.parse({ schemaVersion: '1.0', ...input });
   const signed = signedManifest(manifest);
-  return db.transaction(async (transaction) => {
     await transaction.execute(sql`select pg_advisory_xact_lock(hashtext(${scope.tenantId + ':' + scope.applicationId + ':' + input.dictionaryId}))`);
     const [policy] = await transaction.select({ id: policyProfiles.id }).from(policyProfiles).where(and(
       eq(policyProfiles.id, input.policyId),
@@ -183,6 +199,7 @@ export async function createDictionaryDraft(
     }
     const [created] = await transaction.insert(dictionaryReleases).values({
       ...scope,
+      ...membership,
       dictionaryId: manifest.dictionaryId,
       version: manifest.version,
       state: 'draft',
@@ -241,7 +258,6 @@ export async function createDictionaryDraft(
       contentHash: created.contentHash,
       createdAt: created.createdAt,
     };
-  });
 }
 
 function dayKeys(now = new Date()): readonly string[] {
@@ -304,6 +320,7 @@ export async function listDictionaryReleases(
       state: row.state,
       entryCount: row.entryCount,
       statistics: sanitizedStatistics(row),
+      releaseSetId: row.releaseSetId,
       submittedBy: row.submittedBy,
       approvedBy: row.approvedBy,
       approvedAt: row.approvedAt,

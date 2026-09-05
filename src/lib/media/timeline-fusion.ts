@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import type { GuardAction, GuardDecision, GuardRequest } from '@guardllm/contracts';
 import { createEngineForPolicyBundle } from '@/lib/guard-engine-v2';
 import type { RuntimePolicyBundle } from '@/lib/policy-bundle';
+import { assessAnalysisCoverage,type AnalysisCoverage } from '@/lib/multimodal/coverage';
 
 export type TimelineSource = 'audio' | 'subtitle' | 'frame_ocr' | 'qr_code';
 export interface TimelineTextSegment {
@@ -172,6 +173,7 @@ function trackConflict(
 }
 
 export async function fuseMediaTimeline(input: {
+  analysisCoverage?:AnalysisCoverage;artifactSha256?:string;
   bundle: RuntimePolicyBundle;
   context: Omit<GuardRequest['context'], 'requestId' | 'direction' | 'policyBundleId'>;
   userText?: string;
@@ -239,7 +241,9 @@ export async function fuseMediaTimeline(input: {
           (sorted.length > 0 || Boolean(input.userText))
         ? 'WARN'
         : 'ALLOW';
+  const coverage=assessAnalysisCoverage({coverage:input.analysisCoverage,artifactSha256:input.artifactSha256,...input.context,requiredRiskIds:input.bundle.payload.semanticCoverage?.requiredRiskIds??[]});
   const action = [
+    input.bundle.payload.semanticDecisionMode==='coverage-v1'&&!coverage.complete?'REQUIRE_REVIEW' as const:'ALLOW' as const,
     visualAction,
     conflict ? 'REQUIRE_REVIEW' as const : 'ALLOW' as const,
     failureAction,
@@ -277,6 +281,7 @@ export async function fuseMediaTimeline(input: {
   })() : [];
   return {
     action,
+    coverage,
     cooperativeAttack,
     evidenceConflict: conflict,
     degraded: failures.length > 0,

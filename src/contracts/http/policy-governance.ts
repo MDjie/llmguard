@@ -14,6 +14,11 @@ export const dictionaryLayerSchema = z.enum([
 ]);
 
 export const dictionaryEntrySchema = z.object({
+  canonicalTermId: identifier.optional(),
+  sourceIds: z.array(identifier).min(1).max(32).optional(),
+  actionHint: identifier.optional(),
+  sourceMatchMode: identifier.optional(),
+  contextCases: z.array(z.object({caseId:identifier,text:boundedText,expectedRiskIds:z.array(identifier).max(100),acceptableActions:z.array(z.enum(['ALLOW','WARN','MASK','REWRITE','REQUIRE_REVIEW','SAFE_RESPONSE','BLOCK'])).min(1)}).strict()).max(100).optional(),
   canonicalTerm: z.string().trim().min(1).max(500),
   variants: z.array(z.string().trim().min(1).max(500)).min(1).max(100),
   riskType: identifier,

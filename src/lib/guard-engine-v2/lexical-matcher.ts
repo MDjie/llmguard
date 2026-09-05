@@ -190,7 +190,9 @@ export class LexicalMatcher {
       automaton: AhoCorasick | undefined,
     ) => {
       if (!automaton) return;
-      for (const found of automaton.find(text, maximumMatches)) {
+      const foundMatches = automaton.find(text, maximumMatches + 1);
+      if (foundMatches.length > maximumMatches) throw new Error('LEXICAL_MATCH_CAPACITY_EXCEEDED');
+      for (const found of foundMatches) {
         const entry = entries[found.patternIndex];
         const start = found.end - entry.normalizedPattern.length;
         const matchType = entry.rule.matchType;
@@ -198,7 +200,7 @@ export class LexicalMatcher {
         if (matchType === 'prefix' && start !== 0) continue;
         if (matchType === 'suffix' && found.end !== text.length) continue;
         const matches = byRule.get(entry.rule.id) ?? [];
-        if (matches.length >= 100) continue;
+        if (matches.length >= 100) throw new Error('LEXICAL_RULE_CAPACITY_EXCEEDED');
         matches.push({
           ruleId: entry.rule.id,
           raw: view.text.slice(start, found.end),

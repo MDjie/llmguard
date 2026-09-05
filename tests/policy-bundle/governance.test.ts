@@ -121,6 +121,15 @@ function governedArtifacts(): GovernedPolicyArtifacts {
 }
 
 describe('policy governance artifacts', () => {
+  it('rejects partial or mixed release-set manifests in compiled artifacts',()=>{
+    const artifacts=governedArtifacts();const first=artifacts.dictionaryReleases[0];
+    const root={id:'50000000-0000-4000-8000-000000000001',digest:'a'.repeat(64),shardCount:2};
+    const parts=[{...first,releaseSet:{...root,partNumber:1}},{...first,id:'release-2',dictionaryId:'content-safety-part-2',releaseSet:{...root,partNumber:2}}];
+    expect(()=>validateGovernedPolicyArtifacts({...artifacts,dictionaryReleases:parts})).not.toThrow();
+    expect(()=>validateGovernedPolicyArtifacts({...artifacts,dictionaryReleases:parts.slice(0,1)})).toThrow('complete');
+    expect(()=>validateGovernedPolicyArtifacts({...artifacts,dictionaryReleases:[parts[0],{...parts[1],releaseSet:{...root,partNumber:1}}]})).toThrow('complete');
+    expect(()=>validateGovernedPolicyArtifacts({...artifacts,dictionaryReleases:[parts[0],{...parts[1],releaseSet:{...root,digest:'b'.repeat(64),partNumber:2}}]})).toThrow('complete');
+  });
   it('accepts complete approved artifacts and embeds governed rules in the signed payload', () => {
     const governance = governedArtifacts();
     expect(validateGovernedPolicyArtifacts(governance)).toBe(governance);

@@ -13,6 +13,8 @@ import {
   responseTemplates,
 } from '@/storage/database/shared/schema';
 import { scopePredicate, type TenantScope } from '@/lib/tenancy';
+import { dictionaryReleaseSets } from '@/storage/database/shared/schema';
+import { verifyReleaseSetMembers } from '@/lib/policy-governance/release-set-integrity';
 
 const SHA256_PATTERN = /^[a-f0-9]{64}$/;
 const ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
@@ -33,6 +35,7 @@ export interface DictionaryReleaseManifest {
   readonly entryCount: number;
   readonly submittedBy: string;
   readonly approvedBy: string;
+  readonly releaseSet?: {readonly id:string;readonly digest:string;readonly partNumber:number;readonly shardCount:number};
 }
 
 export interface ResponseTemplateManifest {
@@ -345,6 +348,23 @@ export function validateGovernedPolicyArtifacts(
       );
     }
   }
+  const groups=new Map<string,DictionaryReleaseManifest[]>();
+  for(const release of artifacts.dictionaryReleases) {
+    if(!release.releaseSet)continue;
+    const group=groups.get(release.releaseSet.id) ?? [];
+    group.push(release);groups.set(release.releaseSet.id,group);
+  }
+  for(const group of groups.values()) {
+    const root=group[0].releaseSet!;
+    requireSha256(root.digest,'release set digest');
+    if(!Number.isSafeInteger(root.shardCount) || root.shardCount<1 || group.length!==root.shardCount ||
+      new Set(group.map(release=>release.releaseSet!.partNumber)).size!==root.shardCount ||
+      group.some(release=>release.releaseSet!.digest!==root.digest || release.releaseSet!.shardCount!==root.shardCount ||
+        !Number.isSafeInteger(release.releaseSet!.partNumber) || release.releaseSet!.partNumber<1 || release.releaseSet!.partNumber>root.shardCount ||
+        release.state!==group[0].state || release.version!==group[0].version || release.approvedBy!==group[0].approvedBy)) {
+      throw new PolicyGovernanceValidationError('DICTIONARY_SET_INCOMPLETE','Compiled policy must contain one complete, consistent release set.');
+    }
+  }
   for (const template of artifacts.responseTemplates) validateTemplate(template);
   for (const calibration of artifacts.detectorCalibrations) {
     requireIdentifier(calibration.detectorId, 'calibration detectorId');
@@ -428,14 +448,15 @@ export async function loadGovernedPolicyArtifacts(
   policyId: string,
   now = new Date(),
 ): Promise<GovernedPolicyArtifacts> {
-  const [releaseRows, keywordRows, templateRows, calibrationRows] = await Promise.all([
-    db.select().from(dictionaryReleases).where(and(
+  return db.transaction(async transaction=>{
+  const [releaseRows, keywordRows, templateRows, calibrationRows, setRows] = await Promise.all([
+    transaction.select().from(dictionaryReleases).where(and(
       scopePredicate(dictionaryReleases, scope),
       inArray(dictionaryReleases.state, ['reviewed', 'shadow', 'canary', 'active']),
       isNotNull(dictionaryReleases.approvedBy),
       sql`${dictionaryReleases.canonicalManifest}->>'policyId' = ${policyId}`,
     )),
-    db.select({
+    transaction.select({
       id: keywordRules.id,
       dictionaryId: dictionaryReleases.dictionaryId,
       releaseId: dictionaryReleases.id,
@@ -468,29 +489,56 @@ export async function loadGovernedPolicyArtifacts(
       eq(dictionaryReleases.state, 'active'),
       isNotNull(dictionaryReleases.approvedBy),
     )),
-    db.select().from(responseTemplates).where(and(
+    transaction.select().from(responseTemplates).where(and(
       scopePredicate(responseTemplates, scope),
       eq(responseTemplates.approvalStatus, 'approved'),
       eq(responseTemplates.enabled, true),
       lte(responseTemplates.validFrom, now),
       or(isNull(responseTemplates.validTo), gt(responseTemplates.validTo, now)),
     )),
-    db.select().from(detectorCalibrations).where(and(
+    transaction.select().from(detectorCalibrations).where(and(
       scopePredicate(detectorCalibrations, scope),
       isNotNull(detectorCalibrations.approvedBy),
     )),
+    transaction.select().from(dictionaryReleaseSets).where(and(scopePredicate(dictionaryReleaseSets,scope),
+      eq(dictionaryReleaseSets.policyId,policyId),inArray(dictionaryReleaseSets.state,['reviewed','shadow','canary','active']))),
   ]);
 
   const verifiedReleases = releaseRows.map(verifiedDictionaryRelease);
+  const roots=new Map(setRows.map(root=>[root.id,root]));
+  for(const root of setRows)verifyReleaseSetMembers(root,releaseRows.filter(row=>row.releaseSetId===root.id));
+  for(const row of releaseRows) {
+    if(row.releaseSetId && !roots.has(row.releaseSetId))throw new PolicyGovernanceValidationError('DICTIONARY_SET_MISSING','A dictionary shard lacks its verified root.');
+  }
+  for(const item of verifiedReleases) {
+    if(item.release.state!=='active')continue;
+    const expected=item.manifest.entries.filter(entry=>(!entry.validFrom || Date.parse(entry.validFrom)<=now.getTime()) &&
+      (!entry.validTo || Date.parse(entry.validTo)>now.getTime())).reduce((count,entry)=>count+entry.variants.length,0);
+    if(keywordRows.filter(row=>row.releaseId===item.release.id).length!==expected)
+      throw new PolicyGovernanceValidationError('KEYWORD_RULE_COUNT_MISMATCH','Active signed dictionary entries are missing, disabled or unexpectedly duplicated.');
+  }
   const releaseById = new Map(verifiedReleases.map((item) => [item.release.id, item]));
   return validateGovernedPolicyArtifacts({
-    dictionaryReleases: verifiedReleases.map((item) => item.release),
+    dictionaryReleases: verifiedReleases.map((item,index) => {
+      const row=releaseRows[index];const root=row.releaseSetId ? roots.get(row.releaseSetId) : undefined;
+      return {...item.release,...(root ? {releaseSet:{id:root.id,digest:root.contentHash,partNumber:row.partNumber!,shardCount:root.shardCount}} : {})};
+    }),
     keywordRules: keywordRows.map((row) => {
       const canonicalTerm = row.canonicalTerm?.trim() || row.keyword;
       const release = releaseById.get(row.releaseId);
       if (!release) {
         throw new PolicyGovernanceValidationError('KEYWORD_RULE_RELEASE_INVALID', 'Keyword rule references an unverified dictionary release');
       }
+      const sourceEntry = release.manifest.entries.find(entry=>entry.canonicalTerm===canonicalTerm && entry.riskType===row.dimension && entry.variants.includes(row.keyword));
+      if (!sourceEntry) throw new PolicyGovernanceValidationError('KEYWORD_RULE_SOURCE_MISSING','Keyword rule does not match the signed source manifest');
+      if(row.matchType!==sourceEntry.matchType || row.caseSensitive!==sourceEntry.caseSensitive ||
+        Number(row.score)!==Number((sourceEntry.score*100).toFixed(2)) || row.severity!==sourceEntry.severity ||
+        row.mandatoryDeny!==sourceEntry.mandatoryDeny || row.locale!==sourceEntry.locale || row.direction!==sourceEntry.direction ||
+        row.industry!==sourceEntry.industry || canonicalJson(row.contexts)!==canonicalJson(sourceEntry.contexts) ||
+        row.owner!==sourceEntry.owner || row.evidenceRequirement!==sourceEntry.evidenceRequirement ||
+        (row.validTo?.getTime() ?? null)!==(sourceEntry.validTo ? Date.parse(sourceEntry.validTo) : null) ||
+        (sourceEntry.validFrom && row.validFrom.getTime()!==Date.parse(sourceEntry.validFrom)))
+        throw new PolicyGovernanceValidationError('KEYWORD_RULE_CONTENT_MISMATCH','Keyword rule metadata differs from its signed source manifest');
       return {
         id: row.id,
         riskType: row.dimension,
@@ -501,8 +549,11 @@ export async function loadGovernedPolicyArtifacts(
         severity: row.severity as GovernedKeywordRule['severity'],
         ruleVersion: row.releaseVersion,
         mandatoryDeny: row.mandatoryDeny,
-        canonicalTermId: 'term-' + createHash('sha256')
+        canonicalTermId: sourceEntry.canonicalTermId ?? 'term-' + createHash('sha256')
           .update(row.dictionaryId + ':' + canonicalTerm, 'utf8').digest('hex').slice(0, 24),
+        ...(sourceEntry.sourceIds ? {sourceIds:sourceEntry.sourceIds} : {}),
+        ...(sourceEntry.actionHint ? {actionHint:sourceEntry.actionHint} : {}),
+        ...(sourceEntry.sourceMatchMode ? {sourceMatchMode:sourceEntry.sourceMatchMode} : {}),
         variantId: row.id,
         dictionaryReleaseId: row.releaseId,
         dictionaryVersion: row.releaseVersion,
@@ -552,4 +603,5 @@ export async function loadGovernedPolicyArtifacts(
     tokenizer: builtInTokenizerManifest(),
     failurePolicies: [],
   });
+  },{isolationLevel:'repeatable read',accessMode:'read only'});
 }

@@ -1,0 +1,36 @@
+{
+  "schemaVersion": "2.0",
+  "profileId": "local-ollama-qwen-protocol",
+  "revision": 1,
+  "tenantId": "synthetic-local-test",
+  "applicationId": "synthetic-local-test",
+  "displayName": "Local synthetic protocol selftest",
+  "enabled": true,
+  "mode": "SHADOW",
+  "providerId": "local-ollama-test-only",
+  "providerType": "ollama",
+  "baseUrl": "http://127.0.0.1:11434/v1",
+  "path": "chat/completions",
+  "modelId": "qwen3.5:9b",
+  "deploymentMode": "private",
+  "dataBoundaryPolicyId": "synthetic-loopback-only",
+  "authMode": "none",
+  "directions": [
+    "INPUT"
+  ],
+  "riskIds": [
+    "self_harm",
+    "prompt_injection"
+  ],
+  "maxAttempts": 1,
+  "perAttemptTimeoutMs": 60000,
+  "totalTimeoutMs": 60000,
+  "maxInputChars": 16000,
+  "maxOutputTokens": 1024,
+  "maxConcurrent": 1,
+  "temperature": 0,
+  "thinkingMode": "disabled",
+  "structuredOutputMode": "json_object",
+  "promptTemplateVersion": "guard-judge-2.0",
+  "adapterVersion": "guard-chat-adapter-2.0"
+}

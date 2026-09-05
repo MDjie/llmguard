@@ -1,0 +1,29 @@
+[
+  {
+    "sourceId": "local-master-v1",
+    "path": "data/content-safety/lexicon/content-safety-lexicon.v1.jsonl",
+    "format": "master-jsonl",
+    "sha256": "fec6351404a8a2d0ae0525d5ee4740bfe6444118a5b0ff9bb53be41cc38fa6cf",
+    "license": "Local curated candidates; individual source licenses and independent term review required",
+    "authorizedUse": "candidate_only",
+    "riskMapping": {}
+  },
+  {
+    "sourceId": "staged-fwwdn-v1",
+    "path": "data/content-safety/sources/staged/fwwdn-candidates.v1.jsonl",
+    "format": "candidate-jsonl",
+    "sha256": "e37b20123145e7f7ccc3c9be321fe72c2787f04327ceb90b41b2dbf642710463",
+    "license": "See staged source provenance; production redistribution and review not approved",
+    "authorizedUse": "candidate_only",
+    "riskMapping": {}
+  },
+  {
+    "sourceId": "legacy-sql",
+    "path": "sensitive_lexicon_import.sql",
+    "format": "legacy-sql",
+    "sha256": "3438b32b9dc7079f1ddc8120fc889ffdfec3854cd58df4cfce38c36134c6ef94",
+    "license": "Historical local input; license and risk mapping pending review",
+    "authorizedUse": "candidate_only",
+    "riskMapping": {}
+  }
+]

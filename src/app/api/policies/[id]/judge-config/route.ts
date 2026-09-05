@@ -9,6 +9,9 @@ import { db } from '@/lib/db';
 import { policyJudgeConfigs, llmProviders, policyProfiles } from '@/storage/database/shared/schema';
 import { and, eq } from 'drizzle-orm';
 import { requireTenantContext, scopePredicate } from '@/lib/tenancy';
+import { loadJudgeDraft, saveJudgeDraft } from '@/lib/judge/draft-service';
+import { z } from 'zod';
+import { selftestJudge } from '@/lib/judge/selftest';
 
 // GET: 获取策略的裁判模型配置
 async function getJudgeConfig(
@@ -21,6 +24,7 @@ async function getJudgeConfig(
     const { id: policyId } = await params;
 
     // 查询裁判模型配置
+    const judgeDraft = { ...await loadJudgeDraft(scope, policyId), scope };
     const configs = await db
       .select()
       .from(policyJudgeConfigs)
@@ -34,6 +38,7 @@ async function getJudgeConfig(
       // 返回默认配置
       return NextResponse.json({
         success: true,
+        judgeDraft,
         data: {
           id: '',
           policyId,
@@ -62,6 +67,7 @@ async function getJudgeConfig(
 
     return NextResponse.json({
       success: true,
+      judgeDraft,
       data: {
         id: config.id,
         policyId: config.policyId,
@@ -104,7 +110,18 @@ async function updateJudgeConfig(
   try {
     const scope = requireTenantContext(context.principal);
     const { id: policyId } = await params;
-    const body = await request.json();
+    const body = judgeConfigSchema.parse(await request.json());
+    if (body.profilesV2 !== undefined) {
+      if (body.expectedProfileRevision === undefined) return NextResponse.json({success:false,error:'缺少草稿版本'}, {status:400});
+      try {
+        const judgeDraft = await saveJudgeDraft(scope,policyId,body.profilesV2,body.expectedProfileRevision,body.decisionPolicyVersion ?? 1,
+          {semanticDecisionMode:body.semanticDecisionMode,semanticCoverage:body.semanticCoverage});
+        return NextResponse.json({success:true,judgeDraft:{...judgeDraft,scope},message:'裁判配置草稿已保存，发布策略包后生效'});
+      } catch (error) {
+        const code = error instanceof Error && /^JUDGE_[A-Z_]+$/.test(error.message) ? error.message : 'JUDGE_DRAFT_INVALID';
+        return NextResponse.json({success:false,error:code},{status:code === 'JUDGE_DRAFT_CONFLICT' ? 409 : 400});
+      }
+    }
     const [policy] = await db.select({ id: policyProfiles.id }).from(policyProfiles).where(and(
       eq(policyProfiles.id, policyId),
       scopePredicate(policyProfiles, scope),
@@ -298,13 +315,28 @@ export const GET = withLegacyApiSecurity(
   getJudgeConfig,
 );
 
+const selftestSchema = z.object({profileId:z.string().min(1).max(128),expectedRevision:z.number().int().positive()}).strict();
+export const POST = withLegacyApiSecurity({
+  permission:'provider:test',paramsSchema:policyParamsSchema,bodySchema:selftestSchema,
+  responseSchema:jsonObjectResponseSchema,maxBodyBytes:1024,auditEvent:'policy.judge.selftest',
+  rateLimitPolicy:{id:'judge-protocol-selftest',windowMs:60000,maxRequests:6,scope:'principal'},
+},async (request:NextRequest, {params}:{params:Promise<{id:string}>}, context:{principal:AuthenticatedPrincipal|null}) => {
+  const scope=requireTenantContext(context.principal);const {id}=await params;
+  const body=selftestSchema.parse(await request.json());
+  const draft=await loadJudgeDraft(scope,id);
+  const profile=draft.profilesV2.find(p=>p.profileId===body.profileId);
+  if(!profile)return NextResponse.json({success:false,error:'PROFILE_NOT_FOUND'},{status:404});
+  if(profile.revision!==body.expectedRevision)return NextResponse.json({success:false,error:'JUDGE_DRAFT_CONFLICT'},{status:409});
+  return NextResponse.json({success:true,data:await selftestJudge(profile,request.signal)});
+});
+
 export const PUT = withLegacyApiSecurity(
   {
     permission: 'policy:manage',
     paramsSchema: policyParamsSchema,
     bodySchema: judgeConfigSchema,
     responseSchema: jsonObjectResponseSchema,
-    maxBodyBytes: 32 * 1_024,
+    maxBodyBytes: 512 * 1_024,
     auditEvent: 'policy.judge.update',
     rateLimitPolicy: {
       id: 'policy-judge-update',

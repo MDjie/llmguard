@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { csrfHeaders } from '@/lib/auth/csrf-client';
+import { DictionaryReleaseSetPanel } from '@/components/policy/dictionary-release-set-panel';
 
 type DictionaryLayer = 'PLATFORM_REDLINE' | 'INDUSTRY' | 'TENANT' | 'APPLICATION' | 'INCIDENT';
 type DictionaryState = 'draft' | 'reviewed' | 'shadow' | 'canary' | 'active' | 'deprecated' | 'rolled_back';
@@ -37,6 +38,7 @@ interface TestingStats {
   testedAt: string;
 }
 interface DictionaryRelease {
+  releaseSetId?: string | null;
   id: string;
   policyId: string;
   dictionaryId: string;
@@ -196,7 +198,7 @@ export default function DictionariesPage() {
     }
   };
 
-  const actions = (release: DictionaryRelease) => <div className="flex flex-wrap gap-1.5">
+  const actions = (release: DictionaryRelease) => release.releaseSetId ? <Badge variant="outline">集合分片：请使用上方整组操作</Badge> : <div className="flex flex-wrap gap-1.5">
     {release.state === 'draft' && <><Button size="sm" variant="outline" disabled={workingId !== null} onClick={() => void quickAction(release, 'validate')}><FileCheck2 className="h-3.5 w-3.5" />校验</Button><Button size="sm" variant="outline" disabled={workingId !== null} onClick={() => void quickAction(release, 'test')}><Beaker className="h-3.5 w-3.5" />测试</Button><Button size="sm" disabled={!release.statistics.validation?.passed || !release.statistics.testing?.passed || workingId !== null} onClick={() => openAction(release, 'approve')}><CheckCircle2 className="h-3.5 w-3.5" />审批</Button></>}
     {release.state === 'reviewed' && <Button size="sm" onClick={() => openAction(release, 'publish')}><Rocket className="h-3.5 w-3.5" />发布</Button>}
     {(['shadow', 'canary'] as DictionaryState[]).includes(release.state) && <Button size="sm" onClick={() => openAction(release, 'activate')}><ShieldCheck className="h-3.5 w-3.5" />设为候选</Button>}
@@ -205,6 +207,7 @@ export default function DictionariesPage() {
 
   return (
     <div className="mx-auto w-full max-w-[1500px] space-y-5">
+      <DictionaryReleaseSetPanel onChanged={load} />
       <div className="flex flex-wrap items-start justify-between gap-3"><div><div className="flex items-center gap-2"><Layers3 className="h-6 w-6 text-blue-600" /><h2 className="text-2xl font-semibold text-gray-900">敏感词典治理</h2></div><p className="mt-1 text-sm text-gray-500">分层词典、签名版本、正反例门禁、灰度验证与策略包候选治理</p></div><div className="flex gap-2"><Button variant="outline" size="icon" title="刷新" onClick={() => void load()}><RefreshCw className={loading ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} /></Button><Button onClick={() => setCreateOpen(true)}><Plus className="h-4 w-4" />新建草稿</Button></div></div>
       <Card><CardHeader className="pb-3"><CardTitle className="text-base">发布安全边界</CardTitle><CardDescription>平台红线或 mandatory deny 词典禁止提交人自批；审批后的候选仅在下一次签名策略包发布后影响实时流量。</CardDescription></CardHeader><CardContent className="flex flex-wrap items-center gap-3"><Select value={stateFilter} onValueChange={setStateFilter}><SelectTrigger className="w-44"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="ALL">全部状态</SelectItem>{Object.entries(stateLabels).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent></Select><span className="text-sm text-gray-500">共 {releases.length} 个版本</span></CardContent></Card>
 

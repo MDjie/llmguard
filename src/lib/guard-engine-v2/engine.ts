@@ -34,6 +34,7 @@ export function createGuardEngine(
   const detectorDag = resolveAndValidateDetectorDag(policy.detectorDag, detectors);
 
   return {
+    ...(policy.semanticDecisionMode==='coverage-v1'?{contextEvaluationMode:'unified-v1' as const}:{}),
     async evaluate(request: GuardRequest) {
       const startedAt = now();
       if ((request.content.text?.length ?? 0) > 1_048_576) {

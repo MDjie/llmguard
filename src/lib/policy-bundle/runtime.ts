@@ -17,10 +17,15 @@ import {
 import type { CompiledPolicyBundle } from './types';
 import { semanticClassifierSpecSchema } from '@/lib/guard-engine-v2/semantic-classifier';
 import { guardResourceAdmissionSpecSchema } from '@/lib/resource-control/admission-config';
+import { judgeProfileListSchema } from '@/lib/judge/profile';
+import { semanticCoveragePolicySchema } from '@/lib/guard-engine-v2/semantic-coverage';
 
 const sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
 
 const ruleSchema = z.object({
+  sourceIds: z.array(z.string()).optional(),
+  actionHint: z.string().optional(),
+  sourceMatchMode: z.string().optional(),
   id: z.string(),
   riskType: z.string(),
   pattern: z.string(),
@@ -80,6 +85,7 @@ const detectorDagSchema = z.object({
       'WHEN_PARENT_MATCHES',
       'WHEN_PARENT_FAILS',
       'WHEN_NO_BLOCKING_MATCH',
+      'WHEN_NO_MANDATORY_DENY',
     ]),
     timeoutMs: z.number().int().positive().max(60_000),
     maxAttempts: z.number().int().min(1).max(3),
@@ -88,6 +94,10 @@ const detectorDagSchema = z.object({
   }).strict()).min(1).max(128),
 }).strict();
 const payloadSchema = z.object({
+  decisionPolicyVersion: z.union([z.literal(1), z.literal(2)]).optional(),
+  semanticDecisionMode:z.literal('coverage-v1').optional(),
+  semanticCoverage:semanticCoveragePolicySchema.optional(),
+  judgeProfiles: judgeProfileListSchema.optional(),
   schemaVersion: z.literal('1.0'),
   policyId: z.string(),
   policyVersion: z.number().int().positive(),
@@ -138,6 +148,7 @@ const payloadSchema = z.object({
     state: z.enum(['reviewed', 'shadow', 'canary', 'active']),
     layer: z.enum(['PLATFORM_REDLINE', 'INDUSTRY', 'TENANT', 'APPLICATION', 'INCIDENT']).optional(),
     manifestHash: sha256Schema,
+    releaseSet: z.object({id:z.uuid(),digest:sha256Schema,partNumber:z.number().int().positive(),shardCount:z.number().int().positive()}).strict().optional(),
     contentHash: sha256Schema,
     signatureAlgorithm: z.literal('Ed25519'),
     signingKeyId: z.string(),

@@ -14,6 +14,10 @@ import type {
 } from './governance';
 
 export interface CompiledPolicyBundle {
+  readonly decisionPolicyVersion?: 1 | 2;
+  readonly semanticDecisionMode?: 'coverage-v1';
+  readonly semanticCoverage?: import('@/lib/guard-engine-v2/semantic-coverage').SemanticCoveragePolicy;
+  readonly judgeProfiles?: readonly import('@/lib/judge/profile').JudgeProfile[];
   readonly schemaVersion: '1.0';
   readonly policyId: string;
   readonly policyVersion: number;

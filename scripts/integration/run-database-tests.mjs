@@ -29,6 +29,8 @@ const sqlFiles = process.argv.includes('--policy-governance-schema-only')
       'drizzle/0038_policy_governance.sql',
       'drizzle/0040_output_control_governance.sql',
       'drizzle/0041_policy_operations_governance.sql',
+      'drizzle/0042_dictionary_release_sets.sql',
+      'drizzle/0043_session_request_receipts.sql',
     ]
   : allSqlFiles;
 const client = new pg.Client({

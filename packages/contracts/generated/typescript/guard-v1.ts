@@ -1,8 +1,8 @@
 // Generated from model/guard-v1.schema.json. Do not edit.
-// Source SHA-256: 5e535f81fcd1a87d610f5e1876c5bff2db310e6e050872e15995b940fdbe4776
+// Source SHA-256: 01bb211282221f91e3fb858d2d0b4c19d0904d24c50e9d5d83e8326500e5aa3a
 
 export const GUARD_CONTRACT_VERSION = '1.0' as const;
-export const GUARD_CONTRACT_SOURCE_SHA256 = '5e535f81fcd1a87d610f5e1876c5bff2db310e6e050872e15995b940fdbe4776' as const;
+export const GUARD_CONTRACT_SOURCE_SHA256 = '01bb211282221f91e3fb858d2d0b4c19d0904d24c50e9d5d83e8326500e5aa3a' as const;
 
 export type Direction = "INPUT" | "OUTPUT_COMPLETE" | "OUTPUT_CHUNK" | "RAG_INGEST" | "RAG_CONTEXT" | "TOOL_REQUEST" | "TOOL_RESULT";
 
@@ -151,6 +151,10 @@ export interface Observation {
   readonly variantId?: string;
   readonly dictionaryLayer?: "PLATFORM_REDLINE" | "INDUSTRY" | "TENANT" | "APPLICATION" | "INCIDENT";
   readonly contextRole?: ContextRole;
+  readonly decisionRole?: "HARD_DENY" | "CANDIDATE" | "CONFIRMED_RISK" | "CLEARED" | "UNKNOWN";
+  readonly semanticCoverage?: "COMPLETE" | "INCOMPLETE" | "UNSUPPORTED" | "NOT_APPLICABLE";
+  readonly assessmentId?: string;
+  readonly scoreMeaning?: "PROBABILITY" | "POLICY" | "UNCALIBRATED";
 }
 
 export interface LatencyBreakdown {

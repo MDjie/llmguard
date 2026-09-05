@@ -50,6 +50,7 @@ export interface ProtectedContextFingerprint {
 }
 
 export interface GuardDetectorContext {
+  readonly previousObservations?: readonly Observation[];
   readonly request: GuardRequest;
   readonly envelopes: readonly ContextEnvelope[];
   readonly views: readonly NormalizedView[];
@@ -66,6 +67,12 @@ export interface GuardDetector {
 }
 
 export interface SemanticClassifierSpec {
+  readonly coverage?: {
+    readonly tenantId:string;readonly applicationId:string;readonly directions:readonly import('@/lib/judge/profile').JudgeScenario['direction'][];
+    readonly locales:readonly string[];readonly contextScope:'full'|'window';
+    readonly deploymentMode:'private'|'cloud';readonly dataBoundaryPolicyId:string;
+    readonly qualityEvidenceId:string;readonly qualityValidUntil:string;
+  };
   readonly detectorId: string;
   readonly detectorVersion: string;
   readonly modelId: string;
@@ -103,6 +110,7 @@ export type DetectorRunCondition =
   | 'ALWAYS'
   | 'WHEN_PARENT_MATCHES'
   | 'WHEN_PARENT_FAILS'
+  | 'WHEN_NO_MANDATORY_DENY'
   | 'WHEN_NO_BLOCKING_MATCH';
 export type DetectorFailurePolicy = 'FAIL_CLOSED' | 'DEGRADE';
 
@@ -125,6 +133,12 @@ export interface DetectorDagSpec {
 }
 
 export interface GuardEnginePolicy {
+  readonly semanticDecisionMode?: 'coverage-v1';
+  readonly semanticCoverage?: import('./semantic-coverage').SemanticCoveragePolicy;
+  readonly semanticClassifier?: SemanticClassifierSpec;
+  readonly decisionPolicyVersion?: 1 | 2;
+  readonly riskThresholds?: Readonly<Record<string, { readonly warn: number; readonly block: number }>>;
+  readonly judgeProfiles?: readonly import('@/lib/judge/profile').JudgeProfile[];
   readonly id: string;
   readonly bundleId: string;
   readonly policyVersion?: string;
@@ -153,10 +167,15 @@ export interface GuardEngineDependencies {
 }
 
 export interface GuardEngine {
+  readonly contextEvaluationMode?: 'unified-v1';
+  evaluateContextual?(combined:GuardRequest,current:GuardRequest):Promise<GuardDecision>;
   evaluate(request: GuardRequest): Promise<GuardDecision>;
 }
 
 export interface RuleSpec {
+  readonly sourceIds?: readonly string[];
+  readonly actionHint?: string;
+  readonly sourceMatchMode?: string;
   readonly id: string;
   readonly riskType: string;
   readonly pattern: string;

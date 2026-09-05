@@ -4,6 +4,7 @@ import { objectStoreConfig, S3Presigner } from '@/lib/object-store';
 import type { TenantScope } from '@/lib/tenancy';
 import type { artifactParts, artifacts } from '@/storage/database/shared/schema';
 import { createImageViewPlan } from './view-plan';
+import { analysisCoverageSchema } from './coverage';
 import {
   loadMultimodalDetectionPolicy,
   type MultimodalDetectionPolicy,
@@ -14,6 +15,7 @@ const regionSchema = z.tuple([
   z.number().nonnegative(), z.number().nonnegative(),
 ]);
 const analysisSchema = z.object({
+  coverage:analysisCoverageSchema.optional(),
   analyzerVersion: z.string().min(1).max(100),
   ocr: z.array(z.object({
     viewId: z.string().min(1).max(100),

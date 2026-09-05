@@ -665,6 +665,11 @@ export async function analyzeAudioVideo(
     const analysisFailures = uniqueFailures(failures);
     return {
       analyzerVersion: analyzerVersion(versions, analysisFailures.length > 0),
+      coverage:{artifactSha256:request.artifact.sha256,modality:request.artifact.kind,
+        state:analysisFailures.length?'INCOMPLETE' as const:'SAMPLED' as const,
+        expectedUnits:Math.max(1,metadata.durationMs),processedUnits:Math.max(0,metadata.durationMs),
+        analyzerVersion:analyzerVersion(versions,analysisFailures.length>0),
+        reasonCodes:[...analysisFailures.map(f=>f.code),'FRAME_OR_TRANSCRIPT_COVERAGE_NOT_FULL_SEMANTIC_PROOF']},
       format: metadata.format,
       durationMs: metadata.durationMs,
       transcript,

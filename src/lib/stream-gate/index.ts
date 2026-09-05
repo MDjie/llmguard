@@ -1,4 +1,5 @@
 export { gateSseStream } from './gate';
+export { gatePolicySseStream } from './policy-stream';
 export { createGuardStreamInspector } from './guard-inspector';
 export { parseSseEvents } from './sse';
 export {

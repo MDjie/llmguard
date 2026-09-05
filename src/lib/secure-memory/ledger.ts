@@ -22,7 +22,7 @@ export function mergeRiskLedger(
   readonly riskState: SecureMemoryRiskState;
 } {
   const byRisk = new Map(previous.map((entry) => [entry.riskType, entry]));
-  const matches = decision.observations.filter((observation) => observation.status === 'MATCH');
+  const matches = decision.observations.filter(isConfirmedObservation);
   const signals = matches.length > 0 ? matches : decision.degradationReasons.map((reason) => ({
     riskType: 'system.degradation.' + reason.split(':', 1)[0],
     score: decision.riskLevel === 'NONE' ? 0.5 : 1,
@@ -82,3 +82,4 @@ export function mergeRiskLedger(
     riskState,
   };
 }
+import { isConfirmedObservation } from '@/lib/guard-engine-v2/observation-role';

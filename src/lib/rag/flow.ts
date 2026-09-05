@@ -12,6 +12,7 @@ import { createEngineForPolicyBundle } from '@/lib/guard-engine-v2';
 import type { RuntimePolicyBundle } from '@/lib/policy-bundle';
 import type { TenantScope } from '@/lib/tenancy';
 import { assessGroundedness } from './groundedness';
+import { assessSemanticGroundedness } from './semantic-groundedness';
 import { ragContentHash, type RagProvenance, verifyRagProvenance } from './provenance';
 
 export interface RagCandidate extends RagProvenance {
@@ -323,10 +324,14 @@ export async function guardRagFlow(input: {
     citations.length === 0 || citations.some((id) => !acceptedIds.has(id))
   );
   const citedIds = new Set(citations.filter((id) => acceptedIds.has(id)));
-  const groundedness = assessGroundedness({
+  const lexicalGroundedness = assessGroundedness({
     output: input.output,
     citedTexts: accepted.filter((candidate) => citedIds.has(candidate.chunkId)).map((candidate) => candidate.text),
   });
+  const groundedness=input.bundle.payload.semanticDecisionMode==='coverage-v1'
+    ? await assessSemanticGroundedness({profiles:input.bundle.payload.judgeProfiles??[],scope:input.scope,output:input.output,
+      citations:accepted.filter(candidate=>citedIds.has(candidate.chunkId)),traceId:input.traceId,deadline:input.absoluteDeadlineEpochMs})
+    : lexicalGroundedness;
   const decisions = [
     queryDecision,
     ...candidateDecisions,
@@ -362,6 +367,7 @@ export async function guardRagFlow(input: {
     taintReasons: [...new Set(taintReasons)],
     sourceDiversity: { uniqueSources, acceptedChunks: accepted.length, low: diversityLow },
     groundedness,
+    lexicalGroundedness,
     decisions: {
       query: queryDecision,
       candidates: candidateDecisions,

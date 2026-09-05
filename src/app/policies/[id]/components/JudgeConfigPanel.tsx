@@ -39,6 +39,7 @@ import {
   type FallbackAction,
 } from '@/lib/judge/types';
 import { csrfHeaders } from '@/lib/auth/csrf-client';
+import { JudgeProfilesPanel } from './JudgeProfilesPanel';
 
 interface JudgeConfigPanelProps {
   policyId: string;
@@ -166,6 +167,7 @@ export function JudgeConfigPanel({ policyId }: JudgeConfigPanelProps) {
 
   return (
     <div className="space-y-6">
+      <JudgeProfilesPanel policyId={policyId}/>
       {/* 说明卡片 */}
       <Card className="border-blue-200 bg-blue-50/50">
         <CardContent className="pt-4">

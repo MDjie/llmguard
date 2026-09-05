@@ -1,4 +1,6 @@
 import { createHash } from 'node:crypto';
+import { selectJudgeProfile } from '@/lib/judge/profile';
+import { coverageGaps } from './semantic-coverage';
 import type {
   GuardDecision,
   GuardEnginePolicy,
@@ -45,8 +47,19 @@ export function aggregateGuardDecision(params: {
   readonly latencyMs: number;
 }): GuardDecision {
   const observations = stableObservations(params.observations);
-  const matches = observations.filter((item) => item.status === 'MATCH');
-  const maximumScore = matches.reduce((maximum, item) => Math.max(maximum, item.score), 0);
+  const v2 = params.policy.decisionPolicyVersion === 2;
+  const selectedJudge = selectJudgeProfile(params.policy.judgeProfiles ?? [], params.request.context);
+  const coverageMode=params.policy.semanticDecisionMode==='coverage-v1';
+  const missingRisks=coverageGaps(params.policy,params.request,observations);
+  const judgeMissing = coverageMode ? missingRisks.length>0 : (v2 && selectedJudge?.mode !== 'ENFORCE') || (selectedJudge?.mode === 'ENFORCE' && selectedJudge.riskIds.some(id => !observations.some(o => o.detectorId === 'configurable-judge' && o.riskType === id && o.semanticCoverage === 'COMPLETE' && (o.decisionRole === 'CLEARED' || o.decisionRole === 'CONFIRMED_RISK'))));
+  const candidates = observations.filter(o => o.decisionRole === 'CANDIDATE');
+  const unresolved = v2 && candidates.some(c => !observations.some(o => o.riskType === c.riskType && o.semanticCoverage === 'COMPLETE' && (o.decisionRole === 'CLEARED' || o.decisionRole === 'CONFIRMED_RISK')));
+  const matches = observations.filter((item) => item.status === 'MATCH' && (!v2 || !['CANDIDATE','CLEARED','UNKNOWN'].includes(item.decisionRole ?? '')));
+  const thresholds = (risk: string) => {
+    const table = params.policy.riskThresholds ?? {};
+    const key = Object.keys(table).filter(k => risk === k || risk.startsWith(k + '.')).sort((a,b)=>b.length-a.length)[0];
+    return v2 && key ? table[key] : {warn:params.policy.warnThreshold,block:params.policy.blockThreshold};
+  };
   const maximumRisk = matches.reduce<RiskLevel>(
     (maximum, item) => riskOrder[item.severity] > riskOrder[maximum] ? item.severity : maximum,
     'NONE',
@@ -54,14 +67,14 @@ export function aggregateGuardDecision(params: {
   const mandatoryDeny = matches.some((item) => item.reasonCode === 'MANDATORY_DENY');
   const degradedBlock =
     params.policy.failClosedOnRequiredDetectorFailure &&
-    params.requiredDetectorFailures.length > 0;
+    (params.requiredDetectorFailures.length > 0 || Boolean(judgeMissing));
   const outputDirection = params.request.context.direction === 'OUTPUT_COMPLETE' ||
     params.request.context.direction === 'OUTPUT_CHUNK' ||
     params.request.context.direction === 'TOOL_RESULT';
   const applicableOverride = (item: Observation): GuardDecision['action'] | undefined => {
     const candidate = params.policy.actionOverrides?.[item.riskType];
     const threshold = params.policy.actionOverrideThresholds?.[item.riskType]
-      ?? params.policy.warnThreshold;
+      ?? thresholds(item.riskType).warn;
     return candidate && item.score >= threshold ? candidate : undefined;
   };
   const override = matches.reduce<GuardDecision['action'] | undefined>((selected, item) => {
@@ -74,11 +87,11 @@ export function aggregateGuardDecision(params: {
   // match, while unclassified high-confidence findings and explicit BLOCK overrides
   // still fail closed.
   const thresholdBlock = matches.some((item) =>
-    item.score >= params.policy.blockThreshold &&
+    item.score >= thresholds(item.riskType).block &&
     (!outputDirection || applicableOverride(item) === undefined || applicableOverride(item) === 'BLOCK'));
   const action = mandatoryDeny || degradedBlock || thresholdBlock || override === 'BLOCK'
     ? 'BLOCK'
-    : override ?? (maximumScore >= params.policy.warnThreshold ? 'WARN' : 'ALLOW');
+    : unresolved || judgeMissing ? 'REQUIRE_REVIEW' : override ?? (matches.some(item => item.score >= thresholds(item.riskType).warn) ? 'WARN' : 'ALLOW');
   const riskLevel = degradedBlock && riskOrder[maximumRisk] < riskOrder.HIGH
     ? 'HIGH'
     : maximumRisk;
@@ -95,6 +108,7 @@ export function aggregateGuardDecision(params: {
     ),
   )].sort();
   const degradationReasons = [
+    ...(judgeMissing ? [coverageMode?'SEMANTIC_COVERAGE_INCOMPLETE':'JUDGE_COVERAGE_INCOMPLETE'] : []),
     ...new Set(params.degradationReasons ?? params.requiredDetectorFailures),
   ].sort();
   const failMode = degradationReasons.length === 0
@@ -103,12 +117,13 @@ export function aggregateGuardDecision(params: {
       ? 'FAIL_CLOSED'
       : 'DEGRADED';
   const reasonCodes = [...new Set([
+    ...(unresolved ? ['LEXICAL_CANDIDATE_REQUIRES_REVIEW'] : []),
     ...matches.flatMap((observation) => observation.reasonCode ? [observation.reasonCode] : []),
     ...params.requiredDetectorFailures,
     ...degradationReasons,
   ])].sort();
   const latencyMs = Math.min(600_000, Math.max(0, Math.round(params.latencyMs)));
-  const evidenceComplete = matches.every((observation) =>
+  const evidenceComplete = !judgeMissing && !unresolved && matches.every((observation) =>
     observation.evidence.length > 0 &&
     observation.evidence.every((evidence) =>
       evidence.artifactId !== undefined || (evidence.sourceEnvelopeIds?.length ?? 0) > 0,

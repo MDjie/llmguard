@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { safeFetchJson, type SafeFetchDependencies } from '@/lib/egress/safe-fetch';
 import { canonicalJson } from '@/lib/policy-bundle/canonical';
 import { textEvidence } from './evidence';
+import { classifierCoverageSchema, assertClassifierQualification, assertClassifierScope } from './classifier-qualification';
+import type { Observation } from './types';
 import type {
   GuardDetector,
   GuardDetectorContext,
@@ -114,9 +116,14 @@ export class SemanticClassifierDetector implements GuardDetector {
   }
 
   async detect(context: GuardDetectorContext) {
+    if(this.spec.coverage){
+      assertClassifierScope(this.spec,context);
+      if(this.spec.mode==='ENFORCE')assertClassifierQualification(this.spec);
+    }
     const labelSpecs = new Map(this.spec.labels.map((label) => [label.label, label]));
     const viewsById = new Map(context.views.map((view) => [view.id, view]));
-    const observations = [];
+    const observations:Observation[] = [];
+    const covered=new Map<string,number>();
     for (let offset = 0; offset < context.views.length; offset += this.spec.batchSize) {
       const batch = context.views.slice(offset, offset + this.spec.batchSize)
         .map((view) => ({ id: view.id, text: view.text }));
@@ -125,10 +132,13 @@ export class SemanticClassifierDetector implements GuardDetector {
       for (const item of response.items) {
         const view = viewsById.get(item.id);
         if (!view) throw new Error('SEMANTIC_CLASSIFIER_VIEW_UNKNOWN');
+        if(this.spec.coverage && (new Set(item.labels.map(l=>l.label)).size!==item.labels.length ||
+          item.labels.length!==this.spec.labels.length || this.spec.labels.some(l=>!item.labels.some(p=>p.label===l.label))))throw new Error('SEMANTIC_CLASSIFIER_LABEL_COVERAGE_INCOMPLETE');
         for (const prediction of item.labels) {
           const label = labelSpecs.get(prediction.label);
           if (!label) throw new Error('SEMANTIC_CLASSIFIER_LABEL_UNKNOWN');
           const score = calibratedConfidence(prediction.confidence, this.spec.temperature);
+          covered.set(label.riskType,(covered.get(label.riskType)??0)+1);
           if (score < label.threshold) continue;
           observations.push({
             detectorId: this.id,
@@ -143,8 +153,17 @@ export class SemanticClassifierDetector implements GuardDetector {
               : 'SEMANTIC_CLASSIFIER_SHADOW_MATCH',
             modelVersion: this.spec.modelId + '@' + this.spec.modelVersion,
             configurationDigest: this.digest,
+            ...(this.spec.coverage&&this.spec.mode==='ENFORCE'?{decisionRole:'CONFIRMED_RISK' as const,semanticCoverage:'COMPLETE' as const}:{}),
           });
         }
+      }
+    }
+    if(this.spec.coverage&&this.spec.mode==='ENFORCE'){
+      for(const label of this.spec.labels){
+        if(observations.some(o=>o.riskType===label.riskType))continue;
+        if(!covered.has(label.riskType)||!context.views.length)throw new Error('SEMANTIC_CLASSIFIER_LABEL_COVERAGE_INCOMPLETE');
+        observations.push({detectorId:this.id,detectorVersion:this.version,riskType:label.riskType,score:0,severity:'NONE',evidence:[],
+          status:'NO_MATCH',decisionRole:'CLEARED',semanticCoverage:'COMPLETE',reasonCode:'SEMANTIC_CLASSIFIER_SAFE',modelVersion:this.spec.modelId+'@'+this.spec.modelVersion,configurationDigest:this.digest});
       }
     }
     return observations;
@@ -153,6 +172,7 @@ export class SemanticClassifierDetector implements GuardDetector {
 
 export function semanticClassifierSpecSchema() {
   return z.object({
+    coverage: classifierCoverageSchema.optional(),
     detectorId: z.string().min(1).max(128),
     detectorVersion: z.string().min(1).max(64),
     modelId: z.string().min(1).max(256),

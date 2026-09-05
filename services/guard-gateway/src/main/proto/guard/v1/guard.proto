@@ -1,5 +1,5 @@
 // Generated from model/guard-v1.schema.json. Do not edit.
-// Source SHA-256: 5e535f81fcd1a87d610f5e1876c5bff2db310e6e050872e15995b940fdbe4776
+// Source SHA-256: 01bb211282221f91e3fb858d2d0b4c19d0904d24c50e9d5d83e8326500e5aa3a
 syntax = "proto3";
 
 package guardllm.contracts.v1;
@@ -257,6 +257,10 @@ message Observation {
   optional string variant_id = 19;
   optional string dictionary_layer = 20;
   optional ContextRole context_role = 21;
+  optional string decision_role = 22;
+  optional string semantic_coverage = 23;
+  optional string assessment_id = 24;
+  optional string score_meaning = 25;
 }
 
 message LatencyBreakdown {

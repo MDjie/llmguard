@@ -52,7 +52,9 @@ function simpleOccurrences(
   const candidate = rule.caseSensitive ? view.text : view.text.toLocaleLowerCase('und');
   const pattern = rule.caseSensitive ? rule.pattern : rule.pattern.toLocaleLowerCase('und');
   if (rule.matchType === 'regex') {
-    return safeRegexMatches(view.text, rule.pattern, rule.caseSensitive);
+    const matches=safeRegexMatches(view.text, rule.pattern, rule.caseSensitive);
+    if(matches.length>100)throw new Error('RULE_MATCH_CAPACITY_EXCEEDED');
+    return matches;
   }
   if (rule.matchType === 'exact') {
     return candidate === pattern ? [{ raw: view.text, index: 0 }] : [];
@@ -70,12 +72,13 @@ function simpleOccurrences(
   }
   const result: Array<{ raw: string; index: number }> = [];
   let cursor = 0;
-  while (result.length < 100) {
+  while (result.length <= 100) {
     const index = candidate.indexOf(pattern, cursor);
     if (index < 0) break;
     result.push({ raw: view.text.slice(index, index + rule.pattern.length), index });
     cursor = index + Math.max(1, rule.pattern.length);
   }
+  if(result.length>100)throw new Error('RULE_MATCH_CAPACITY_EXCEEDED');
   return result;
 }
 
@@ -159,6 +162,7 @@ export class RuleDetector implements GuardDetector {
     version = '3.0.0',
     private readonly exceptions: readonly RuleExceptionSpec[] = [],
     private readonly now: () => number = Date.now,
+    private readonly decisionPolicyVersion: 1 | 2 = 1,
   ) {
     this.version = version;
     this.matcher = new LexicalMatcher(rules);
@@ -176,7 +180,7 @@ export class RuleDetector implements GuardDetector {
       if (!ruleIsActiveForRequest(rule, context, evaluationTime)) continue;
       const isExcepted = !rule.mandatoryDeny && this.exceptions.some((exception) => {
         const isLegacyDimensionException = exception.targetRuleIds === undefined;
-        return isLegacyDimensionException &&
+        return this.decisionPolicyVersion === 1 && isLegacyDimensionException &&
           exceptionAppliesToRisk(exception, rule) &&
           exceptionIsActiveForRequest(exception, context, evaluationTime) &&
           context.views.some((view) => simpleOccurrences(view, exception).length > 0);
@@ -211,12 +215,14 @@ export class RuleDetector implements GuardDetector {
           );
           if (
             !rule.mandatoryDeny &&
+            this.decisionPolicyVersion === 1 &&
             CONTEXTUAL_RISK_TYPES.has(rule.riskType) &&
             contextRole.suppressLexicalBlock
           ) continue;
           roles.add(contextRole.role);
           approximate ||= match.approximate;
           strongestViewConfidence = Math.max(strongestViewConfidence, view.confidence ?? 1);
+          if(evidence.length>=100)throw new Error('RULE_EVIDENCE_CAPACITY_EXCEEDED');
           evidence.push(textEvidence(
             context,
             view,
@@ -227,9 +233,7 @@ export class RuleDetector implements GuardDetector {
               ? '*'.repeat(match.raw.length)
               : `${match.raw[0]}***${match.raw.at(-1)}`,
           ));
-          if (evidence.length >= 100) break;
         }
-        if (evidence.length >= 100) break;
       }
       if (evidence.length === 0) continue;
       const baseScore = Math.min(1, Math.max(0, rule.score));
@@ -239,6 +243,7 @@ export class RuleDetector implements GuardDetector {
       observations.push({
         detectorId: this.id,
         detectorVersion: this.version,
+        ...(this.decisionPolicyVersion === 2 ? { decisionRole: rule.mandatoryDeny ? 'HARD_DENY' as const : 'CANDIDATE' as const, scoreMeaning: 'UNCALIBRATED' as const } : {}),
         riskType: rule.riskType,
         category: rule.riskType,
         confidence: score,

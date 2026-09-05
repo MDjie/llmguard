@@ -1,5 +1,10 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
+import { guardDecisionSchema } from '@/contracts/http/guard-v1';
+import type { GuardRequest, GuardDecision } from '@guardllm/contracts';
+import type { MasterKey } from '@/lib/secrets';
+import { isConfirmedObservation } from '@/lib/guard-engine-v2/observation-role';
+import { receiptReference, sessionRequestHmac } from './request-receipt';
 import { loadMasterKey, openSecret, sealSecret } from '@/lib/secrets';
 import { db } from '@/storage/database/shared/db';
 import {
@@ -7,6 +12,7 @@ import {
   guardMemoryGraphEdges,
   guardMemoryRiskLedgers,
   guardSessionRiskStates,
+  guardSessionRequestReceipts,
 } from '@/storage/database/shared/schema';
 import { mergeRiskLedger } from './ledger';
 import {
@@ -32,6 +38,39 @@ export class SecureMemoryVersionConflictError extends Error {
     super('SECURE_MEMORY_VERSION_CONFLICT');
     this.name = 'SecureMemoryVersionConflictError';
   }
+}
+
+export class SecureMemoryReplayError extends Error {
+  constructor(readonly code:'SECURE_MEMORY_REQUEST_CONFLICT'|'SECURE_MEMORY_RECEIPT_EXPIRED'|'SECURE_MEMORY_RECEIPT_KEY_UNAVAILABLE') {
+    super(code);this.name='SecureMemoryReplayError';
+  }
+}
+function assertRequestScope(scope:AppendSecureMemoryEvaluationInput['scope'],request:GuardRequest,sessionId:string) {
+  if(!sessionId || sessionId.length>128 || request.context.sessionId!==sessionId ||
+    request.context.tenantId!==scope.tenantId || request.context.applicationId!==scope.applicationId)
+    throw new Error('GUARD_SESSION_SCOPE_MISMATCH');
+}
+function receiptPredicate(request:GuardRequest) {
+  return and(eq(guardSessionRequestReceipts.tenantId,request.context.tenantId),
+    eq(guardSessionRequestReceipts.applicationId,request.context.applicationId),
+    eq(guardSessionRequestReceipts.sessionId,request.context.sessionId!),
+    eq(guardSessionRequestReceipts.requestId,request.context.requestId),
+    eq(guardSessionRequestReceipts.direction,request.context.direction));
+}
+function decodeReceipt(row:typeof guardSessionRequestReceipts.$inferSelect,request:GuardRequest,key:MasterKey) {
+  if(row.expiresAt.getTime()<=Date.now() || !row.decisionEnvelopes.length)throw new SecureMemoryReplayError('SECURE_MEMORY_RECEIPT_EXPIRED');
+  if(row.keyId!==key.id)throw new SecureMemoryReplayError('SECURE_MEMORY_RECEIPT_KEY_UNAVAILABLE');
+  if(row.requestHmac!==sessionRequestHmac(request,key))throw new SecureMemoryReplayError('SECURE_MEMORY_REQUEST_CONFLICT');
+  const decision:GuardDecision=guardDecisionSchema.parse(JSON.parse(row.decisionEnvelopes.map((envelope,index)=>
+    openSecret(envelope,receiptReference(request,index),key)).join('')));
+  return {eventId:row.eventId,stateVersion:row.stateVersion,sequenceNumber:row.sequenceNumber,decision};
+}
+export async function readSecureMemoryReplay(scope:AppendSecureMemoryEvaluationInput['scope'],request:GuardRequest):Promise<GuardDecision|undefined> {
+  assertRequestScope(scope,request,request.context.sessionId ?? '');
+  const [row]=await db.select().from(guardSessionRequestReceipts).where(receiptPredicate(request)).limit(1);
+  if(!row)return undefined;
+  const key=loadMasterKey();
+  try{return decodeReceipt(row,request,key).decision;}finally{key.bytes.fill(0);}
 }
 
 function stateReference(scope: AppendSecureMemoryEvaluationInput['scope'], sessionId: string): string {
@@ -105,18 +144,18 @@ export async function readSecureMemorySnapshot(
   sessionId: string,
 ): Promise<SecureMemorySnapshot> {
   if (!sessionId || sessionId.length > 128) throw new Error('GUARD_SESSION_ID_INVALID');
-  const [stored, ledger] = await Promise.all([
-    db.select().from(guardSessionRiskStates).where(and(
+  const [stored, ledger] = await db.transaction(transaction=>Promise.all([
+    transaction.select().from(guardSessionRiskStates).where(and(
       eq(guardSessionRiskStates.tenantId, scope.tenantId),
       eq(guardSessionRiskStates.applicationId, scope.applicationId),
       eq(guardSessionRiskStates.sessionId, sessionId),
     )).limit(1).then((rows) => rows[0]),
-    db.select().from(guardMemoryRiskLedgers).where(and(
+    transaction.select().from(guardMemoryRiskLedgers).where(and(
       eq(guardMemoryRiskLedgers.tenantId, scope.tenantId),
       eq(guardMemoryRiskLedgers.applicationId, scope.applicationId),
       eq(guardMemoryRiskLedgers.sessionId, sessionId),
     )).limit(1).then((rows) => rows[0]),
-  ]);
+  ]),{isolationLevel:'repeatable read',accessMode:'read only'});
   const active = stored && stored.expiresAt.getTime() > Date.now();
   let hotWindow = '';
   if (active) {
@@ -145,7 +184,8 @@ export async function readSecureMemorySnapshot(
 
 export async function appendSecureMemoryEvaluation(
   input: AppendSecureMemoryEvaluationInput,
-): Promise<{ readonly eventId: string; readonly stateVersion: number; readonly sequenceNumber: number }> {
+): Promise<{ readonly eventId: string; readonly stateVersion: number; readonly sequenceNumber: number; readonly decision:GuardDecision }> {
+  assertRequestScope(input.scope,input.request,input.sessionId);
   if (!input.sessionId || input.sessionId.length > 128) throw new Error('GUARD_SESSION_ID_INVALID');
   if (input.tokenCount !== undefined && (!Number.isSafeInteger(input.tokenCount) || input.tokenCount < 0)) {
     throw new Error('GUARD_SESSION_TOKEN_COUNT_INVALID');
@@ -160,6 +200,10 @@ export async function appendSecureMemoryEvaluation(
     const payloadEnvelopes = splitUtf8(serialized).map((part, index) =>
       sealSecret(part, eventReference(input.scope, eventId, index), key));
     return await db.transaction(async (transaction) => {
+      // Covers the empty-session race, where SELECT FOR UPDATE alone locks no row.
+      await transaction.execute(sql`select pg_advisory_xact_lock(hashtext(${stateReference(input.scope,input.sessionId)}))`);
+      const [receipt]=await transaction.select().from(guardSessionRequestReceipts).where(receiptPredicate(input.request)).limit(1);
+      if(receipt)return decodeReceipt(receipt,input.request,key);
       const [stored] = await transaction.select().from(guardSessionRiskStates).where(and(
         eq(guardSessionRiskStates.tenantId, input.scope.tenantId),
         eq(guardSessionRiskStates.applicationId, input.scope.applicationId),
@@ -191,7 +235,7 @@ export async function appendSecureMemoryEvaluation(
         256,
       );
       const riskLabels = uniqueBounded(input.decision.observations
-        .filter((observation) => observation.status === 'MATCH')
+    .filter(isConfirmedObservation)
         .map((observation) => observation.riskType), 256);
       await transaction.insert(guardMemoryEvents).values({
         ...input.scope,
@@ -348,7 +392,15 @@ export async function appendSecureMemoryEvaluation(
       if (graphEdges.length > 0) {
         await transaction.insert(guardMemoryGraphEdges).values(graphEdges).onConflictDoNothing();
       }
-      return { eventId, stateVersion, sequenceNumber };
+      const serializedDecision=JSON.stringify(guardDecisionSchema.parse(input.decision));
+      if(Buffer.byteLength(serializedDecision,'utf8')>4*1024*1024)throw new Error('SECURE_MEMORY_RECEIPT_TOO_LARGE');
+      await transaction.insert(guardSessionRequestReceipts).values({...input.scope,
+        sessionId:input.sessionId,requestId:input.request.context.requestId,direction:input.request.context.direction,
+        requestHmac:sessionRequestHmac(input.request,key),keyId:key.id,
+        decisionEnvelopes:splitUtf8(serializedDecision).map((part,index)=>sealSecret(part,receiptReference(input.request,index),key)),
+        eventId,stateVersion,sequenceNumber,expiresAt,createdAt:occurredAt,
+      });
+      return { eventId, stateVersion, sequenceNumber, decision:input.decision };
     });
   } finally {
     key.bytes.fill(0);
@@ -362,6 +414,7 @@ export async function endSecureMemorySession(
 ): Promise<void> {
   if (!sessionId || sessionId.length > 128) throw new Error('GUARD_SESSION_ID_INVALID');
   await db.transaction(async (transaction) => {
+    await transaction.execute(sql`select pg_advisory_xact_lock(hashtext(${stateReference(scope,sessionId)}))`);
     const ledger = await transaction.select().from(guardMemoryRiskLedgers).where(and(
       eq(guardMemoryRiskLedgers.tenantId, scope.tenantId),
       eq(guardMemoryRiskLedgers.applicationId, scope.applicationId),
@@ -392,11 +445,15 @@ export async function endSecureMemorySession(
       recentRiskTypes: [],
       escalationLevel: 0,
       expiresAt: occurredAt,
+      stateVersion: sql`${guardSessionRiskStates.stateVersion} + 1`,
       updatedAt: occurredAt,
     }).where(and(
       eq(guardSessionRiskStates.tenantId, scope.tenantId),
       eq(guardSessionRiskStates.applicationId, scope.applicationId),
       eq(guardSessionRiskStates.sessionId, sessionId),
     ));
+    await transaction.update(guardSessionRequestReceipts).set({expiresAt:occurredAt,decisionEnvelopes:[]}).where(and(
+      eq(guardSessionRequestReceipts.tenantId,scope.tenantId),eq(guardSessionRequestReceipts.applicationId,scope.applicationId),
+      eq(guardSessionRequestReceipts.sessionId,sessionId)));
   });
 }

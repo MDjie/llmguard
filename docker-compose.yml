@@ -44,6 +44,10 @@ x-runtime-environment: &runtime-environment
   RAW_CONTENT_RETENTION_DAYS: "${RAW_CONTENT_RETENTION_DAYS:-7}"
   PROVIDER_ALLOWED_HOSTS: "${PROVIDER_ALLOWED_HOSTS:-}"
   PROVIDER_ALLOWED_PRIVATE_HOSTS: "${PROVIDER_ALLOWED_PRIVATE_HOSTS:-}"
+  JUDGE_PRIVATE_ENDPOINT_APPROVALS_JSON: "${JUDGE_PRIVATE_ENDPOINT_APPROVALS_JSON:-[]}"
+  JUDGE_QUALITY_APPROVALS_JSON: "${JUDGE_QUALITY_APPROVALS_JSON:-[]}"
+  SEMANTIC_CLASSIFIER_QUALITY_APPROVALS_JSON: "${SEMANTIC_CLASSIFIER_QUALITY_APPROVALS_JSON:-[]}"
+  MULTIMODAL_QUALITY_APPROVALS_JSON: "${MULTIMODAL_QUALITY_APPROVALS_JSON:-[]}"
   CALLBACK_ALLOWED_HOSTS: "${CALLBACK_ALLOWED_HOSTS:-}"
   CALLBACK_ALLOWED_PRIVATE_HOSTS: "${CALLBACK_ALLOWED_PRIVATE_HOSTS:-}"
   TOOL_ALLOWED_HOSTS: "${TOOL_ALLOWED_HOSTS:-}"
@@ -127,6 +131,8 @@ services:
       - ./drizzle/0039_session_risk_and_media_resilience.sql:/docker-entrypoint-initdb.d/48-session-risk-media-resilience.sql:ro
       - ./drizzle/0040_output_control_governance.sql:/docker-entrypoint-initdb.d/49-output-control-governance.sql:ro
       - ./drizzle/0041_policy_operations_governance.sql:/docker-entrypoint-initdb.d/50-policy-operations-governance.sql:ro
+      - ./drizzle/0042_dictionary_release_sets.sql:/docker-entrypoint-initdb.d/51-dictionary-release-sets.sql:ro
+      - ./drizzle/0043_session_request_receipts.sql:/docker-entrypoint-initdb.d/52-session-request-receipts.sql:ro
     ports:
       - "127.0.0.1:${DB_PORT:-5434}:5432"
     healthcheck:

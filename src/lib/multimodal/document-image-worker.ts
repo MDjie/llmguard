@@ -61,6 +61,7 @@ export async function processNextDocumentImageJob() {
       : undefined;
     const anomalyScore = Math.max(0, ...analysis.anomalies.map((item) => item.score));
     const fusion = await fuseMultimodal({
+      analysisCoverage:analysis.coverage,artifactSha256:artifact.verifiedSha256??undefined,
       bundle,
       context: {
         traceId: `job-trace-${job.id}`,

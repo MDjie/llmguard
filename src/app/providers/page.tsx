@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { csrfHeaders } from '@/lib/auth/csrf-client';
+import type { ProviderDeployment } from '@/lib/providers/deployment';
 import { 
   Plus, 
   Edit2, 
@@ -28,6 +29,7 @@ interface LLMProvider {
   baseUrl: string | null;
   hasSecret: boolean;
   requiresSecretMigration: boolean;
+  deploymentConfig: ProviderDeployment | null;
   defaultModel: string | null;
   useCase: string;
   isEnabled: boolean;
@@ -52,6 +54,7 @@ const providerTypes = [
   { value: 'kimi', label: 'Kimi (月之暗面)' },
   { value: 'doubao', label: '豆包 (字节跳动)' },
   { value: 'qwen', label: '通义千问 (阿里)' },
+  { value: 'glm', label: 'GLM (智谱)' },
   { value: 'ollama', label: 'Ollama (本地)' },
   { value: 'custom', label: '自定义 OpenAI 兼容端点' },
 ];
@@ -80,6 +83,9 @@ export default function ProvidersPage() {
     apiKey: '',
     defaultModel: '',
     useCase: 'both',
+    deploymentMode: 'cloud',
+    authMode: 'bearer',
+    dataBoundaryPolicyId: 'customer-cloud-approved',
   });
 
   useEffect(() => {
@@ -119,6 +125,7 @@ export default function ProvidersPage() {
         baseUrl: formData.baseUrl || null,
         defaultModel: formData.defaultModel || null,
         useCase: formData.useCase,
+        deploymentConfig: {deploymentMode:formData.deploymentMode,authMode:formData.authMode,dataBoundaryPolicyId:formData.dataBoundaryPolicyId},
       };
 
       // 只在创建时或提供了新密钥时才发送 apiKey
@@ -158,6 +165,9 @@ export default function ProvidersPage() {
       apiKey: '', // 不显示已有密钥
       defaultModel: provider.defaultModel || '',
       useCase: provider.useCase,
+      deploymentMode: provider.deploymentConfig?.deploymentMode ?? (provider.providerType === 'ollama' ? 'private' : 'cloud'),
+      authMode: provider.deploymentConfig?.authMode ?? (provider.providerType === 'ollama' && !provider.hasSecret ? 'none' : 'bearer'),
+      dataBoundaryPolicyId: provider.deploymentConfig?.dataBoundaryPolicyId ?? 'customer-default',
     });
     setShowForm(true);
   };
@@ -298,6 +308,9 @@ export default function ProvidersPage() {
             apiKey: '',
             defaultModel: '',
             useCase: 'both',
+            deploymentMode: 'cloud',
+            authMode: 'bearer',
+            dataBoundaryPolicyId: 'customer-cloud-approved',
           });
           setShowForm(true);
         }}>
@@ -383,6 +396,13 @@ export default function ProvidersPage() {
                   placeholder="例如: https://api.deepseek.com"
                 />
               </div>
+
+              <div className="grid gap-4 md:grid-cols-3">
+                <div><label className="block text-sm font-medium mb-1">部署方式</label><Select value={formData.deploymentMode} onValueChange={v=>setFormData({...formData,deploymentMode:v,authMode:v==='cloud'?'bearer':formData.authMode})}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="cloud">授权云 API</SelectItem><SelectItem value="private">本客户私有部署</SelectItem></SelectContent></Select></div>
+                <div><label className="block text-sm font-medium mb-1">认证方式</label><Select value={formData.authMode} onValueChange={v=>setFormData({...formData,authMode:v})}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="bearer">Bearer 密钥</SelectItem><SelectItem value="none" disabled={formData.deploymentMode!=='private'}>无认证（已批准私网）</SelectItem></SelectContent></Select></div>
+                <div><label className="block text-sm font-medium mb-1">数据边界编号</label><Input value={formData.dataBoundaryPolicyId} onChange={e=>setFormData({...formData,dataBoundaryPolicyId:e.target.value})} required/></div>
+              </div>
+              <p className="text-xs text-muted-foreground">每套产品服务一个客户。私有模型可使用客户自定义模型名与地址；保存前须由部署管理员批准端点和数据边界，模型品牌不代表部署位置。</p>
 
               <div>
                 <label className="block text-sm font-medium mb-1">

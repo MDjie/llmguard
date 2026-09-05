@@ -6,7 +6,7 @@ import type {
   SourceType,
   TrustLevel,
 } from '@guardllm/contracts';
-import { createEngineForPolicyBundle } from '@/lib/guard-engine-v2';
+import { createEngineForPolicyBundle, evaluateWithSessionContext } from '@/lib/guard-engine-v2';
 import {
   isPolicyBundleRuntimeError,
   loadLatestVerifiedPolicyBundleForPolicy,
@@ -14,9 +14,14 @@ import {
 } from '@/lib/policy-bundle';
 import type { TenantScope } from '@/lib/tenancy';
 import { DetectionPolicyError } from './errors';
+import { isConfirmedObservation } from '@/lib/guard-engine-v2/observation-role';
 import type { DetectionFinding, DetectionResult } from './types';
 
 export interface GuardEngineV2DetectionOptions {
+  readonly requestId?: string;
+  readonly locale?: string;
+  readonly industry?: string;
+  readonly memoryMode?: 'read_only' | 'read_write';
   readonly allowPreRelease?: boolean;
   readonly sessionId?: string;
   readonly subjectId?: string;
@@ -72,7 +77,7 @@ function sourceTrust(sourceType: SourceType): {
 
 function evidenceSpans(decision: GuardDecision, textLength: number): EvidenceSpan[] {
   const spans = decision.observations
-    .filter((observation) => observation.status === 'MATCH')
+    .filter(isConfirmedObservation)
     .flatMap((observation) => observation.evidence)
     .flatMap((evidence) => {
       if (evidence.start === undefined || evidence.end === undefined) return [];
@@ -178,7 +183,7 @@ export function adaptGuardDecisionToDetectionResult(
   bundle: CompiledPolicyBundle,
 ): DetectionResult {
   const action = legacyAction(decision.action);
-  const matched = decision.observations.filter((observation) => observation.status === 'MATCH');
+  const matched = decision.observations.filter(isConfirmedObservation);
   const findings = matched.map((observation) => observationFinding(observation, action, bundle));
   const maximumScore = matched.reduce(
     (maximum, observation) => Math.max(maximum, observation.score),
@@ -191,7 +196,7 @@ export function adaptGuardDecisionToDetectionResult(
     action,
     findings,
     summary: findings.length === 0
-      ? '未检测到安全风险'
+      ? (decision.action === 'ALLOW' ? '未检测到已确认安全风险' : '检测未完成或需要复核；最终动作: ' + actionLabels[action])
       : '风险维度: ' + [...new Set(findings.map((finding) => finding.dimensionName))].join('、')
         + '；最终动作: ' + actionLabels[action],
     latencyMs: decision.latencyMs,
@@ -240,16 +245,19 @@ export async function detectWithGuardEngineV2(
   const sourceType = options.sourceType ?? (direction === 'output' ? 'AGENT' : 'USER');
   const trust = sourceTrust(sourceType);
   const now = Date.now();
-  const requestId = 'compat-' + randomUUID();
+  const requestId = options.requestId ?? 'compat-' + randomUUID();
+  if (requestId.length < 8 || requestId.length > 128) throw new Error('GUARD_REQUEST_ID_INVALID');
   const deadlineMs = Math.min(60_000, Math.max(100, options.deadlineMs ?? 30_000));
   const engine = createEngineForPolicyBundle(bundle);
-  const decision = await engine.evaluate({
+  const decision = await evaluateWithSessionContext(engine, {
     contractVersion: '1.0',
     context: {
-      traceId: requestId,
+      traceId: 'compat-trace-' + createHash('sha256').update(requestId).digest('hex').slice(0,32),
       requestId,
       tenantId: scope.tenantId,
       applicationId: scope.applicationId,
+      ...(options.locale ? {locale:options.locale} : {}),
+      ...(options.industry ? {industry:options.industry} : {}),
       ...(options.sessionId ? { sessionId: options.sessionId } : {}),
       ...(options.subjectId ? { subjectId: options.subjectId } : {}),
       ...(options.authContextId ? { authContextId: options.authContextId } : {}),
@@ -261,7 +269,7 @@ export async function detectWithGuardEngineV2(
     content: {
       text,
       envelopes: [{
-        envelopeId: 'env-' + randomUUID(),
+        envelopeId: 'env-' + createHash('sha256').update(JSON.stringify([scope.tenantId,scope.applicationId,options.sessionId ?? '',requestId,direction,options.sourceId ?? requestId])).digest('hex').slice(0,32),
         tenantId: scope.tenantId,
         applicationId: scope.applicationId,
         ...(options.sessionId ? { sessionId: options.sessionId } : {}),
@@ -278,7 +286,7 @@ export async function detectWithGuardEngineV2(
         contentEnd: text.length,
       }],
     },
-  });
+  }, scope, {readOnly:options.allowPreRelease || options.memoryMode === 'read_only'});
   options.signal?.throwIfAborted();
   return adaptGuardDecisionToDetectionResult(text, decision, bundle.payload);
 }

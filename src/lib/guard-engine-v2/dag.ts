@@ -205,7 +205,9 @@ async function executeNode(input: {
         inputChars: input.context.request.content.text?.length ?? 0,
         batchSize: 1 + (input.context.request.content.artifacts?.length ?? 0),
       });
-      return { node: input.node, detector: input.detector, observations, status, attempts };
+      return { node: input.node, detector: input.detector, observations, status, attempts,
+        ...(['ERROR','TIMEOUT'].includes(status) ? {failureReason: `${input.detector.id}:unavailable`} : {}),
+      };
     } catch {
       lastStatus = nodeSignal.aborted ? 'TIMEOUT' : 'ERROR';
     }
@@ -241,6 +243,7 @@ function shouldRun(
   blockThreshold: number,
 ): boolean {
   if (node.runCondition === 'ALWAYS') return true;
+  if (node.runCondition === 'WHEN_NO_MANDATORY_DENY') return !parentOutcomes.some(outcome => outcome.observations.some(o => o.status === 'MATCH' && o.reasonCode === 'MANDATORY_DENY'));
   if (node.runCondition === 'WHEN_PARENT_MATCHES') {
     return parentOutcomes.some((outcome) => outcome.status === 'MATCH');
   }
@@ -334,7 +337,7 @@ export async function executeDetectorDag(input: {
       return executeNode({
         node,
         detector,
-        context: input.context,
+        context: { ...input.context, previousObservations: [...outcomes.values()].flatMap(outcome => outcome.observations) },
         deadlineSignal: input.deadlineSignal,
         absoluteDeadlineEpochMs: input.absoluteDeadlineEpochMs,
         now: input.now,

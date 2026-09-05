@@ -565,10 +565,36 @@ export const keywordCategories = pgTable(
 // ============================================
 // 5. 受治理词典发布与响应模板
 // ============================================
+export const dictionaryReleaseSets = pgTable('dictionary_release_sets', {
+  ...tenantScopeColumns(),
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  policyId: varchar('policy_id', {length:36}).notNull().references(()=>policyProfiles.id, {onDelete:'restrict'}),
+  dictionaryId: varchar('dictionary_id', {length:128}).notNull(),
+  version: varchar('version', {length:64}).notNull(),
+  state: varchar('state', {length:32}).notNull().default('draft'),
+  revision: integer('revision').notNull().default(1),
+  canonicalManifest: jsonb('canonical_manifest').$type<Record<string,unknown>>().notNull(),
+  contentHash: varchar('content_hash', {length:64}).notNull(),
+  signature: text('signature').notNull(),
+  signingKeyId: varchar('signing_key_id', {length:128}).notNull(),
+  shardCount: integer('shard_count').notNull(),
+  submittedBy: varchar('submitted_by', {length:100}).notNull(),
+  approvedBy: varchar('approved_by', {length:100}),
+  approvedAt: timestamp('approved_at', {withTimezone:true}),
+  previousSetId: uuid('previous_set_id'),
+  createdAt: timestamp('created_at', {withTimezone:true}).notNull().defaultNow(),
+}, table=>[
+  uniqueIndex('dictionary_release_sets_scope_version_uq').on(table.tenantId,table.applicationId,table.dictionaryId,table.version),
+  uniqueIndex('dictionary_release_sets_scope_id_uq').on(table.tenantId,table.applicationId,table.id),
+  uniqueIndex('dictionary_release_sets_one_active_uq').on(table.tenantId,table.applicationId,table.dictionaryId).where(sql`${table.state} = 'active'`),
+]);
+
 export const dictionaryReleases = pgTable(
 	"dictionary_releases",
 	{
 		...tenantScopeColumns(),
+		releaseSetId: uuid('release_set_id').references(()=>dictionaryReleaseSets.id, {onDelete:'restrict'}),
+		partNumber: integer('part_number'),
 		id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
 		dictionaryId: varchar("dictionary_id", { length: 128 }).notNull(),
 		version: varchar("version", { length: 64 }).notNull(),
@@ -1491,6 +1517,25 @@ export const policyBundleTransitions = pgTable(
 		index("policy_bundle_transitions_scope_created_idx").on(table.tenantId, table.applicationId, table.createdAt),
 	]
 );
+
+export const guardSessionRequestReceipts = pgTable('guard_session_request_receipts', {
+  ...tenantScopeColumns(),
+  id: uuid('id').primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: varchar('session_id',{length:128}).notNull(),
+  requestId: varchar('request_id',{length:128}).notNull(),
+  direction: varchar('direction',{length:32}).notNull(),
+  requestHmac: varchar('request_hmac',{length:64}).notNull(),
+  keyId: varchar('key_id',{length:128}).notNull(),
+  decisionEnvelopes: jsonb('decision_envelopes').$type<import('@/lib/secrets').SecretEnvelope[]>().notNull(),
+  eventId: uuid('event_id').notNull(),
+  stateVersion: integer('state_version').notNull(),
+  sequenceNumber: bigint('sequence_number',{mode:'number'}).notNull(),
+  expiresAt: timestamp('expires_at',{withTimezone:true}).notNull(),
+  createdAt: timestamp('created_at',{withTimezone:true}).notNull().defaultNow(),
+},table=>[
+  uniqueIndex('guard_session_receipts_request_uq').on(table.tenantId,table.applicationId,table.sessionId,table.requestId,table.direction),
+  index('guard_session_receipts_expiry_idx').on(table.expiresAt),
+]);
 
 export const guardSessionRiskStates = pgTable(
 	"guard_session_risk_states",

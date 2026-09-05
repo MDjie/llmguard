@@ -1,4 +1,4 @@
-import { and, inArray, isNotNull, lte, or } from 'drizzle-orm';
+import { and, inArray, isNotNull, lte, or, sql } from 'drizzle-orm';
 import { canonicalJson } from '@/lib/policy-bundle';
 import { db } from '@/storage/database/shared/db';
 import {
@@ -9,6 +9,7 @@ import {
   documentScanFindings,
   documentScanTasks,
   judgeModelInvocations,
+  guardSessionRequestReceipts,
   riskFindings,
 } from '@/storage/database/shared/schema';
 import {
@@ -24,6 +25,7 @@ export interface RetentionPurgeResult {
   findings: number;
   agentTraces: number;
   judgeInvocations: number;
+  sessionReceiptPayloads: number;
   deletionProofId: string | null;
 }
 
@@ -73,8 +75,14 @@ export async function purgeExpiredContent(
       .where(inArray(detectionRecords.sessionId, sessionIds))
     : [];
   const recordIds = records.map((item) => item.id);
+  const receiptIds=(await db.select({id:guardSessionRequestReceipts.id}).from(guardSessionRequestReceipts)
+    .where(and(lte(guardSessionRequestReceipts.expiresAt,now),sql`jsonb_array_length(${guardSessionRequestReceipts.decisionEnvelopes}) > 0`))
+    .limit(batchSize)).map(item=>item.id);
 
   return db.transaction(async (transaction) => {
+    const purgedReceipts=receiptIds.length ? await transaction.update(guardSessionRequestReceipts).set({decisionEnvelopes:[]})
+      .where(and(inArray(guardSessionRequestReceipts.id,receiptIds),lte(guardSessionRequestReceipts.expiresAt,now)))
+      .returning({id:guardSessionRequestReceipts.id}) : [];
     const purgedDocuments = documentIds.length
       ? await transaction.update(documentScanTasks).set({
           extractedText: null,
@@ -153,6 +161,7 @@ export async function purgeExpiredContent(
       findings: purgedFindings.length,
       agentTraces: purgedAgentTraces.length,
       judgeInvocations: purgedJudgeInvocations.length,
+      sessionReceiptPayloads: purgedReceipts.length,
     };
     const deletedObjectCount = Object.values(result)
       .reduce((sum, count) => sum + count, 0);
@@ -170,6 +179,7 @@ export async function purgeExpiredContent(
         { objectType: 'RISK_FINDING', count: result.findings, idDigest: lineageObjectIdDigest(purgedFindings.map((item) => item.id)) },
         { objectType: 'AGENT_TRACE', count: result.agentTraces, idDigest: lineageObjectIdDigest(purgedAgentTraces.map((item) => item.id)) },
         { objectType: 'JUDGE_INVOCATION', count: result.judgeInvocations, idDigest: lineageObjectIdDigest(purgedJudgeInvocations.map((item) => item.id)) },
+        { objectType: 'SESSION_RECEIPT', count: result.sessionReceiptPayloads, idDigest: lineageObjectIdDigest(purgedReceipts.map((item) => item.id)) },
       ],
       phases: {
         database: {

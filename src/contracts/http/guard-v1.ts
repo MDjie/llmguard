@@ -152,6 +152,10 @@ export const observationSchema = z.object({
   canonicalTermId: z.string().min(1).max(256).optional(),
   variantId: z.string().min(1).max(256).optional(),
   dictionaryLayer: z.enum(['PLATFORM_REDLINE', 'INDUSTRY', 'TENANT', 'APPLICATION', 'INCIDENT']).optional(),
+  decisionRole: z.enum(['HARD_DENY', 'CANDIDATE', 'CONFIRMED_RISK', 'CLEARED', 'UNKNOWN']).optional(),
+  semanticCoverage: z.enum(['COMPLETE', 'INCOMPLETE', 'UNSUPPORTED', 'NOT_APPLICABLE']).optional(),
+  assessmentId: z.string().min(1).max(128).optional(),
+  scoreMeaning: z.enum(['PROBABILITY', 'POLICY', 'UNCALIBRATED']).optional(),
   contextRole: z.enum(['mention', 'quotation', 'news', 'legal', 'research', 'education', 'medical', 'instruction', 'transaction', 'endorsement', 'disclosure']).optional(),
 }).strict();
 

@@ -1,6 +1,8 @@
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, inArray } from 'drizzle-orm';
 import type { GuardDecision, GuardRequest } from '@guardllm/contracts';
-import { createEngineForPolicyBundle } from '@/lib/guard-engine-v2';
+import { createEngineForPolicyBundle, evaluateWithSessionContext } from '@/lib/guard-engine-v2';
+import { readSecureMemorySnapshot } from '@/lib/secure-memory';
+import { isConfirmedObservation } from '@/lib/guard-engine-v2/observation-role';
 import { observePolicyBundleGeneration, observeShadowComparison } from '@/lib/observability/metrics';
 import {
   inspectPolicyReadiness,
@@ -11,6 +13,7 @@ import { scopePredicate, type TenantScope } from '@/lib/tenancy';
 import { db } from '@/storage/database/shared/db';
 import { applicationPolicyBindings, policyBundles } from '@/storage/database/shared/schema';
 import { PolicyGovernanceOperationError } from './errors';
+import { profileDigest } from '@/lib/judge/profile-registry';
 
 function digestSummary(bundle: Awaited<ReturnType<typeof loadVerifiedPolicyBundle>>) {
   const dictionaryDigests = (bundle.payload.dictionaryReleases ?? []).map((release) => ({
@@ -33,6 +36,10 @@ function digestSummary(bundle: Awaited<ReturnType<typeof loadVerifiedPolicyBundl
   return {
     dictionaryDigests,
     modelDigests,
+    semanticDecisionMode:bundle.payload.semanticDecisionMode??'legacy',
+    requiredRiskIds:bundle.payload.semanticCoverage?.requiredRiskIds??[],
+    modelRoles:(bundle.payload.judgeProfiles??[]).map(p=>({profileId:p.profileId,role:p.role??'base',contextScope:p.contextScope??'full',riskIds:p.riskIds,directions:p.directions})),
+    judgeProfiles: (bundle.payload.judgeProfiles ?? []).map(p=>({profileId:p.profileId,revision:p.revision,displayName:p.displayName,enabled:p.enabled,mode:p.mode,modelId:p.modelId,modelRevision:p.modelRevision,deploymentMode:p.deploymentMode,configurationDigest:profileDigest(p),weightsSha256:p.weightsSha256,qualityEvidenceId:p.qualityEvidenceId ?? null,qualityValidUntil:p.qualityValidUntil ?? null})),
     tokenizerDigest: bundle.payload.tokenizer
       ? {
           id: bundle.payload.tokenizer.id,
@@ -103,7 +110,7 @@ export async function getPolicyRuntimeSummary(scope: TenantScope) {
 
 function matchedRisks(decision: GuardDecision): readonly string[] {
   return [...new Set(decision.observations
-    .filter((item) => item.status === 'MATCH')
+    .filter(isConfirmedObservation)
     .map((item) => item.riskType))].sort();
 }
 
@@ -147,19 +154,20 @@ export async function evaluateShadowComparison(scope: TenantScope, request: Guar
     loadVerifiedPolicyBundle(scope, binding.activeBundleId),
     loadVerifiedPolicyBundle(scope, binding.shadowBundleId),
   ]);
+  const snapshot=request.context.sessionId ? await readSecureMemorySnapshot(scope,request.context.sessionId) : undefined;
   const evaluate = async (
     bundle: typeof activeBundle,
     suffix: string,
   ): Promise<{ readonly decision: GuardDecision; readonly latencyMs: number }> => {
     const startedAt = performance.now();
-    const decision = await createEngineForPolicyBundle(bundle).evaluate({
+    const decision = await evaluateWithSessionContext(createEngineForPolicyBundle(bundle),{
       ...request,
       context: {
         ...request.context,
         requestId: (request.context.requestId + '-' + suffix).slice(0, 128),
         policyBundleId: bundle.id,
       },
-    });
+    },scope,{readOnly:true,snapshot});
     return { decision, latencyMs: Math.max(0, performance.now() - startedAt) };
   };
   const [active, shadow] = await Promise.all([
@@ -183,5 +191,7 @@ export async function evaluateShadowComparison(scope: TenantScope, request: Guar
     shadowBundleId: shadowBundle.id,
     generation: binding.generation,
     ...comparison,
+    sessionSnapshotVersion:snapshot?.stateVersion ?? null,
+    sessionMemoryMutated:false,
   };
 }

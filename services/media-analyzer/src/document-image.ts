@@ -1,5 +1,6 @@
 import { copyFile, readdir, stat } from 'node:fs/promises';
 import { join } from 'node:path';
+import { z } from 'zod';
 import { withLoadedArtifact } from './artifact-loader';
 import type { CommandRunner } from './command-runner';
 import type {
@@ -84,6 +85,12 @@ function uniqueFailures(values: readonly AnalysisFailure[]): AnalysisFailure[] {
   ])).values()].slice(0, 100);
 }
 
+export function parsePdfPageCount(stdout:string,maximum:number):number{
+  const matches=[...stdout.matchAll(/^Pages:\s+(\d+)\s*$/gmu)];
+  const count=matches.length===1?Number(matches[0][1]):0;
+  if(!Number.isSafeInteger(count)||count<1||count>maximum)throw new Error('ANALYZER_DOCUMENT_PAGE_LIMIT');
+  return count;
+}
 async function sourcePages(
   request: DocumentImageRequest,
   inputPath: string,
@@ -92,6 +99,11 @@ async function sourcePages(
   signal?: AbortSignal,
 ): Promise<string[]> {
   if (request.artifact.kind === 'IMAGE') {
+    const probe=await runner.run(process.env.ANALYZER_FFPROBE_COMMAND??'ffprobe',['-v','error','-count_frames','-select_streams','v:0','-show_entries','stream=nb_read_frames','-of','json',inputPath],
+      {cwd:workspace,timeoutMs:request.limits.maxDecodeSeconds*1000,maxOutputBytes:65536,signal});
+    const countSchema=z.object({streams:z.array(z.object({nb_read_frames:z.string()})).length(1)});
+    const frames=countSchema.parse(JSON.parse(probe.stdout)).streams[0].nb_read_frames;
+    if(frames!=='1')throw new Error('ANALYZER_ANIMATED_IMAGE_REQUIRES_VIDEO_PIPELINE');
     const target = join(workspace, 'page-0001.png');
     await runner.run(process.env.ANALYZER_FFMPEG_COMMAND ?? 'ffmpeg', [
       '-nostdin', '-v', 'error', '-protocol_whitelist', 'file,pipe',
@@ -104,6 +116,8 @@ async function sourcePages(
   if (request.artifact.mediaType !== 'application/pdf') {
     throw new Error('ANALYZER_DOCUMENT_FORMAT_UNSUPPORTED');
   }
+  const info=await runner.run(process.env.ANALYZER_PDFINFO_COMMAND??'pdfinfo',[inputPath],{cwd:workspace,timeoutMs:request.limits.maxDecodeSeconds*1000,maxOutputBytes:65536,signal});
+  const expectedPages=parsePdfPageCount(info.stdout,request.limits.maxPages);
   await runner.run(process.env.ANALYZER_PDFTOPPM_COMMAND ?? 'pdftoppm', [
     '-png', '-r', '150', '-f', '1', '-l', String(request.limits.maxPages),
     inputPath, join(workspace, 'page'),
@@ -113,7 +127,7 @@ async function sourcePages(
   const pages = (await readdir(workspace))
     .filter((name) => /^page-\d+\.png$/u.test(name))
     .sort().map((name) => join(workspace, name));
-  if (pages.length === 0 || pages.length > request.limits.maxPages) {
+  if (pages.length !== expectedPages) {
     throw new Error('ANALYZER_DOCUMENT_PAGE_LIMIT');
   }
   return pages;
@@ -300,6 +314,7 @@ export async function analyzeDocumentImage(
     const visual: VisualRisk[] = [];
     const failures: AnalysisFailure[] = [];
     const versions = new Set<string>();
+    let lowConfidenceOcr=false;
     const analyzedViews = await mapInBatches(
       views,
       request.limits.batchSize,
@@ -329,6 +344,7 @@ export async function analyzeDocumentImage(
     );
     for (const analyzed of analyzedViews) {
       if (analyzed.ocrResult.status === 'fulfilled') {
+        if(analyzed.ocrResult.value.some(region=>region.confidence<request.limits.minimumConfidence))lowConfidenceOcr=true;
         ocr.push(...analyzed.ocrResult.value.filter(
           (region) => region.confidence >= request.limits.minimumConfidence,
         ));
@@ -376,6 +392,11 @@ export async function analyzeDocumentImage(
     const analysisFailures = uniqueFailures(failures);
     return {
       analyzerVersion: `media-analyzer/1.1+${[...versions].sort().join(',') || 'degraded'}`,
+      coverage:{artifactSha256:request.artifact.sha256,modality:request.artifact.kind,
+        state:analysisFailures.length||lowConfidenceOcr?'INCOMPLETE' as const:'COMPLETE' as const,
+        expectedUnits:pages.length*request.views.length,processedUnits:views.length,
+        analyzerVersion:`media-analyzer/1.1+${[...versions].sort().join(',') || 'degraded'}`,
+        reasonCodes:[...analysisFailures.map(f=>f.code),...(lowConfidenceOcr?['OCR_LOW_CONFIDENCE_REGIONS']:[])]},
       ocr,
       codes,
       labels,

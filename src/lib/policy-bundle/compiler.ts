@@ -13,6 +13,12 @@ import {
   type ModelDigestManifest,
 } from './governance';
 import type { CompiledPolicyBundle } from './types';
+import { judgeProfileListSchema, validateJudgeProfileSet, type JudgeProfile } from '@/lib/judge/profile';
+import { assertJudgeQuality } from '@/lib/judge/profile-registry';
+import { withJudgeDetectorDag } from '@/lib/guard-engine-v2/semantic-routing';
+import { riskDefinition } from '@/lib/guard-engine-v2/risk-registry';
+import { semanticCoveragePolicySchema, type SemanticCoveragePolicy } from '@/lib/guard-engine-v2/semantic-coverage';
+import { assertClassifierQualification } from '@/lib/guard-engine-v2/classifier-qualification';
 
 function requireUniqueIds(values: readonly { readonly id: string }[], field: string): void {
   if (new Set(values.map((value) => value.id)).size !== values.length) {
@@ -77,6 +83,10 @@ export function compilePolicyBundle(
   policyVersion: number,
   options: {
     readonly semanticClassifier?: SemanticClassifierSpec;
+    readonly decisionPolicyVersion?: 1 | 2;
+    readonly semanticDecisionMode?: 'coverage-v1';
+    readonly semanticCoverage?: SemanticCoveragePolicy;
+    readonly judgeProfiles?: readonly JudgeProfile[];
     readonly resourceAdmission?: GuardResourceAdmissionSpec;
     readonly governance?: Partial<GovernedPolicyArtifacts>;
     readonly compileTimeEpochMs?: number;
@@ -87,7 +97,22 @@ export function compilePolicyBundle(
     throw new PolicyGovernanceValidationError('COMPILE_TIME_INVALID', 'Compile time is invalid');
   }
 
-  const detectorDag = buildDefaultDetectorDag(options.semanticClassifier);
+  const judgeProfiles = options.judgeProfiles ? judgeProfileListSchema.parse(options.judgeProfiles).map(profile=>({...profile,
+    riskDefinitions:Object.fromEntries(profile.riskIds.map(id=>[id,riskDefinition(id,profile.riskDefinitions)])),
+  })) : undefined;
+  if (judgeProfiles) { validateJudgeProfileSet(judgeProfiles); for (const profile of judgeProfiles.filter(p=>p.enabled)) assertJudgeQuality(profile, compileTimeEpochMs); }
+  if(options.semanticDecisionMode==='coverage-v1'){
+    if(options.decisionPolicyVersion!==2)throw new Error('COVERAGE_REQUIRES_V2');
+    const coverage=semanticCoveragePolicySchema.parse(options.semanticCoverage);
+    const baseProfiles=judgeProfiles?.filter(p=>p.enabled&&p.mode==='ENFORCE'&&(p.role??'base')==='base')??[];
+    const classifier=options.semanticClassifier;
+    if(classifier?.coverage&&classifier.mode==='ENFORCE')assertClassifierQualification(classifier,compileTimeEpochMs);
+    const risks=new Set([...baseProfiles.flatMap(p=>p.riskIds),...(classifier?.coverage&&classifier.mode==='ENFORCE'?classifier.labels.map(l=>l.riskType):[])]);
+    if(coverage.requiredRiskIds.some(id=>!risks.has(id)))throw new Error('SEMANTIC_BASE_COVERAGE_REQUIRED');
+  } else if (options.decisionPolicyVersion === 2 && !judgeProfiles?.some(p=>p.enabled && p.mode === 'ENFORCE'&&(p.role??'base')==='base')) throw new Error('V2_ENFORCED_JUDGE_REQUIRED');
+  const baseDag=buildDefaultDetectorDag(options.semanticClassifier);
+  const coverageDag=options.semanticDecisionMode==='coverage-v1'?{...baseDag,nodes:baseDag.nodes.map(n=>n.detectorId===options.semanticClassifier?.detectorId?{...n,failurePolicy:'DEGRADE' as const}:n)}:baseDag;
+  const detectorDag = withJudgeDetectorDag(coverageDag, judgeProfiles, options.decisionPolicyVersion);
   const governanceInput = options.governance;
   const governance = sortedGovernance(validateGovernedPolicyArtifacts({
     dictionaryReleases: governanceInput?.dictionaryReleases ?? [],
@@ -226,6 +251,9 @@ export function compilePolicyBundle(
     exceptions,
     thresholds,
     detectorDag,
+    ...(options.decisionPolicyVersion ? { decisionPolicyVersion: options.decisionPolicyVersion } : {}),
+    ...(options.semanticDecisionMode?{semanticDecisionMode:options.semanticDecisionMode,semanticCoverage:semanticCoveragePolicySchema.parse(options.semanticCoverage)}:{}),
+    ...(judgeProfiles ? { judgeProfiles } : {}),
     ...(options.semanticClassifier
       ? { semanticClassifier: options.semanticClassifier }
       : {}),

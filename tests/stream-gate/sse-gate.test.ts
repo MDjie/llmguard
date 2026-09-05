@@ -40,6 +40,28 @@ async function collect(stream: AsyncIterable<string>): Promise<string> {
 }
 
 describe('SSE stream commit gate', () => {
+  it('bounds hung upstream reads and non-cooperative iterator cleanup',async()=>{
+    let aborted=false;
+    const hung:AsyncIterable<string>={[Symbol.asyncIterator]:()=>({next:()=>new Promise(()=>{}),return:()=>new Promise(()=>{})})};
+    await expect(collect(gateSseStream(hung,options({upstreamIdleTimeoutMs:10,abortUpstream:()=>{aborted=true;}})))).rejects.toThrow('TIMEOUT');expect(aborted).toBe(true);
+  });
+  it('requires complete upstream termination and rejects post-completion content',async()=>{
+    await expect(collect(gateSseStream(source([event('ordinary')]),options({mode:'complete',requireUpstreamCompletion:true})))).rejects.toBeInstanceOf(StreamBlockedError);
+    await expect(collect(gateSseStream(source(['data: [DONE]\n\n',event('late')]),options({mode:'complete'})))).rejects.toBeInstanceOf(StreamBlockedError);
+  });
+  it('rejects an unrecognized structured event instead of treating it as empty safe content',async()=>{
+    await expect(collect(gateSseStream(source(['data: {"type":"response.function_call_arguments.delta","delta":"tool"}\n\n']),options()))).rejects.toThrow('STRUCTURED_EVENT');
+  });
+  it('bounds a stalled inspector even when it ignores AbortSignal',async()=>{
+    await expect(collect(gateSseStream(source([event('ordinary')]),options({inspectionTimeoutMs:10,inspector:()=>new Promise(()=>{})})))).rejects.toBeInstanceOf(StreamBlockedError);
+  });
+  it('refuses unsupported streamed tool effects and oversized unterminated events',async()=>{
+    await expect(collect(gateSseStream(source(['data: {"choices":[{"delta":{"tool_calls":[{"function":{"name":"unsafe"}}]}}]}\n\n']),options()))).rejects.toThrow('ACTION_GATE');
+    await expect(collect(gateSseStream(source(['x'.repeat(100)]),options({maxBufferedBytes:50})))).rejects.toBeInstanceOf(StreamGateCapacityError);
+  });
+  it('does not commit a nominal allow without required semantic coverage',async()=>{
+    await expect(collect(gateSseStream(source([event('ordinary')]),options({requireSemanticCoverage:true})))).rejects.toBeInstanceOf(StreamBlockedError);
+  });
   it('detects cross-event attacks before any complete sensitive token is committed', async () => {
     let aborted = false;
     const emitted: string[] = [];

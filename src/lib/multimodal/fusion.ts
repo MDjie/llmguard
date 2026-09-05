@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import type { GuardAction, GuardDecision, GuardRequest } from '@guardllm/contracts';
 import { createEngineForPolicyBundle } from '@/lib/guard-engine-v2';
 import type { RuntimePolicyBundle } from '@/lib/policy-bundle';
+import { assessAnalysisCoverage,type AnalysisCoverage } from './coverage';
 
 export interface OcrFusionRegion {
   readonly text: string;
@@ -128,6 +129,7 @@ function mappedEvidence(
 }
 
 export async function fuseMultimodal(input: {
+  readonly analysisCoverage?:AnalysisCoverage;readonly artifactSha256?:string;
   readonly bundle: RuntimePolicyBundle;
   readonly context: Omit<GuardRequest['context'], 'requestId' | 'direction' | 'policyBundleId'>;
   readonly userText?: string;
@@ -199,7 +201,9 @@ export async function fuseMultimodal(input: {
           input.instructionCapability !== 'FORBIDDEN' && combined.text
         ? 'WARN'
         : 'ALLOW';
-  const action = [visualAction, failureAction, trustAction]
+  const coverage=assessAnalysisCoverage({coverage:input.analysisCoverage,artifactSha256:input.artifactSha256,...input.context,requiredRiskIds:input.bundle.payload.semanticCoverage?.requiredRiskIds??[]});
+  const coverageAction:GuardAction=input.bundle.payload.semanticDecisionMode==='coverage-v1'&&!coverage.complete?'REQUIRE_REVIEW':'ALLOW';
+  const action = [visualAction, failureAction, trustAction,coverageAction]
     .reduce(stronger, combinedDecision.action);
   const visualEvidence = input.visual.map((item) => {
     const base = {
@@ -230,6 +234,7 @@ export async function fuseMultimodal(input: {
   });
   return {
     action,
+    coverage,
     cooperativeAttack,
     degraded: failures.length > 0,
     textDecisions: {

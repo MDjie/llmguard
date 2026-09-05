@@ -1,5 +1,5 @@
 // Generated from model/guard-v1.schema.json. Do not edit.
-// Source SHA-256: 5e535f81fcd1a87d610f5e1876c5bff2db310e6e050872e15995b940fdbe4776
+// Source SHA-256: 01bb211282221f91e3fb858d2d0b4c19d0904d24c50e9d5d83e8326500e5aa3a
 package io.guardllm.contracts.v1;
 
 import java.util.List;
@@ -7,7 +7,7 @@ import java.util.Map;
 
 public final class GuardContracts {
   public static final String CONTRACT_VERSION = "1.0";
-  public static final String SOURCE_SHA256 = "5e535f81fcd1a87d610f5e1876c5bff2db310e6e050872e15995b940fdbe4776";
+  public static final String SOURCE_SHA256 = "01bb211282221f91e3fb858d2d0b4c19d0904d24c50e9d5d83e8326500e5aa3a";
   private GuardContracts() {}
 
   public enum Direction { INPUT, OUTPUT_COMPLETE, OUTPUT_CHUNK, RAG_INGEST, RAG_CONTEXT, TOOL_REQUEST, TOOL_RESULT }
@@ -156,7 +156,11 @@ public final class GuardContracts {
     String canonicalTermId,
     String variantId,
     String dictionaryLayer,
-    ContextRole contextRole
+    ContextRole contextRole,
+    String decisionRole,
+    String semanticCoverage,
+    String assessmentId,
+    String scoreMeaning
   ) {}
 
   public record LatencyBreakdown(

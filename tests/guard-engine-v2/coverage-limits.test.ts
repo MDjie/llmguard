@@ -1,0 +1,14 @@
+import { describe,expect,it } from 'vitest';
+import { createGuardEngine, RuleDetector } from '../../src/lib/guard-engine-v2';
+import type { GuardDetector } from '../../src/lib/guard-engine-v2';
+const request=(text:string)=>({contractVersion:'1.0' as const,context:{tenantId:'t',applicationId:'a',traceId:'trace',requestId:'req',direction:'INPUT' as const,policyBundleId:'bundle',absoluteDeadlineEpochMs:Date.now()+5000},content:{text}});
+const engine=(detectors:GuardDetector[])=>createGuardEngine({id:'p',bundleId:'bundle',warnThreshold:.5,blockThreshold:.8,failClosedOnRequiredDetectorFailure:true},detectors,{hmacKey:'0123456789abcdef0123456789abcdef'});
+describe('explicit incomplete coverage',()=>{
+  it('marks regex evidence overflow as unavailable instead of silently cutting the result',async()=>{
+    const rules=new RuleDetector([{id:'regex-flood',riskType:'example',pattern:'x',matchType:'regex',caseSensitive:true,score:.1}]);
+    const result=await engine([rules]).evaluate(request('x '.repeat(101)));
+    expect(result.action).toBe('BLOCK');expect(result.degradationReasons).toContain('rules:unavailable');
+  });
+  it('fails closed rather than losing a tail risk behind thousands of early hits',async()=>{const rules=new RuleDetector([{id:'flood',riskType:'example',pattern:'x',matchType:'contains',caseSensitive:true,score:.1},{id:'tail',riskType:'danger',pattern:'danger',matchType:'contains',caseSensitive:true,score:1,mandatoryDeny:true}]);const result=await engine([rules]).evaluate(request('x '.repeat(1100)+'danger'));expect(result.action).toBe('BLOCK');expect(result.degradationReasons).toContain('rules:unavailable');});
+  it('propagates returned detector ERROR statuses to fail-closed decisions',async()=>{const detector:GuardDetector={id:'required',version:'1',required:true,detect:async()=>[{detectorId:'required',detectorVersion:'1',riskType:'coverage',score:0,severity:'NONE',status:'ERROR',evidence:[]}]};const result=await engine([detector]).evaluate(request('ordinary'));expect(result.action).toBe('BLOCK');});
+});

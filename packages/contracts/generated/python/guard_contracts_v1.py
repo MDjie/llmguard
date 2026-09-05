@@ -1,9 +1,9 @@
 # Generated from model/guard-v1.schema.json. Do not edit.
-# Source SHA-256: 5e535f81fcd1a87d610f5e1876c5bff2db310e6e050872e15995b940fdbe4776
+# Source SHA-256: 01bb211282221f91e3fb858d2d0b4c19d0904d24c50e9d5d83e8326500e5aa3a
 from typing import Literal, NotRequired, TypedDict
 
 GUARD_CONTRACT_VERSION = '1.0'
-GUARD_CONTRACT_SOURCE_SHA256 = '5e535f81fcd1a87d610f5e1876c5bff2db310e6e050872e15995b940fdbe4776'
+GUARD_CONTRACT_SOURCE_SHA256 = '01bb211282221f91e3fb858d2d0b4c19d0904d24c50e9d5d83e8326500e5aa3a'
 
 Direction = Literal["INPUT", "OUTPUT_COMPLETE", "OUTPUT_CHUNK", "RAG_INGEST", "RAG_CONTEXT", "TOOL_REQUEST", "TOOL_RESULT"]
 
@@ -145,6 +145,10 @@ class Observation(TypedDict):
     variantId: NotRequired[str]
     dictionaryLayer: NotRequired[Literal["PLATFORM_REDLINE", "INDUSTRY", "TENANT", "APPLICATION", "INCIDENT"]]
     contextRole: NotRequired[ContextRole]
+    decisionRole: NotRequired[Literal["HARD_DENY", "CANDIDATE", "CONFIRMED_RISK", "CLEARED", "UNKNOWN"]]
+    semanticCoverage: NotRequired[Literal["COMPLETE", "INCOMPLETE", "UNSUPPORTED", "NOT_APPLICABLE"]]
+    assessmentId: NotRequired[str]
+    scoreMeaning: NotRequired[Literal["PROBABILITY", "POLICY", "UNCALIBRATED"]]
 
 class LatencyBreakdown(TypedDict):
     normalizationMs: NotRequired[int]

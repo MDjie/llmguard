@@ -1,9 +1,9 @@
 // Code generated from model/guard-v1.schema.json. DO NOT EDIT.
-// Source SHA-256: 5e535f81fcd1a87d610f5e1876c5bff2db310e6e050872e15995b940fdbe4776
+// Source SHA-256: 01bb211282221f91e3fb858d2d0b4c19d0904d24c50e9d5d83e8326500e5aa3a
 package guardv1
 
 const GuardContractVersion = "1.0"
-const GuardContractSourceSHA256 = "5e535f81fcd1a87d610f5e1876c5bff2db310e6e050872e15995b940fdbe4776"
+const GuardContractSourceSHA256 = "01bb211282221f91e3fb858d2d0b4c19d0904d24c50e9d5d83e8326500e5aa3a"
 
 type Direction string
 
@@ -265,6 +265,10 @@ type Observation struct {
 	VariantId *string `json:"variantId,omitempty"`
 	DictionaryLayer *string `json:"dictionaryLayer,omitempty"`
 	ContextRole *ContextRole `json:"contextRole,omitempty"`
+	DecisionRole *string `json:"decisionRole,omitempty"`
+	SemanticCoverage *string `json:"semanticCoverage,omitempty"`
+	AssessmentId *string `json:"assessmentId,omitempty"`
+	ScoreMeaning *string `json:"scoreMeaning,omitempty"`
 }
 
 type LatencyBreakdown struct {

@@ -1,10 +1,12 @@
 import { createHash } from 'node:crypto';
 import { resolveContextEnvelopes } from '@/lib/context-trust';
+import { projectContextDecision } from './context-projection';
 import {
   advanceSessionRiskState,
   appendSecureMemoryEvaluation,
   applySessionRiskControl,
   readSecureMemorySnapshot,
+  readSecureMemoryReplay,
   SecureMemoryVersionConflictError,
   sessionRiskControl,
   type SecureMemorySnapshot,
@@ -114,6 +116,7 @@ export async function evaluateWithSessionContext(
   engine: GuardEngine,
   request: GuardRequest,
   scope: TenantScope,
+  options: {readonly readOnly?:boolean;readonly snapshot?:SecureMemorySnapshot} = {},
 ): Promise<GuardDecision> {
   if (
     request.context.tenantId !== scope.tenantId ||
@@ -121,17 +124,30 @@ export async function evaluateWithSessionContext(
   ) {
     throw new Error('GUARD_SESSION_SCOPE_MISMATCH');
   }
-  const current = await engine.evaluate(request);
   const sessionId = request.context.sessionId;
-  if (!sessionId) return current;
+  if(options.snapshot && !options.readOnly)throw new Error('GUARD_SESSION_SNAPSHOT_READ_ONLY_REQUIRED');
+  if(sessionId && !options.readOnly) {
+    const replay=await readSecureMemoryReplay(scope,request);
+    if(replay)return replay;
+  }
+  if (!sessionId) return engine.evaluate(request);
+  const unified=engine.contextEvaluationMode==='unified-v1';
+  const current = unified ? undefined : await engine.evaluate(request);
   for (let attempt = 0; attempt < 2; attempt += 1) {
-    const snapshot = await readSecureMemorySnapshot(scope, sessionId);
-    const contextualDecision = snapshot.hasHistory
+    const snapshot = options.snapshot ?? await readSecureMemorySnapshot(scope, sessionId);
+    const combined=snapshot.hasHistory?requestWithSecureMemory(request,snapshot):request;
+    const contextualDecision = unified
+      ? snapshot.hasHistory
+        ? engine.evaluateContextual
+          ? await engine.evaluateContextual(combined,request)
+          : projectContextDecision(await engine.evaluate(combined),combined,request)
+        : await engine.evaluate(request)
+      : snapshot.hasHistory
       ? chooseSessionDecision(
-          current,
+          current!,
           await engine.evaluate(requestWithSecureMemory(request, snapshot)),
         )
-      : current;
+      : current!;
     const riskAssessment = advanceSessionRiskState({
       previousState: snapshot.riskState,
       previousNodes: snapshot.intentNodes,
@@ -143,8 +159,9 @@ export async function evaluateWithSessionContext(
       contextualDecision,
       sessionRiskControl(riskAssessment),
     );
+    if (options.readOnly) return selected;
     try {
-      await appendSecureMemoryEvaluation({
+      const stored=await appendSecureMemoryEvaluation({
         scope,
         sessionId,
         expectedStateVersion: snapshot.stateVersion,
@@ -153,7 +170,7 @@ export async function evaluateWithSessionContext(
         tokenizerId: request.context.tokenizerId,
         riskAssessment,
       });
-      return selected;
+      return stored.decision;
     } catch (error) {
       if (error instanceof SecureMemoryVersionConflictError && attempt === 0) continue;
       throw error;

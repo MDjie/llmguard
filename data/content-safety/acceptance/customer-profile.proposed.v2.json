@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "2.0",
+  "kind": "customer-acceptance-profile-draft",
+  "status": "PROPOSED_NOT_APPROVED",
+  "scope": { "deployment": "single-customer", "tenantId": null, "applicationIds": [] },
+  "approvalRef": null,
+  "approvedBy": null,
+  "approvedAt": null,
+  "datasetDigest": null,
+  "primaryAndFallbackProfileDigests": [],
+  "requiredRiskIds": [],
+  "requiredDirections": [],
+  "requiredLocales": [],
+  "enabledExtensions": { "X01": null, "X02": null },
+  "metricTargetsToApprove": [
+    "per-risk recall lower bound and FNR upper bound",
+    "benign intervention/FPR upper bound",
+    "UNKNOWN, review and missing-evidence upper bounds",
+    "independently observed harmful effect leak upper bound",
+    "minimum independent groups per critical stratum",
+    "queue-inclusive p50/p95/p99, throughput and timeout capacity"
+  ],
+  "profiles": { "customer": { "requirements": [] } },
+  "releaseQualification": "INSUFFICIENT_EVIDENCE",
+  "note": "Empty gates cannot pass. Operator-approved scope, frozen independent labels, actual endpoint identity, all enforced fallbacks and separate release approval are mandatory. Never infer approval or copy synthetic labels into gold."
+}

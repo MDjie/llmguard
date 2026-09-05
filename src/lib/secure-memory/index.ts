@@ -3,6 +3,8 @@ export {
   appendSecureMemoryEvaluation,
   endSecureMemorySession,
   readSecureMemorySnapshot,
+  readSecureMemoryReplay,
+  SecureMemoryReplayError,
   SecureMemoryVersionConflictError,
 } from './repository';
 export {

@@ -27,23 +27,22 @@ import { ProtectedContextLeakDetector } from './protected-context';
 import { ReasoningAttackDetector } from './reasoning-attack-detector';
 import { RuleDetector } from './rule-detector';
 import { SemanticClassifierDetector } from './semantic-classifier';
+import { ConfigurableJudgeDetector } from './judge-detector';
+import { withJudgeDetectorDag } from './semantic-routing';
 import type { GuardDetector, GuardEngineDependencies } from './types';
+import { projectContextDecision } from './context-projection';
 
 export interface PolicyBundleEngineRuntimeOptions {
   readonly dlpTokenizationHmacKey?: string | Buffer;
   readonly outputSecurityEventSink?: OutputControlSecurityEventSink;
 }
 
-export function createEngineForPolicyBundle(
-  bundle: RuntimePolicyBundle,
-  hmacKey = process.env.CONTENT_HASH_KEY ?? '',
-  protectedContextFingerprints: GuardEngineDependencies['protectedContextFingerprints'] = [],
-  runtimeOptions: PolicyBundleEngineRuntimeOptions = {},
-) {
-  const warnThreshold = bundle.payload.thresholds.length > 0
+/** Shared production recipe. No qualification bypass or request-controlled override. */
+export function preparePolicyBundleEngine(bundle:RuntimePolicyBundle) {
+  const warnThreshold = bundle.payload.decisionPolicyVersion !== 2 && bundle.payload.thresholds.length > 0
     ? Math.min(...bundle.payload.thresholds.map((item) => item.warn))
     : 0.5;
-  const blockThreshold = bundle.payload.thresholds.length > 0
+  const blockThreshold = bundle.payload.decisionPolicyVersion !== 2 && bundle.payload.thresholds.length > 0
     ? Math.min(...bundle.payload.thresholds.map((item) => item.block))
     : 0.8;
   const dimensionCodes = new Map(
@@ -60,7 +59,7 @@ export function createEngineForPolicyBundle(
     actionOverrideThresholds[riskType] = threshold.warn;
   }
   const detectorDag = bundle.payload.detectorDag
-    ?? buildDefaultDetectorDag(bundle.payload.semanticClassifier);
+    ?? withJudgeDetectorDag(buildDefaultDetectorDag(bundle.payload.semanticClassifier), bundle.payload.judgeProfiles, bundle.payload.decisionPolicyVersion);
   const protectedContextEnabled = detectorDag.nodes.some(
     (node) => node.detectorId === 'protected-context-leak',
   );
@@ -83,10 +82,13 @@ export function createEngineForPolicyBundle(
       bundle.payload.rules,
       `policy-${bundle.payload.policyVersion}`,
       bundle.payload.exceptions,
+      Date.now,
+      bundle.payload.decisionPolicyVersion,
     ),
     ...(bundle.payload.semanticClassifier
       ? [new SemanticClassifierDetector(bundle.payload.semanticClassifier)]
       : []),
+    ...(bundle.payload.judgeProfiles?.some(p=>p.enabled) ? [new ConfigurableJudgeDetector(bundle.payload.judgeProfiles,{},bundle.payload.semanticDecisionMode)] : []),
   ];
   // Older signed bundles carry an earlier explicit DAG. Keep them executable by
   // registering exactly the detector identities signed into that bundle.
@@ -95,11 +97,14 @@ export function createEngineForPolicyBundle(
   if (detectors.length !== referencedDetectorIds.size) {
     throw new Error('GRD_POLICY_DETECTOR_REGISTRY_INCOMPLETE');
   }
-  const outputSecurityEventSink = runtimeOptions.outputSecurityEventSink ??
-    (process.env.NODE_ENV === 'production' ? recordOutputControlFailure : undefined);
-  const baseEngine = createGuardEngine(
-    {
+  return {policy:{
       id: bundle.payload.policyId,
+      decisionPolicyVersion: bundle.payload.decisionPolicyVersion,
+      semanticDecisionMode:bundle.payload.semanticDecisionMode,
+      semanticCoverage:bundle.payload.semanticCoverage,
+      semanticClassifier:bundle.payload.semanticClassifier,
+      judgeProfiles: bundle.payload.judgeProfiles,
+      riskThresholds: Object.fromEntries(bundle.payload.thresholds.flatMap(t => { const risk = dimensionCodes.get(t.dimensionId); return risk ? [[risk,{warn:t.warn,block:t.block}]] : []; })),
       bundleId: bundle.id,
       policyVersion: String(bundle.payload.policyVersion),
       warnThreshold,
@@ -108,11 +113,26 @@ export function createEngineForPolicyBundle(
       actionOverrides,
       actionOverrideThresholds,
       detectorDag,
-    },
-    detectors,
-    { hmacKey, protectedContextFingerprints },
-  );
+    },detectors};
+}
+export function createEngineForPolicyBundle(
+  bundle: RuntimePolicyBundle,
+  hmacKey = process.env.CONTENT_HASH_KEY ?? '',
+  protectedContextFingerprints: GuardEngineDependencies['protectedContextFingerprints'] = [],
+  runtimeOptions: PolicyBundleEngineRuntimeOptions = {},
+) {
+  const {policy,detectors}=preparePolicyBundleEngine(bundle);
+  const outputSecurityEventSink=runtimeOptions.outputSecurityEventSink??(process.env.NODE_ENV==='production'?recordOutputControlFailure:undefined);
+  const baseEngine=createGuardEngine(policy,detectors,{hmacKey,protectedContextFingerprints});
   return {
+    ...(baseEngine.contextEvaluationMode?{contextEvaluationMode:baseEngine.contextEvaluationMode}:{}),
+    async evaluateContextual(combined:Parameters<typeof baseEngine.evaluate>[0],current:Parameters<typeof baseEngine.evaluate>[0]){
+      const decision=projectContextDecision(await baseEngine.evaluate(combined),combined,current);
+      return applyOutputIntervention(current,decision,bundle,{
+        evidenceHmacKey:hmacKey,tokenizationHmacKey:runtimeOptions.dlpTokenizationHmacKey??process.env.DLP_TOKENIZATION_HMAC_KEY,
+        evaluateRecheck:baseEngine.evaluate,securityEventSink:outputSecurityEventSink,
+      });
+    },
     async evaluate(request: Parameters<typeof baseEngine.evaluate>[0]) {
       const decision = await baseEngine.evaluate(request);
       return applyOutputIntervention(request, decision, bundle, {

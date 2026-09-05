@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { judgeProfileListSchema } from '@/lib/judge/profile';
+import { semanticCoveragePolicySchema } from '@/lib/guard-engine-v2/semantic-coverage';
 
 const boundedId = z.string().min(1).max(128);
 const dimensionCode = z.string().min(1).max(64).regex(/^[a-z][a-z0-9_]*$/);
@@ -83,6 +85,11 @@ export const escalationConfigSchema = z
 
 export const judgeConfigSchema = z
   .object({
+    profilesV2: judgeProfileListSchema.optional(),
+    expectedProfileRevision: z.number().int().nonnegative().optional(),
+    decisionPolicyVersion: z.union([z.literal(1), z.literal(2)]).optional(),
+    semanticDecisionMode:z.literal('coverage-v1').optional(),
+    semanticCoverage:semanticCoveragePolicySchema.optional(),
     enabled: z.boolean().default(false),
     providerId: boundedId.nullable().optional(),
     mode: z.enum(['conservative', 'balanced', 'review_only']).default('conservative'),

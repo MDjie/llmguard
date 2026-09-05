@@ -823,6 +823,38 @@
           },
           "contextRole": {
             "$ref": "#/components/schemas/ContextRole"
+          },
+          "decisionRole": {
+            "type": "string",
+            "enum": [
+              "HARD_DENY",
+              "CANDIDATE",
+              "CONFIRMED_RISK",
+              "CLEARED",
+              "UNKNOWN"
+            ]
+          },
+          "semanticCoverage": {
+            "type": "string",
+            "enum": [
+              "COMPLETE",
+              "INCOMPLETE",
+              "UNSUPPORTED",
+              "NOT_APPLICABLE"
+            ]
+          },
+          "assessmentId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "scoreMeaning": {
+            "type": "string",
+            "enum": [
+              "PROBABILITY",
+              "POLICY",
+              "UNCALIBRATED"
+            ]
           }
         }
       },

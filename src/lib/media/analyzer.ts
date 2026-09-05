@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { analysisCoverageSchema } from '@/lib/multimodal/coverage';
 import { ProviderEndpointPolicy, safeFetchJson } from '@/lib/egress';
 import { objectStoreConfig, S3Presigner } from '@/lib/object-store';
 import type { TenantScope } from '@/lib/tenancy';
@@ -12,6 +13,7 @@ import {
 const region = z.tuple([z.number().nonnegative(), z.number().nonnegative(), z.number().nonnegative(), z.number().nonnegative()]);
 const mediaAnalysisSchema = z.object({
   analyzerVersion: z.string().min(1).max(100),
+  coverage:analysisCoverageSchema.optional(),
   format: z.string().min(1).max(100),
   durationMs: z.number().int().nonnegative().max(7 * 24 * 60 * 60 * 1_000),
   transcript: z.array(z.object({

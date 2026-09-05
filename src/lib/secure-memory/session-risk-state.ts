@@ -123,7 +123,7 @@ function initialScore(phases: readonly SessionIntentPhase[], decision: GuardDeci
             : 0
   ), 0);
   const observationScore = decision.observations
-    .filter((observation) => observation.status === 'MATCH')
+    .filter(isConfirmedObservation)
     .reduce((maximum, observation) => Math.max(maximum, observation.score), 0);
   return clampScore(Math.max(phaseScore, observationScore, ACTION_SCORE[decision.action]));
 }
@@ -199,7 +199,7 @@ export function advanceSessionRiskState(input: {
     .map((node) => decayNode(node, occurredAt, benignTurn))
     .filter((node) => node.decayedScore >= 0.02);
   const riskTypes = [...new Set(input.decision.observations
-    .filter((observation) => observation.status === 'MATCH')
+    .filter(isConfirmedObservation)
     .map((observation) => observation.riskType))].sort().slice(0, 32);
   const node: SessionIntentNode = {
     id: createHash('sha256')
@@ -346,3 +346,4 @@ export function applySessionRiskControl(
     policyPath: [...decision.policyPath, `session-state:${control.state.toLowerCase()}`],
   };
 }
+import { isConfirmedObservation } from '@/lib/guard-engine-v2/observation-role';
