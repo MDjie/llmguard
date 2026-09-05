@@ -1,0 +1,64 @@
+{
+  "taskId": "T16",
+  "status": "in_progress",
+  "baseline": {
+    "codeRevision": "ad09fb492de2524e60dd6c8f66a6788aef7d06bf",
+    "activeBundleId": "b79d16b5-4581-4364-88fa-e85fb50f4af4",
+    "activeBundleHash": "5e29f2c85c10b0d23a8d0e140c93cb89595685b306a7c6edc497a1029ab3634b",
+    "generation": 3
+  },
+  "modifiedFiles": [
+    "src/app/api/policies/[id]/judge-config/route.ts",
+    "src/app/dictionaries/page.tsx",
+    "src/app/policies/[id]/components/JudgeConfigPanel.tsx",
+    "src/app/policies/[id]/components/JudgeProfilesPanel.tsx",
+    "src/app/providers/page.tsx",
+    "src/components/policy/dictionary-release-set-panel.tsx",
+    "tests/api-security/release-set-routes.test.mjs"
+  ],
+  "commands": [
+    "pnpm test:unit --run --reporter=json --outputFile=data/content-safety/reports/optimization/implementation-2026-09-05/full-unit-tests-continuation-final.json",
+    "pnpm test:integration:release-sets --apply-migration yes --out data/content-safety/reports/optimization/implementation-2026-09-05/release-set-integration.json",
+    "pnpm test:integration:session-replay --apply-migration yes --out data/content-safety/reports/optimization/implementation-2026-09-05/session-replay-integration.json",
+    "pnpm ts-check",
+    "pnpm lint:build",
+    "pnpm contracts:check",
+    "pnpm build",
+    "pnpm exec eslint src/lib/guard-engine-v2/rule-detector.ts src/app/api/v1/guard/evaluate-shadow/route.ts tests/guard-engine-v2/coverage-limits.test.ts tests/api-security/release-set-routes.test.mjs --quiet",
+    "git -c safe.directory=E:/大模型安全/大模型护栏 diff --check"
+  ],
+  "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "assertions": [
+    "已实现单客户场景裁判面板、私有认证与主备配置，新增整组词库导入/审批/编译源/回滚UI并禁用单片流转；浏览器E2E及效果比较UI未完成。"
+  ],
+  "artifactHashes": {
+    "src/app/api/policies/[id]/judge-config/route.ts": "d40fb4f50e85d539a7eb57d861449b1e1d17ecee7ff3173f699c8b0ff72543af",
+    "src/app/dictionaries/page.tsx": "aa7e84f1fe190178778459511a94916b11f879df20629cab82fd8eea51baf18b",
+    "src/app/policies/[id]/components/JudgeConfigPanel.tsx": "e0fff7651afbc7f5ab921e64e02b4edc058e4afd9bdb5773b9a3d66f47683e82",
+    "src/app/policies/[id]/components/JudgeProfilesPanel.tsx": "0b1516bf9c3429410fd0d07b91a525fcdf6102d9f652119927999901aa188d66",
+    "src/app/providers/page.tsx": "fea95599cb93fdcbc1f30ad1a2286023f9899b0263b952d6c62e6e0df0d24b4e",
+    "src/components/policy/dictionary-release-set-panel.tsx": "bf513e4f7b9fdd90cfb4eca22f434fb903a2f14f2fb724e6896b54bc1a482edf",
+    "tests/api-security/release-set-routes.test.mjs": "c909e39172a08d1059b4269349237c4efbbc2502a138b52a3d46f2ec2aa79902"
+  },
+  "engineeringStatus": "PARTIAL",
+  "qualityStatus": "INSUFFICIENT_EVIDENCE",
+  "deploymentStatus": "NOT_ACTIVATED",
+  "regressionEvidence": "continuation-verification.json",
+  "regressionDoesNotCompleteMissingAcceptance": true,
+  "blockers": [
+    "仍有未完成工程或真实验收；以23号续做记录和任务清单为准"
+  ],
+  "nextAction": "继续任务清单中的剩余工程和真实验收，不将合成回归当作质量通过",
+  "previousRegressionEvidence": "verification.json",
+  "continuationRecordedAt": "2026-09-05T03:54:22.858Z"
+}

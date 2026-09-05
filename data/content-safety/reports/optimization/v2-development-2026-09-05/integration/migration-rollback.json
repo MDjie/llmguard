@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "2.0",
+  "status": "PASS",
+  "database": "guardllm_integration_v2_20260905",
+  "schemaBefore": {
+    "release_sets": null,
+    "receipts": null
+  },
+  "upgrade": [
+    "0042_dictionary_release_sets",
+    "0043_session_request_receipts"
+  ],
+  "rollback": "Exact previous dictionary release set restored; additive schema and audit retained",
+  "businessDatabaseModified": false,
+  "productionChanged": false,
+  "syntheticOnly": true
+}

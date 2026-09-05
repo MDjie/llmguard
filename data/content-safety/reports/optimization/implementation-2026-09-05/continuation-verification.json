@@ -1,0 +1,83 @@
+{
+  "schemaVersion": "1.0",
+  "runId": "implementation-2026-09-05",
+  "batch": "release-sets-session-replay",
+  "recordedAt": "2026-09-05T03:54:22.858Z",
+  "baseline": {
+    "codeRevision": "ad09fb492de2524e60dd6c8f66a6788aef7d06bf",
+    "activeBundleId": "b79d16b5-4581-4364-88fa-e85fb50f4af4",
+    "activeBundleHash": "5e29f2c85c10b0d23a8d0e140c93cb89595685b306a7c6edc497a1029ab3634b",
+    "generation": 3
+  },
+  "engineeringStatus": "PARTIAL_TASK_COMPLETION",
+  "qualityStatus": "INSUFFICIENT_EVIDENCE",
+  "deploymentStatus": "NOT_ACTIVATED",
+  "businessDatabaseMigrationsApplied": false,
+  "isolatedDatabase": "guardllm_integration_sets_20260905",
+  "bindingUnchanged": true,
+  "commands": [
+    "pnpm test:unit --run --reporter=json --outputFile=data/content-safety/reports/optimization/implementation-2026-09-05/full-unit-tests-continuation-final.json",
+    "pnpm test:integration:release-sets --apply-migration yes --out data/content-safety/reports/optimization/implementation-2026-09-05/release-set-integration.json",
+    "pnpm test:integration:session-replay --apply-migration yes --out data/content-safety/reports/optimization/implementation-2026-09-05/session-replay-integration.json",
+    "pnpm ts-check",
+    "pnpm lint:build",
+    "pnpm contracts:check",
+    "pnpm build",
+    "pnpm exec eslint src/lib/guard-engine-v2/rule-detector.ts src/app/api/v1/guard/evaluate-shadow/route.ts tests/guard-engine-v2/coverage-limits.test.ts tests/api-security/release-set-routes.test.mjs --quiet",
+    "git -c safe.directory=E:/大模型安全/大模型护栏 diff --check"
+  ],
+  "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "tests": {
+    "files": 172,
+    "passed": 842,
+    "failed": 0,
+    "skipped": 0,
+    "report": "full-unit-tests-continuation-final.json"
+  },
+  "integration": {
+    "releaseSets": {
+      "status": "PASS",
+      "checks": 9,
+      "report": "release-set-integration.json"
+    },
+    "sessionReplay": {
+      "status": "PASS",
+      "checks": 8,
+      "report": "session-replay-integration.json"
+    },
+    "syntheticOnly": true
+  },
+  "recoveredFailures": [
+    {
+      "command": "pnpm ts-check (first concurrent attempt)",
+      "exitCode": 2,
+      "cause": "Concurrent next build regenerated .next route types while tsc was reading them",
+      "resolution": "pnpm ts-check rerun after build completed: exit 0; final pnpm build also exit 0"
+    }
+  ],
+  "artifacts": {
+    "full-unit-tests-continuation-final.json": "bace1beb329afe214f370c19d09bb13f2bea6bd6ac4be48e7b05d3b0b513b545",
+    "release-set-integration.json": "3b5aec6655b8393d48b446832aae6e49c32d0a063b24bf9c465860157a49b390",
+    "session-replay-integration.json": "bb614bd9f642aad970a975708442f07801134f4bc927963197136d4efcf5ebbb",
+    "runtime-after-release-sets-replay.json": "590d50fc10a5e8cbb7a03402f6948eaddb67676a71a5ce5cf1adfb5783ae6d34"
+  },
+  "sourceLock": "continuation-source-lock.json",
+  "limitations": [
+    "No browser E2E in this batch",
+    "Actual master/legacy SQL conversion and independent content approval incomplete",
+    "No independently reviewed locked business dataset or new model quality/performance qualification",
+    "No business database migrations, policy activation or production rollout",
+    "No downloads or actual sensitive-term imports in this batch",
+    "All T00-T18 tasks are not complete"
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0",
+  "profileId": "local-ollama-qwen-protocol",
+  "revision": 1,
+  "profileDigest": "fbf6e0e2a14cb0be643ba5ce9b7c330302e4489db317b73ebbcdd3039cd9e4d8",
+  "qualityBindingDigest": "1dca6605effa5986e701299dafffe303666a81957b6de9a2c8b6cb0216ea1338",
+  "testedAt": "2026-09-05T02:28:19.719Z",
+  "protocolStatus": "PASS",
+  "qualityStatus": "UNVERIFIED",
+  "reportedModel": "qwen3.5:9b",
+  "attempts": [
+    {
+      "profileId": "local-ollama-qwen-protocol",
+      "revision": 1,
+      "modelId": "qwen3.5:9b",
+      "status": "COMPLETE",
+      "latencyMs": 52980
+    }
+  ]
+}

@@ -1,0 +1,56 @@
+{
+  "taskId": "T06",
+  "status": "done",
+  "baseline": {
+    "codeRevision": "ad09fb492de2524e60dd6c8f66a6788aef7d06bf",
+    "activeBundleId": "b79d16b5-4581-4364-88fa-e85fb50f4af4",
+    "activeBundleHash": "5e29f2c85c10b0d23a8d0e140c93cb89595685b306a7c6edc497a1029ab3634b",
+    "generation": 3
+  },
+  "modifiedFiles": [
+    "packages/contracts/model/guard-v1.schema.json",
+    "src/contracts/http/guard-v1.ts",
+    "src/lib/guard-engine-v2/aggregate.ts",
+    "src/lib/guard-engine-v2/observation-role.ts",
+    "src/lib/secure-memory/ledger.ts",
+    "src/lib/secure-memory/session-risk-state.ts",
+    "src/lib/detection/v2-compat.ts",
+    "tests/guard-engine-v2/configurable-judge.test.ts"
+  ],
+  "commands": [
+    "pnpm test:unit --run --reporter=json --outputFile=data/content-safety/reports/optimization/implementation-2026-09-05/full-unit-tests-final.json",
+    "pnpm contracts:check",
+    "pnpm ts-check",
+    "pnpm lint:build",
+    "pnpm build"
+  ],
+  "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "assertions": [
+    "候选/确认/清除/未知角色、逐风险阈值、旧包兼容和契约生成通过回归；候选不再累积为会话已确认风险。"
+  ],
+  "artifactHashes": {
+    "packages/contracts/model/guard-v1.schema.json": "01bb211282221f91e3fb858d2d0b4c19d0904d24c50e9d5d83e8326500e5aa3a",
+    "src/contracts/http/guard-v1.ts": "7759199aa511f74ccc1cc402b93df520f7f97005814183a91b95dbad63f64fae",
+    "src/lib/guard-engine-v2/aggregate.ts": "b863beb53effcf10b8b28b84df88fca7ab7b85e005f7dd5d1e633be4347a3740",
+    "src/lib/guard-engine-v2/observation-role.ts": "7488db750568db5129e5c6a92c0200461b6742a0c06690cb7f2c09b7c0371cd4",
+    "src/lib/secure-memory/ledger.ts": "ea22cc287d69cb74b57a484a1fb35cf2fc7e020f46d199a34ce5efe6a984eeb7",
+    "src/lib/secure-memory/session-risk-state.ts": "bf296d8c9293dcc194c129b615e3ec438d2485275ea5bc009b5c837a1a0847f6",
+    "src/lib/detection/v2-compat.ts": "f0bd7a58599d9d5cb3a5bf38063f9659f20ea620dcd78234a9e77d459a191cdb",
+    "tests/guard-engine-v2/configurable-judge.test.ts": "775a41d784ded7e004f69d9f74094e95b1f41854395a302ba950d030c96f5be6"
+  },
+  "engineeringStatus": "VERIFIED",
+  "qualityStatus": "INSUFFICIENT_EVIDENCE",
+  "deploymentStatus": "NOT_ACTIVATED",
+  "regressionEvidence": "verification.json",
+  "regressionDoesNotCompleteMissingAcceptance": true,
+  "blockers": [
+    "真实业务质量尚未独立验收"
+  ],
+  "nextAction": "保持回归，待独立质量验收"
+}

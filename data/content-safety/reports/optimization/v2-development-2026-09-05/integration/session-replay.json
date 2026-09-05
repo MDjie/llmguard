@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "1.0",
+  "status": "PASS",
+  "recordedAt": "2026-09-05T05:08:38.893Z",
+  "database": "guardllm_integration_v2_20260905",
+  "fixtureScope": {
+    "tenantId": "c8859989-7a23-495f-aff0-8197ad38159c",
+    "applicationId": "ef1d4b72-0675-4c1e-826c-b76fcb960da1"
+  },
+  "syntheticOnly": true,
+  "qualityStatus": "UNVERIFIED",
+  "runtimeBusinessDatabaseModified": false,
+  "checks": [
+    "simultaneous_first_request_commits_one_event_and_one_decision",
+    "same_content_retry_refreshes_deadline_without_model_call_or_risk_inflation",
+    "old_request_replay_after_three_turns_does_not_append_or_confirm_candidates",
+    "content_policy_authorization_and_scope_conflicts_rejected",
+    "shared_readonly_snapshot_does_not_write_events_receipts_or_risk_state",
+    "concurrent_distinct_requests_retry_version_conflict_without_lost_turn",
+    "receipt_decisions_encrypted_and_request_fingerprints_keyed",
+    "session_end_expires_replays_erases_receipt_payloads_and_resets_history"
+  ]
+}

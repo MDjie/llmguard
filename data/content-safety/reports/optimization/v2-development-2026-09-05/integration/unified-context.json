@@ -1,0 +1,11 @@
+{
+  "status": "PASS",
+  "syntheticOnly": true,
+  "businessDatabaseModified": false,
+  "checks": [
+    "one_full_evaluation_per_new_turn",
+    "history_and_current_evaluated_together",
+    "replay_has_zero_extra_model_calls",
+    "projected_context_trace_preserved"
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "status": "PASS",
+  "syntheticOnly": true,
+  "productionEligible": false,
+  "qualityStatus": "UNVERIFIED",
+  "database": "guardllm_integration_v2_20260905",
+  "scope": {
+    "tenantId": "644e3b54-f300-4f8d-b7d5-f4e2a0a5732e",
+    "applicationId": "22289246-aade-4806-8c06-f84e517c2169"
+  },
+  "first": {
+    "id": "c1697a20-1281-42f1-a7aa-df1340ad9005",
+    "digest": "b3469d55457a9ff9338dda3856e87c26196a2faef22d228d18b09bef11abe5ac"
+  },
+  "second": {
+    "id": "91178a87-ce31-42c9-b55c-6f1899e9e458",
+    "digest": "c912db05a9278c8ae57b11f8d0ee4f7def3efd45e708fadde057c81fa89b88e7"
+  },
+  "restoredId": "c1697a20-1281-42f1-a7aa-df1340ad9005",
+  "checks": [
+    "signed_first_bundle_loads_through_real_runtime",
+    "unbound_canary_fixture_cannot_change_active",
+    "real_binding_switch_changes_signature_digest_generation_and_detection",
+    "exact_previous_signed_bundle_restored_and_audit_retained",
+    "tampered_signature_rejected_without_lkg_fallback"
+  ],
+  "limitations": [
+    "Lifecycle canary states are explicit synthetic fixtures; no formal model quality approval or customer production release."
+  ]
+}

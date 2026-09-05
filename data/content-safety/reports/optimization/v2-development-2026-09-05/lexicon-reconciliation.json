@@ -1,0 +1,130 @@
+{
+  "schemaVersion": "2.0",
+  "kind": "lexicon-source-reconciliation",
+  "sources": [
+    {
+      "sourceId": "local-master-v1",
+      "path": "data/content-safety/lexicon/content-safety-lexicon.v1.jsonl",
+      "format": "master-jsonl",
+      "sha256": "fec6351404a8a2d0ae0525d5ee4740bfe6444118a5b0ff9bb53be41cc38fa6cf",
+      "license": "Local curated candidates; individual source licenses and independent term review required",
+      "authorizedUse": "candidate_only",
+      "riskMapping": {}
+    },
+    {
+      "sourceId": "staged-fwwdn-v1",
+      "path": "data/content-safety/sources/staged/fwwdn-candidates.v1.jsonl",
+      "format": "candidate-jsonl",
+      "sha256": "e37b20123145e7f7ccc3c9be321fe72c2787f04327ceb90b41b2dbf642710463",
+      "license": "See staged source provenance; production redistribution and review not approved",
+      "authorizedUse": "candidate_only",
+      "riskMapping": {}
+    },
+    {
+      "sourceId": "legacy-sql",
+      "path": "sensitive_lexicon_import.sql",
+      "format": "legacy-sql",
+      "sha256": "3438b32b9dc7079f1ddc8120fc889ffdfec3854cd58df4cfce38c36134c6ef94",
+      "license": "Historical local input; license and risk mapping pending review",
+      "authorizedUse": "candidate_only",
+      "riskMapping": {}
+    }
+  ],
+  "counts": {
+    "inputRows": 11713,
+    "metadataRows": 49,
+    "acceptedRows": 797,
+    "duplicateRows": 990,
+    "quarantinedRows": 9914,
+    "rejectedRows": 12,
+    "uniqueTerms": 9561
+  },
+  "truncations": [
+    {
+      "label": "Sensitive-lexicon色情词库",
+      "declared": 928,
+      "available": 550,
+      "sourceId": "legacy-sql"
+    },
+    {
+      "label": "Sensitive-lexicon政治敏感词",
+      "declared": 326,
+      "available": 303,
+      "sourceId": "legacy-sql"
+    },
+    {
+      "label": "Sensitive-lexicon反动词库",
+      "declared": 556,
+      "available": 551,
+      "sourceId": "legacy-sql"
+    },
+    {
+      "label": "Sensitive-lexicon涉枪涉爆词库",
+      "declared": 437,
+      "available": 434,
+      "sourceId": "legacy-sql"
+    },
+    {
+      "label": "Sensitive-lexicon贪腐词库",
+      "declared": 243,
+      "available": 240,
+      "sourceId": "legacy-sql"
+    },
+    {
+      "label": "Sensitive-lexicon广告词库",
+      "declared": 123,
+      "available": 120,
+      "sourceId": "legacy-sql"
+    },
+    {
+      "label": "Sensitive-lexicon民生词库",
+      "declared": 570,
+      "available": 510,
+      "sourceId": "legacy-sql"
+    },
+    {
+      "label": "Sensitive-lexicon COVID-19词库",
+      "declared": 75,
+      "available": 72,
+      "sourceId": "legacy-sql"
+    },
+    {
+      "label": "Sensitive-lexicon非法网址库",
+      "declared": 14595,
+      "available": 2000,
+      "sourceId": "legacy-sql"
+    },
+    {
+      "label": "Sensitive-lexicon补充词库",
+      "declared": 1064,
+      "available": 1063,
+      "sourceId": "legacy-sql"
+    },
+    {
+      "label": "Sensitive-lexicon GFW补充词库",
+      "declared": 6414,
+      "available": 2000,
+      "sourceId": "legacy-sql"
+    },
+    {
+      "label": "Sensitive-lexicon网易过滤词库",
+      "declared": 7746,
+      "available": 2000,
+      "sourceId": "legacy-sql"
+    },
+    {
+      "label": "Sensitive-lexicon其他词库",
+      "declared": 158,
+      "available": 157,
+      "sourceId": "legacy-sql"
+    }
+  ],
+  "digest": "1a32e08f196551377b7144ba2e7ee404136bb678d448814a692084feb8a8e334",
+  "fileSha256": "21ca34966cc421ab3d5ffabf7f1cf7f1b2873ffa9bb2ac668b9c262c56cd2b6a",
+  "countsConserved": true,
+  "productionEligible": false,
+  "allCandidatesRequireReview": true,
+  "rawConversionArtifact": "lexicon-conversion.json (local-only; reproduce using command below)",
+  "reproduce": "pnpm lexicon:convert-reviewed --manifest data/content-safety/sources/conversion-sources.v2.json --out data/content-safety/reports/optimization/reproduced-conversion.json",
+  "note": "13 declared-count discrepancies, not evidence that every difference represents truncation. No raw SQL execution, no database import, no automatic license or review approval."
+}

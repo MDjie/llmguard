@@ -1,0 +1,31 @@
+{
+  "schemaVersion": "2.0",
+  "kind": "paired-detection-comparison",
+  "datasetDigest": "aba4d489ca0a6aafdde7d6058f6061e7a68b15487004130544863427bcc3f3d4",
+  "left": "a9575961fd4c51f9a121bbdbae4dbbf639056607f8d46778028f531779e28e53",
+  "right": "8a3737afb8274e3343b63ddbfedd3e559de6fff34b66ae25e98eb68e92e1e84f",
+  "improved": 0,
+  "regressed": 0,
+  "independentGroups": 2,
+  "paired": [
+    {
+      "caseId": "synthetic-0",
+      "groupId": "synthetic-family-0",
+      "leftCorrect": false,
+      "rightCorrect": false,
+      "latencyDeltaMs": 1809.2282000000014,
+      "leftTrace": "isolated-policy-cd9fa86c-581c-4aa6-b370-31a4e38ad3b0-64b549e3cf56",
+      "rightTrace": "isolated-policy-6f52e6c9-3e77-47f0-a798-fde481f9f4f9-64b549e3cf56"
+    },
+    {
+      "caseId": "synthetic-1",
+      "groupId": "synthetic-family-1",
+      "leftCorrect": false,
+      "rightCorrect": false,
+      "latencyDeltaMs": 3191.0242,
+      "leftTrace": "isolated-policy-cd9fa86c-581c-4aa6-b370-31a4e38ad3b0-46051caabdff",
+      "rightTrace": "isolated-policy-6f52e6c9-3e77-47f0-a798-fde481f9f4f9-46051caabdff"
+    }
+  ],
+  "qualityStatus": "INSUFFICIENT_EVIDENCE"
+}

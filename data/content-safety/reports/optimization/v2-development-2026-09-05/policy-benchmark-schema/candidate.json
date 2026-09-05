@@ -1,0 +1,1005 @@
+{
+  "schemaVersion": "1.0",
+  "policyId": "default-policy-balanced",
+  "policyVersion": 3,
+  "dimensions": [
+    {
+      "id": "f9e3d08b-ac02-4795-836c-503978e21304",
+      "code": "ad_detection",
+      "name": "广告检测",
+      "weight": 0.9
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440009",
+      "code": "adult_content",
+      "name": "色情低俗",
+      "weight": 0.9
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440015",
+      "code": "business_sensitive",
+      "name": "企业敏感信息",
+      "weight": 0.9
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440014",
+      "code": "copyright_risk",
+      "name": "版权风险",
+      "weight": 0.7
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440011",
+      "code": "credential_secret_leak",
+      "name": "密钥凭证泄露",
+      "weight": 0.9
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440012",
+      "code": "fraud_scam",
+      "name": "诈骗欺诈",
+      "weight": 1
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440005",
+      "code": "illegal_content",
+      "name": "非法内容",
+      "weight": 0.8
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440003",
+      "code": "malicious_code",
+      "name": "恶意代码",
+      "weight": 1
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440013",
+      "code": "misinformation",
+      "name": "虚假信息",
+      "weight": 0.8
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440016",
+      "code": "output_leak",
+      "name": "输出泄露",
+      "weight": 0.8
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440002",
+      "code": "pii_leak",
+      "name": "信息泄露",
+      "weight": 1
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440001",
+      "code": "prompt_injection",
+      "name": "提示词注入",
+      "weight": 1
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440010",
+      "code": "self_harm",
+      "name": "自伤自杀",
+      "weight": 1
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440008",
+      "code": "sensitive_compliance",
+      "name": "敏感合规",
+      "weight": 0.8
+    },
+    {
+      "id": "45f9982f-84a6-4e5a-917f-d9eb34c592bd",
+      "code": "spam_detection",
+      "name": "垃圾信息检测",
+      "weight": 0.7
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440004",
+      "code": "violence_hate",
+      "name": "暴力仇恨",
+      "weight": 0.8
+    }
+  ],
+  "rules": [
+    {
+      "id": "66fcb24d-d59d-4ae4-b955-eb44d514b64b",
+      "riskType": "ad_detection",
+      "pattern": "限时优惠",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.7,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "a6b2c1d3-e4f5-6a7b-8c9d-0e1f2a3b4c5d",
+      "riskType": "ad_detection",
+      "pattern": "加微信",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.8,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "b7c3d2e4-f5a6-7b8c-9d0e-1f2a3b4c5d6e",
+      "riskType": "ad_detection",
+      "pattern": "点击购买",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.75,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "2c774d78-2a11-4e97-a5e4-196121313ffe",
+      "riskType": "adult_content",
+      "pattern": "色情",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.95,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "32ad99d1-1335-43f8-aea5-fd7aa8ca91f3",
+      "riskType": "adult_content",
+      "pattern": "裸聊",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.9,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "7a368eaf-9ac0-4392-919b-fabb7c6a445f",
+      "riskType": "adult_content",
+      "pattern": "约炮",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.9,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "5499855b-7cac-446d-87e0-4956bc5e3fc7",
+      "riskType": "business_sensitive",
+      "pattern": "内部资料",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.85,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "57b2be14-fc0d-43a6-97a7-a3df2bf58c0b",
+      "riskType": "business_sensitive",
+      "pattern": "商业机密",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.9,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "b07a5e2b-3ae0-417c-857c-a83205ffe5f5",
+      "riskType": "business_sensitive",
+      "pattern": "机密文件",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.9,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "ae4026e3-e513-490a-9391-93f8931cb4cd",
+      "riskType": "copyright_risk",
+      "pattern": "侵权",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.75,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "ea56d8dd-0aaa-4511-9546-3434b0f4e329",
+      "riskType": "copyright_risk",
+      "pattern": "盗版",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.8,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "179c3205-8ec3-4851-9889-7d77e200cae2",
+      "riskType": "credential_secret_leak",
+      "pattern": "sk-[A-Za-z0-9_-]{20,}",
+      "matchType": "regex",
+      "caseSensitive": false,
+      "score": 0.95,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "38b1b25c-2b57-4e0f-8878-47f339f9791f",
+      "riskType": "credential_secret_leak",
+      "pattern": "api_key",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.8,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "63e492c5-158b-46a0-a9d8-7eb81e3b280b",
+      "riskType": "credential_secret_leak",
+      "pattern": "secret_key",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.8,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "e708bfb8-70f1-4563-88ab-e17b37a6e045",
+      "riskType": "credential_secret_leak",
+      "pattern": "access_token",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.85,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "1cb98b4b-4352-497f-bacc-f653ef975a02",
+      "riskType": "fraud_scam",
+      "pattern": "恭喜中奖",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.9,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "6cae7426-1f35-4b1a-89a2-1bfd5ee8ecd2",
+      "riskType": "fraud_scam",
+      "pattern": "钓鱼链接",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.9,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "9a93e073-1f96-4d78-95d7-763d846582b3",
+      "riskType": "fraud_scam",
+      "pattern": "内幕消息",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.8,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "a745d009-26ee-4770-b309-1a6649b87b31",
+      "riskType": "fraud_scam",
+      "pattern": "冒充客服",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.85,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "a761d512-5083-4c90-ae52-fd276adcfdd1",
+      "riskType": "fraud_scam",
+      "pattern": "稳赚不赔",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.85,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "1f88d3a6-614c-40d5-b6e2-a34cea335224",
+      "riskType": "illegal_content",
+      "pattern": "洗钱",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.95,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440501",
+      "riskType": "illegal_content",
+      "pattern": "毒品",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.95,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440502",
+      "riskType": "illegal_content",
+      "pattern": "诈骗",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.95,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "6215b42d-c220-452e-9ec5-bc31667b6355",
+      "riskType": "illegal_content",
+      "pattern": "买卖账号",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.9,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "670bdf5a-0957-4a0e-9128-264f73b3c661",
+      "riskType": "illegal_content",
+      "pattern": "诈骗",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.9,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "993df25f-c721-4aea-b9ec-e172abbf003e",
+      "riskType": "illegal_content",
+      "pattern": "黑产",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.9,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "f36cbd94-fc9e-4aa3-a0cc-8dc29df7b68f",
+      "riskType": "illegal_content",
+      "pattern": "绕过实名",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.85,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "137254a4-794d-4f51-85b4-3a6e9194e1f8",
+      "riskType": "malicious_code",
+      "pattern": "控制他人电脑",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.95,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "18313cfe-08cf-494e-a4ad-3750a58a11d1",
+      "riskType": "malicious_code",
+      "pattern": "木马",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.95,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440301",
+      "riskType": "malicious_code",
+      "pattern": "SELECT * FROM",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.9,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440302",
+      "riskType": "malicious_code",
+      "pattern": "<script>",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.85,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440303",
+      "riskType": "malicious_code",
+      "pattern": "远程控制",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 1,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440304",
+      "riskType": "malicious_code",
+      "pattern": "木马",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.95,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "724addd7-101b-4a43-a2ee-a6998ba2fb7b",
+      "riskType": "malicious_code",
+      "pattern": "入侵",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.85,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "77ad7478-4bcf-40de-b259-bb36782445f4",
+      "riskType": "malicious_code",
+      "pattern": "获取文件",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.9,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "a7518ee9-d64a-468f-b2ac-5c46b8858e05",
+      "riskType": "malicious_code",
+      "pattern": "后门",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.95,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "badb1cea-4393-45aa-8d87-75298b14118b",
+      "riskType": "malicious_code",
+      "pattern": "免杀",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.9,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "cf998c94-3aef-4d2f-b790-d0abe0eeb491",
+      "riskType": "malicious_code",
+      "pattern": "窃取密码",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.95,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "dd6d53fc-bb83-47c2-b07f-097392094442",
+      "riskType": "malicious_code",
+      "pattern": "反弹shell",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.9,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "10a8599f-b257-4efc-9b95-114e8d2bd2fe",
+      "riskType": "misinformation",
+      "pattern": "虚假新闻",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.8,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "85c523a2-5c55-4d4d-b07b-060b27ec99dc",
+      "riskType": "misinformation",
+      "pattern": "谣言",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.75,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "01ec8db4-504c-4183-ac22-3fbe65497c4d",
+      "riskType": "output_leak",
+      "pattern": "内部信息",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.8,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "9daab45f-f10f-4cc7-9649-fa7071c205d7",
+      "riskType": "output_leak",
+      "pattern": "系统指令",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.85,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "2f8afb55-6609-4968-a9b7-ea8ac2cfb415",
+      "riskType": "pii_leak",
+      "pattern": "1[3-9]\\d{9}",
+      "matchType": "regex",
+      "caseSensitive": false,
+      "score": 0.8,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440204",
+      "riskType": "pii_leak",
+      "pattern": "[\\w.-]+@[\\w.-]+\\.\\w+",
+      "matchType": "regex",
+      "caseSensitive": false,
+      "score": 0.75,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440205",
+      "riskType": "pii_leak",
+      "pattern": "(sk-|api[_-]?key|Bearer\\s+)[a-zA-Z0-9_-]{20,}",
+      "matchType": "regex",
+      "caseSensitive": false,
+      "score": 1,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "91a2d38e-fd89-42f6-bf45-3c5ff259782e",
+      "riskType": "pii_leak",
+      "pattern": "\\d{17}[\\dXx]",
+      "matchType": "regex",
+      "caseSensitive": false,
+      "score": 0.9,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "a404ffac-705b-488c-a413-9e66319ae3ff",
+      "riskType": "pii_leak",
+      "pattern": "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}",
+      "matchType": "regex",
+      "caseSensitive": false,
+      "score": 0.6,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "a4a826dd-7e19-4223-a7aa-d4ae9cec6168",
+      "riskType": "pii_leak",
+      "pattern": "\\d{16,19}",
+      "matchType": "regex",
+      "caseSensitive": false,
+      "score": 0.85,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "0e806fa7-077c-4785-971f-d3dda64ecf02",
+      "riskType": "prompt_injection",
+      "pattern": "系统提示词",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.95,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "2d5ae48d-fdb5-4fa9-9eef-7533a88d8d40",
+      "riskType": "prompt_injection",
+      "pattern": "忽略所有规则",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.9,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "3621dff1-a563-468a-b4ae-43160bfabde4",
+      "riskType": "prompt_injection",
+      "pattern": "扮演",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.5,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "4fbf40bf-e8d3-4834-90d5-d1af7b07b9e0",
+      "riskType": "prompt_injection",
+      "pattern": "忽略之前的指令",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.9,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440101",
+      "riskType": "prompt_injection",
+      "pattern": "忽略之前",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.9,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440102",
+      "riskType": "prompt_injection",
+      "pattern": "系统提示词",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.95,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440103",
+      "riskType": "prompt_injection",
+      "pattern": "你现在是",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.85,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440104",
+      "riskType": "prompt_injection",
+      "pattern": "DAN模式",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 1,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440105",
+      "riskType": "prompt_injection",
+      "pattern": "忽略所有规则",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.95,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "6daae776-8053-4f79-bfca-71df89c87fe1",
+      "riskType": "prompt_injection",
+      "pattern": "DAN",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.85,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "92283b6f-5c42-4674-90b4-e4d91da35660",
+      "riskType": "prompt_injection",
+      "pattern": "越狱",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.9,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "9411f354-90e5-48f9-ae66-0aa2fccac8ff",
+      "riskType": "prompt_injection",
+      "pattern": "绕过限制",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.9,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "97f13468-15fc-4767-abd8-6266ceb3b35f",
+      "riskType": "prompt_injection",
+      "pattern": "system prompt",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.95,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "9c28e929-664c-477f-b858-6a5129be1c90",
+      "riskType": "prompt_injection",
+      "pattern": "忽略",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.6,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "9e2eb5e7-c22a-4a95-93c9-ae94f84c85f3",
+      "riskType": "prompt_injection",
+      "pattern": "开发者模式",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.85,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "a0b95748-6c4f-4190-b6e0-a3883200fa10",
+      "riskType": "prompt_injection",
+      "pattern": "忽略之前",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.85,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "ac9c1c01-3b0c-4990-aca7-f907e3be9f33",
+      "riskType": "prompt_injection",
+      "pattern": "(输出|泄露|告诉我).*系统提示词",
+      "matchType": "regex",
+      "caseSensitive": false,
+      "score": 0.95,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "f93194bd-8c7e-40d6-a06e-7739c90d374d",
+      "riskType": "prompt_injection",
+      "pattern": "无限制模式",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.85,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "5e16d1c5-e5d3-4aba-aacc-79a96ac5d756",
+      "riskType": "self_harm",
+      "pattern": "自杀",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.95,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "69f9ead1-3703-4fb8-88e3-b90528c779d9",
+      "riskType": "self_harm",
+      "pattern": "割腕",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.95,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "9d42c300-db73-4b2d-bc36-664c2a66aed1",
+      "riskType": "self_harm",
+      "pattern": "不想活了",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.9,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "dbbdb35d-91b4-4aa6-9c23-cda71c438d1a",
+      "riskType": "self_harm",
+      "pattern": "结束生命",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.95,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "0faefc79-ea3b-4809-a346-39d2eef8c4a2",
+      "riskType": "sensitive_compliance",
+      "pattern": "水军",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.75,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "3cd8f55a-11db-4d80-abba-a0771a1fd1f6",
+      "riskType": "sensitive_compliance",
+      "pattern": "绕过监管",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.85,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "875e1ef7-64d6-49cb-bafe-0fbe2483b0b6",
+      "riskType": "sensitive_compliance",
+      "pattern": "控评",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.75,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "4b8874df-ee45-42ee-a6de-f08500ecf8ae",
+      "riskType": "spam_detection",
+      "pattern": "刷屏",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.6,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "7f057d88-ff31-4425-8615-40909fe9eba3",
+      "riskType": "spam_detection",
+      "pattern": "(.)\\1{8,}",
+      "matchType": "regex",
+      "caseSensitive": false,
+      "score": 0.7,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "ecc3a096-4ae8-4644-9b64-785c3666fa18",
+      "riskType": "spam_detection",
+      "pattern": "顶顶顶",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.5,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "244956fe-0f94-4564-9e1d-51239661a31e",
+      "riskType": "violence_hate",
+      "pattern": "暴力威胁",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.9,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440401",
+      "riskType": "violence_hate",
+      "pattern": "杀死",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.9,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "9a93c464-9813-4922-b31b-77f14555e76d",
+      "riskType": "violence_hate",
+      "pattern": "仇恨",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.8,
+      "mandatoryDeny": false
+    },
+    {
+      "id": "f44f21ec-1bdb-4a95-90c0-02eab07df10f",
+      "riskType": "violence_hate",
+      "pattern": "杀人",
+      "matchType": "contains",
+      "caseSensitive": false,
+      "score": 0.95,
+      "mandatoryDeny": false
+    }
+  ],
+  "exceptions": [],
+  "thresholds": [
+    {
+      "dimensionId": "45f9982f-84a6-4e5a-917f-d9eb34c592bd",
+      "warn": 0.5,
+      "block": 0.8,
+      "autoMask": false,
+      "autoRewrite": false
+    },
+    {
+      "dimensionId": "550e8400-e29b-41d4-a716-446655440001",
+      "warn": 0.5,
+      "block": 0.8,
+      "autoMask": false,
+      "autoRewrite": false
+    },
+    {
+      "dimensionId": "550e8400-e29b-41d4-a716-446655440002",
+      "warn": 0.5,
+      "block": 0.8,
+      "autoMask": true,
+      "autoRewrite": false
+    },
+    {
+      "dimensionId": "550e8400-e29b-41d4-a716-446655440003",
+      "warn": 0.5,
+      "block": 0.8,
+      "autoMask": false,
+      "autoRewrite": false
+    },
+    {
+      "dimensionId": "550e8400-e29b-41d4-a716-446655440004",
+      "warn": 0.5,
+      "block": 0.8,
+      "autoMask": false,
+      "autoRewrite": false
+    },
+    {
+      "dimensionId": "550e8400-e29b-41d4-a716-446655440005",
+      "warn": 0.5,
+      "block": 0.8,
+      "autoMask": false,
+      "autoRewrite": false
+    },
+    {
+      "dimensionId": "550e8400-e29b-41d4-a716-446655440008",
+      "warn": 0.5,
+      "block": 0.8,
+      "autoMask": false,
+      "autoRewrite": false
+    },
+    {
+      "dimensionId": "550e8400-e29b-41d4-a716-446655440009",
+      "warn": 0.5,
+      "block": 0.8,
+      "autoMask": false,
+      "autoRewrite": false
+    },
+    {
+      "dimensionId": "550e8400-e29b-41d4-a716-446655440010",
+      "warn": 0.5,
+      "block": 0.8,
+      "autoMask": false,
+      "autoRewrite": false
+    },
+    {
+      "dimensionId": "550e8400-e29b-41d4-a716-446655440011",
+      "warn": 0.5,
+      "block": 0.8,
+      "autoMask": false,
+      "autoRewrite": false
+    },
+    {
+      "dimensionId": "550e8400-e29b-41d4-a716-446655440012",
+      "warn": 0.5,
+      "block": 0.8,
+      "autoMask": false,
+      "autoRewrite": false
+    },
+    {
+      "dimensionId": "550e8400-e29b-41d4-a716-446655440013",
+      "warn": 0.5,
+      "block": 0.8,
+      "autoMask": false,
+      "autoRewrite": false
+    },
+    {
+      "dimensionId": "550e8400-e29b-41d4-a716-446655440014",
+      "warn": 0.5,
+      "block": 0.8,
+      "autoMask": false,
+      "autoRewrite": false
+    },
+    {
+      "dimensionId": "550e8400-e29b-41d4-a716-446655440015",
+      "warn": 0.5,
+      "block": 0.8,
+      "autoMask": false,
+      "autoRewrite": false
+    },
+    {
+      "dimensionId": "550e8400-e29b-41d4-a716-446655440016",
+      "warn": 0.5,
+      "block": 0.8,
+      "autoMask": false,
+      "autoRewrite": false
+    },
+    {
+      "dimensionId": "f9e3d08b-ac02-4795-836c-503978e21304",
+      "warn": 0.5,
+      "block": 0.8,
+      "autoMask": false,
+      "autoRewrite": false
+    }
+  ],
+  "decisionPolicyVersion": 2,
+  "semanticDecisionMode": "coverage-v1",
+  "semanticCoverage": {
+    "requiredRiskIds": [
+      "self_harm",
+      "prompt_injection"
+    ]
+  },
+  "judgeProfiles": [
+    {
+      "schemaVersion": "2.0",
+      "profileId": "synthetic-base",
+      "revision": 1,
+      "tenantId": "synthetic-local-test",
+      "applicationId": "synthetic-local-test",
+      "displayName": "Synthetic local benchmark",
+      "enabled": true,
+      "mode": "SHADOW",
+      "providerId": "synthetic-local",
+      "providerType": "ollama",
+      "backendKind": "chat_judge",
+      "baseUrl": "http://127.0.0.1:11434/v1",
+      "path": "chat/completions",
+      "modelId": "qwen3.5:9b",
+      "modelRevision": null,
+      "weightsSha256": null,
+      "mutableAlias": true,
+      "deploymentMode": "private",
+      "dataBoundaryPolicyId": "synthetic-loopback-only",
+      "authMode": "none",
+      "directions": [
+        "INPUT",
+        "OUTPUT_COMPLETE"
+      ],
+      "industries": [],
+      "locales": [],
+      "priority": 0,
+      "riskIds": [
+        "self_harm",
+        "prompt_injection"
+      ],
+      "riskDefinitions": {},
+      "fallbackProfileIds": [],
+      "maxAttempts": 1,
+      "perAttemptTimeoutMs": 45000,
+      "totalTimeoutMs": 45000,
+      "maxInputChars": 16000,
+      "maxOutputTokens": 1024,
+      "maxConcurrent": 2,
+      "structuredOutputMode": "json_schema",
+      "temperature": null,
+      "thinkingMode": "disabled",
+      "promptTemplateVersion": "guard-judge-2.0",
+      "adapterVersion": "guard-chat-adapter-2.0"
+    }
+  ]
+}

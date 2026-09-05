@@ -1,0 +1,702 @@
+{
+  "schemaVersion": "1.0",
+  "documentVersion": "1.1",
+  "kind": "implementation_plan",
+  "status": "in_progress",
+  "deploymentScope": "single_customer_per_product_instance",
+  "executionRunId": "implementation-2026-09-05",
+  "productionQualityStatus": "INSUFFICIENT_EVIDENCE",
+  "createdAt": "2026-09-05",
+  "sourceDocument": "20_检测能力准确率与漏报专项优化方案_GPT可执行版_2026-09-05.md",
+  "qualityGates": "20_detection-quality-gates.proposed.v1.json",
+  "baseline": {
+    "commit": "ad09fb4",
+    "scope": "inspected_local_workspace_and_database_only",
+    "reauditRequired": true
+  },
+  "execution": {
+    "packageManager": "pnpm",
+    "defaultMode": "single_agent_sequential",
+    "createSubagents": false,
+    "productionActivationAuthorized": false,
+    "independentApprovalCanBeFabricated": false,
+    "autoLowerQualityGates": false,
+    "downloadPolicy": "仅授权、许可清晰的来源；固定版本/哈希；不执行下载脚本，不自动购买/同意新条款，不上传私有数据"
+  },
+  "statusValues": [
+    "pending",
+    "in_progress",
+    "done",
+    "blocked"
+  ],
+  "evidenceOutput": "data/content-safety/reports/optimization/{runId}/{taskId}.json",
+  "evidenceRequiredFields": [
+    "taskId",
+    "status",
+    "baseline",
+    "modifiedFiles",
+    "commands",
+    "exitCodes",
+    "assertions",
+    "artifactHashes",
+    "engineeringStatus",
+    "qualityStatus",
+    "deploymentStatus",
+    "blockers",
+    "nextAction"
+  ],
+  "dependencySemantics": {
+    "default": "engineering prerequisites; live quality and deployment evidence are separately gated",
+    "T02": "toolchain plus reviewed MVP may unblock engineering; complete independent gold evidence required by T13/T18",
+    "T07": "mock-only can support partial engineering but does not count as completed real integration; selected ENFORCE primary and fallback profiles require real T13 evaluation"
+  },
+  "tasks": [
+    {
+      "id": "T00",
+      "title": "基线冻结与资源清点",
+      "priority": "P0",
+      "status": "in_progress",
+      "engineeringStatus": "PARTIAL",
+      "executionNote": "已只读冻结本地数据库、活动包、GPU与代码基线；正式标准全文条款复核未完成。",
+      "executionEvidence": "data/content-safety/reports/optimization/implementation-2026-09-05/T00.json",
+      "dependsOn": [],
+      "sourceSection": "T00",
+      "existingPaths": [
+        "package.json",
+        "src/lib/policy-governance/runtime.ts",
+        "src/lib/policy-bundle/readiness.ts"
+      ],
+      "proposedPaths": [
+        "scripts/content-safety/audit-runtime.ts"
+      ],
+      "acceptance": [
+        "只读快照含提交、dirty diff、活动包及词库/模型/DAG 摘要",
+        "无秘密输出或 active 变更；缺失硬件/凭据如实列出",
+        "补正式标准条款及来源锁，不把项目数量目标当作已核实法规"
+      ],
+      "commandsToRegister": [
+        "detection:audit-runtime"
+      ],
+      "verification": "Execute task-specific tests after implementation; include package contracts/type/lint checks when affected; report actual commands and exit codes. See sourceDocument section 9 for steps."
+    },
+    {
+      "id": "T01",
+      "title": "三套指标与证据门禁",
+      "priority": "P0",
+      "status": "done",
+      "engineeringStatus": "VERIFIED",
+      "executionNote": "版本化分类/动作/覆盖指标、Wilson界限及0/1/2门禁已实现并通过单元测试；指标目标尚未达成认证。",
+      "executionEvidence": "data/content-safety/reports/optimization/implementation-2026-09-05/T01.json",
+      "dependsOn": [
+        "T00"
+      ],
+      "sourceSection": "T01",
+      "existingPaths": [
+        "src/lib/evaluation/metrics.ts",
+        "src/lib/evaluation/classification-metrics.ts",
+        "src/lib/evaluation/service.ts"
+      ],
+      "proposedPaths": [
+        "src/lib/evaluation/quality-gates.ts",
+        "tests/evaluation/quality-gates.test.ts",
+        "scripts/content-safety/check-quality-gates.ts"
+      ],
+      "acceptance": [
+        "WARN 后继续执行不算成功阻断",
+        "分母零、全转人工、UNKNOWN、小样本不得虚假通过",
+        "实现 PASS/FAIL/INSUFFICIENT_EVIDENCE 及对应退出码 0/1/2"
+      ],
+      "commandsToRegister": [
+        "detection:quality-gate"
+      ],
+      "verification": "Execute task-specific tests after implementation; include package contracts/type/lint checks when affected; report actual commands and exit codes. See sourceDocument section 9 for steps."
+    },
+    {
+      "id": "T02",
+      "title": "数据、标注与防污染分区",
+      "priority": "P0",
+      "status": "in_progress",
+      "engineeringStatus": "PARTIAL",
+      "executionNote": "已实现数据schema、group/模板/来源族/精确归一化文本泄漏检查；近重复聚类、标注工具及完整独立gold仍缺。",
+      "executionEvidence": "data/content-safety/reports/optimization/implementation-2026-09-05/T02.json",
+      "dependsOn": [
+        "T00",
+        "T01"
+      ],
+      "sourceSection": "T02",
+      "existingPaths": [
+        "data/content-safety"
+      ],
+      "proposedPaths": [
+        "data/content-safety/datasets/detection-case.schema.json",
+        "data/content-safety/datasets/dataset-manifest.schema.json",
+        "scripts/content-safety/prepare-evaluation-dataset.ts",
+        "tests/evaluation/group-split.test.ts"
+      ],
+      "acceptance": [
+        "开发/校准/锁定的 groupId、近重复族和同会话无交叉",
+        "未审核与来源未授权样本不计 gold",
+        "工具链/MVP 工程完成不代表 60000 样本质量门禁达成"
+      ],
+      "commandsToRegister": [
+        "detection:dataset-check"
+      ],
+      "verification": "Execute task-specific tests after implementation; include package contracts/type/lint checks when affected; report actual commands and exit codes. See sourceDocument section 9 for steps."
+    },
+    {
+      "id": "T03",
+      "title": "统一风险注册表",
+      "priority": "P0",
+      "status": "in_progress",
+      "engineeringStatus": "PARTIAL",
+      "executionNote": "已有风险注册表，裁判定义冻结进签名配置；全部旧新风险码统一行为与标准条款映射仍待补齐。",
+      "executionEvidence": "data/content-safety/reports/optimization/implementation-2026-09-05/T03.json",
+      "dependsOn": [
+        "T00"
+      ],
+      "sourceSection": "T03",
+      "existingPaths": [
+        "src/lib/guard-engine-v2/rule-detector.ts",
+        "src/lib/guard-engine-v2/intent-context.ts",
+        "src/lib/policy-bundle/compiler.ts"
+      ],
+      "proposedPaths": [
+        "data/content-safety/taxonomy/risk-registry.v1.json",
+        "src/lib/guard-engine-v2/risk-registry.ts",
+        "tests/guard-engine-v2/risk-registry.test.ts"
+      ],
+      "acceptance": [
+        "旧码、新码同义时上下文行为一致",
+        "未知标签拒绝；父子关系不伪造细分类",
+        "模型、规则、UI 共用版本映射；变更影响包哈希"
+      ],
+      "commandsToRegister": [],
+      "verification": "Execute task-specific tests after implementation; include package contracts/type/lint checks when affected; report actual commands and exit codes. See sourceDocument section 9 for steps."
+    },
+    {
+      "id": "T04",
+      "title": "独立词库转换与 release set",
+      "priority": "P0",
+      "status": "in_progress",
+      "engineeringStatus": "PARTIAL",
+      "executionNote": "已完成集合根签名、原子导入/独立审批/编译源激活/精确回滚、单片防绕过及编译完整性校验；隔离库10000条/20片和失败回滚检查通过。原始词库全量转换与真实审核仍未完成。",
+      "executionEvidence": "data/content-safety/reports/optimization/implementation-2026-09-05/T04.json",
+      "dependsOn": [
+        "T02",
+        "T03"
+      ],
+      "sourceSection": "T04",
+      "existingPaths": [
+        "src/contracts/http/policy-governance.ts",
+        "src/lib/policy-governance/validation.ts",
+        "src/lib/policy-governance/dictionaries.ts",
+        "src/lib/policy-bundle/compiler.ts",
+        "scripts/content-safety/compile-shadow-bundle.mjs"
+      ],
+      "proposedPaths": [
+        "scripts/content-safety/compile-release-set.ts",
+        "scripts/content-safety/import-legacy-lexicon.ts",
+        "tests/content-safety/release-set.test.ts"
+      ],
+      "acceptance": [
+        "最大 500 条/片，10000 合成标记测试集合原子性和幂等",
+        "source/term/action_hint/match_mode/canonicalTermId 转换不丢失",
+        "candidate 不能发布；词法 negativeExamples 与端到端 contextCases 分开"
+      ],
+      "commandsToRegister": [
+        "lexicon:compile-release-set"
+      ],
+      "verification": "Execute task-specific tests after implementation; include package contracts/type/lint checks when affected; report actual commands and exit codes. See sourceDocument section 9 for steps."
+    },
+    {
+      "id": "T05",
+      "title": "局部白名单与上下文",
+      "priority": "P0",
+      "status": "in_progress",
+      "engineeringStatus": "PARTIAL",
+      "executionNote": "V2禁用旧全局白名单旁路，保留局部目标词条跨度豁免及mandatory保护；完整locale/context/support路由专项验收待补。",
+      "executionEvidence": "data/content-safety/reports/optimization/implementation-2026-09-05/T05.json",
+      "dependsOn": [
+        "T03",
+        "T04"
+      ],
+      "sourceSection": "T05",
+      "existingPaths": [
+        "src/lib/guard-engine-v2/rule-detector.ts",
+        "src/lib/guard-engine-v2/intent-context.ts",
+        "src/lib/policy-bundle/compiler.ts"
+      ],
+      "proposedPaths": [
+        "tests/guard-engine-v2/targeted-context-policy.test.ts"
+      ],
+      "acceptance": [
+        "只抑制指定风险/词条/跨度，外部第二次命中保留",
+        "跨租户、方向、期限不生效；不能免除 mandatory",
+        "新闻/研究前缀不是全局通行证；自伤支持路由不关闭检测"
+      ],
+      "commandsToRegister": [],
+      "verification": "Execute task-specific tests after implementation; include package contracts/type/lint checks when affected; report actual commands and exit codes. See sourceDocument section 9 for steps."
+    },
+    {
+      "id": "T06",
+      "title": "候选/确认信号与逐风险决策",
+      "priority": "P0",
+      "status": "done",
+      "engineeringStatus": "VERIFIED",
+      "executionNote": "候选/确认/清除/未知角色、逐风险阈值、旧包兼容和契约生成通过回归；候选不再累积为会话已确认风险。",
+      "executionEvidence": "data/content-safety/reports/optimization/implementation-2026-09-05/T06.json",
+      "dependsOn": [
+        "T01",
+        "T03"
+      ],
+      "sourceSection": "T06",
+      "existingPaths": [
+        "packages/contracts/model/guard-v1.schema.json",
+        "src/lib/guard-engine-v2/types.ts",
+        "src/lib/guard-engine-v2/engine.ts",
+        "src/lib/guard-engine-v2/aggregate.ts",
+        "src/lib/guard-engine-v2/from-policy-bundle.ts",
+        "src/lib/policy-bundle/types.ts"
+      ],
+      "proposedPaths": [
+        "tests/guard-engine-v2/risk-fusion.test.ts"
+      ],
+      "acceptance": [
+        "decisionPolicyVersion=2 显式启用，旧包缺省行为不变",
+        "弱词法高分不直接 BLOCK；各风险阈值独立",
+        "重复证据不抬分，UNKNOWN 不清除 mandatory；契约源与生成物一致"
+      ],
+      "commandsToRegister": [],
+      "verification": "Execute task-specific tests after implementation; include package contracts/type/lint checks when affected; report actual commands and exit codes. See sourceDocument section 9 for steps."
+    },
+    {
+      "id": "T07",
+      "title": "多模型裁判与真实语义适配",
+      "priority": "P0",
+      "status": "in_progress",
+      "engineeringStatus": "PARTIAL_REAL_PROTOCOL_VERIFIED",
+      "executionNote": "多供应商画像、认证、主备、单客户私有边界与严格解析已实现；本地Ollama qwen3.5:9b真实协议PASS约52.98秒。其他服务、专用分类器v2和效果资格待实测。",
+      "executionEvidence": "data/content-safety/reports/optimization/implementation-2026-09-05/T07.json",
+      "dependsOn": [
+        "T03",
+        "T06"
+      ],
+      "sourceSection": "T07",
+      "existingPaths": [
+        "src/lib/guard-engine-v2/semantic-classifier.ts",
+        "src/lib/providers/chat.ts",
+        "src/lib/judge/service.ts",
+        "src/lib/egress",
+        "src/lib/secrets",
+        "src/app/api/providers/route.ts",
+        "src/app/api/policies/[id]/judge-config/route.ts"
+      ],
+      "proposedPaths": [
+        "src/lib/judge/profile.ts",
+        "src/lib/judge/profile-registry.ts",
+        "src/lib/judge/response-schema.ts",
+        "src/lib/judge/router.ts",
+        "services/safety-classifier/src",
+        "tests/semantic-service",
+        "tests/judge/provider-matrix.test.ts",
+        "data/content-safety/models/model-candidates.v1.json"
+      ],
+      "acceptance": [
+        "T07.1 版本化画像与兼容迁移；T07.2 多提供商解析/主备/隔离；T07.3 分类器 v2 与真实后端；T07.4 自测矩阵",
+        "DeepSeek/GLM/Qwen/Kimi/Ollama/带认证私有兼容/无认证获准私有兼容均有 mock 合同测试",
+        "private 与品牌解耦；private-only 不切云；总 deadline/次数限额有效",
+        "空响应、拒答、错误 JSON、未知风险不能当 SAFE；权重哈希与云配置哈希不混淆",
+        "至少一个真实后端集成验证；缺账号供应商 UNVERIFIED，生产主备均待 T13 实测"
+      ],
+      "commandsToRegister": [
+        "detection:judge-selftest"
+      ],
+      "verification": "Execute task-specific tests after implementation; include package contracts/type/lint checks when affected; report actual commands and exit codes. See sourceDocument section 9 for steps."
+    },
+    {
+      "id": "T08",
+      "title": "真实主链路语义与裁判路由",
+      "priority": "P0",
+      "status": "in_progress",
+      "engineeringStatus": "PARTIAL",
+      "executionNote": "签名配置接入V2 DAG；高词法候选清除/零词法风险/mandatory/未知覆盖模拟测试PASS；真实签名包API trace未验收。",
+      "executionEvidence": "data/content-safety/reports/optimization/implementation-2026-09-05/T08.json",
+      "dependsOn": [
+        "T05",
+        "T06",
+        "T07"
+      ],
+      "sourceSection": "T08",
+      "existingPaths": [
+        "src/lib/guard-engine-v2/default-dag.ts",
+        "src/lib/guard-engine-v2/dag.ts",
+        "src/lib/guard-engine-v2/engine.ts"
+      ],
+      "proposedPaths": [
+        "src/lib/guard-engine-v2/semantic-routing.ts",
+        "tests/guard-engine-v2/semantic-routing.test.ts"
+      ],
+      "acceptance": [
+        "弱词法误拦与零词法风险均到语义",
+        "从签名包读取裁判 revision，按 scope/方向/场景确定画像",
+        "mandatory 不撤销、SHADOW 不改动作、未覆盖不视为安全",
+        "真实 API trace 证明 V2 主链调用，不只旧裁判独立测试"
+      ],
+      "commandsToRegister": [],
+      "verification": "Execute task-specific tests after implementation; include package contracts/type/lint checks when affected; report actual commands and exit codes. See sourceDocument section 9 for steps."
+    },
+    {
+      "id": "T09",
+      "title": "多轮与入口一致性",
+      "priority": "P0",
+      "status": "in_progress",
+      "engineeringStatus": "PARTIAL",
+      "executionNote": "已完成持久化加密回执、同ID内容冲突、并发/三轮幂等、候选不累积和共享只读影子快照，隔离库8组检查通过；所有真实HTTP/SDK及RAG/工具/流式入口等价验收仍缺。",
+      "executionEvidence": "data/content-safety/reports/optimization/implementation-2026-09-05/T09.json",
+      "dependsOn": [
+        "T06",
+        "T08"
+      ],
+      "sourceSection": "T09",
+      "existingPaths": [
+        "src/lib/detection/v2-compat.ts",
+        "src/lib/guard-engine-v2/session-context.ts",
+        "src/lib/secure-memory",
+        "src/app/api/v1/guard/evaluate/route.ts"
+      ],
+      "proposedPaths": [
+        "tests/guard-engine-v2/entrypoint-context-parity.test.ts"
+      ],
+      "acceptance": [
+        "相同上下文旧新 API 风险/动作一致",
+        "三轮风险、重试幂等、跨租户隔离与历史毒化测试通过",
+        "影子/评测只读记忆，不重复推进生产会话"
+      ],
+      "commandsToRegister": [],
+      "verification": "Execute task-specific tests after implementation; include package contracts/type/lint checks when affected; report actual commands and exit codes. See sourceDocument section 9 for steps."
+    },
+    {
+      "id": "T10",
+      "title": "DLP 与业务事实依据",
+      "priority": "P1",
+      "status": "pending",
+      "engineeringStatus": "NOT_IMPLEMENTED_IN_THIS_RUN",
+      "executionNote": "保留既有DLP/RAG/工具能力；本轮未实现新实体授权和保险产品/版本事实依据校验。",
+      "executionEvidence": "data/content-safety/reports/optimization/implementation-2026-09-05/T10.json",
+      "dependsOn": [
+        "T03",
+        "T06",
+        "T09"
+      ],
+      "sourceSection": "T10",
+      "existingPaths": [
+        "src/lib/dlp",
+        "src/lib/output-control",
+        "src/lib/rag",
+        "src/lib/tools"
+      ],
+      "proposedPaths": [
+        "tests/dlp/contextual-entity-release.test.ts",
+        "tests/guard-engine-v2/business-grounding.test.ts"
+      ],
+      "acceptance": [
+        "订单号/实体/授权区分与多次出现脱敏正确",
+        "保险文档产品/时间/版本定位，缺依据不能给确定结论",
+        "通用安全模型不冒充事实校验器；工具授权仍独立"
+      ],
+      "commandsToRegister": [],
+      "verification": "Execute task-specific tests after implementation; include package contracts/type/lint checks when affected; report actual commands and exit codes. See sourceDocument section 9 for steps."
+    },
+    {
+      "id": "T11",
+      "title": "规范化、长文与超限",
+      "priority": "P1",
+      "status": "in_progress",
+      "engineeringStatus": "PARTIAL",
+      "executionNote": "词法、正则及跨视图证据容量耗尽显式报告失败，裁判超长输入不截断送检；长文分窗、跨窗语义和旧入口全范围回归仍未完成。",
+      "executionEvidence": "data/content-safety/reports/optimization/implementation-2026-09-05/T11.json",
+      "dependsOn": [
+        "T03",
+        "T06",
+        "T08"
+      ],
+      "sourceSection": "T11",
+      "existingPaths": [
+        "src/lib/guard-engine-v2/normalization.ts",
+        "src/lib/guard-engine-v2/adversarial-variants.ts",
+        "src/lib/guard-engine-v2/lexical-matcher.ts",
+        "src/lib/guard-engine-v2/evidence.ts"
+      ],
+      "proposedPaths": [
+        "tests/guard-engine-v2/long-context-coverage.test.ts"
+      ],
+      "acceptance": [
+        "规范化版本一致，原文证据跨度有效",
+        "头/中/尾/跨窗风险覆盖；大量良性命中不挤掉末尾风险",
+        "超限或截断为 incomplete，不能空命中即安全"
+      ],
+      "commandsToRegister": [],
+      "verification": "Execute task-specific tests after implementation; include package contracts/type/lint checks when affected; report actual commands and exit codes. See sourceDocument section 9 for steps."
+    },
+    {
+      "id": "T12",
+      "title": "流式与多模态",
+      "priority": "P1",
+      "status": "pending",
+      "engineeringStatus": "NOT_IMPLEMENTED_IN_THIS_RUN",
+      "executionNote": "新裁判仅承诺文本，带附件为UNSUPPORTED；新增流式/多模态真实推理验收未完成。",
+      "executionEvidence": "data/content-safety/reports/optimization/implementation-2026-09-05/T12.json",
+      "dependsOn": [
+        "T07",
+        "T08",
+        "T09",
+        "T11"
+      ],
+      "sourceSection": "T12",
+      "existingPaths": [
+        "src/lib/stream-gate",
+        "src/lib/multimodal",
+        "services/media-analyzer"
+      ],
+      "proposedPaths": [
+        "tests/stream-gate/semantic-release.test.ts",
+        "tests/multimodal/semantic-coverage.test.ts"
+      ],
+      "acceptance": [
+        "跨输出段风险在释放前拦截，统计实际已放出字节",
+        "OCR/ASR 失败不当作安全；OCR 安全不等于视觉安全",
+        "每种对外承诺模态都有真实集成证据，否则阻断该画像"
+      ],
+      "commandsToRegister": [],
+      "verification": "Execute task-specific tests after implementation; include package contracts/type/lint checks when affected; report actual commands and exit codes. See sourceDocument section 9 for steps."
+    },
+    {
+      "id": "T13",
+      "title": "校准、供应商对照与消融",
+      "priority": "P1",
+      "status": "pending",
+      "engineeringStatus": "NOT_IMPLEMENTED_IN_THIS_RUN",
+      "executionNote": "缺独立审核锁定集；校准、对照、消融与供应商质量对比脚本仍待实现；本轮未宣称质量提升数值。",
+      "executionEvidence": "data/content-safety/reports/optimization/implementation-2026-09-05/T13.json",
+      "dependsOn": [
+        "T01",
+        "T02",
+        "T07",
+        "T08",
+        "T10",
+        "T11"
+      ],
+      "sourceSection": "T13",
+      "existingPaths": [
+        "src/lib/evaluation",
+        "src/lib/guard-engine-v2/semantic-classifier.ts"
+      ],
+      "proposedPaths": [
+        "scripts/content-safety/calibrate-thresholds.ts",
+        "scripts/content-safety/evaluate-detection.ts",
+        "tests/evaluation/calibration-integrity.test.ts"
+      ],
+      "acceptance": [
+        "仅 calibration split 调阈值，不读取锁定集调参",
+        "B0/B1/S1/S2/H1 和消融同集比较",
+        "每个生产主备的模型/量化/模板/解析器/映射独立实测；自报 confidence 非概率",
+        "质量门禁需完整审核锁定集；协议 mock 不替代真实推理"
+      ],
+      "commandsToRegister": [
+        "detection:evaluate",
+        "detection:calibrate"
+      ],
+      "verification": "Execute task-specific tests after implementation; include package contracts/type/lint checks when affected; report actual commands and exit codes. See sourceDocument section 9 for steps."
+    },
+    {
+      "id": "T14",
+      "title": "签名版本、迁移与回滚",
+      "priority": "P0",
+      "status": "in_progress",
+      "engineeringStatus": "PARTIAL",
+      "executionNote": "裁判签名配置及草稿CAS已实现；新增词库集合原子切换/精确回滚和0042/0043迁移，隔离库验证通过；客户迁移、真实签名发布trace及完整回滚兼容验收仍缺。",
+      "executionEvidence": "data/content-safety/reports/optimization/implementation-2026-09-05/T14.json",
+      "dependsOn": [
+        "T04",
+        "T05",
+        "T06",
+        "T08"
+      ],
+      "sourceSection": "T14",
+      "existingPaths": [
+        "src/lib/policy-bundle",
+        "src/lib/policy-governance/dictionaries.ts",
+        "src/lib/policy-governance/runtime.ts"
+      ],
+      "proposedPaths": [
+        "tests/policy-bundle/optimization-upgrade.test.ts"
+      ],
+      "acceptance": [
+        "词库集合及主备画像/模板/端点/映射/校准摘要被签入包",
+        "provider 草稿编辑不改 active；旧 judge-config 迁移不自动启用",
+        "新旧包兼容；半发布不切流；未验证备用与虚假审批不得发布"
+      ],
+      "commandsToRegister": [],
+      "verification": "Execute task-specific tests after implementation; include package contracts/type/lint checks when affected; report actual commands and exit codes. See sourceDocument section 9 for steps."
+    },
+    {
+      "id": "T15",
+      "title": "观测与反馈",
+      "priority": "P1",
+      "status": "in_progress",
+      "engineeringStatus": "PARTIAL",
+      "executionNote": "Observation包含角色、覆盖、模型和配置digest，生效摘要提供实际revision；分层抽审及反馈采样工具未完成。",
+      "executionEvidence": "data/content-safety/reports/optimization/implementation-2026-09-05/T15.json",
+      "dependsOn": [
+        "T01",
+        "T06",
+        "T08",
+        "T09"
+      ],
+      "sourceSection": "T15",
+      "existingPaths": [
+        "src/lib/observability/metrics.ts",
+        "src/lib/evaluation"
+      ],
+      "proposedPaths": [
+        "scripts/content-safety/export-review-sample.ts",
+        "tests/evaluation/feedback-sampling.test.ts"
+      ],
+      "acceptance": [
+        "实际语义/裁判调用、UNKNOWN、覆盖/跳过/主备原因可观测",
+        "放行/拦截分层抽审并保留抽样概率；未标注 disagreement 不是 FNR",
+        "日志最小化、租户隔离、无高基数标签；反馈不自动改 active"
+      ],
+      "commandsToRegister": [],
+      "verification": "Execute task-specific tests after implementation; include package contracts/type/lint checks when affected; report actual commands and exit codes. See sourceDocument section 9 for steps."
+    },
+    {
+      "id": "T16",
+      "title": "控制台配置及解释",
+      "priority": "P1",
+      "status": "in_progress",
+      "engineeringStatus": "PARTIAL",
+      "executionNote": "已实现单客户场景裁判面板、私有认证与主备配置，新增整组词库导入/审批/编译源/回滚UI并禁用单片流转；浏览器E2E及效果比较UI未完成。",
+      "executionEvidence": "data/content-safety/reports/optimization/implementation-2026-09-05/T16.json",
+      "dependsOn": [
+        "T01",
+        "T06",
+        "T14",
+        "T15"
+      ],
+      "sourceSection": "T16",
+      "existingPaths": [
+        "src/app/policy-releases/page.tsx",
+        "src/app/evaluation-runs/page.tsx",
+        "src/app/providers/page.tsx",
+        "src/app/policies/[id]/components/JudgeConfigPanel.tsx",
+        "src/components/judge/JudgeModelResultCard.tsx"
+      ],
+      "proposedPaths": [
+        "tests/e2e/judge-profile-configuration.spec.ts"
+      ],
+      "acceptance": [
+        "读取本地 Next.js 指南；复用 shadcn/ui",
+        "供应商/模型/认证/场景/主备/预算配置及四阶段自测发布可用",
+        "草稿/未验证/影子/生效状态真实，显示 actual profile revision",
+        "E2E 多租户与 hydration 通过，密钥不回显"
+      ],
+      "commandsToRegister": [],
+      "verification": "Execute task-specific tests after implementation; include package contracts/type/lint checks when affected; report actual commands and exit codes. See sourceDocument section 9 for steps."
+    },
+    {
+      "id": "T17",
+      "title": "性能与缓存",
+      "priority": "P1",
+      "status": "in_progress",
+      "engineeringStatus": "PARTIAL",
+      "executionNote": "已有配置/范围隔离缓存键、请求次数/时限/并发界限；未启用语义结果缓存，冷热并发基准工具及性能资格未完成。",
+      "executionEvidence": "data/content-safety/reports/optimization/implementation-2026-09-05/T17.json",
+      "dependsOn": [
+        "T08",
+        "T09",
+        "T11",
+        "T13"
+      ],
+      "sourceSection": "T17",
+      "existingPaths": [
+        "src/lib/guard-engine-v2/cache-key.ts",
+        "src/lib/guard-engine-v2/engine.ts"
+      ],
+      "proposedPaths": [
+        "scripts/content-safety/benchmark-detection.ts",
+        "tests/guard-engine-v2/semantic-cache-isolation.test.ts"
+      ],
+      "acceptance": [
+        "缓存键包括完整上下文、tenant、包、模型/模板/解析器、校准、方向与期限",
+        "冷热缓存和实际并发画像分别测量；云模型预算单独冻结",
+        "预算耗尽不 silent allow；缓存不丢状态更新；质量不因缓存改变"
+      ],
+      "commandsToRegister": [
+        "detection:benchmark"
+      ],
+      "verification": "Execute task-specific tests after implementation; include package contracts/type/lint checks when affected; report actual commands and exit codes. See sourceDocument section 9 for steps."
+    },
+    {
+      "id": "T18",
+      "title": "端到端证据与发布交付",
+      "priority": "P0",
+      "status": "in_progress",
+      "engineeringStatus": "PARTIAL",
+      "executionNote": "本批次全量单测842/842、词库9组及会话8组隔离集成、契约兼容、类型/静态检查与构建通过；真实质量与完整专项验收仍未通过，业务库未迁移，未发布/切流/提交代码。",
+      "executionEvidence": "data/content-safety/reports/optimization/implementation-2026-09-05/T18.json",
+      "dependsOn": [
+        "T10",
+        "T12",
+        "T13",
+        "T14",
+        "T15",
+        "T16",
+        "T17"
+      ],
+      "sourceSection": "T18",
+      "existingPaths": [
+        "src/lib/policy-bundle/readiness.ts"
+      ],
+      "proposedPaths": [
+        "scripts/content-safety/run-optimization-gates.ts",
+        "tests/release/detection-quality-evidence.test.ts"
+      ],
+      "acceptance": [
+        "冻结制品上真实质量/可靠性/兼容/性能门禁通过",
+        "生产发布与独立审批需授权；无授权只交付制品和发布清单",
+        "词库/包/模型实际绑定和回滚均验证；区分工程完成/质量达标/部署生效"
+      ],
+      "commandsToRegister": [
+        "detection:optimization-gates"
+      ],
+      "verification": "Execute task-specific tests after implementation; include package contracts/type/lint checks when affected; report actual commands and exit codes. See sourceDocument section 9 for steps."
+    }
+  ],
+  "judgeRequirements": {
+    "requiredProviderTypes": [
+      "deepseek",
+      "glm",
+      "qwen",
+      "kimi",
+      "ollama",
+      "openai_compatible",
+      "custom"
+    ],
+    "mockProfiles": [
+      "deepseek",
+      "glm",
+      "qwen",
+      "kimi",
+      "ollama",
+      "private_compatible_bearer",
+      "private_compatible_none_approved"
+    ],
+    "defaultMaxAttemptsIncludingFallback": 2,
+    "privateOnlyMayFallbackToCloud": false,
+    "cloudWeightsDigestRequired": false,
+    "configDigestIsWeightDigest": false,
+    "allEnforcedFallbacksMustBeQualityValidated": true,
+    "providerDraftMayChangeActiveBundle": false
+  }
+}

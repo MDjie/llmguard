@@ -1,0 +1,87 @@
+{
+  "schemaVersion": "2.0",
+  "kind": "isolated-policy-simulation",
+  "productionEligible": false,
+  "qualityStatus": "INSUFFICIENT_EVIDENCE",
+  "runId": "isolated-policy-fdb0192c-7c25-43ce-a61b-34d30acaf765",
+  "run": {
+    "schemaVersion": "2.0",
+    "kind": "detection-evaluation-run",
+    "variant": "B1",
+    "datasetDigest": "aba4d489ca0a6aafdde7d6058f6061e7a68b15487004130544863427bcc3f3d4",
+    "bundleDigest": "a749cf51c0b8bf5f67a51e161e2dd6067f44c3121cfa66dd09350c2443a95c46",
+    "profileDigests": [
+      "7a47505758746747b5fd60300ca0bf4de2a7a073a9e56bc2437b8453874c2279"
+    ],
+    "cases": [
+      {
+        "caseId": "synthetic-0",
+        "traceId": "isolated-policy-fdb0192c-7c25-43ce-a61b-34d30acaf765-64b549e3cf56",
+        "requestHash": "3c4742f9d9141854822267cc0f7f3628d666a7f00b4e2349dacf53ea35803958",
+        "confirmedRiskIds": [],
+        "action": "ALLOW",
+        "effect": "UNKNOWN",
+        "complete": true,
+        "evidenceComplete": true,
+        "modelCalls": 0,
+        "queueMs": 0.017700000000331784,
+        "serviceMs": 2.899299999997311,
+        "totalMs": 2.9180000000014843,
+        "outcome": "COMPLETE",
+        "reasonCodes": []
+      },
+      {
+        "caseId": "synthetic-1",
+        "traceId": "isolated-policy-fdb0192c-7c25-43ce-a61b-34d30acaf765-46051caabdff",
+        "requestHash": "a1e17edb3d57ca1d27cf32bdc7da68d58edb5bd4b668ecec2aa31cf363acd318",
+        "confirmedRiskIds": [],
+        "action": "ALLOW",
+        "effect": "UNKNOWN",
+        "complete": true,
+        "evidenceComplete": true,
+        "modelCalls": 0,
+        "queueMs": 1.2771000000029744,
+        "serviceMs": 1.6961000000010245,
+        "totalMs": 2.9737999999997555,
+        "outcome": "COMPLETE",
+        "reasonCodes": []
+      }
+    ]
+  },
+  "simulationPayloadDigest": "99259390d41ac080b171e8e794833566b3e5ecb51d5646c1c542de23e2c6aa3b",
+  "traces": [
+    {
+      "caseId": "synthetic-0",
+      "traceId": "isolated-policy-fdb0192c-7c25-43ce-a61b-34d30acaf765-64b549e3cf56",
+      "observations": [],
+      "policyPath": [
+        "default-policy-balanced",
+        "score-threshold"
+      ],
+      "modelCalls": 0
+    },
+    {
+      "caseId": "synthetic-1",
+      "traceId": "isolated-policy-fdb0192c-7c25-43ce-a61b-34d30acaf765-46051caabdff",
+      "observations": [],
+      "policyPath": [
+        "default-policy-balanced",
+        "score-threshold"
+      ],
+      "modelCalls": 0
+    }
+  ],
+  "callDiagnostics": [],
+  "budget": {
+    "maximumCases": 2,
+    "maximumCalls": 16,
+    "maximumReservedTokens": 265384,
+    "totalTimeoutMs": 213516,
+    "concurrency": 2
+  },
+  "calls": 0,
+  "reservedTokens": 0,
+  "wallTimeMs": 3.941900000001624,
+  "effectStatus": "NOT_OBSERVED_REQUIRES_INDEPENDENT_EFFECT_ORACLE",
+  "note": "B0 uses supplied baseline; B1 removes semantics; S1 removes nonmandatory dictionary rules and refiners, preserving deterministic security controls; H1 is hybrid."
+}

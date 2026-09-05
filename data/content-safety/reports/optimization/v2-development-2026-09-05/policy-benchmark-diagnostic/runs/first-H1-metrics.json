@@ -1,0 +1,224 @@
+{
+  "schemaVersion": "2.0",
+  "kind": "detection-metric-report",
+  "variant": "H1",
+  "datasetDigest": "aba4d489ca0a6aafdde7d6058f6061e7a68b15487004130544863427bcc3f3d4",
+  "runDigest": "6e610cd4939a52ef33c2c1bb34b98c1cba1559c8ea18b97749cbcc382fbd9a7f",
+  "qualityStatus": "INSUFFICIENT_EVIDENCE",
+  "independentLabelsVerified": false,
+  "qualificationReasons": [
+    "INDEPENDENT_LOCKED_TEST_LABELS_REQUIRED",
+    "APPROVED_ACCEPTANCE_PROFILE_AND_OPERATOR_RELEASE_REQUIRED"
+  ],
+  "point": {
+    "caseCount": 2,
+    "risk": {
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "tn": 2,
+      "precision": null,
+      "recall": null,
+      "fnr": null,
+      "fpr": 0,
+      "accuracy": 1,
+      "f1": null
+    },
+    "perRisk": {},
+    "unknownRate": 0.5,
+    "reviewRate": 0,
+    "missingEvidenceRate": 0.5,
+    "actionCorrectness": 0,
+    "benignInterventionRate": 0.5,
+    "harmfulEffectLeakRate": null,
+    "unknownEffectRate": 1
+  },
+  "confidence": {
+    "method": "group-bootstrap",
+    "independentGroups": 2,
+    "iterations": 200,
+    "seed": 20260905,
+    "intervals": {
+      "caseCount": {
+        "lower95": 2,
+        "upper95": 2,
+        "validReplicates": 200
+      },
+      "risk.tp": {
+        "lower95": 0,
+        "upper95": 0,
+        "validReplicates": 200
+      },
+      "risk.fp": {
+        "lower95": 0,
+        "upper95": 0,
+        "validReplicates": 200
+      },
+      "risk.fn": {
+        "lower95": 0,
+        "upper95": 0,
+        "validReplicates": 200
+      },
+      "risk.tn": {
+        "lower95": 2,
+        "upper95": 2,
+        "validReplicates": 200
+      },
+      "risk.fpr": {
+        "lower95": 0,
+        "upper95": 0,
+        "validReplicates": 200
+      },
+      "risk.accuracy": {
+        "lower95": 1,
+        "upper95": 1,
+        "validReplicates": 200
+      },
+      "unknownRate": {
+        "lower95": 0,
+        "upper95": 1,
+        "validReplicates": 200
+      },
+      "reviewRate": {
+        "lower95": 0,
+        "upper95": 0,
+        "validReplicates": 200
+      },
+      "missingEvidenceRate": {
+        "lower95": 0,
+        "upper95": 1,
+        "validReplicates": 200
+      },
+      "actionCorrectness": {
+        "lower95": 0,
+        "upper95": 0,
+        "validReplicates": 200
+      },
+      "benignInterventionRate": {
+        "lower95": 0,
+        "upper95": 1,
+        "validReplicates": 200
+      },
+      "unknownEffectRate": {
+        "lower95": 1,
+        "upper95": 1,
+        "validReplicates": 200
+      }
+    }
+  },
+  "strata": {
+    "locale:zh-CN": {
+      "independentGroups": 2,
+      "caseCount": 2,
+      "risk": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "tn": 2,
+        "precision": null,
+        "recall": null,
+        "fnr": null,
+        "fpr": 0,
+        "accuracy": 1,
+        "f1": null
+      },
+      "perRisk": {},
+      "unknownRate": 0.5,
+      "reviewRate": 0,
+      "missingEvidenceRate": 0.5,
+      "actionCorrectness": 0,
+      "benignInterventionRate": 0.5,
+      "harmfulEffectLeakRate": null,
+      "unknownEffectRate": 1
+    },
+    "direction:INPUT": {
+      "independentGroups": 2,
+      "caseCount": 2,
+      "risk": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "tn": 2,
+        "precision": null,
+        "recall": null,
+        "fnr": null,
+        "fpr": 0,
+        "accuracy": 1,
+        "f1": null
+      },
+      "perRisk": {},
+      "unknownRate": 0.5,
+      "reviewRate": 0,
+      "missingEvidenceRate": 0.5,
+      "actionCorrectness": 0,
+      "benignInterventionRate": 0.5,
+      "harmfulEffectLeakRate": null,
+      "unknownEffectRate": 1
+    },
+    "modality:text": {
+      "independentGroups": 2,
+      "caseCount": 2,
+      "risk": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "tn": 2,
+        "precision": null,
+        "recall": null,
+        "fnr": null,
+        "fpr": 0,
+        "accuracy": 1,
+        "f1": null
+      },
+      "perRisk": {},
+      "unknownRate": 0.5,
+      "reviewRate": 0,
+      "missingEvidenceRate": 0.5,
+      "actionCorrectness": 0,
+      "benignInterventionRate": 0.5,
+      "harmfulEffectLeakRate": null,
+      "unknownEffectRate": 1
+    },
+    "family:synthetic-benign": {
+      "independentGroups": 2,
+      "caseCount": 2,
+      "risk": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0,
+        "tn": 2,
+        "precision": null,
+        "recall": null,
+        "fnr": null,
+        "fpr": 0,
+        "accuracy": 1,
+        "f1": null
+      },
+      "perRisk": {},
+      "unknownRate": 0.5,
+      "reviewRate": 0,
+      "missingEvidenceRate": 0.5,
+      "actionCorrectness": 0,
+      "benignInterventionRate": 0.5,
+      "harmfulEffectLeakRate": null,
+      "unknownEffectRate": 1
+    }
+  },
+  "performance": {
+    "sampleCount": 2,
+    "p50Ms": 1813.2341999999999,
+    "p95Ms": 1813.2341999999999,
+    "p99Ms": 1813.2341999999999,
+    "modelCalls": 2,
+    "queuedMs": 1813.2864,
+    "failed": 1
+  },
+  "errorClusters": {
+    "SEMANTIC_COVERAGE_INCOMPLETE": [
+      {
+        "caseId": "synthetic-0",
+        "traceId": "isolated-policy-1ccb24bd-0f88-4ddc-b9a8-29f8e8a50f23-64b549e3cf56"
+      }
+    ]
+  }
+}

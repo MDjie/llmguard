@@ -1,0 +1,72 @@
+{
+  "taskId": "T14",
+  "status": "in_progress",
+  "baseline": {
+    "codeRevision": "ad09fb492de2524e60dd6c8f66a6788aef7d06bf",
+    "activeBundleId": "b79d16b5-4581-4364-88fa-e85fb50f4af4",
+    "activeBundleHash": "5e29f2c85c10b0d23a8d0e140c93cb89595685b306a7c6edc497a1029ab3634b",
+    "generation": 3
+  },
+  "modifiedFiles": [
+    "docker-compose.yml",
+    "drizzle/0042_dictionary_release_sets.sql",
+    "drizzle/0043_session_request_receipts.sql",
+    "src/app/api/providers/route.ts",
+    "src/lib/judge/draft-service.ts",
+    "src/lib/policy-bundle/compiler.ts",
+    "src/lib/policy-bundle/governance.ts",
+    "src/lib/policy-bundle/runtime.ts",
+    "src/lib/policy-bundle/service.ts",
+    "src/lib/policy-bundle/types.ts",
+    "src/lib/policy-governance/release-set-service.ts"
+  ],
+  "commands": [
+    "pnpm test:unit --run --reporter=json --outputFile=data/content-safety/reports/optimization/implementation-2026-09-05/full-unit-tests-continuation-final.json",
+    "pnpm test:integration:release-sets --apply-migration yes --out data/content-safety/reports/optimization/implementation-2026-09-05/release-set-integration.json",
+    "pnpm test:integration:session-replay --apply-migration yes --out data/content-safety/reports/optimization/implementation-2026-09-05/session-replay-integration.json",
+    "pnpm ts-check",
+    "pnpm lint:build",
+    "pnpm contracts:check",
+    "pnpm build",
+    "pnpm exec eslint src/lib/guard-engine-v2/rule-detector.ts src/app/api/v1/guard/evaluate-shadow/route.ts tests/guard-engine-v2/coverage-limits.test.ts tests/api-security/release-set-routes.test.mjs --quiet",
+    "git -c safe.directory=E:/大模型安全/大模型护栏 diff --check"
+  ],
+  "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "assertions": [
+    "裁判签名配置及草稿CAS已实现；新增词库集合原子切换/精确回滚和0042/0043迁移，隔离库验证通过；客户迁移、真实签名发布trace及完整回滚兼容验收仍缺。"
+  ],
+  "artifactHashes": {
+    "docker-compose.yml": "b52f02e78005916cd197fff8e46be22d0d6fb1ff9d4be68251deb16867455308",
+    "drizzle/0042_dictionary_release_sets.sql": "41a0d1da9f0f7658af589172bf578ec416ec450b0b4abb869c79ebdbee94e21d",
+    "drizzle/0043_session_request_receipts.sql": "463a9a4dc060c72657daf5a55428cb4cb83dc10474c8df513cf59526b7f01ee0",
+    "src/app/api/providers/route.ts": "bcc2037c297d88a477ec5f8bf9ee8efcd9989a7b671b712dadbb155358f001db",
+    "src/lib/judge/draft-service.ts": "9d37cde747fca6a8790119bf44800c0f593783988cd37d7c6ee37f5e87fc33f1",
+    "src/lib/policy-bundle/compiler.ts": "7bded143ddd7adde901bb396d9b1327db9518296e8e045aea198429b3bd1bcd5",
+    "src/lib/policy-bundle/governance.ts": "686e88a32c42405b136e2e4f4cb663e034eb93c2bc9fadb70d27246a29884fbb",
+    "src/lib/policy-bundle/runtime.ts": "6e5b684904dedde3aba014a700fec7989c9233f88f16f6605bf1001df48ee28f",
+    "src/lib/policy-bundle/service.ts": "dac5c11a75fc8691888dc72b093329d68f9ea028e252c70a757e95078ddb1eb0",
+    "src/lib/policy-bundle/types.ts": "30ace5ef9fcf601341f0d5b46ed47ff8c0d36d777130566de920bac9585fa27f",
+    "src/lib/policy-governance/release-set-service.ts": "9fa38cdb26184aa633974edcaa82a66198a635ae088c436891651ce0b9638934"
+  },
+  "engineeringStatus": "PARTIAL",
+  "qualityStatus": "INSUFFICIENT_EVIDENCE",
+  "deploymentStatus": "NOT_ACTIVATED",
+  "regressionEvidence": "continuation-verification.json",
+  "regressionDoesNotCompleteMissingAcceptance": true,
+  "blockers": [
+    "仍有未完成工程或真实验收；以23号续做记录和任务清单为准"
+  ],
+  "nextAction": "继续任务清单中的剩余工程和真实验收，不将合成回归当作质量通过",
+  "previousRegressionEvidence": "verification.json",
+  "continuationRecordedAt": "2026-09-05T03:54:22.858Z"
+}

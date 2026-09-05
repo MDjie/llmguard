@@ -1,0 +1,62 @@
+{
+  "taskId": "T07",
+  "status": "in_progress",
+  "baseline": {
+    "codeRevision": "ad09fb492de2524e60dd6c8f66a6788aef7d06bf",
+    "activeBundleId": "b79d16b5-4581-4364-88fa-e85fb50f4af4",
+    "activeBundleHash": "5e29f2c85c10b0d23a8d0e140c93cb89595685b306a7c6edc497a1029ab3634b",
+    "generation": 3
+  },
+  "modifiedFiles": [
+    "src/lib/judge/profile.ts",
+    "src/lib/judge/profile-registry.ts",
+    "src/lib/judge/router.ts",
+    "src/lib/judge/response-schema.ts",
+    "src/lib/judge/selftest.ts",
+    "src/lib/providers/chat.ts",
+    "src/lib/providers/deployment.ts",
+    "src/lib/providers/deployment-policy.ts",
+    "scripts/content-safety/judge-selftest.ts",
+    "tests/judge/provider-matrix.test.ts",
+    "tests/judge/private-provider-security.test.ts"
+  ],
+  "commands": [
+    "pnpm test:unit --run --reporter=json --outputFile=data/content-safety/reports/optimization/implementation-2026-09-05/full-unit-tests-final.json",
+    "pnpm contracts:check",
+    "pnpm ts-check",
+    "pnpm lint:build",
+    "pnpm build"
+  ],
+  "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "assertions": [
+    "多供应商画像、认证、主备、单客户私有边界与严格解析已实现；本地Ollama qwen3.5:9b真实协议PASS约52.98秒。其他服务、专用分类器v2和效果资格待实测。"
+  ],
+  "artifactHashes": {
+    "src/lib/judge/profile.ts": "34cd288b7c03162729318bdb9f9b344e52e0d8ae6d0f5cebf412dbd34ed75bc7",
+    "src/lib/judge/profile-registry.ts": "b46e3e8789d427f823dee3ad4bb06532baa2f96dc4b25627cadedfb7c8f39db5",
+    "src/lib/judge/router.ts": "0c073c974ada6bc0af8882670eab960e310e9974d2078f1ecc8a771d43867940",
+    "src/lib/judge/response-schema.ts": "abbad03333dafca7609f345b4f03d5493a9d6a32e2e289ac032c442ac7916f7c",
+    "src/lib/judge/selftest.ts": "2f52d2652a17bab9361283351dd98a195c86fdbe59681ef53805cae043e2f6e3",
+    "src/lib/providers/chat.ts": "6536ed4767f4fd40cc89256bc755d9e2377c1bcab72bb6c16b2eab2168437bf0",
+    "src/lib/providers/deployment.ts": "3c72f4936e45c79c386f218ec0f1e687268f4f1f9a43a8e8c55dc0f0aa4cde37",
+    "src/lib/providers/deployment-policy.ts": "2c5f194e54793c96388c76910228357182f4514684a55343e52bbabbbe80f30b",
+    "scripts/content-safety/judge-selftest.ts": "18751a973f574182dc8c8335d38c65d375308623081ef1964a65f92f3e682fd2",
+    "tests/judge/provider-matrix.test.ts": "7adccfc0c49cd1ae56a493251beef2d8dcb2c5cc5f0694489960686b0a1cdbbb",
+    "tests/judge/private-provider-security.test.ts": "d8702d224706da48c6be15f1865dc8350ba1dcdcfa109b57b88ba7c0d6dbe71e"
+  },
+  "engineeringStatus": "PARTIAL_REAL_PROTOCOL_VERIFIED",
+  "qualityStatus": "INSUFFICIENT_EVIDENCE",
+  "deploymentStatus": "NOT_ACTIVATED",
+  "regressionEvidence": "verification.json",
+  "regressionDoesNotCompleteMissingAcceptance": true,
+  "blockers": [
+    "本任务仍有工程步骤或验收缺口，详见 assertions 与 22 号执行记录；不标为完成"
+  ],
+  "nextAction": "接续未完成验收项，不能将现有通用回归当作此任务全部完成"
+}

@@ -1,0 +1,24 @@
+{
+  "schemaVersion": "1.0",
+  "status": "PASS",
+  "recordedAt": "2026-09-05T05:08:37.782Z",
+  "database": "guardllm_integration_v2_20260905",
+  "fixtureScope": {
+    "tenantId": "6ae4fc20-d6e8-48be-afaf-b921fe1ff10d",
+    "applicationId": "b7d6ad62-4bfc-47d2-8b02-6a701383ad71"
+  },
+  "syntheticOnly": true,
+  "qualityStatus": "UNVERIFIED",
+  "runtimeBusinessDatabaseModified": false,
+  "checks": [
+    "atomic_import_501_terms_two_shards_and_concurrent_idempotent_retry",
+    "immutable_version_scope_maker_checker_revision_and_individual_shard_bypass_rejected",
+    "database_deferred_consistency_and_immutable_membership_block_partial_updates",
+    "compiler_embeds_complete_signed_root_and_all_501_rules",
+    "compiler_rejects_missing_rules_and_mutated_signed_metadata",
+    "concurrent_activation_single_winner_and_10000_term_tail_not_truncated",
+    "rollback_restores_exact_previous_two_shards_not_latest_twenty",
+    "last_shard_insert_failure_rolls_back_root_prior_shards_keywords_and_audit",
+    "dictionary_lifecycle_never_creates_or_switches_runtime_policy_binding"
+  ]
+}

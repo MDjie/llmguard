@@ -1,0 +1,10 @@
+{
+  "schemaVersion": "2.0",
+  "executionEntry": "25_GPT执行入口_检测优化V2_2026-09-05.md",
+  "deployment": "single-customer",
+  "developmentScope": ["E00", "E01", "E02", "E03", "E04", "E05", "E06", "E07", "X01", "X02"],
+  "externalAcceptance": ["Q01 independent reviewed customer data and approved quality profile", "O01 explicit production authorization and observation"],
+  "productionChanged": false,
+  "reuse": ["atomic release sets", "signed policy bundles", "secure session receipts", "provider adapters", "local scoped whitelist"],
+  "gitBranch": "codex/detection-optimization-v2"
+}

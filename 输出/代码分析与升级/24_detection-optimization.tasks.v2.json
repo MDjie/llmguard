@@ -1,0 +1,700 @@
+{
+  "schemaVersion": "2.0",
+  "kind": "implementation-plan",
+  "createdAt": "2026-09-05",
+  "planStatus": "ENGINEERING_DELIVERED_QUALITY_AND_DEPLOYMENT_PENDING",
+  "executionEvidenceIndex": "data/content-safety/reports/optimization/v2-development-2026-09-05/engineering-summary.json",
+  "handoverDocument": "docs/detection-v2-delivery.md",
+  "scope": "single-customer-per-deployment",
+  "productionChanged": false,
+  "document": "24_检测能力优化提升方案_V2_大模型协同与单客户交付_2026-09-05.md",
+  "executionEntry": "25_GPT执行入口_检测优化V2_2026-09-05.md",
+  "supersedesExecutionOnlyAfterStart": "20_detection-optimization.tasks.v1.json",
+  "rules": {
+    "preserveOriginalRequirements": true,
+    "preserveExistingWork": true,
+    "defaultWorkInProgressLimit": 1,
+    "defaultExecutor": "single_GPT",
+    "spawnAgentsRequiresExplicitAuthorization": true,
+    "autoPublishProduction": false,
+    "autoApproveModelGeneratedData": false,
+    "allowPrivateOnlyCloudFallback": false,
+    "modifyApprovedQualityGatesWithoutApproval": false,
+    "commandsListedAsProposedMustBeImplementedBeforeUse": true
+  },
+  "statusSemantics": {
+    "engineering": [
+      "PLANNED",
+      "IN_PROGRESS",
+      "OFFLINE_PASS",
+      "PASS",
+      "FAIL"
+    ],
+    "quality": [
+      "NOT_RUN",
+      "INSUFFICIENT_EVIDENCE",
+      "PASS",
+      "FAIL",
+      "NOT_APPLICABLE"
+    ],
+    "deployment": [
+      "NOT_DEPLOYED",
+      "SHADOW",
+      "CANARY",
+      "ACTIVE",
+      "ROLLED_BACK"
+    ],
+    "dependencyRule": "dependsOnEngineering 表示必需工程接口/定向测试已通过（OFFLINE_PASS 或 PASS），不以独立金标或真实供应商账号阻断可继续的本地工程；Q01 的正式资格及 O01 的发布门禁须满足 releaseRules，不可用 OFFLINE_PASS 替代真实闭环。"
+  },
+  "defaultOrder": [
+    "E00",
+    "E01",
+    "E02",
+    "E03",
+    "E04",
+    "E05",
+    "E06",
+    "E07",
+    "Q01",
+    "X01",
+    "X02",
+    "O01"
+  ],
+  "releaseRules": {
+    "coreEngineeringPackage": [
+      "E00",
+      "E01",
+      "E02",
+      "E03",
+      "E04",
+      "E05",
+      "E06",
+      "E07"
+    ],
+    "fullEngineeringPassRequiresActualSelectedEndpoint": true,
+    "qualityRequires": [
+      "independently-reviewed-locked-dataset",
+      "approved-acceptance-profile",
+      "actual-primary-and-every-enforced-fallback",
+      "per-scope-quality-and-performance-evidence"
+    ],
+    "productionRequires": [
+      "core-engineering-pass",
+      "Q01-quality-pass",
+      "explicit-release-authorization",
+      "signed-immutable-bundle",
+      "migration-and-rollback-evidence",
+      "approved-observation-requirements"
+    ],
+    "conditionalExtensions": {
+      "X01": "客户实际启用业务事实/RAG/工具专项时，工程和质量均为该客户发布前置",
+      "X02": "客户实际启用真正流式/多模态时，工程和质量均为该客户发布前置"
+    },
+    "allOriginalWorkCompleteRequires": [
+      "all-core-tasks",
+      "Q01",
+      "X01",
+      "X02",
+      "O01"
+    ],
+    "noSilentScopeRemoval": true
+  },
+  "tasks": [
+    {
+      "id": "E00",
+      "title": "冻结范围、核对基线与模型可行性",
+      "engineeringStatus": "PASS",
+      "qualityStatus": "INSUFFICIENT_EVIDENCE",
+      "deploymentStatus": "NOT_DEPLOYED",
+      "dependsOnEngineering": [],
+      "legacyTaskIds": [
+        "T00",
+        "T03",
+        "T17"
+      ],
+      "primaryPaths": [
+        "AGENTS.md",
+        "data/content-safety/reports/optimization/",
+        "scripts/content-safety/audit-runtime.ts"
+      ],
+      "implementationSteps": [
+        "记录当前代码/dirty diff、既有证据、迁移和实际绑定；只读业务环境。",
+        "核对已修复与剩余缺口，冻结单客户核心及合同要求的扩展范围。",
+        "对已授权可用模型用少量合成内容探测协议、冷热时延和身份；缺端点只标未验证。"
+      ],
+      "acceptanceChecks": [
+        "范围与真实来源可追踪",
+        "不变更生产绑定",
+        "缺外部输入不阻断不依赖它的工程任务"
+      ],
+      "evidenceFiles": [
+        "baseline.json",
+        "scope.json",
+        "model-feasibility.json"
+      ],
+      "externalInputs": [
+        "真实端点探测需要已授权地址和认证；缺失时保留 UNVERIFIED"
+      ],
+      "actualEvidence": ["data/content-safety/reports/optimization/v2-development-2026-09-05/baseline.json","data/content-safety/reports/optimization/v2-development-2026-09-05/scope.json","data/content-safety/reports/optimization/v2-development-2026-09-05/selected-endpoint-protocol.json","data/content-safety/reports/optimization/v2-development-2026-09-05/runtime-final.json"]
+    },
+    {
+      "id": "E01",
+      "title": "模型辅助候选、分组与标注审核工具",
+      "engineeringStatus": "PASS",
+      "qualityStatus": "INSUFFICIENT_EVIDENCE",
+      "deploymentStatus": "NOT_DEPLOYED",
+      "dependsOnEngineering": [
+        "E00"
+      ],
+      "legacyTaskIds": [
+        "T02"
+      ],
+      "primaryPaths": [
+        "src/lib/evaluation/optimization-dataset.ts",
+        "scripts/content-safety/",
+        "src/lib/evaluation/"
+      ],
+      "implementationSteps": [
+        "实现 synthetic/development/calibration/locked 清单及来源家族分组。",
+        "实现受控候选生成/预标注作业、审核/双审/裁决及导出。",
+        "验证同源不跨 split，模型产物不可自审为金标；无模型时使用确定性 fixture 验证工具。"
+      ],
+      "acceptanceChecks": [
+        "重复/跨 split 泄漏被拒绝",
+        "缺标签/未审不能通过质量资格",
+        "生成来源与审核轨迹可导出"
+      ],
+      "evidenceFiles": [
+        "dataset-tooling.json",
+        "annotation-workflow.json"
+      ],
+      "externalInputs": [
+        "真实业务金标须由独立审核人员产生；不属于工具完成前置"
+      ],
+      "actualEvidence": ["data/content-safety/reports/optimization/v2-development-2026-09-05/full-regression-release.json"]
+    },
+    {
+      "id": "E02",
+      "title": "受控原始词库转换与既有集合接通",
+      "engineeringStatus": "PASS",
+      "qualityStatus": "INSUFFICIENT_EVIDENCE",
+      "deploymentStatus": "NOT_DEPLOYED",
+      "dependsOnEngineering": [
+        "E00"
+      ],
+      "legacyTaskIds": [
+        "T04",
+        "T05"
+      ],
+      "primaryPaths": [
+        "data/content-safety/",
+        "scripts/content-safety/",
+        "src/lib/policy-governance/release-set.ts"
+      ],
+      "implementationSteps": [
+        "受限解析 master/staged/历史 SQL，不执行原始 SQL。",
+        "完成来源许可、去重、冲突、quarantine、数量守恒和尾部检查。",
+        "将有真实审核依据的数据转换为现有 reviewed manifest；无审核只输出候选。",
+        "复用现有 release-set 编译及事务测试，不重建发布引擎。"
+      ],
+      "acceptanceChecks": [
+        "所有输入行可追踪且数量守恒",
+        "未审条目不能发布",
+        "历史截断和拒绝理由明确",
+        "跨片/尾部不丢且摘要可重算"
+      ],
+      "evidenceFiles": [
+        "lexicon-conversion.json",
+        "lexicon-reconciliation.json"
+      ],
+      "externalInputs": [
+        "真实生产词条许可和审核资格需确认；不阻止候选转换与隔离工程测试"
+      ],
+      "actualEvidence": ["data/content-safety/reports/optimization/v2-development-2026-09-05/lexicon-reconciliation.json","data/content-safety/reports/optimization/v2-development-2026-09-05/integration/release-sets.json"]
+    },
+    {
+      "id": "E03",
+      "title": "单客户模型画像、配置与协议自测",
+      "engineeringStatus": "PASS",
+      "qualityStatus": "INSUFFICIENT_EVIDENCE",
+      "deploymentStatus": "NOT_DEPLOYED",
+      "dependsOnEngineering": [
+        "E00"
+      ],
+      "legacyTaskIds": [
+        "T07",
+        "T16"
+      ],
+      "primaryPaths": [
+        "src/lib/providers/",
+        "src/lib/judge/",
+        "src/app/providers/page.tsx",
+        "src/app/policies/[id]/components/",
+        "packages/contracts/model/guard-v1.schema.json"
+      ],
+      "implementationSteps": [
+        "复用现有供应商适配，增加基础/复核角色及客户所需认证能力。",
+        "验证能力矩阵、数据边界、主备预算、身份和密钥引用。",
+        "跑所有预设 mock 故障矩阵及可用私有端点真实协议测试。",
+        "提供候选隔离评测作业，允许未获生产资格的配置完成真实评测，但不接入生产请求或绑定。"
+      ],
+      "acceptanceChecks": [
+        "成功、空内容、拒答、截断、身份漂移、401/403、429、5xx、超时和取消覆盖",
+        "private-only 不切云",
+        "配置草稿不改 active",
+        "无质量证据不发布 ENFORCE",
+        "普通业务请求不能开启资格绕过；隔离测试身份/制品不能晋级生产。"
+      ],
+      "evidenceFiles": [
+        "provider-contracts.json",
+        "selected-endpoint-protocol.json"
+      ],
+      "externalInputs": [
+        "实际主备端点未提供时真实兼容标为 UNVERIFIED；离线实现通过可供 E04 使用"
+      ],
+      "actualEvidence": ["data/content-safety/reports/optimization/v2-development-2026-09-05/full-regression-release.json","data/content-safety/reports/optimization/v2-development-2026-09-05/browser-final/candidate-evaluation.json","data/content-safety/reports/optimization/v2-development-2026-09-05/policy-benchmark-schema/runs/benchmark-summary.json"]
+    },
+    {
+      "id": "E04",
+      "title": "覆盖融合、统一会话评估与长文完整性",
+      "engineeringStatus": "PASS",
+      "qualityStatus": "INSUFFICIENT_EVIDENCE",
+      "deploymentStatus": "NOT_DEPLOYED",
+      "dependsOnEngineering": [
+        "E00",
+        "E03"
+      ],
+      "legacyTaskIds": [
+        "T03",
+        "T05",
+        "T06",
+        "T08",
+        "T09",
+        "T10",
+        "T11"
+      ],
+      "primaryPaths": [
+        "src/lib/policy-bundle/compiler.ts",
+        "src/lib/guard-engine-v2/aggregate.ts",
+        "src/lib/guard-engine-v2/semantic-routing.ts",
+        "src/lib/guard-engine-v2/from-policy-bundle.ts",
+        "src/lib/guard-engine-v2/session-context.ts",
+        "src/lib/guard-engine-v2/rule-detector.ts",
+        "packages/contracts/model/guard-v1.schema.json"
+      ],
+      "implementationSteps": [
+        "先写专属裁判绑定和重复评估失败用例，再引入明确版本化覆盖决策。",
+        "实现基础语义/条件复核/共享预算，不取消零词命中语义检测。",
+        "构建一次请求上下文，复用观察，保留回执幂等及旧包行为。",
+        "补全分窗、跨窗、尾部、超限和原文证据映射；保留基本 DLP/权限。"
+      ],
+      "acceptanceChecks": [
+        "合格分类器可独立满足对应覆盖",
+        "未知/漏标签/SHADOW 不当 SAFE",
+        "局部例外不撤销硬约束",
+        "无理由不重复全链路推理",
+        "长文不静默截断",
+        "旧包及并发/重放回归通过"
+      ],
+      "evidenceFiles": [
+        "coverage-routing.json",
+        "context-completeness.json",
+        "compatibility.json"
+      ],
+      "externalInputs": [],
+      "actualEvidence": ["data/content-safety/reports/optimization/v2-development-2026-09-05/full-regression-release.json","data/content-safety/reports/optimization/v2-development-2026-09-05/integration/unified-context.json","data/content-safety/reports/optimization/v2-development-2026-09-05/integration/session-replay.json"]
+    },
+    {
+      "id": "E05",
+      "title": "真实入口、控制台与策略发布闭环",
+      "engineeringStatus": "PASS",
+      "qualityStatus": "INSUFFICIENT_EVIDENCE",
+      "deploymentStatus": "NOT_DEPLOYED",
+      "dependsOnEngineering": [
+        "E01",
+        "E02",
+        "E03",
+        "E04"
+      ],
+      "legacyTaskIds": [
+        "T04",
+        "T08",
+        "T09",
+        "T12",
+        "T14",
+        "T15",
+        "T16"
+      ],
+      "primaryPaths": [
+        "src/app/api/detect/",
+        "src/app/api/v1/guard/",
+        "src/lib/detection/v2-compat.ts",
+        "src/app/dictionaries/page.tsx",
+        "src/components/policy/",
+        "src/app/policies/[id]/components/",
+        "packages/",
+        "services/guard-gateway/"
+      ],
+      "implementationSteps": [
+        "盘点入口与支持范围，统一公共上下文调用。",
+        "未认证流式/模态入口拒绝或完整缓冲，保留原有安全控制。",
+        "将词库编译源、模型草稿、签名包和实时绑定展示清楚，补解释和审核队列操作。",
+        "先简化 UI 流程，不破坏既有集合事务状态机。"
+      ],
+      "acceptanceChecks": [
+        "等价请求在各入口语义一致",
+        "未支持能力没有绕行",
+        "草稿不影响实时流量",
+        "权限/刷新/冲突/失败路径可验证"
+      ],
+      "evidenceFiles": [
+        "entrypoint-matrix.json",
+        "console-workflow.json"
+      ],
+      "externalInputs": [],
+      "actualEvidence": ["data/content-safety/reports/optimization/v2-development-2026-09-05/browser-final/console-workflow.json","data/content-safety/reports/optimization/v2-development-2026-09-05/integration/release-sets.json"]
+    },
+    {
+      "id": "E06",
+      "title": "预生产端到端与迁移回滚验收",
+      "engineeringStatus": "PASS",
+      "qualityStatus": "INSUFFICIENT_EVIDENCE",
+      "deploymentStatus": "NOT_DEPLOYED",
+      "dependsOnEngineering": [
+        "E05"
+      ],
+      "legacyTaskIds": [
+        "T09",
+        "T11",
+        "T12",
+        "T14",
+        "T16",
+        "T18"
+      ],
+      "primaryPaths": [
+        "scripts/integration/",
+        "tests/e2e/",
+        "tests/guard-engine-v2/",
+        "tests/judge/",
+        "drizzle/0042_dictionary_release_sets.sql",
+        "drizzle/0043_session_request_receipts.sql"
+      ],
+      "implementationSteps": [
+        "使用专用隔离库/环境演练从旧版升级和回滚，不删除持久化卷。",
+        "验证真实 HTTP、数据库、浏览器和受影响 SDK/gateway。",
+        "逐项执行主方案第12节14条验收；外部缺口标 NOT_RUN。",
+        "顺序运行完整回归/契约/lint/ts-check/build，避免 .next 类型竞争。"
+      ],
+      "acceptanceChecks": [
+        "14项清单有可复现证据",
+        "页面不是只通过 build",
+        "模型调用和包摘要可追踪",
+        "准确回滚不删除审计",
+        "合成身份不代替生产审批",
+        "真实候选模型的完整策略测试在隔离评测域运行，不伪造生产质量资格。"
+      ],
+      "evidenceFiles": [
+        "core-e2e.json",
+        "migration-rollback.json",
+        "engineering-summary.json"
+      ],
+      "externalInputs": [
+        "没有可用真实模型时只能 OFFLINE_PASS，真实闭环待验证；不妨碍全部离线工程测试"
+      ],
+      "actualEvidence": ["data/content-safety/reports/optimization/v2-development-2026-09-05/engineering-summary.json","data/content-safety/reports/optimization/v2-development-2026-09-05/integration/migration-rollback.json","data/content-safety/reports/optimization/v2-development-2026-09-05/browser-final/console-workflow.json"]
+    },
+    {
+      "id": "E07",
+      "title": "可复现评测、基准与误差归因工具",
+      "engineeringStatus": "PASS",
+      "qualityStatus": "INSUFFICIENT_EVIDENCE",
+      "deploymentStatus": "NOT_DEPLOYED",
+      "dependsOnEngineering": [
+        "E01",
+        "E04"
+      ],
+      "legacyTaskIds": [
+        "T00",
+        "T01",
+        "T13",
+        "T15",
+        "T17"
+      ],
+      "primaryPaths": [
+        "src/lib/evaluation/",
+        "scripts/content-safety/",
+        "src/lib/judge/",
+        "data/content-safety/reports/optimization/"
+      ],
+      "implementationSteps": [
+        "扩展独立风险、动作及效果指标，补 UNKNOWN、误干预、缺证、分层分母与区间。",
+        "实现配对比较、消融、冷热并发性能、调用次数及错误聚类工具。",
+        "生成客户验收画像草稿，不自动修改旧批准阈值。",
+        "E06 完成后引用完整主线证据汇总 readiness；模型生成归因必须关联 trace。"
+      ],
+      "acceptanceChecks": [
+        "零分母/未审/合成/未调用模型不得通过正式资格",
+        "指标能从逐例数据重算",
+        "性能含排队、失败和超时",
+        "不把模型自报置信度当校准概率"
+      ],
+      "evidenceFiles": [
+        "evaluation-tooling.json",
+        "benchmark-tooling.json",
+        "acceptance-profile.proposed.json"
+      ],
+      "externalInputs": [
+        "正式数值目标与真实质量需 Q01 冻结；不属于工具完成前置"
+      ],
+      "actualEvidence": ["data/content-safety/reports/optimization/v2-development-2026-09-05/policy-benchmark-schema/runs/benchmark-summary.json","data/content-safety/reports/optimization/v2-development-2026-09-05/full-regression-release.json"]
+    },
+    {
+      "id": "Q01",
+      "title": "实际部署范围独立质量资格",
+      "engineeringStatus": "PLANNED",
+      "qualityStatus": "INSUFFICIENT_EVIDENCE",
+      "deploymentStatus": "NOT_DEPLOYED",
+      "dependsOnEngineering": [
+        "E06",
+        "E07"
+      ],
+      "legacyTaskIds": [
+        "T00",
+        "T01",
+        "T02",
+        "T07",
+        "T13",
+        "T17",
+        "T18"
+      ],
+      "primaryPaths": [
+        "data/content-safety/reports/optimization/",
+        "src/lib/evaluation/quality-gates.ts"
+      ],
+      "implementationSteps": [
+        "冻结独立金标、批准指标、实际主备及模板/策略/数据版本。",
+        "运行 B0/B1/S1/H1、分层质量和性能；验证每个 ENFORCE 主备。",
+        "不达标返回对应工程任务做限定修复，保留评测选择偏差控制。"
+      ],
+      "acceptanceChecks": [
+        "所有批准指标与安全不变量通过",
+        "没有未知隐藏/合成金标/模型自证",
+        "严重风险、良性误干预和效果泄漏均有分母与置信说明"
+      ],
+      "evidenceFiles": [
+        "quality-qualification.json",
+        "per-case-results.jsonl",
+        "paired-comparison.json"
+      ],
+      "externalInputs": [
+        "独立审核业务数据",
+        "批准的验收画像和规范适用性",
+        "实际主备端点与测试资源"
+      ],
+      "actualEvidence": ["data/content-safety/reports/optimization/v2-development-2026-09-05/engineering-summary.json"]
+    },
+    {
+      "id": "X01",
+      "title": "业务事实、RAG及工具专项",
+      "engineeringStatus": "OFFLINE_PASS",
+      "qualityStatus": "INSUFFICIENT_EVIDENCE",
+      "deploymentStatus": "NOT_DEPLOYED",
+      "dependsOnEngineering": [
+        "E04"
+      ],
+      "legacyTaskIds": [
+        "T10"
+      ],
+      "primaryPaths": [
+        "src/lib/guard-engine-v2/",
+        "src/lib/data-protection/",
+        "src/lib/evaluation/"
+      ],
+      "implementationSteps": [
+        "复用已有权限/DLP，补业务事实依据、检索权限及工具参数专项。",
+        "模型做证据抽取与对照，缺事实来源时明确无法核验。",
+        "验证间接注入和工具实际效果，不只检查标签。"
+      ],
+      "acceptanceChecks": [
+        "事实引用有版本/时效/权限",
+        "禁止动作无实际执行",
+        "模型不能凭记忆捏造事实"
+      ],
+      "evidenceFiles": [
+        "rag-tool-factual-engineering.json",
+        "rag-tool-factual-quality.json"
+      ],
+      "externalInputs": [
+        "客户领域事实源和独立专项数据"
+      ],
+      "actualEvidence": ["data/content-safety/reports/optimization/v2-development-2026-09-05/full-regression-release.json"]
+    },
+    {
+      "id": "X02",
+      "title": "真正流式与多模态专项",
+      "engineeringStatus": "OFFLINE_PASS",
+      "qualityStatus": "INSUFFICIENT_EVIDENCE",
+      "deploymentStatus": "NOT_DEPLOYED",
+      "dependsOnEngineering": [
+        "E03",
+        "E04"
+      ],
+      "legacyTaskIds": [
+        "T12"
+      ],
+      "primaryPaths": [
+        "src/lib/guard-engine-v2/",
+        "services/media-analyzer/",
+        "src/app/api/v1/guard/",
+        "src/lib/evaluation/"
+      ],
+      "implementationSteps": [
+        "实现流式缓冲/释放、跨片状态和预算，以及对应模态证据管线。",
+        "OCR/ASR/采样不完整和解析失败不能表示完整安全。",
+        "对真正流式和模态模型独立做效果/时延评测。"
+      ],
+      "acceptanceChecks": [
+        "未判定内容不提前释放",
+        "不存在事后回滚已输出内容的虚假保证",
+        "未覆盖能力明确标识"
+      ],
+      "evidenceFiles": [
+        "stream-multimodal-engineering.json",
+        "stream-multimodal-quality.json"
+      ],
+      "externalInputs": [
+        "相应模态模型、数据、资源及批准目标"
+      ],
+      "actualEvidence": ["data/content-safety/reports/optimization/v2-development-2026-09-05/full-regression-release.json"]
+    },
+    {
+      "id": "O01",
+      "title": "客户发布、观察与运维交接",
+      "engineeringStatus": "PLANNED",
+      "qualityStatus": "INSUFFICIENT_EVIDENCE",
+      "deploymentStatus": "NOT_DEPLOYED",
+      "dependsOnEngineering": [
+        "E06",
+        "E07",
+        "Q01"
+      ],
+      "legacyTaskIds": [
+        "T14",
+        "T15",
+        "T18"
+      ],
+      "primaryPaths": [
+        "docker-compose.yml",
+        "drizzle/",
+        "src/lib/policy-bundle/",
+        "data/content-safety/reports/optimization/"
+      ],
+      "implementationSteps": [
+        "检查客户启用的 X 能力均有工程及质量证据。",
+        "经授权备份迁移、发布签名包、核验实际绑定、影子/灰度观察。",
+        "交付运维、密钥轮转、容量告警和准确回滚流程。"
+      ],
+      "acceptanceChecks": [
+        "实际请求 trace 对应发布摘要",
+        "观察要求达成且异常未隐瞒",
+        "未完成合同内扩展不能宣布全量完成"
+      ],
+      "evidenceFiles": [
+        "deployment-acceptance.json",
+        "runtime-binding.json",
+        "observation-and-handover.json"
+      ],
+      "externalInputs": [
+        "客户发布授权与部署窗口",
+        "批准的观察期和实际流量/审核证据",
+        "合同要求的 X01/X02 质量资格"
+      ],
+      "actualEvidence": ["data/content-safety/reports/optimization/v2-development-2026-09-05/runtime-final.json","data/content-safety/reports/optimization/v2-development-2026-09-05/engineering-summary.json"]
+    }
+  ],
+  "legacyCoverage": {
+    "T00": [
+      "E00",
+      "E07",
+      "Q01"
+    ],
+    "T01": [
+      "E07",
+      "Q01"
+    ],
+    "T02": [
+      "E01",
+      "Q01"
+    ],
+    "T03": [
+      "E00",
+      "E04"
+    ],
+    "T04": [
+      "E02",
+      "E05"
+    ],
+    "T05": [
+      "E02",
+      "E04"
+    ],
+    "T06": [
+      "E04"
+    ],
+    "T07": [
+      "E03",
+      "Q01"
+    ],
+    "T08": [
+      "E04",
+      "E05"
+    ],
+    "T09": [
+      "E04",
+      "E05",
+      "E06"
+    ],
+    "T10": [
+      "E04",
+      "X01"
+    ],
+    "T11": [
+      "E04",
+      "E06"
+    ],
+    "T12": [
+      "E05",
+      "E06",
+      "X02"
+    ],
+    "T13": [
+      "E07",
+      "Q01"
+    ],
+    "T14": [
+      "E05",
+      "E06",
+      "O01"
+    ],
+    "T15": [
+      "E05",
+      "E07",
+      "O01"
+    ],
+    "T16": [
+      "E03",
+      "E05",
+      "E06"
+    ],
+    "T17": [
+      "E00",
+      "E07",
+      "Q01"
+    ],
+    "T18": [
+      "E06",
+      "Q01",
+      "O01"
+    ]
+  }
+}

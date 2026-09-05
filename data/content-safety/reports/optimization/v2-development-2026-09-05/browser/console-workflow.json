@@ -1,0 +1,20 @@
+{
+  "status": "PASS",
+  "syntheticOnly": true,
+  "database": "guardllm_integration_v2_20260905",
+  "businessDatabaseModified": false,
+  "scope": {
+    "tenantId": "15924a8d-0ace-4fef-816e-857ad35c48d9",
+    "applicationId": "20de8003-4c92-4fed-aa44-33b7949c674c"
+  },
+  "policyId": "a976263e-f0c9-44e1-899c-2641375ed13f",
+  "checks": [
+    "real_browser_login",
+    "coverage_configuration_save_and_refresh",
+    "stale_draft_write_rejected",
+    "real_http_candidate_model_call_without_production_qualification",
+    "draft_and_candidate_evaluation_never_create_active_binding",
+    "desktop_mobile_render_without_client_exceptions"
+  ],
+  "pageErrors": []
+}

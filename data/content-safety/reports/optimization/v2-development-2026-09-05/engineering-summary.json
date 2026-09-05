@@ -1,0 +1,255 @@
+{
+  "schemaVersion": "2.0",
+  "kind": "detection-v2-engineering-delivery",
+  "recordedAt": "2026-09-05T06:01:40.634Z",
+  "branch": "codex/detection-optimization-v2",
+  "capturedBeforeGitCommit": true,
+  "engineeringStatus": "PASS",
+  "qualityStatus": "INSUFFICIENT_EVIDENCE",
+  "deploymentStatus": "NOT_DEPLOYED",
+  "productionChanged": false,
+  "scope": "one customer per deployment, application-scoped configurations",
+  "verification": [
+    {
+      "command": "pnpm test:unit --run --reporter=json --outputFile=data/content-safety/reports/optimization/v2-development-2026-09-05/full-regression-committed.json",
+      "exitCode": 0,
+      "tests": 897,
+      "passed": 897,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "command": "pnpm contracts:check",
+      "exitCode": 0,
+      "note": "Guard and appliance generated outputs current; backward compatibility passed"
+    },
+    {
+      "command": "pnpm lint",
+      "exitCode": 0,
+      "note": "0 errors, 98 warnings at full run; 11 scoped unused-variable warnings subsequently removed and scoped lint rechecked at zero. Unrelated legacy warnings retained."
+    },
+    {
+      "command": "pnpm ts-check",
+      "exitCode": 0
+    },
+    {
+      "command": "pnpm build",
+      "exitCode": 0
+    },
+    {
+      "command": "pnpm analyzer:build",
+      "exitCode": 0
+    },
+    {
+      "command": "pnpm test:sdk-python",
+      "exitCode": 0,
+      "tests": 3
+    },
+    {
+      "command": "pnpm test:sdk-go",
+      "exitCode": 0
+    },
+    {
+      "command": "pnpm test:sdk-java",
+      "exitCode": 0,
+      "tests": 3
+    },
+    {
+      "command": "pnpm test:gateway-java",
+      "exitCode": 0,
+      "tests": 28
+    },
+    {
+      "command": "pnpm production-surface:verify",
+      "exitCode": 0
+    },
+    {
+      "command": "pnpm plan:check",
+      "exitCode": 0,
+      "note": "Unrelated customer target environment remains BLOCKED_EXTERNAL"
+    },
+    {
+      "command": "pnpm exec tsx scripts/integration/run-optimization-v2.ts --database guardllm_integration_v2_20260905 --template guardllm_integration_p5 --initialize yes --out-dir data/content-safety/reports/optimization/v2-development-2026-09-05/integration",
+      "exitCode": 0,
+      "note": "Original run executed 21 assertions and old-schema upgrade. Added signed-binding test was then executed separately; driver now includes it."
+    },
+    {
+      "command": "pnpm exec tsx scripts/integration/test-signed-binding.ts --database guardllm_integration_v2_20260905 --out data/content-safety/reports/optimization/v2-development-2026-09-05/integration/signed-binding.json",
+      "exitCode": 0,
+      "checks": 5,
+      "note": "Synthetic canary fixtures; real signed load, binding switch, exact rollback and signature rejection, not model quality approval."
+    },
+    {
+      "command": "pnpm exec tsx scripts/integration/test-console-v2.ts --database guardllm_integration_v2_20260905 --out-dir data/content-safety/reports/optimization/v2-development-2026-09-05/browser-final --port 3137",
+      "exitCode": 0,
+      "checks": 6
+    }
+  ],
+  "acceptanceChecks": [
+    {
+      "id": 1,
+      "status": "PASS",
+      "evidence": [
+        "lexicon-reconciliation.json",
+        "full-regression-committed.json"
+      ],
+      "note": "Candidates cannot publish without independently signed exact entries and source license"
+    },
+    {
+      "id": 2,
+      "status": "PASS",
+      "evidence": [
+        "full-regression-committed.json"
+      ],
+      "note": "Scoped exceptions, candidate clearance, mandatory denial and unrelated risks"
+    },
+    {
+      "id": 3,
+      "status": "PASS",
+      "evidence": [
+        "policy-benchmark-schema/runs/first-H1.json",
+        "full-regression-committed.json"
+      ],
+      "note": "Zero-keyword base semantic call; incomplete coverage UNKNOWN"
+    },
+    {
+      "id": 4,
+      "status": "PASS",
+      "evidence": [
+        "policy-benchmark-schema/runs/benchmark-summary.json",
+        "full-regression-committed.json"
+      ],
+      "note": "Single-base path; conditional refiner mock regression with shared deadline"
+    },
+    {
+      "id": 5,
+      "status": "PASS",
+      "evidence": [
+        "integration/session-replay.json",
+        "integration/unified-context.json"
+      ]
+    },
+    {
+      "id": 6,
+      "status": "PASS",
+      "evidence": [
+        "full-regression-committed.json"
+      ],
+      "note": "Long text, tail, overlap, surrogate and context projection"
+    },
+    {
+      "id": 7,
+      "status": "PASS",
+      "evidence": [
+        "full-regression-committed.json",
+        "policy-benchmark-diagnostic/runs/benchmark-summary.json"
+      ],
+      "note": "Protocol fault fixtures and retained real model format/evidence failures"
+    },
+    {
+      "id": 8,
+      "status": "PASS",
+      "evidence": [
+        "full-regression-committed.json"
+      ],
+      "note": "Private-only boundary, no-auth approval, secret reference, SSRF and fallback controls"
+    },
+    {
+      "id": 9,
+      "status": "PASS",
+      "evidence": [
+        "integration/release-sets.json",
+        "integration/signed-binding.json",
+        "runtime-final.json"
+      ],
+      "note": "Synthetic isolated lifecycle fixtures; no customer production approval inferred"
+    },
+    {
+      "id": 10,
+      "status": "PASS",
+      "evidence": [
+        "browser-final/console-workflow.json",
+        "full-regression-committed.json"
+      ],
+      "note": "HTTP management candidate flow and affected SDK/gateway compatibility; customer ENFORCE release remains Q01/O01"
+    },
+    {
+      "id": 11,
+      "status": "PASS",
+      "evidence": [
+        "full-regression-committed.json"
+      ],
+      "note": "Output recheck and stream fail-closed; unqualified multimodal remains review"
+    },
+    {
+      "id": 12,
+      "status": "PASS",
+      "evidence": [
+        "full-regression-committed.json"
+      ],
+      "note": "Dataset/model/config provenance and locked-label gates; no automatic quality promotion"
+    },
+    {
+      "id": 13,
+      "status": "PASS",
+      "evidence": [
+        "integration/migration-rollback.json",
+        "integration/signed-binding.json"
+      ],
+      "note": "Additive migration, retained audit and exact rollback"
+    },
+    {
+      "id": 14,
+      "status": "PASS",
+      "evidence": [
+        "browser-final/console-workflow.json"
+      ],
+      "note": "Real browser login/save/refresh/CAS/model call; screenshots stored, image preview unavailable"
+    }
+  ],
+  "modelEvidence": {
+    "model": "qwen3.5:9b",
+    "endpoint": "local Ollama",
+    "datasets": "two synthetic benign samples per benchmark, not independent gold",
+    "benchmarkRuns": 36,
+    "benchmarkModelCalls": 36,
+    "jsonObjectFailuresRetained": true,
+    "jsonSchemaH1Complete": "6 of 6 observations across first/warm/concurrent phases",
+    "coldWeights": "UNVERIFIED; model not unloaded",
+    "effect": "UNKNOWN; no independent effect oracle",
+    "quality": "UNVERIFIED"
+  },
+  "extensions": {
+    "X01": {
+      "engineering": "OFFLINE_PASS",
+      "quality": "INSUFFICIENT_EVIDENCE",
+      "note": "Versioned ACL-scoped semantic grounding and tool controls; customer factual sources not supplied"
+    },
+    "X02": {
+      "engineering": "OFFLINE_PASS",
+      "quality": "INSUFFICIENT_EVIDENCE",
+      "note": "Qualified-window streaming and coverage contracts; current audio/video sampling cannot prove complete semantics"
+    }
+  },
+  "externalAcceptance": {
+    "Q01": [
+      "Independent real business labels and reviewer responsibility",
+      "Approved thresholds and scope",
+      "Actual customer primary/fallback model and modality quality",
+      "Independent effect and cold/steady load evidence"
+    ],
+    "O01": [
+      "Explicit production migration/release window",
+      "Authorized signed ENFORCE publication",
+      "Approved observation period and rollback signoff"
+    ]
+  },
+  "runtimeBinding": {
+    "activeBundleId": "b79d16b5-4581-4364-88fa-e85fb50f4af4",
+    "version": 3,
+    "generation": 3,
+    "contentHash": "5e29f2c85c10b0d23a8d0e140c93cb89595685b306a7c6edc497a1029ab3634b",
+    "unchanged": true
+  },
+  "handover": "docs/detection-v2-delivery.md"
+}

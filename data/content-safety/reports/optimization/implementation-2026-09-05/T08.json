@@ -1,0 +1,48 @@
+{
+  "taskId": "T08",
+  "status": "in_progress",
+  "baseline": {
+    "codeRevision": "ad09fb492de2524e60dd6c8f66a6788aef7d06bf",
+    "activeBundleId": "b79d16b5-4581-4364-88fa-e85fb50f4af4",
+    "activeBundleHash": "5e29f2c85c10b0d23a8d0e140c93cb89595685b306a7c6edc497a1029ab3634b",
+    "generation": 3
+  },
+  "modifiedFiles": [
+    "src/lib/guard-engine-v2/judge-detector.ts",
+    "src/lib/guard-engine-v2/semantic-routing.ts",
+    "src/lib/guard-engine-v2/dag.ts",
+    "src/lib/guard-engine-v2/from-policy-bundle.ts"
+  ],
+  "commands": [
+    "pnpm test:unit --run --reporter=json --outputFile=data/content-safety/reports/optimization/implementation-2026-09-05/full-unit-tests-final.json",
+    "pnpm contracts:check",
+    "pnpm ts-check",
+    "pnpm lint:build",
+    "pnpm build"
+  ],
+  "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "assertions": [
+    "签名配置接入V2 DAG；高词法候选清除/零词法风险/mandatory/未知覆盖模拟测试PASS；真实签名包API trace未验收。"
+  ],
+  "artifactHashes": {
+    "src/lib/guard-engine-v2/judge-detector.ts": "17c11fc65bfd99edd840a078f3c4b36ba2fafb3de65264c45c810619dba5f4a6",
+    "src/lib/guard-engine-v2/semantic-routing.ts": "ffe0bd638c33a2e981132b2a4608c5a336339d120eac7d6cdd5e7271d0c9c3da",
+    "src/lib/guard-engine-v2/dag.ts": "2a7036930d55e2ab9415f7f18b83d2dd0089836f8908a782f7da526c7530c17f",
+    "src/lib/guard-engine-v2/from-policy-bundle.ts": "e0ea8fe01f93d94b4aae4f33a926f944f08f0b96a5cae342a6daf092efb81513"
+  },
+  "engineeringStatus": "PARTIAL",
+  "qualityStatus": "INSUFFICIENT_EVIDENCE",
+  "deploymentStatus": "NOT_ACTIVATED",
+  "regressionEvidence": "verification.json",
+  "regressionDoesNotCompleteMissingAcceptance": true,
+  "blockers": [
+    "本任务仍有工程步骤或验收缺口，详见 assertions 与 22 号执行记录；不标为完成"
+  ],
+  "nextAction": "接续未完成验收项，不能将现有通用回归当作此任务全部完成"
+}

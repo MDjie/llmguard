@@ -1,0 +1,57 @@
+{
+  "schemaVersion": "1.0",
+  "runId": "implementation-2026-09-05",
+  "baseline": {
+    "codeRevision": "ad09fb492de2524e60dd6c8f66a6788aef7d06bf",
+    "activeBundleId": "b79d16b5-4581-4364-88fa-e85fb50f4af4",
+    "activeBundleHash": "5e29f2c85c10b0d23a8d0e140c93cb89595685b306a7c6edc497a1029ab3634b",
+    "generation": 3
+  },
+  "qualityStatus": "INSUFFICIENT_EVIDENCE",
+  "deploymentStatus": "NOT_ACTIVATED",
+  "bindingUnchanged": true,
+  "commands": [
+    "pnpm test:unit --run --reporter=json --outputFile=data/content-safety/reports/optimization/implementation-2026-09-05/full-unit-tests-final.json",
+    "pnpm contracts:check",
+    "pnpm ts-check",
+    "pnpm lint:build",
+    "pnpm build",
+    "pnpm detection:judge-selftest --profile data/content-safety/models/local-ollama-protocol-test.profile.json --allow-network yes --out data/content-safety/reports/optimization/implementation-2026-09-05/local-ollama-protocol-selftest.json",
+    "pnpm detection:audit-runtime --out data/content-safety/reports/optimization/implementation-2026-09-05/runtime-after.json --database local --scope all-local"
+  ],
+  "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "tests": {
+    "files": 170,
+    "passed": 823,
+    "failed": 0,
+    "pending": 0,
+    "report": "full-unit-tests-final.json"
+  },
+  "realProtocol": {
+    "provider": "ollama",
+    "model": "qwen3.5:9b",
+    "status": "PASS",
+    "latencyMs": 52980,
+    "quality": "UNVERIFIED",
+    "scope": "synthetic-local-test; loopback-only; no cloud"
+  },
+  "sourceTreeDigest": "7715eb7c81ad068516b79279ea480a827dc08dd36c6ab790cbd26c7aaa5c723d",
+  "artifacts": {
+    "sourceLock": "source-lock.json",
+    "tasks": "T00.json through T18.json"
+  },
+  "limitations": [
+    "No browser E2E in this run",
+    "No independently reviewed locked business dataset",
+    "No production rollout or database imports",
+    "Not all T00-T18 tasks implemented"
+  ]
+}

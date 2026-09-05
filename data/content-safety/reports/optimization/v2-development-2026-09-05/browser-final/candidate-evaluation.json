@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "2.0",
+  "kind": "isolated-candidate-evaluation",
+  "runId": "isolated-92939d77-e0e3-4ca4-b173-2566fab50376",
+  "productionEligible": false,
+  "qualityStatus": "INSUFFICIENT_EVIDENCE",
+  "evaluatedAt": "2026-09-05T05:45:09.847Z",
+  "datasetDigest": "35f491f8d4673e01231c27c2f374f02eb0cf2006b475c7af656fff9267f067c2",
+  "configuredProfileDigests": [
+    "409f3fa18c14ffabbb700ff1ecdb6a6c63b9219c0d189844c9318247c0dfe074"
+  ],
+  "executedProfileDigests": [
+    "409f3fa18c14ffabbb700ff1ecdb6a6c63b9219c0d189844c9318247c0dfe074"
+  ],
+  "budget": {
+    "maximumCases": 4,
+    "maximumCalls": 8,
+    "maximumReservedTokens": 200000,
+    "totalTimeoutMs": 60000,
+    "concurrency": 1
+  },
+  "callsReserved": 1,
+  "tokensReserved": 3335,
+  "wallTimeMs": 1861,
+  "cases": [
+    {
+      "caseId": "console-c6a55fc9-ed52-48c0-a6de-7198d4ec1bf8",
+      "groupId": "console-c6a55fc9-ed52-48c0-a6de-7198d4ec1bf8",
+      "traceId": "isolated-92939d77-e0e3-4ca4-b173-2566fab50376-3d7d8c0e",
+      "status": "COMPLETE",
+      "confirmedRiskIds": [],
+      "latencyMs": 1861,
+      "queueMs": 0,
+      "attempts": [
+        {
+          "profileId": "console-local-model",
+          "revision": 2,
+          "modelId": "qwen3.5:9b",
+          "status": "COMPLETE",
+          "latencyMs": 1858
+        }
+      ],
+      "profileDigest": "409f3fa18c14ffabbb700ff1ecdb6a6c63b9219c0d189844c9318247c0dfe074",
+      "reportedModel": "qwen3.5:9b"
+    }
+  ],
+  "digest": "b68b603d58d7bc9ade350928f34de422870aa43b2d63da689440012ed70573f2"
+}

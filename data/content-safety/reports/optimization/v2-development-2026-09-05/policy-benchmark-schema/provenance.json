@@ -1,0 +1,8 @@
+{
+  "kind": "synthetic-engineering-benchmark",
+  "baselineBundleId": "b79d16b5-4581-4364-88fa-e85fb50f4af4",
+  "baselineHash": "5e29f2c85c10b0d23a8d0e140c93cb89595685b306a7c6edc497a1029ab3634b",
+  "businessDatabaseReadOnly": true,
+  "qualityStatus": "INSUFFICIENT_EVIDENCE",
+  "cacheState": "UNVERIFIED"
+}

@@ -1,0 +1,46 @@
+{
+  "taskId": "T03",
+  "status": "in_progress",
+  "baseline": {
+    "codeRevision": "ad09fb492de2524e60dd6c8f66a6788aef7d06bf",
+    "activeBundleId": "b79d16b5-4581-4364-88fa-e85fb50f4af4",
+    "activeBundleHash": "5e29f2c85c10b0d23a8d0e140c93cb89595685b306a7c6edc497a1029ab3634b",
+    "generation": 3
+  },
+  "modifiedFiles": [
+    "data/content-safety/taxonomy/risk-registry.v1.json",
+    "src/lib/guard-engine-v2/risk-registry.ts",
+    "src/lib/judge/draft-service.ts"
+  ],
+  "commands": [
+    "pnpm test:unit --run --reporter=json --outputFile=data/content-safety/reports/optimization/implementation-2026-09-05/full-unit-tests-final.json",
+    "pnpm contracts:check",
+    "pnpm ts-check",
+    "pnpm lint:build",
+    "pnpm build"
+  ],
+  "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "assertions": [
+    "已有风险注册表，裁判定义冻结进签名配置；全部旧新风险码统一行为与标准条款映射仍待补齐。"
+  ],
+  "artifactHashes": {
+    "data/content-safety/taxonomy/risk-registry.v1.json": "852893bff3575d11ca813d94d3ca0deb914f4d212cbd8e0f3ef480660deff00d",
+    "src/lib/guard-engine-v2/risk-registry.ts": "666c7b8fd7347c9277a564ed77518699aa2e5d21d39a51527e538216a4c95f91",
+    "src/lib/judge/draft-service.ts": "9d37cde747fca6a8790119bf44800c0f593783988cd37d7c6ee37f5e87fc33f1"
+  },
+  "engineeringStatus": "PARTIAL",
+  "qualityStatus": "INSUFFICIENT_EVIDENCE",
+  "deploymentStatus": "NOT_ACTIVATED",
+  "regressionEvidence": "verification.json",
+  "regressionDoesNotCompleteMissingAcceptance": true,
+  "blockers": [
+    "本任务仍有工程步骤或验收缺口，详见 assertions 与 22 号执行记录；不标为完成"
+  ],
+  "nextAction": "接续未完成验收项，不能将现有通用回归当作此任务全部完成"
+}

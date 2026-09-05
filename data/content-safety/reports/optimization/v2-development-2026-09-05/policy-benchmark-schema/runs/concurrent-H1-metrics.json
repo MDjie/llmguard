@@ -1,0 +1,339 @@
+{
+  "schemaVersion": "2.0",
+  "kind": "detection-metric-report",
+  "variant": "H1",
+  "datasetDigest": "aba4d489ca0a6aafdde7d6058f6061e7a68b15487004130544863427bcc3f3d4",
+  "runDigest": "b9ede43c7d508cf8ecc0bb19f726662ce8792cdb19ee0d756097b93648214acd",
+  "qualityStatus": "INSUFFICIENT_EVIDENCE",
+  "independentLabelsVerified": false,
+  "qualificationReasons": [
+    "INDEPENDENT_LOCKED_TEST_LABELS_REQUIRED",
+    "APPROVED_ACCEPTANCE_PROFILE_AND_OPERATOR_RELEASE_REQUIRED"
+  ],
+  "point": {
+    "caseCount": 2,
+    "risk": {
+      "tp": 0,
+      "fp": 1,
+      "fn": 0,
+      "tn": 1,
+      "precision": 0,
+      "recall": null,
+      "fnr": null,
+      "fpr": 0.5,
+      "accuracy": 0.5,
+      "f1": 0
+    },
+    "perRisk": {
+      "prompt_injection": {
+        "tp": 0,
+        "fp": 1,
+        "fn": 0,
+        "tn": 1,
+        "precision": 0,
+        "recall": null,
+        "fnr": null,
+        "fpr": 0.5,
+        "accuracy": 0.5,
+        "f1": 0
+      }
+    },
+    "unknownRate": 0,
+    "reviewRate": 0,
+    "missingEvidenceRate": 0,
+    "actionCorrectness": 0,
+    "benignInterventionRate": 0.5,
+    "harmfulEffectLeakRate": null,
+    "unknownEffectRate": 1
+  },
+  "confidence": {
+    "method": "group-bootstrap",
+    "independentGroups": 2,
+    "iterations": 200,
+    "seed": 20260905,
+    "intervals": {
+      "caseCount": {
+        "lower95": 2,
+        "upper95": 2,
+        "validReplicates": 200
+      },
+      "risk.tp": {
+        "lower95": 0,
+        "upper95": 0,
+        "validReplicates": 200
+      },
+      "risk.fp": {
+        "lower95": 0,
+        "upper95": 2,
+        "validReplicates": 200
+      },
+      "risk.fn": {
+        "lower95": 0,
+        "upper95": 0,
+        "validReplicates": 200
+      },
+      "risk.tn": {
+        "lower95": 0,
+        "upper95": 2,
+        "validReplicates": 200
+      },
+      "risk.precision": {
+        "lower95": 0,
+        "upper95": 0,
+        "validReplicates": 155
+      },
+      "risk.fpr": {
+        "lower95": 0,
+        "upper95": 1,
+        "validReplicates": 200
+      },
+      "risk.accuracy": {
+        "lower95": 0,
+        "upper95": 1,
+        "validReplicates": 200
+      },
+      "risk.f1": {
+        "lower95": 0,
+        "upper95": 0,
+        "validReplicates": 155
+      },
+      "perRisk.prompt_injection.tp": {
+        "lower95": 0,
+        "upper95": 0,
+        "validReplicates": 200
+      },
+      "perRisk.prompt_injection.fp": {
+        "lower95": 0,
+        "upper95": 2,
+        "validReplicates": 200
+      },
+      "perRisk.prompt_injection.fn": {
+        "lower95": 0,
+        "upper95": 0,
+        "validReplicates": 200
+      },
+      "perRisk.prompt_injection.tn": {
+        "lower95": 0,
+        "upper95": 2,
+        "validReplicates": 200
+      },
+      "perRisk.prompt_injection.precision": {
+        "lower95": 0,
+        "upper95": 0,
+        "validReplicates": 155
+      },
+      "perRisk.prompt_injection.fpr": {
+        "lower95": 0,
+        "upper95": 1,
+        "validReplicates": 200
+      },
+      "perRisk.prompt_injection.accuracy": {
+        "lower95": 0,
+        "upper95": 1,
+        "validReplicates": 200
+      },
+      "perRisk.prompt_injection.f1": {
+        "lower95": 0,
+        "upper95": 0,
+        "validReplicates": 155
+      },
+      "unknownRate": {
+        "lower95": 0,
+        "upper95": 0,
+        "validReplicates": 200
+      },
+      "reviewRate": {
+        "lower95": 0,
+        "upper95": 0,
+        "validReplicates": 200
+      },
+      "missingEvidenceRate": {
+        "lower95": 0,
+        "upper95": 0,
+        "validReplicates": 200
+      },
+      "actionCorrectness": {
+        "lower95": 0,
+        "upper95": 0,
+        "validReplicates": 200
+      },
+      "benignInterventionRate": {
+        "lower95": 0,
+        "upper95": 1,
+        "validReplicates": 200
+      },
+      "unknownEffectRate": {
+        "lower95": 1,
+        "upper95": 1,
+        "validReplicates": 200
+      }
+    }
+  },
+  "strata": {
+    "locale:zh-CN": {
+      "independentGroups": 2,
+      "caseCount": 2,
+      "risk": {
+        "tp": 0,
+        "fp": 1,
+        "fn": 0,
+        "tn": 1,
+        "precision": 0,
+        "recall": null,
+        "fnr": null,
+        "fpr": 0.5,
+        "accuracy": 0.5,
+        "f1": 0
+      },
+      "perRisk": {
+        "prompt_injection": {
+          "tp": 0,
+          "fp": 1,
+          "fn": 0,
+          "tn": 1,
+          "precision": 0,
+          "recall": null,
+          "fnr": null,
+          "fpr": 0.5,
+          "accuracy": 0.5,
+          "f1": 0
+        }
+      },
+      "unknownRate": 0,
+      "reviewRate": 0,
+      "missingEvidenceRate": 0,
+      "actionCorrectness": 0,
+      "benignInterventionRate": 0.5,
+      "harmfulEffectLeakRate": null,
+      "unknownEffectRate": 1
+    },
+    "direction:INPUT": {
+      "independentGroups": 2,
+      "caseCount": 2,
+      "risk": {
+        "tp": 0,
+        "fp": 1,
+        "fn": 0,
+        "tn": 1,
+        "precision": 0,
+        "recall": null,
+        "fnr": null,
+        "fpr": 0.5,
+        "accuracy": 0.5,
+        "f1": 0
+      },
+      "perRisk": {
+        "prompt_injection": {
+          "tp": 0,
+          "fp": 1,
+          "fn": 0,
+          "tn": 1,
+          "precision": 0,
+          "recall": null,
+          "fnr": null,
+          "fpr": 0.5,
+          "accuracy": 0.5,
+          "f1": 0
+        }
+      },
+      "unknownRate": 0,
+      "reviewRate": 0,
+      "missingEvidenceRate": 0,
+      "actionCorrectness": 0,
+      "benignInterventionRate": 0.5,
+      "harmfulEffectLeakRate": null,
+      "unknownEffectRate": 1
+    },
+    "modality:text": {
+      "independentGroups": 2,
+      "caseCount": 2,
+      "risk": {
+        "tp": 0,
+        "fp": 1,
+        "fn": 0,
+        "tn": 1,
+        "precision": 0,
+        "recall": null,
+        "fnr": null,
+        "fpr": 0.5,
+        "accuracy": 0.5,
+        "f1": 0
+      },
+      "perRisk": {
+        "prompt_injection": {
+          "tp": 0,
+          "fp": 1,
+          "fn": 0,
+          "tn": 1,
+          "precision": 0,
+          "recall": null,
+          "fnr": null,
+          "fpr": 0.5,
+          "accuracy": 0.5,
+          "f1": 0
+        }
+      },
+      "unknownRate": 0,
+      "reviewRate": 0,
+      "missingEvidenceRate": 0,
+      "actionCorrectness": 0,
+      "benignInterventionRate": 0.5,
+      "harmfulEffectLeakRate": null,
+      "unknownEffectRate": 1
+    },
+    "family:synthetic-benign": {
+      "independentGroups": 2,
+      "caseCount": 2,
+      "risk": {
+        "tp": 0,
+        "fp": 1,
+        "fn": 0,
+        "tn": 1,
+        "precision": 0,
+        "recall": null,
+        "fnr": null,
+        "fpr": 0.5,
+        "accuracy": 0.5,
+        "f1": 0
+      },
+      "perRisk": {
+        "prompt_injection": {
+          "tp": 0,
+          "fp": 1,
+          "fn": 0,
+          "tn": 1,
+          "precision": 0,
+          "recall": null,
+          "fnr": null,
+          "fpr": 0.5,
+          "accuracy": 0.5,
+          "f1": 0
+        }
+      },
+      "unknownRate": 0,
+      "reviewRate": 0,
+      "missingEvidenceRate": 0,
+      "actionCorrectness": 0,
+      "benignInterventionRate": 0.5,
+      "harmfulEffectLeakRate": null,
+      "unknownEffectRate": 1
+    }
+  },
+  "performance": {
+    "sampleCount": 2,
+    "p50Ms": 2156.5155000000013,
+    "p95Ms": 2156.5155000000013,
+    "p99Ms": 2156.5155000000013,
+    "modelCalls": 2,
+    "queuedMs": 0.6275999999998021,
+    "failed": 0
+  },
+  "errorClusters": {
+    "SEMANTIC_BASE_SHADOW_UNSAFE": [
+      {
+        "caseId": "synthetic-1",
+        "traceId": "isolated-policy-df75eaf7-b956-4502-9c88-e2922ea7d966-46051caabdff"
+      }
+    ]
+  }
+}

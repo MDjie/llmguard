@@ -1,0 +1,88 @@
+{
+  "taskId": "T04",
+  "status": "in_progress",
+  "baseline": {
+    "codeRevision": "ad09fb492de2524e60dd6c8f66a6788aef7d06bf",
+    "activeBundleId": "b79d16b5-4581-4364-88fa-e85fb50f4af4",
+    "activeBundleHash": "5e29f2c85c10b0d23a8d0e140c93cb89595685b306a7c6edc497a1029ab3634b",
+    "generation": 3
+  },
+  "modifiedFiles": [
+    "drizzle/0042_dictionary_release_sets.sql",
+    "scripts/content-safety/compile-release-set.ts",
+    "scripts/integration/test-release-sets.ts",
+    "src/app/api/policy-governance/release-sets/[id]/activate/route.ts",
+    "src/app/api/policy-governance/release-sets/[id]/approve/route.ts",
+    "src/app/api/policy-governance/release-sets/[id]/canary/route.ts",
+    "src/app/api/policy-governance/release-sets/[id]/rollback/route.ts",
+    "src/app/api/policy-governance/release-sets/[id]/shadow/route.ts",
+    "src/app/api/policy-governance/release-sets/route.ts",
+    "src/contracts/http/policy-governance.ts",
+    "src/lib/policy-bundle/governance.ts",
+    "src/lib/policy-bundle/runtime.ts",
+    "src/lib/policy-governance/dictionaries.ts",
+    "src/lib/policy-governance/release-set-integrity.ts",
+    "src/lib/policy-governance/release-set-service.ts",
+    "src/lib/policy-governance/release-set.ts",
+    "src/storage/database/shared/schema.ts",
+    "tests/content-safety/release-set.test.ts",
+    "tests/policy-bundle/governance.test.ts"
+  ],
+  "commands": [
+    "pnpm test:unit --run --reporter=json --outputFile=data/content-safety/reports/optimization/implementation-2026-09-05/full-unit-tests-continuation-final.json",
+    "pnpm test:integration:release-sets --apply-migration yes --out data/content-safety/reports/optimization/implementation-2026-09-05/release-set-integration.json",
+    "pnpm test:integration:session-replay --apply-migration yes --out data/content-safety/reports/optimization/implementation-2026-09-05/session-replay-integration.json",
+    "pnpm ts-check",
+    "pnpm lint:build",
+    "pnpm contracts:check",
+    "pnpm build",
+    "pnpm exec eslint src/lib/guard-engine-v2/rule-detector.ts src/app/api/v1/guard/evaluate-shadow/route.ts tests/guard-engine-v2/coverage-limits.test.ts tests/api-security/release-set-routes.test.mjs --quiet",
+    "git -c safe.directory=E:/大模型安全/大模型护栏 diff --check"
+  ],
+  "exitCodes": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "assertions": [
+    "已完成集合根签名、原子导入/独立审批/编译源激活/精确回滚、单片防绕过及编译完整性校验；隔离库10000条/20片和失败回滚检查通过。原始词库全量转换与真实审核仍未完成。"
+  ],
+  "artifactHashes": {
+    "drizzle/0042_dictionary_release_sets.sql": "41a0d1da9f0f7658af589172bf578ec416ec450b0b4abb869c79ebdbee94e21d",
+    "scripts/content-safety/compile-release-set.ts": "bb20600e140cb25d36e5ebd500099de153ed9cf20de32f0f2e7bde1a510d98bf",
+    "scripts/integration/test-release-sets.ts": "9f2d00c5a39f2093b7c98ab64b2ecf85c40c31d874d92477d91353ef98de1475",
+    "src/app/api/policy-governance/release-sets/[id]/activate/route.ts": "74431c618a93ff3aa8802a2a660b5eada37c9ee7cd551e38101ce3dd410dc388",
+    "src/app/api/policy-governance/release-sets/[id]/approve/route.ts": "ce4aa611f9e757e13e0d7f370b7a6c8a85c1e8c50e0031723598fe92b87c8d68",
+    "src/app/api/policy-governance/release-sets/[id]/canary/route.ts": "fd38c3ba68bc3ae83a299d851498bf77033390a17b8b5c1afeda42525c885cfc",
+    "src/app/api/policy-governance/release-sets/[id]/rollback/route.ts": "6798ce8d8aeffaeb75ca6a7064f65c5fdc57a1b4f34eedc05a34f55402e67a98",
+    "src/app/api/policy-governance/release-sets/[id]/shadow/route.ts": "4c246da1038e7cb4975155aa043b5dca48e5fa7b8762a0894949a619188f1aed",
+    "src/app/api/policy-governance/release-sets/route.ts": "5357d52ee4fd1d4d91c650be7cbfdd0cfd64e65c39c3b3f5232af3c46abafd61",
+    "src/contracts/http/policy-governance.ts": "6bd1d840c049146c082e0df4884c9dd664d523aaa8e0dbeaf38fb95a796a0f80",
+    "src/lib/policy-bundle/governance.ts": "686e88a32c42405b136e2e4f4cb663e034eb93c2bc9fadb70d27246a29884fbb",
+    "src/lib/policy-bundle/runtime.ts": "6e5b684904dedde3aba014a700fec7989c9233f88f16f6605bf1001df48ee28f",
+    "src/lib/policy-governance/dictionaries.ts": "2ff536a9cc0b419407e16cf31424c1137845cd2b826123d4936a686e3fa2ba9b",
+    "src/lib/policy-governance/release-set-integrity.ts": "15ba495dc5fe9aa83615aa58216103c3dc79198bd9874448d88f365531f7aa0b",
+    "src/lib/policy-governance/release-set-service.ts": "9fa38cdb26184aa633974edcaa82a66198a635ae088c436891651ce0b9638934",
+    "src/lib/policy-governance/release-set.ts": "62315331c990ac33aa38119c44943568ab885ca0d845a65caea3fdb7ec5d4a36",
+    "src/storage/database/shared/schema.ts": "6acb5fa114a927f386025aa228129b7e88dd2170fe21d9ba8f09b1924c923746",
+    "tests/content-safety/release-set.test.ts": "340e42f815cebf5cfd3377e776c714695941bb0f61e91cafed119da738d96208",
+    "tests/policy-bundle/governance.test.ts": "7da9ea22fa3fc496e5837139bbe78cfdd0eba16a828367007e7b074f4ee2ca3f"
+  },
+  "engineeringStatus": "PARTIAL",
+  "qualityStatus": "INSUFFICIENT_EVIDENCE",
+  "deploymentStatus": "NOT_ACTIVATED",
+  "regressionEvidence": "continuation-verification.json",
+  "regressionDoesNotCompleteMissingAcceptance": true,
+  "blockers": [
+    "仍有未完成工程或真实验收；以23号续做记录和任务清单为准"
+  ],
+  "nextAction": "实现原始词库受控转换，继续真实审核/语境评测，不自动晋级候选",
+  "previousRegressionEvidence": "verification.json",
+  "continuationRecordedAt": "2026-09-05T03:54:22.858Z"
+}

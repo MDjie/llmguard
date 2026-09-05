@@ -1,0 +1,144 @@
+{
+  "schemaVersion": "2.0",
+  "kind": "isolated-policy-benchmark",
+  "productionEligible": false,
+  "qualityStatus": "INSUFFICIENT_EVIDENCE",
+  "cacheState": "UNVERIFIED_NO_MODEL_UNLOAD_REQUESTED",
+  "phases": [
+    {
+      "id": "first",
+      "concurrency": 1,
+      "note": "First observed request; not proof of cold weights"
+    },
+    {
+      "id": "warm",
+      "concurrency": 1,
+      "note": "Repeated requests; cache policy is endpoint-owned"
+    },
+    {
+      "id": "concurrent",
+      "concurrency": 2,
+      "note": "Repeated requests; cache policy is endpoint-owned"
+    }
+  ],
+  "budget": {
+    "maximumCases": 2,
+    "maximumCalls": 24,
+    "maximumReservedTokens": 300000,
+    "totalTimeoutMs": 240000,
+    "concurrency": 2
+  },
+  "calls": 12,
+  "reservedTokens": 39804,
+  "datasetDigest": "aba4d489ca0a6aafdde7d6058f6061e7a68b15487004130544863427bcc3f3d4",
+  "runs": [
+    {
+      "runId": "isolated-policy-3e9f2b6f-0a95-4a6e-8591-e0dfa19a9435",
+      "variant": "B0",
+      "runDigest": "ea64ce4314d0d603b62e65343d8088f71b50edc16e188ccf0329252f949c4067",
+      "simulationPayloadDigest": "5e29f2c85c10b0d23a8d0e140c93cb89595685b306a7c6edc497a1029ab3634b",
+      "wallTimeMs": 67.18700000000001,
+      "cases": 2,
+      "complete": 2
+    },
+    {
+      "runId": "isolated-policy-249f8bef-2cd9-4a9d-a076-380157980290",
+      "variant": "B1",
+      "runDigest": "b55b6eb6f40b51d3a7cbec3ea5faeb24e0c06f15a7ebabb72ceadf61f994d8eb",
+      "simulationPayloadDigest": "99259390d41ac080b171e8e794833566b3e5ecb51d5646c1c542de23e2c6aa3b",
+      "wallTimeMs": 4.43100000000004,
+      "cases": 2,
+      "complete": 2
+    },
+    {
+      "runId": "isolated-policy-01d9b29c-a89e-492d-923b-1d8214f4a01c",
+      "variant": "S1",
+      "runDigest": "48e004a66adb97107c7c9eb19a5056866b578c2b7d8c2adca2960a32369273de",
+      "simulationPayloadDigest": "3d6a68971d7bb29ba2c163520da3379bf20ad86b6414faf31de06b090165b8c3",
+      "wallTimeMs": 3553.6030999999994,
+      "cases": 2,
+      "complete": 0
+    },
+    {
+      "runId": "isolated-policy-1ccb24bd-0f88-4ddc-b9a8-29f8e8a50f23",
+      "variant": "H1",
+      "runDigest": "6e610cd4939a52ef33c2c1bb34b98c1cba1559c8ea18b97749cbcc382fbd9a7f",
+      "simulationPayloadDigest": "5f12d848a9dc14b297e11df1429fcc1e41987b7dcc88c024a19fd828bb835cf9",
+      "wallTimeMs": 3518.7511000000004,
+      "cases": 2,
+      "complete": 1
+    },
+    {
+      "runId": "isolated-policy-b0f7c7b7-be14-47e4-b620-7e1afec620ea",
+      "variant": "B0",
+      "runDigest": "0e0be58c5e292f90b754fd0a16f39842c685505869c5aec2c77eb067c596f25d",
+      "simulationPayloadDigest": "5e29f2c85c10b0d23a8d0e140c93cb89595685b306a7c6edc497a1029ab3634b",
+      "wallTimeMs": 4.367699999999786,
+      "cases": 2,
+      "complete": 2
+    },
+    {
+      "runId": "isolated-policy-efc3542d-1429-4f2c-9451-481e1f3a3897",
+      "variant": "B1",
+      "runDigest": "bcb804284cab631ea3cb8bcf8e66dccbada90c3902a9d8adae5a6d6fd6e0736e",
+      "simulationPayloadDigest": "99259390d41ac080b171e8e794833566b3e5ecb51d5646c1c542de23e2c6aa3b",
+      "wallTimeMs": 6.473599999999351,
+      "cases": 2,
+      "complete": 2
+    },
+    {
+      "runId": "isolated-policy-c92a6ac3-8c51-4f33-a160-830815ef4c19",
+      "variant": "S1",
+      "runDigest": "9447143ef8fee18ec52bd7b813891bd50024c7ce0d9e923b256509c091ea5721",
+      "simulationPayloadDigest": "3d6a68971d7bb29ba2c163520da3379bf20ad86b6414faf31de06b090165b8c3",
+      "wallTimeMs": 3058.4996,
+      "cases": 2,
+      "complete": 0
+    },
+    {
+      "runId": "isolated-policy-447c5c68-33bb-4001-b42e-32b15e45a540",
+      "variant": "H1",
+      "runDigest": "190facd0de2253f61a9616f674faeee5b3935d10f833f5961f6df36104582652",
+      "simulationPayloadDigest": "5f12d848a9dc14b297e11df1429fcc1e41987b7dcc88c024a19fd828bb835cf9",
+      "wallTimeMs": 4072.857400000001,
+      "cases": 2,
+      "complete": 0
+    },
+    {
+      "runId": "isolated-policy-0610c43f-c727-4a47-b1c1-fbc666aa52e8",
+      "variant": "B0",
+      "runDigest": "53efc118168744ce7fffb13e59c1e1a2ff1f8cbf0d03b576fc948d5bbd729080",
+      "simulationPayloadDigest": "5e29f2c85c10b0d23a8d0e140c93cb89595685b306a7c6edc497a1029ab3634b",
+      "wallTimeMs": 4.552200000000084,
+      "cases": 2,
+      "complete": 2
+    },
+    {
+      "runId": "isolated-policy-0a8c12dd-c48d-4aee-9ee6-e9ae9c791352",
+      "variant": "B1",
+      "runDigest": "6b2b86dce4841c5ffe0a4732119e62d8b60f7bb75a54af05ba8e126d6e0ace77",
+      "simulationPayloadDigest": "99259390d41ac080b171e8e794833566b3e5ecb51d5646c1c542de23e2c6aa3b",
+      "wallTimeMs": 6.301900000000387,
+      "cases": 2,
+      "complete": 2
+    },
+    {
+      "runId": "isolated-policy-c3a9a13a-92e8-440e-bdb3-c46b5d9a1745",
+      "variant": "S1",
+      "runDigest": "5514497e392dc262ce28d3662bc74dfa544d349209acdf1322a8b0950748f338",
+      "simulationPayloadDigest": "3d6a68971d7bb29ba2c163520da3379bf20ad86b6414faf31de06b090165b8c3",
+      "wallTimeMs": 4236.6001,
+      "cases": 2,
+      "complete": 1
+    },
+    {
+      "runId": "isolated-policy-7be579fe-6e74-436b-9ac2-35d70aed983c",
+      "variant": "H1",
+      "runDigest": "1dd97ba98325cc888f5799564e757bc941f60906af54247ae90834da9a613310",
+      "simulationPayloadDigest": "5f12d848a9dc14b297e11df1429fcc1e41987b7dcc88c024a19fd828bb835cf9",
+      "wallTimeMs": 3664.8961000000018,
+      "cases": 2,
+      "complete": 0
+    }
+  ]
+}
