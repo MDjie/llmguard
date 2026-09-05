@@ -1,0 +1,210 @@
+{
+  "schemaVersion": "1.0",
+  "generatedAt": "2026-09-04T21:46:17.391Z",
+  "status": "PASS",
+  "scope": {
+    "path": "GuardEngineV2 + bounded normalization + PromptAttackDetector",
+    "payload": "deterministic benign synthetic CJK; no customer content",
+    "measuredEnvironment": "local developer workstation",
+    "productionSloClaimed": false
+  },
+  "host": {
+    "platform": "win32",
+    "architecture": "x64",
+    "logicalCpuCount": 32,
+    "nodeVersion": "v24.15.0"
+  },
+  "profiles": [
+    {
+      "estimatedTokens": 1024,
+      "iterations": 40,
+      "signoff": "LOCAL_MEASURED",
+      "generatedCharacters": 1024,
+      "tokenizer": "synthetic_cjk_one_codepoint_proxy",
+      "metrics": {
+        "requests": 40,
+        "successes": 40,
+        "errors": 0,
+        "errorRate": 0,
+        "degradationRate": 0,
+        "latencyMs": {
+          "min": 1.757,
+          "p50": 2.009,
+          "p95": 2.896,
+          "p99": 3.851,
+          "max": 3.851
+        },
+        "qps": 472.89,
+        "elapsedMs": 84.586,
+        "cpuMs": {
+          "user": 125,
+          "system": 0,
+          "total": 125
+        },
+        "memoryBytes": {
+          "rssBefore": 190525440,
+          "rssAfter": 228446208,
+          "rssDelta": 37920768
+        },
+        "actions": {
+          "ALLOW": 40
+        },
+        "errorCodes": {}
+      }
+    },
+    {
+      "estimatedTokens": 8192,
+      "iterations": 16,
+      "signoff": "LOCAL_MEASURED",
+      "generatedCharacters": 8192,
+      "tokenizer": "synthetic_cjk_one_codepoint_proxy",
+      "metrics": {
+        "requests": 16,
+        "successes": 16,
+        "errors": 0,
+        "errorRate": 0,
+        "degradationRate": 0,
+        "latencyMs": {
+          "min": 13.132,
+          "p50": 14.98,
+          "p95": 17.71,
+          "p99": 17.71,
+          "max": 17.71
+        },
+        "qps": 66.031,
+        "elapsedMs": 242.31,
+        "cpuMs": {
+          "user": 218,
+          "system": 0,
+          "total": 218
+        },
+        "memoryBytes": {
+          "rssBefore": 228458496,
+          "rssAfter": 228724736,
+          "rssDelta": 266240
+        },
+        "actions": {
+          "ALLOW": 16
+        },
+        "errorCodes": {}
+      }
+    },
+    {
+      "estimatedTokens": 32768,
+      "iterations": 6,
+      "signoff": "LOCAL_MEASURED",
+      "generatedCharacters": 32768,
+      "tokenizer": "synthetic_cjk_one_codepoint_proxy",
+      "metrics": {
+        "requests": 6,
+        "successes": 6,
+        "errors": 0,
+        "errorRate": 0,
+        "degradationRate": 0,
+        "latencyMs": {
+          "min": 58.9,
+          "p50": 63.18,
+          "p95": 75.385,
+          "p99": 75.385,
+          "max": 75.385
+        },
+        "qps": 15.259,
+        "elapsedMs": 393.199,
+        "cpuMs": {
+          "user": 406,
+          "system": 0,
+          "total": 406
+        },
+        "memoryBytes": {
+          "rssBefore": 232153088,
+          "rssAfter": 252153856,
+          "rssDelta": 20000768
+        },
+        "actions": {
+          "ALLOW": 6
+        },
+        "errorCodes": {}
+      }
+    },
+    {
+      "estimatedTokens": 131072,
+      "iterations": 2,
+      "signoff": "LOCAL_PROXY_ONLY_TARGET_MODEL_AND_TOKENIZER_REQUIRED",
+      "generatedCharacters": 131072,
+      "tokenizer": "synthetic_cjk_one_codepoint_proxy",
+      "metrics": {
+        "requests": 2,
+        "successes": 2,
+        "errors": 0,
+        "errorRate": 0,
+        "degradationRate": 0,
+        "latencyMs": {
+          "min": 222.96,
+          "p50": 222.96,
+          "p95": 227.06,
+          "p99": 227.06,
+          "max": 227.06
+        },
+        "qps": 4.444,
+        "elapsedMs": 450.026,
+        "cpuMs": {
+          "user": 469,
+          "system": 0,
+          "total": 469
+        },
+        "memoryBytes": {
+          "rssBefore": 301490176,
+          "rssAfter": 324870144,
+          "rssDelta": 23379968
+        },
+        "actions": {
+          "ALLOW": 2
+        },
+        "errorCodes": {}
+      }
+    }
+  ],
+  "concurrency": {
+    "requests": 64,
+    "successes": 64,
+    "errors": 0,
+    "errorRate": 0,
+    "degradationRate": 0,
+    "latencyMs": {
+      "min": 2.035,
+      "p50": 8.681,
+      "p95": 15.851,
+      "p99": 20.592,
+      "max": 20.592
+    },
+    "qps": 508.746,
+    "elapsedMs": 125.8,
+    "cpuMs": {
+      "user": 125,
+      "system": 0,
+      "total": 125
+    },
+    "memoryBytes": {
+      "rssBefore": 324870144,
+      "rssAfter": 330465280,
+      "rssDelta": 5595136
+    },
+    "actions": {
+      "ALLOW": 64
+    },
+    "errorCodes": {},
+    "requestedConcurrency": 8,
+    "maxObservedActive": 8,
+    "queue": {
+      "implementation": "in_process_promise_workers",
+      "maxQueuedRequests": 56,
+      "externalWorkerBacklogMeasured": false
+    },
+    "tenants": 2
+  },
+  "externalAcceptance": {
+    "exact128kTargetTokenizer": "BLOCKED_EXTERNAL",
+    "targetTopologyThirtyMinuteLoad": "BLOCKED_EXTERNAL",
+    "targetHardwareAndCustomerDatabase": "BLOCKED_EXTERNAL"
+  }
+}

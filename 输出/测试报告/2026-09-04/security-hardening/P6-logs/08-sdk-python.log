@@ -1,0 +1,12 @@
+command=pnpm test:sdk-python
+startedAt=2026-09-04T23:01:08.344Z
+
+$ python -m unittest discover -s packages/sdk-python/tests -p test_*.py
+...
+----------------------------------------------------------------------
+Ran 3 tests in 0.000s
+
+OK
+
+finishedAt=2026-09-04T23:01:08.855Z
+exitCode=0

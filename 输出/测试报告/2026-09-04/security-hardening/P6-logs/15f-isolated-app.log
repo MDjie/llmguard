@@ -1,0 +1,31 @@
+2026-09-04T22:30:58.855311431Z ▲ Next.js 16.3.3
+2026-09-04T22:30:58.855543536Z - Local:         http://localhost:5000
+2026-09-04T22:30:58.855556236Z - Network:       http://0.0.0.0:5000
+2026-09-04T22:30:58.855886576Z ✓ Ready in 0ms
+2026-09-04T22:30:58.858111137Z ✓ Running next.config took 1.1ms
+2026-09-04T22:30:59.784271368Z {"timestamp":"2026-09-04T22:30:59.782Z","level":"info","event":"database.connecting","fields":{"host":"postgres","port":"5432","database":"guardllm_integration_p6"}}
+
+2026-09-04T22:31:00.862231421Z 分片 0 检测失败: Error [DetectionPolicyError]: No signed executable policy bundle is available
+2026-09-04T22:31:00.862252757Z     at h (.next/server/chunks/[root-of-the-server]__19hkusn._.js:1:896)
+2026-09-04T22:31:00.862254335Z     at async h (.next/server/chunks/[root-of-the-server]__0n9x5gi._.js:8:527716)
+2026-09-04T22:31:00.862255621Z     at async y (.next/server/chunks/_0z3msum._.js:1:4642)
+2026-09-04T22:31:00.862256784Z     at async (.next/server/chunks/_0z3msum._.js:1:3446)
+2026-09-04T22:31:00.862257883Z     at async (.next/server/chunks/[root-of-the-server]__0qod-33._.js:39:176876)
+2026-09-04T22:31:00.862259029Z     at async X (.next/server/chunks/_0z3msum._.js:1:8650)
+2026-09-04T22:31:00.862260143Z     at async Z (.next/server/chunks/_0z3msum._.js:1:9728)
+2026-09-04T22:31:00.862261264Z     at async Module.y [as handler] (.next/server/chunks/_0z3msum._.js:1:11785) {
+2026-09-04T22:31:00.862262400Z   code: 'POLICY_BUNDLE_POLICY_MISMATCH',
+2026-09-04T22:31:00.862263602Z   [cause]: Error [PolicyBundleRuntimeError]: The active policy bundle does not contain the requested policy
+2026-09-04T22:31:00.862264795Z       at g (.next/server/chunks/src_02cqdgd._.js:5:68858)
+2026-09-04T22:31:00.862265923Z       at async h (.next/server/chunks/[root-of-the-server]__19hkusn._.js:1:749)
+2026-09-04T22:31:00.862267698Z       at async h (.next/server/chunks/[root-of-the-server]__0n9x5gi._.js:8:527716)
+2026-09-04T22:31:00.862268843Z       at async y (.next/server/chunks/_0z3msum._.js:1:4642)
+2026-09-04T22:31:00.862269964Z       at async (.next/server/chunks/_0z3msum._.js:1:3446)
+2026-09-04T22:31:00.862271072Z       at async (.next/server/chunks/[root-of-the-server]__0qod-33._.js:39:176876)
+2026-09-04T22:31:00.862272209Z       at async X (.next/server/chunks/_0z3msum._.js:1:8650)
+2026-09-04T22:31:00.862273321Z       at async Z (.next/server/chunks/_0z3msum._.js:1:9728)
+2026-09-04T22:31:00.862274433Z       at async Module.y [as handler] (.next/server/chunks/_0z3msum._.js:1:11785) {
+2026-09-04T22:31:00.862275563Z     code: 'POLICY_BUNDLE_POLICY_MISMATCH',
+2026-09-04T22:31:00.862276704Z     recoverable: false
+2026-09-04T22:31:00.862277853Z   }
+2026-09-04T22:31:00.862278964Z }

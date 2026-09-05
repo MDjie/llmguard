@@ -1,0 +1,8 @@
+command=pnpm test:sdk-go
+startedAt=2026-09-04T23:01:08.856Z
+
+$ node scripts/run-toolchain-tests.mjs go-sdk
+ok  	github.com/guardllm/guardllm-sdk-go	0.042s
+
+finishedAt=2026-09-04T23:01:15.557Z
+exitCode=0

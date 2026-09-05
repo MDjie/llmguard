@@ -1,0 +1,12 @@
+command=pnpm contracts:check
+startedAt=2026-09-04T22:58:35.412Z
+
+$ node packages/contracts/scripts/generate.mjs --check && node packages/contracts/scripts/check-compatibility.mjs && pnpm appliance:contracts:check
+Contract outputs are current (source 5e535f81fcd1a87d610f5e1876c5bff2db310e6e050872e15995b940fdbe4776)
+Guard v1 is backward compatible with its accepted baseline
+$ node packages/contracts-appliance/scripts/generate.mjs --check && node packages/contracts-appliance/scripts/check-compatibility.mjs
+Appliance contract outputs are current (source b10daf922dd2098768c989fea3284fa56fc6ebacadb8d35520c6fcec29f5a080)
+Appliance v1 is backward compatible with its accepted baseline
+
+finishedAt=2026-09-04T22:58:36.408Z
+exitCode=0

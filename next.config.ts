@@ -6,7 +6,19 @@ const nextConfig: NextConfig = {
   // 生产构建使用 standalone 模式，优化部署大小和构建速度
   output: 'standalone',
   // 将 Node.js 原生模块标记为服务端专用
-  serverExternalPackages: ['postgres', 'pg', 'drizzle-orm', 're2-wasm'],
+  serverExternalPackages: [
+    'postgres', 'pg', 'drizzle-orm', 're2-wasm',
+    'pdf-parse', '@napi-rs/canvas',
+  ],
+  // pdf-parse loads the platform Canvas binary through an optional runtime require.
+  // Include only that pnpm package family so standalone images retain the active platform binary.
+  outputFileTracingIncludes: {
+    '/*': [
+      'node_modules/.pnpm/@napi-rs+canvas@*/node_modules/@napi-rs/canvas/*',
+      'node_modules/.pnpm/@napi-rs+canvas-*@*/node_modules/@napi-rs/canvas-*/*',
+      'node_modules/.pnpm/pdfjs-dist@*/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs',
+    ],
+  },
   // 空的 turbopack 配置，允许使用 webpack 配置（Next.js 16 默认 Turbopack）
   turbopack: {},
   // 确保这些模块不会被 Webpack 打包到客户端

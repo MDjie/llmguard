@@ -1,0 +1,10 @@
+command=pnpm appliance:validate
+startedAt=2026-09-04T23:01:15.957Z
+
+$ node scripts/acceptance/run-appliance-baseline.mjs && pnpm production-surface:verify
+{"status":"SOFTWARE_BASELINE_VERIFIED","targetAcceptanceStatus":"BLOCKED_EXTERNAL","checks":[{"name":"appliance-contracts","status":"PASSED"},{"name":"appliance-plan","status":"PASSED"},{"name":"typescript-strict","status":"PASSED"},{"name":"appliance-tests","status":"PASSED"}],"report":"acceptance/appliance/generated/software-baseline-evidence.json"}
+$ node scripts/verify-production-surface.mjs
+Production surface verification passed.
+
+finishedAt=2026-09-04T23:01:25.302Z
+exitCode=0

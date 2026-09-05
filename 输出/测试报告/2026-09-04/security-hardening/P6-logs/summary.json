@@ -1,0 +1,154 @@
+{
+  "schemaVersion": "1.0",
+  "startedAt": "2026-09-04T22:58:35.147Z",
+  "commit": null,
+  "gates": [
+    {
+      "id": "01-contracts",
+      "command": "pnpm contracts:check",
+      "startedAt": "2026-09-04T22:58:35.412Z",
+      "finishedAt": "2026-09-04T22:58:36.408Z",
+      "durationMs": 996,
+      "exitCode": 0,
+      "status": "PASS",
+      "log": "01-contracts.log"
+    },
+    {
+      "id": "02-plan",
+      "command": "pnpm plan:check",
+      "startedAt": "2026-09-04T22:58:36.409Z",
+      "finishedAt": "2026-09-04T22:58:37.199Z",
+      "durationMs": 790,
+      "exitCode": 0,
+      "status": "PASS",
+      "log": "02-plan.log"
+    },
+    {
+      "id": "03-quality",
+      "command": "pnpm quality:full",
+      "startedAt": "2026-09-04T22:58:37.199Z",
+      "finishedAt": "2026-09-04T23:00:22.311Z",
+      "durationMs": 105112,
+      "exitCode": 0,
+      "status": "PASS",
+      "log": "03-quality.log"
+    },
+    {
+      "id": "04-unit",
+      "command": "pnpm test:unit --run",
+      "startedAt": "2026-09-04T23:00:22.312Z",
+      "finishedAt": "2026-09-04T23:00:34.007Z",
+      "durationMs": 11695,
+      "exitCode": 0,
+      "status": "PASS",
+      "log": "04-unit.log"
+    },
+    {
+      "id": "05-coverage",
+      "command": "pnpm test:coverage --run",
+      "startedAt": "2026-09-04T23:00:34.008Z",
+      "finishedAt": "2026-09-04T23:00:48.955Z",
+      "durationMs": 14947,
+      "exitCode": 0,
+      "status": "PASS",
+      "log": "05-coverage.log"
+    },
+    {
+      "id": "06-integration",
+      "command": "pnpm test:integration",
+      "startedAt": "2026-09-04T23:00:48.956Z",
+      "finishedAt": "2026-09-04T23:00:52.582Z",
+      "durationMs": 3626,
+      "exitCode": 0,
+      "status": "PASS",
+      "log": "06-integration.log"
+    },
+    {
+      "id": "07-e2e",
+      "command": "pnpm test:e2e",
+      "startedAt": "2026-09-04T23:00:52.583Z",
+      "finishedAt": "2026-09-04T23:01:08.344Z",
+      "durationMs": 15761,
+      "exitCode": 0,
+      "status": "PASS",
+      "log": "07-e2e.log"
+    },
+    {
+      "id": "08-sdk-python",
+      "command": "pnpm test:sdk-python",
+      "startedAt": "2026-09-04T23:01:08.344Z",
+      "finishedAt": "2026-09-04T23:01:08.855Z",
+      "durationMs": 511,
+      "exitCode": 0,
+      "status": "PASS",
+      "log": "08-sdk-python.log"
+    },
+    {
+      "id": "09-sdk-go",
+      "command": "pnpm test:sdk-go",
+      "startedAt": "2026-09-04T23:01:08.856Z",
+      "finishedAt": "2026-09-04T23:01:15.557Z",
+      "durationMs": 6701,
+      "exitCode": 0,
+      "status": "PASS",
+      "log": "09-sdk-go.log"
+    },
+    {
+      "id": "10-compatibility",
+      "command": "pnpm compatibility:check",
+      "startedAt": "2026-09-04T23:01:15.558Z",
+      "finishedAt": "2026-09-04T23:01:15.956Z",
+      "durationMs": 398,
+      "exitCode": 0,
+      "status": "PASS",
+      "log": "10-compatibility.log"
+    },
+    {
+      "id": "11-appliance",
+      "command": "pnpm appliance:validate",
+      "startedAt": "2026-09-04T23:01:15.957Z",
+      "finishedAt": "2026-09-04T23:01:25.302Z",
+      "durationMs": 9345,
+      "exitCode": 0,
+      "status": "PASS",
+      "log": "11-appliance.log"
+    },
+    {
+      "id": "12-build",
+      "command": "pnpm build",
+      "startedAt": "2026-09-04T23:01:25.302Z",
+      "finishedAt": "2026-09-04T23:01:39.320Z",
+      "durationMs": 14018,
+      "exitCode": 0,
+      "status": "PASS",
+      "log": "12-build.log"
+    },
+    {
+      "id": "13-sdk-java",
+      "command": "pnpm test:sdk-java",
+      "startedAt": "2026-09-04T23:01:39.320Z",
+      "finishedAt": "2026-09-04T23:01:49.268Z",
+      "durationMs": 9948,
+      "exitCode": 0,
+      "status": "PASS",
+      "log": "13-sdk-java.log"
+    },
+    {
+      "id": "14-gateway-java",
+      "command": "pnpm test:gateway-java",
+      "startedAt": "2026-09-04T23:01:49.268Z",
+      "finishedAt": "2026-09-04T23:03:11.973Z",
+      "durationMs": 82705,
+      "exitCode": 0,
+      "status": "PASS",
+      "log": "14-gateway-java.log"
+    }
+  ],
+  "integrationDatabase": {
+    "mode": "auto-created-local",
+    "database": "guardllm_integration_p6_34108_736875",
+    "cleanup": "PASS"
+  },
+  "finishedAt": "2026-09-04T23:03:12.079Z",
+  "status": "PASS"
+}

@@ -1,0 +1,9 @@
+command=pnpm quality:full
+startedAt=2026-09-04T22:58:37.199Z
+
+$ pnpm ts-check && pnpm lint:build
+$ tsc -p tsconfig.json
+$ eslint . --quiet
+
+finishedAt=2026-09-04T23:00:22.311Z
+exitCode=0

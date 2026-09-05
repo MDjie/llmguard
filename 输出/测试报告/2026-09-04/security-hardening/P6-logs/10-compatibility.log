@@ -1,0 +1,8 @@
+command=pnpm compatibility:check
+startedAt=2026-09-04T23:01:15.558Z
+
+$ node scripts/compatibility/validate-matrix.mjs
+{"targets":20,"summary":{"IMPLEMENTED":4,"CI_VERIFIED":1,"PENDING_TARGET_POC":15,"NOT_SUPPORTED":0},"mode":"schema"}
+
+finishedAt=2026-09-04T23:01:15.956Z
+exitCode=0

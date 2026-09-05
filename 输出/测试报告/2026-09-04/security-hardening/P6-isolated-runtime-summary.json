@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "1.0",
+  "generatedAt": "2026-09-04T22:31:00.979Z",
+  "status": "PASS",
+  "isolation": {
+    "database": "guardllm_integration_p6",
+    "appPort": 58083,
+    "principal": "<ephemeral-p6-admin>",
+    "productionAccountMutated": false
+  },
+  "runtimeApi": {
+    "selectedCases": 32,
+    "passedAssertions": 32,
+    "failedAssertions": 0,
+    "httpSuccesses": 32,
+    "anonymousBoundaryPassed": true
+  },
+  "authenticatedE2E": {
+    "passed": 10,
+    "expected": 10
+  },
+  "deploymentSmoke": {
+    "checks": 15,
+    "passed": 15,
+    "failed": 0,
+    "latencyMs": {
+      "p50": 23.341,
+      "p95": 224.036,
+      "p99": 224.036
+    }
+  },
+  "evidence": {
+    "runtimeResults": "P6-runtime-api-results.json",
+    "runtimeLog": "P6-logs/15c-runtime-api.log",
+    "e2eLog": "P6-logs/15d-e2e-authenticated.log",
+    "deploymentSmoke": "P6-deployment-smoke.json",
+    "deploymentSmokeLog": "P6-logs/15e-deployment-smoke.log"
+  }
+}

@@ -1,0 +1,177 @@
+{
+  "schemaVersion": "1.0",
+  "generatedAt": "2026-09-04T22:31:00.965Z",
+  "status": "PASS",
+  "target": {
+    "kind": "isolated_local_deployment",
+    "baseUrl": "http://127.0.0.1:58083"
+  },
+  "principal": "<ephemeral-p6-admin>",
+  "policy": {
+    "generation": 1,
+    "activeBundleSha256": "432993d1c5ceb194631de25006972f6d74396295db3f86b5adde78a12d2ba5e8",
+    "signatureVerified": true
+  },
+  "summary": {
+    "checks": 15,
+    "passed": 15,
+    "failed": 0,
+    "latencyMs": {
+      "p50": 23.341,
+      "p95": 224.036,
+      "p99": 224.036
+    }
+  },
+  "results": [
+    {
+      "id": "SMOKE-LIVE",
+      "capability": "service",
+      "method": "GET",
+      "path": "/api/health/live",
+      "status": 200,
+      "code": null,
+      "latencyMs": 16.066,
+      "assertionPassed": true
+    },
+    {
+      "id": "SMOKE-DATABASE",
+      "capability": "database",
+      "method": "GET",
+      "path": "/api/health/db",
+      "status": 200,
+      "code": null,
+      "latencyMs": 14.665,
+      "assertionPassed": true
+    },
+    {
+      "id": "SMOKE-POLICY-HEALTH",
+      "capability": "policy",
+      "method": "GET",
+      "path": "/api/health/policy",
+      "status": 200,
+      "code": null,
+      "latencyMs": 23.341,
+      "assertionPassed": true
+    },
+    {
+      "id": "SMOKE-POLICY-RUNTIME",
+      "capability": "policy",
+      "method": "GET",
+      "path": "/api/policy-runtime",
+      "status": 200,
+      "code": null,
+      "latencyMs": 43.482,
+      "assertionPassed": true
+    },
+    {
+      "id": "SMOKE-POLICIES",
+      "capability": "policy profiles",
+      "method": "GET",
+      "path": "/api/policies",
+      "status": 200,
+      "code": null,
+      "latencyMs": 90.579,
+      "assertionPassed": true
+    },
+    {
+      "id": "SMOKE-POLICY-STATE",
+      "capability": "multi-turn protection",
+      "method": "GET",
+      "path": "/api/policy-state",
+      "status": 200,
+      "code": null,
+      "latencyMs": 28.678,
+      "assertionPassed": true
+    },
+    {
+      "id": "SMOKE-RAG",
+      "capability": "RAG",
+      "method": "POST",
+      "path": "/api/v1/guard/rag/evaluate",
+      "status": 200,
+      "code": null,
+      "latencyMs": 145.325,
+      "assertionPassed": true
+    },
+    {
+      "id": "SMOKE-AGENT-DENY",
+      "capability": "Agent tool authorization",
+      "method": "POST",
+      "path": "/api/v1/guard/tools/authorize",
+      "status": 403,
+      "code": "TOOL_UNKNOWN_OR_DISABLED",
+      "latencyMs": 39.702,
+      "assertionPassed": true
+    },
+    {
+      "id": "SMOKE-DOCUMENTS",
+      "capability": "document and multimodal task boundary",
+      "method": "GET",
+      "path": "/api/document-scan",
+      "status": 200,
+      "code": null,
+      "latencyMs": 77.317,
+      "assertionPassed": true
+    },
+    {
+      "id": "SMOKE-DOCUMENT-PDF",
+      "capability": "PDF document parsing and detection",
+      "method": "POST",
+      "path": "/api/document-scan",
+      "status": 200,
+      "code": null,
+      "latencyMs": 224.036,
+      "assertionPassed": true
+    },
+    {
+      "id": "SMOKE-SECURITY-SCANS",
+      "capability": "resource control and scanners",
+      "method": "GET",
+      "path": "/api/security-scans",
+      "status": 200,
+      "code": null,
+      "latencyMs": 22.895,
+      "assertionPassed": true
+    },
+    {
+      "id": "SMOKE-INCIDENTS",
+      "capability": "security operations",
+      "method": "GET",
+      "path": "/api/incidents",
+      "status": 200,
+      "code": null,
+      "latencyMs": 22.864,
+      "assertionPassed": true
+    },
+    {
+      "id": "SMOKE-DICTIONARIES",
+      "capability": "dictionary governance",
+      "method": "GET",
+      "path": "/api/policy-governance/dictionaries",
+      "status": 200,
+      "code": null,
+      "latencyMs": 16.582,
+      "assertionPassed": true
+    },
+    {
+      "id": "SMOKE-TEMPLATES",
+      "capability": "response governance",
+      "method": "GET",
+      "path": "/api/policy-governance/templates",
+      "status": 200,
+      "code": null,
+      "latencyMs": 17.299,
+      "assertionPassed": true
+    },
+    {
+      "id": "SMOKE-ANONYMOUS-RAG",
+      "capability": "anonymous authorization boundary",
+      "method": "POST",
+      "path": "/api/v1/guard/rag/evaluate",
+      "status": 401,
+      "code": "AUTHENTICATION_REQUIRED",
+      "latencyMs": 10.369,
+      "assertionPassed": true
+    }
+  ]
+}

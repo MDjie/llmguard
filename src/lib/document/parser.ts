@@ -8,10 +8,6 @@ import mammoth from 'mammoth';
 import sanitizeHtml from 'sanitize-html';
 import { convertOfficeDocument } from './converter';
 
-// pdf-parse 使用动态导入
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const pdfParse = require('pdf-parse');
-
 // 导出类型
 export interface PlainLine {
   lineNumber: number;
@@ -299,8 +295,17 @@ async function parseDocx(buffer: Buffer): Promise<ParsedDocument> {
  * 解析 PDF 文件
  */
 async function parsePdf(buffer: Buffer): Promise<ParsedDocument> {
+  let parser: import('pdf-parse').PDFParse | null = null;
   try {
-    const data = await pdfParse(buffer);
+    // pdfjs resolves its optional native Canvas adapter at runtime. Keeping this
+    // import inside the PDF path preserves lazy loading while making standalone
+    // dependency tracing create a resolvable top-level package link.
+    await import('@napi-rs/canvas');
+    const { PDFParse } = await import('pdf-parse');
+    parser = new PDFParse({
+      data: new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength),
+    });
+    const data = await parser.getText();
     const extractedText = data.text;
 
     // 构建定位信息
@@ -324,8 +329,10 @@ async function parsePdf(buffer: Buffer): Promise<ParsedDocument> {
       },
     };
   } catch (error) {
-    console.error('PDF 解析失败:', error);
+    console.error('PDF parsing failed:', error instanceof Error ? error.name : 'UnknownError');
     throw new Error('PDF 文件解析失败，请确保文件格式正确');
+  } finally {
+    await parser?.destroy().catch(() => undefined);
   }
 }
 

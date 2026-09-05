@@ -1,0 +1,25 @@
+$ vitest --config vitest.config.mts "--run" "tests/policy-bundle/policy-bundle.test.ts" "tests/policy-bundle/local-keys.test.ts" "tests/policy-bundle/runtime-error.test.ts" "tests/detection/no-policy.test.ts" "tests/guardrail/template-runtime.test.ts" "tests/guardrail/output-control.test.ts" "tests/resource-control/resource-control.test.ts" "tests/resource-control/resilience.test.ts" "tests/media-analyzer/core.test.ts" "tests/media-analyzer/resilience.test.ts" "tests/detection/judge.test.ts" "tests/guard-engine-v2/dag.test.ts" "tests/guard-engine-v2/engine.test.ts" "tests/stream-gate/sse-gate.test.ts" "tests/guard-jobs/cancellation-contract.test.ts" "tests/deployment/production-assets.test.mjs"
+
+ RUN  v4.1.11 E:/大模型安全/大模型护栏
+
+ ✓ tests/deployment/production-assets.test.mjs (11 tests) 13ms
+ ✓ tests/media-analyzer/resilience.test.ts (3 tests) 5ms
+ ✓ tests/policy-bundle/runtime-error.test.ts (2 tests) 5ms
+ ✓ tests/policy-bundle/local-keys.test.ts (3 tests) 24ms
+ ✓ tests/media-analyzer/core.test.ts (8 tests) 54ms
+ ✓ tests/guardrail/template-runtime.test.ts (4 tests) 7ms
+ ✓ tests/detection/no-policy.test.ts (1 test) 4ms
+ ✓ tests/detection/judge.test.ts (8 tests) 121ms
+ ✓ tests/stream-gate/sse-gate.test.ts (7 tests) 13ms
+ ✓ tests/guard-engine-v2/dag.test.ts (5 tests) 48ms
+ ✓ tests/guardrail/output-control.test.ts (9 tests) 78ms
+ ✓ tests/guard-engine-v2/engine.test.ts (12 tests) 103ms
+ ✓ tests/guard-jobs/cancellation-contract.test.ts (1 test) 2ms
+ ✓ tests/policy-bundle/policy-bundle.test.ts (3 tests) 14ms
+ ✓ tests/resource-control/resource-control.test.ts (5 tests) 5ms
+ ✓ tests/resource-control/resilience.test.ts (6 tests) 12ms
+
+ Test Files  16 passed (16)
+      Tests  88 passed (88)
+   Start at  05:50:09
+   Duration  2.05s (transform 2.83s, setup 0ms, import 15.94s, tests 508ms, environment 1ms)

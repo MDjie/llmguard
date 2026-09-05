@@ -1,0 +1,167 @@
+command=pnpm build
+startedAt=2026-09-04T23:01:25.302Z
+
+$ next build
+▲ Next.js 16.3.3 (Turbopack)
+- Environments: .env.local, .env
+✓ Running next.config.ts took 28ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 2.9s
+  Running TypeScript ...
+  Finished TypeScript in 2.9s ...
+  Collecting page data using 31 workers ...
+  Generating static pages using 31 workers (0/67) ...
+  Generating static pages using 31 workers (16/67)
+  Generating static pages using 31 workers (33/67)
+  Generating static pages using 31 workers (50/67)
+✓ Generating static pages using 31 workers (67/67) in 274ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ƒ /
+├ ƒ /_not-found
+├ ƒ /agent-logs
+├ ƒ /api/agent-logs
+├ ƒ /api/application-credentials
+├ ƒ /api/applications
+├ ƒ /api/audit/events
+├ ƒ /api/audit/reports
+├ ƒ /api/auth/change-password
+├ ƒ /api/auth/login
+├ ƒ /api/auth/logout
+├ ƒ /api/auth/me
+├ ƒ /api/auth/scope
+├ ƒ /api/chat
+├ ƒ /api/content-access-requests
+├ ƒ /api/content-access-requests/[id]/review
+├ ƒ /api/data-catalog
+├ ƒ /api/data-catalog/[id]
+├ ƒ /api/detect
+├ ƒ /api/detection-sessions
+├ ƒ /api/dimensions
+├ ƒ /api/dimensions/[id]
+├ ƒ /api/dimensions/[id]/rules
+├ ƒ /api/dimensions/[id]/rules/[ruleId]
+├ ƒ /api/dimensions/[id]/test
+├ ƒ /api/document-scan
+├ ƒ /api/document-scan/[id]
+├ ƒ /api/document-scan/[id]/findings/[findingId]
+├ ƒ /api/document-scan/[id]/rescan
+├ ƒ /api/document-scan/[id]/retry
+├ ƒ /api/escalation-summary
+├ ƒ /api/evaluation-runs
+├ ƒ /api/evaluation-runs/[id]
+├ ƒ /api/export
+├ ƒ /api/export/approvals
+├ ƒ /api/export/stats
+├ ƒ /api/gateway-routing
+├ ƒ /api/health
+├ ƒ /api/health/db
+├ ƒ /api/health/live
+├ ƒ /api/health/policy
+├ ƒ /api/history
+├ ƒ /api/incidents
+├ ƒ /api/incidents/[id]
+├ ƒ /api/incidents/[id]/raw-access
+├ ƒ /api/incidents/[id]/raw-access/consume
+├ ƒ /api/incidents/[id]/raw-access/requests
+├ ƒ /api/judge/helpers
+├ ƒ /api/metrics
+├ ƒ /api/ocr-models
+├ ƒ /api/policies
+├ ƒ /api/policies/[id]
+├ ƒ /api/policies/[id]/clone
+├ ƒ /api/policies/[id]/escalation
+├ ƒ /api/policies/[id]/judge-config
+├ ƒ /api/policies/[id]/keyword-categories
+├ ƒ /api/policies/[id]/keywords
+├ ƒ /api/policies/[id]/keywords/batch
+├ ƒ /api/policies/[id]/keywords/export
+├ ƒ /api/policies/[id]/set-default
+├ ƒ /api/policies/[id]/toggle
+├ ƒ /api/policies/[id]/versions
+├ ƒ /api/policies/compare
+├ ƒ /api/policy-bundles
+├ ƒ /api/policy-bundles/health-check
+├ ƒ /api/policy-governance/dictionaries
+├ ƒ /api/policy-governance/dictionaries/[id]/activate
+├ ƒ /api/policy-governance/dictionaries/[id]/approve
+├ ƒ /api/policy-governance/dictionaries/[id]/publish
+├ ƒ /api/policy-governance/dictionaries/[id]/rollback
+├ ƒ /api/policy-governance/dictionaries/[id]/test
+├ ƒ /api/policy-governance/dictionaries/[id]/validate
+├ ƒ /api/policy-governance/shadow-compare
+├ ƒ /api/policy-governance/templates
+├ ƒ /api/policy-governance/templates/[id]/approve
+├ ƒ /api/policy-governance/templates/[id]/preview
+├ ƒ /api/policy-governance/templates/[id]/rollback
+├ ƒ /api/policy-runtime
+├ ƒ /api/policy-state
+├ ƒ /api/providers
+├ ƒ /api/providers/test
+├ ƒ /api/security-scan-assets
+├ ƒ /api/security-scan-findings/[id]/reviews
+├ ƒ /api/security-scans
+├ ƒ /api/security-scans/[id]
+├ ƒ /api/simulate
+├ ƒ /api/stats
+├ ƒ /api/tenants
+├ ƒ /api/test-cases
+├ ƒ /api/test-cases/[id]
+├ ƒ /api/test-cases/run
+├ ƒ /api/tool-registry
+├ ƒ /api/users
+├ ƒ /api/users/[id]
+├ ƒ /api/v1/content-marks/media/[contentId]
+├ ƒ /api/v1/content-marks/text
+├ ƒ /api/v1/content-marks/verify
+├ ƒ /api/v1/guard/artifacts/[id]
+├ ƒ /api/v1/guard/artifacts/[id]/complete
+├ ƒ /api/v1/guard/artifacts/[id]/parts/[partNumber]
+├ ƒ /api/v1/guard/artifacts/[id]/retry
+├ ƒ /api/v1/guard/artifacts/uploads
+├ ƒ /api/v1/guard/evaluate
+├ ƒ /api/v1/guard/evaluate-shadow
+├ ƒ /api/v1/guard/jobs
+├ ƒ /api/v1/guard/jobs/[id]
+├ ƒ /api/v1/guard/rag/evaluate
+├ ƒ /api/v1/guard/tools/approvals
+├ ƒ /api/v1/guard/tools/authorize
+├ ƒ /api/v1/guard/tools/result
+├ ƒ /api/whitelist
+├ ƒ /api/whitelist-rules
+├ ƒ /api/whitelist-rules/test
+├ ƒ /api/whitelist/[id]
+├ ƒ /change-password
+├ ƒ /dashboard
+├ ƒ /dictionaries
+├ ƒ /dimensions
+├ ƒ /dimensions/[id]
+├ ƒ /document-scan
+├ ƒ /document-scan/[id]
+├ ƒ /evaluation-runs
+├ ƒ /export
+├ ƒ /history
+├ ƒ /incidents
+├ ƒ /login
+├ ƒ /model-eval
+├ ƒ /policies
+├ ƒ /policies/[id]
+├ ƒ /policy-releases
+├ ƒ /providers
+├ ƒ /response-templates
+├ ○ /robots.txt
+├ ƒ /simulate
+├ ƒ /test-cases
+└ ƒ /whitelist
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+
+finishedAt=2026-09-04T23:01:39.320Z
+exitCode=0

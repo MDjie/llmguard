@@ -1,0 +1,10 @@
+command=pnpm plan:check
+startedAt=2026-09-04T22:58:36.409Z
+
+$ node scripts/acceptance/validate-integrated-plan.mjs && pnpm appliance:plan-check
+{"status":"VALID","workPackages":13,"blockedClaims":5,"targetEnvironment":"BLOCKED_EXTERNAL"}
+$ node scripts/acceptance/validate-appliance-plan.mjs
+{"status":"VALID","environment":"BLOCKED_EXTERNAL","bomComponents":11,"topologyModes":4,"metrics":11,"workPackages":13}
+
+finishedAt=2026-09-04T22:58:37.199Z
+exitCode=0

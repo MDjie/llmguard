@@ -1,0 +1,18 @@
+{"timestamp":"2026-09-04T22:30:37.174Z","level":"info","event":"database.connecting","fields":{"host":"127.0.0.1","port":"5434","database":"guardllm_integration_p6"}}
+{
+  "reused": true,
+  "bundleId": "949d1d04-6c4c-4d9a-a4af-814128baec3a",
+  "generation": 1,
+  "policyId": "default-policy-balanced",
+  "policyVersion": 1,
+  "contentHash": "33ae6796bfc26e3aec033cab46963f98bc22eae59a5d13e2bb6e3b7d8c8a07f9",
+  "signingKeyId": "local-ed25519-v1",
+  "publicKeyFingerprint": "70be33428efeb9a20dd2e42a0e101090d647ecb03199e72b8e1d3afe3a0377d0",
+  "dimensionCount": 16,
+  "ruleCount": 81,
+  "thresholdCount": 16,
+  "applicationBound": true,
+  "deploymentProfile": "local-compose",
+  "assuranceLevel": "operator-attested-development-only",
+  "externalApproval": false
+}

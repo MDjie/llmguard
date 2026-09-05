@@ -1,0 +1,223 @@
+{
+  "schemaVersion": "1.0",
+  "generatedAt": "2026-09-04T23:03:48.516Z",
+  "status": "PASS",
+  "target": {
+    "baseUrl": "http://127.0.0.1:58082",
+    "composeProject": "guardllm-r0"
+  },
+  "endpoints": [
+    {
+      "path": "/api/health",
+      "status": 200,
+      "latencyMs": 43.974
+    },
+    {
+      "path": "/api/health/live",
+      "status": 200,
+      "latencyMs": 41.759
+    },
+    {
+      "path": "/api/health/db",
+      "status": 200,
+      "latencyMs": 31.556
+    },
+    {
+      "path": "/api/health/policy",
+      "status": 200,
+      "latencyMs": 62.423,
+      "ready": true,
+      "generation": 3
+    },
+    {
+      "path": "/api/v1/guard/evaluate",
+      "status": 401,
+      "latencyMs": 71.122,
+      "code": "AUTHENTICATION_REQUIRED"
+    }
+  ],
+  "endpointChecks": {
+    "health": true,
+    "live": true,
+    "database": true,
+    "policy": true,
+    "anonymousBoundary": true
+  },
+  "deployment": {
+    "serviceCount": 13,
+    "expectedServices": 13,
+    "services": [
+      {
+        "name": "guardllm-r0-app-1",
+        "image": "guardllm-r0-app:latest",
+        "status": "Up 32 minutes (healthy)"
+      },
+      {
+        "name": "guardllm-r0-rag-worker-1",
+        "image": "guardllm-r0-worker:latest",
+        "status": "Up 2 hours"
+      },
+      {
+        "name": "guardllm-r0-callback-worker-1",
+        "image": "guardllm-r0-worker:latest",
+        "status": "Up 2 hours"
+      },
+      {
+        "name": "guardllm-r0-evaluation-worker-1",
+        "image": "guardllm-r0-worker:latest",
+        "status": "Up 2 hours"
+      },
+      {
+        "name": "guardllm-r0-media-worker-1",
+        "image": "guardllm-r0-worker:latest",
+        "status": "Up 2 hours"
+      },
+      {
+        "name": "guardllm-r0-audit-export-worker-1",
+        "image": "guardllm-r0-worker:latest",
+        "status": "Up 2 hours"
+      },
+      {
+        "name": "guardllm-r0-security-scan-worker-1",
+        "image": "guardllm-r0-worker:latest",
+        "status": "Up 2 hours"
+      },
+      {
+        "name": "guardllm-r0-multimodal-worker-1",
+        "image": "guardllm-r0-worker:latest",
+        "status": "Up 2 hours"
+      },
+      {
+        "name": "guardllm-r0-content-marking-worker-1",
+        "image": "guardllm-r0-worker:latest",
+        "status": "Up 2 hours"
+      },
+      {
+        "name": "guardllm-r0-audit-timestamp-worker-1",
+        "image": "guardllm-r0-worker:latest",
+        "status": "Up 2 hours"
+      },
+      {
+        "name": "guardllm-r0-artifact-worker-1",
+        "image": "guardllm-r0-worker:latest",
+        "status": "Up 2 hours"
+      },
+      {
+        "name": "guardllm-r0-media-analyzer-1",
+        "image": "781bae66ae95",
+        "status": "Up 5 hours (healthy)"
+      },
+      {
+        "name": "guardllm-r0-postgres-1",
+        "image": "postgres:16.10-alpine",
+        "status": "Up 5 hours (healthy)"
+      }
+    ],
+    "appImageDigest": "sha256:462f4cca0cdcfa28fabd8decd84ea58a42e3350bf79f054e5e1a0ff26714ff92",
+    "appStartedAt": "2026-09-04T22:31:18.142704427Z",
+    "appHealth": "healthy",
+    "readOnlyRootFilesystem": true,
+    "writableTmpfsPaths": [
+      "/app/.next/cache",
+      "/tmp"
+    ]
+  },
+  "logReview": {
+    "window": "10m",
+    "containers": [
+      {
+        "container": "guardllm-r0-app-1",
+        "structuredHighSeverity": 0,
+        "processFailures": 0
+      },
+      {
+        "container": "guardllm-r0-rag-worker-1",
+        "structuredHighSeverity": 0,
+        "processFailures": 0
+      },
+      {
+        "container": "guardllm-r0-callback-worker-1",
+        "structuredHighSeverity": 0,
+        "processFailures": 0
+      },
+      {
+        "container": "guardllm-r0-evaluation-worker-1",
+        "structuredHighSeverity": 0,
+        "processFailures": 0
+      },
+      {
+        "container": "guardllm-r0-media-worker-1",
+        "structuredHighSeverity": 0,
+        "processFailures": 0
+      },
+      {
+        "container": "guardllm-r0-audit-export-worker-1",
+        "structuredHighSeverity": 0,
+        "processFailures": 0
+      },
+      {
+        "container": "guardllm-r0-security-scan-worker-1",
+        "structuredHighSeverity": 0,
+        "processFailures": 0
+      },
+      {
+        "container": "guardllm-r0-multimodal-worker-1",
+        "structuredHighSeverity": 0,
+        "processFailures": 0
+      },
+      {
+        "container": "guardllm-r0-content-marking-worker-1",
+        "structuredHighSeverity": 0,
+        "processFailures": 0
+      },
+      {
+        "container": "guardllm-r0-audit-timestamp-worker-1",
+        "structuredHighSeverity": 0,
+        "processFailures": 0
+      },
+      {
+        "container": "guardllm-r0-artifact-worker-1",
+        "structuredHighSeverity": 0,
+        "processFailures": 0
+      },
+      {
+        "container": "guardllm-r0-media-analyzer-1",
+        "structuredHighSeverity": 0,
+        "processFailures": 0
+      },
+      {
+        "container": "guardllm-r0-postgres-1",
+        "structuredHighSeverity": 0,
+        "processFailures": 0
+      }
+    ]
+  },
+  "auditChain": {
+    "valid": true,
+    "verifiedAt": "2026-09-04T23:03:28.499Z",
+    "totalChecked": 2608,
+    "partitions": [
+      {
+        "partitionKeySha256": "4899549e45f8be781dea1e36467a6e8b446c0429cc541ec1771cfd9cea07686d",
+        "valid": true,
+        "checked": 390,
+        "headHash": "1c5582cbfab1e27b630b12003f631bc08086733e29cb2495b71e99ff22350773"
+      },
+      {
+        "partitionKeySha256": "c13ec66279d2415676e8995c03fa7903f2a766b52f548b8449e65c3acaa79b5c",
+        "valid": true,
+        "checked": 2218,
+        "headHash": "faacfa2808b214aec71fc974816ef16108b28dfdfefe033d88dc12655eed05f6"
+      }
+    ]
+  },
+  "runtimeChecks": {
+    "expectedServiceCount": true,
+    "allServicesRunning": true,
+    "appHealthy": true,
+    "readOnlyRootFilesystem": true,
+    "boundedWritablePaths": true,
+    "noHighSeverityLogs": true,
+    "auditChainValid": true
+  }
+}

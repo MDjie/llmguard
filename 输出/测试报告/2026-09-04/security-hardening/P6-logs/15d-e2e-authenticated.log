@@ -1,0 +1,29 @@
+$ playwright test
+
+Running 10 tests using 1 worker
+
+(node:57872) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:57872) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok  1 [desktop-chromium] › tests\e2e\app-connectivity.spec.ts:7:7 › frontend and backend connectivity › serves operational endpoints and a defined database readiness state (363ms)
+  ok  2 [desktop-chromium] › tests\e2e\app-connectivity.spec.ts:28:7 › frontend and backend connectivity › rejects anonymous access at protected backend boundaries (53ms)
+  ok  3 [desktop-chromium] › tests\e2e\app-connectivity.spec.ts:39:7 › frontend and backend connectivity › redirects anonymous users and connects the login form to the backend (1.6s)
+  ok  4 [desktop-chromium] › tests\e2e\app-connectivity.spec.ts:73:7 › frontend and backend connectivity › opens and closes user-support dialogs (1.9s)
+  ok  5 [desktop-chromium] › tests\e2e\app-connectivity.spec.ts:87:7 › frontend and backend connectivity › completes an authenticated navigation and logout workflow (1.8s)
+(node:22772) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:22772) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok  6 [mobile-chromium] › tests\e2e\app-connectivity.spec.ts:7:7 › frontend and backend connectivity › serves operational endpoints and a defined database readiness state (361ms)
+  ok  7 [mobile-chromium] › tests\e2e\app-connectivity.spec.ts:28:7 › frontend and backend connectivity › rejects anonymous access at protected backend boundaries (44ms)
+  ok  8 [mobile-chromium] › tests\e2e\app-connectivity.spec.ts:39:7 › frontend and backend connectivity › redirects anonymous users and connects the login form to the backend (1.9s)
+  ok  9 [mobile-chromium] › tests\e2e\app-connectivity.spec.ts:73:7 › frontend and backend connectivity › opens and closes user-support dialogs (2.0s)
+  ok 10 [mobile-chromium] › tests\e2e\app-connectivity.spec.ts:87:7 › frontend and backend connectivity › completes an authenticated navigation and logout workflow (2.0s)
+
+  10 passed (14.3s)
+
+To open last HTML report run:
+[36m[39m
+[36m  pnpm exec playwright show-report[39m
+[36m[39m

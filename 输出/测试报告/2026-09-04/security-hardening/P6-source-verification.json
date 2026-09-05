@@ -1,0 +1,89 @@
+{
+  "schemaVersion": "1.0",
+  "generatedAt": "2026-09-04T21:38:28.363Z",
+  "status": "PASS",
+  "sources": {
+    "docx": {
+      "fileName": "02_GuardLLM_全面操作与测试手册_V1.0_2026-09-03.docx",
+      "bytes": 58398,
+      "sha256": "9d03fc7d911098a20f7e9f7f0a47ab720402ea2e31c17bb08890fe2b0163cd5c"
+    },
+    "xlsx": {
+      "fileName": "02A_GuardLLM_配套测试用例_V1.0_2026-09-03.xlsx",
+      "bytes": 75693,
+      "sha256": "6c1665e8ae0417117c2f0a575bb57ca16cd014e554aeb266c7dd1bbbbbf602c1"
+    },
+    "extractedInventory": {
+      "fileName": "source-inventory.json",
+      "bytes": 2021012,
+      "sha256": "9b15b6ce57bd022991396793a06f95002c73a7b6e2ead0616c9f746f557b7eb3"
+    }
+  },
+  "docxStructure": {
+    "paragraphs": 286,
+    "tables": 36,
+    "inlineShapes": 0,
+    "sections": 1
+  },
+  "workbookStructure": [
+    {
+      "name": "概览",
+      "state": "visible",
+      "rows": 24,
+      "columns": 14,
+      "nonemptyCells": 93
+    },
+    {
+      "name": "测试用例",
+      "state": "visible",
+      "rows": 162,
+      "columns": 18,
+      "nonemptyCells": 2390
+    },
+    {
+      "name": "测试数据",
+      "state": "visible",
+      "rows": 16,
+      "columns": 7,
+      "nonemptyCells": 93
+    },
+    {
+      "name": "执行记录",
+      "state": "visible",
+      "rows": 162,
+      "columns": 18,
+      "nonemptyCells": 2232
+    },
+    {
+      "name": "需求追踪",
+      "state": "visible",
+      "rows": 36,
+      "columns": 7,
+      "nonemptyCells": 233
+    },
+    {
+      "name": "环境与证据",
+      "state": "visible",
+      "rows": 19,
+      "columns": 6,
+      "nonemptyCells": 70
+    },
+    {
+      "name": "缺陷记录",
+      "state": "visible",
+      "rows": 104,
+      "columns": 12,
+      "nonemptyCells": 14
+    }
+  ],
+  "testCases": {
+    "expected": 158,
+    "discovered": 158,
+    "unique": 158,
+    "first": "TC-0001",
+    "last": "TC-0158",
+    "missingIds": [],
+    "unexpectedIds": [],
+    "duplicateIds": []
+  }
+}

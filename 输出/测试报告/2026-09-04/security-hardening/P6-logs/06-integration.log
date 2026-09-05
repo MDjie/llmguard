@@ -1,0 +1,8 @@
+command=pnpm test:integration
+startedAt=2026-09-04T23:00:48.956Z
+
+$ node scripts/integration/run-database-tests.mjs
+{"status":"PASS","migrations":43,"requiredRelations":18,"tenancyIsolation":"PASS","dataLineageConstraints":"PASS","appendOnlyAudit":"PASS","policyGovernanceConstraints":"PASS","policyGovernanceScopeConstraints":9,"p3SchemaColumns":10,"p3SchemaConstraints":4,"p4SchemaColumns":4,"p4SchemaConstraints":1,"p4SelectorIndex":"PASS","p5SchemaColumns":6,"p5SchemaConstraints":7,"p5GovernanceIndexes":3,"p5ContentAccessIdentity":"PASS","p5RawEvidencePersistence":"PASS"}
+
+finishedAt=2026-09-04T23:00:52.582Z
+exitCode=0
