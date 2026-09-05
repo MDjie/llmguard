@@ -56,6 +56,7 @@ import { ABComparePanel } from './components/ABComparePanel';
 import { JudgeConfigPanel } from './components/JudgeConfigPanel';
 import { EscalationConfigPanel } from './components/EscalationConfigPanel';
 import { csrfHeaders } from '@/lib/auth/csrf-client';
+import { PromptInjectionCatalogPanel } from '@/components/content-safety/PromptInjectionCatalogPanel';
 
 interface PolicyDetail {
   id: string;
@@ -594,6 +595,7 @@ export default function PolicyDetailPage() {
 
         {/* 关键词管理 Tab */}
         <TabsContent value="keywords" className="space-y-4">
+          <PromptInjectionCatalogPanel />
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">

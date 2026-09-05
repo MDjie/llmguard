@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { csrfHeaders } from '@/lib/auth/csrf-client';
+import { PromptInjectionCatalogPanel } from '@/components/content-safety/PromptInjectionCatalogPanel';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -420,7 +421,8 @@ export default function DimensionDetailPage() {
           <TabsTrigger value="settings">基本设置</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="rules">
+        <TabsContent value="rules" className="space-y-4">
+          {dimension.code === 'prompt_injection' && <PromptInjectionCatalogPanel />}
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">

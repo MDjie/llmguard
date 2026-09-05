@@ -4,6 +4,9 @@
 
 ## 目录边界
 
+- `lexicon/prompt-injection-bilingual.v1.json`：提示词注入专项目录，24 个可重叠工程家族、中文 72 条、英文 72 条和 48 条组合规则。由构建过程导入内置检测器，随代码版本部署，不是可热加载的生产词典。
+- `lexicon/prompt-injection-bilingual.v1.candidates.jsonl`：同源导出的 144 条审核候选，可进入已有转换/独立审核流程，不自动导入数据库或激活策略。研究结论、页面版本核对和发布边界见 `docs/prompt-injection-bilingual-coverage.md`。
+
 - `lexicon/content-safety-lexicon.v1.jsonl`：权威工作词库；当前为候选版本，条目未启用硬拦截。
 - `lexicon/content-safety-lexicon.schema.json`：词库交换格式约束。
 - `lexicon/releases/*.shadow.json`：离线回放和影子评测产物；未签名，禁止生产加载。

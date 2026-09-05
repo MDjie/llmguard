@@ -1,0 +1,11 @@
+[
+  {
+    "sourceId": "prompt-injection-bilingual@1.0.0",
+    "path": "data/content-safety/lexicon/prompt-injection-bilingual.v1.candidates.jsonl",
+    "format": "candidate-jsonl",
+    "sha256": "a6a32530bee1c3a3dc1f75fcbdb87f87259c136adfa7b9bdf0eedd02dbeb8a38",
+    "license": "project-authored; follow repository/customer redistribution policy",
+    "authorizedUse": "candidate_only",
+    "riskMapping": {}
+  }
+]

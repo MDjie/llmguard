@@ -1,4 +1,5 @@
 import { textEvidence } from './evidence';
+import { injectionPhraseMatches, isNegatedInjectionInstruction, isQuotedInjectionAnalysis, promptInjectionSignatures } from './prompt-injection-signatures';
 import { isDefensiveEducationalContext } from './intent-context';
 import type {
   GuardDetector,
@@ -24,6 +25,7 @@ interface RawMatch {
 }
 
 const PROMPT_ATTACKS: readonly MatchSpec[] = [
+  ...promptInjectionSignatures,
   {
     id: 'DIRECT_OVERRIDE_EN',
     riskType: 'prompt_injection.direct',
@@ -435,15 +437,24 @@ function observe(
       if (evidence.length >= 100) break;
     }
     if (evidence.length > 0) {
+      const promptInput = detectorId === 'prompt-attack-baseline' &&
+        context.request.context.direction === 'INPUT';
+      const quotedAnalysis = promptInput && evidence.every((item) =>
+        isQuotedInjectionAnalysis(context.request.content.text ?? '', item.start ?? 0, item.end ?? 0));
+      const contextualReview = detectorId === 'prompt-attack-baseline' &&
+        context.request.context.direction === 'INPUT' && evidence.every((item) =>
+          isQuotedInjectionAnalysis(context.request.content.text ?? '', item.start ?? 0, item.end ?? 0) ||
+          isNegatedInjectionInstruction(context.request.content.text ?? '', item.start ?? 0, item.end ?? 0));
       observations.push({
         detectorId,
         detectorVersion: version,
         riskType: spec.riskType,
-        score: spec.score,
-        severity: spec.severity,
+        score: contextualReview ? 0.55 : spec.score,
+        severity: contextualReview ? 'MEDIUM' : spec.severity,
+        ...(contextualReview ? { decisionRole: 'CANDIDATE' as const, scoreMeaning: 'UNCALIBRATED' as const, contextRole: quotedAnalysis ? 'quotation' as const : 'mention' as const } : {}),
         evidence,
         status: 'MATCH',
-        reasonCode: spec.id,
+        reasonCode: contextualReview ? `${spec.id}_CONTEXT_REQUIRES_SEMANTIC_REVIEW` : spec.id,
       });
     }
   }
@@ -531,12 +542,28 @@ export function validVehicleIdentificationNumber(value: string): boolean {
 
 export class PromptAttackDetector implements GuardDetector {
   readonly id = 'prompt-attack-baseline';
-  readonly version = '2.0.0';
+  readonly version = '2.1.0';
   readonly required = true;
 
   async detect(context: GuardDetectorContext): Promise<readonly Observation[]> {
     if (context.signal.aborted) throw context.signal.reason;
-    return observe(context, this.id, this.version, PROMPT_ATTACKS);
+    const observations = [...observe(context, this.id, this.version, PROMPT_ATTACKS)];
+    const covered = new Set(observations.map((observation) => observation.riskType));
+    // Literal phrases fill recall gaps but are not calibrated violations.
+    const candidates = new Map<string, Observation>();
+    for (const view of context.views) {
+      for (const match of injectionPhraseMatches(view.text)) {
+        if (covered.has(match.riskType) || candidates.has(match.riskType)) continue;
+        candidates.set(match.riskType, {
+          detectorId: this.id, detectorVersion: this.version,
+          riskType: match.riskType, score: 0.6, severity: 'MEDIUM',
+          decisionRole: 'CANDIDATE', scoreMeaning: 'UNCALIBRATED',
+          evidence: [textEvidence(context, view, match.index, match.index + match.value.length, match.value, mask(match.value))],
+          status: 'MATCH', reasonCode: `${match.id}_PHRASE_REQUIRES_SEMANTIC_REVIEW`,
+        });
+      }
+    }
+    return [...observations, ...candidates.values()];
   }
 }
 

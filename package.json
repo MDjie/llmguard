@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "detection:export-injection-candidates": "tsx scripts/content-safety/export-prompt-injection.ts",
     "detection:eval-compare": "tsx scripts/content-safety/benchmark-policy.ts",
     "test:integration:optimization-v2": "tsx scripts/integration/run-optimization-v2.ts",
     "test:console:optimization-v2": "tsx scripts/integration/test-console-v2.ts",
