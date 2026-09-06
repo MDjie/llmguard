@@ -3,6 +3,8 @@ export { MemoryRateLimiter } from './rate-limit';
 export { isPlatformPermission, PLATFORM_PERMISSIONS, PLATFORM_ROLES } from './types';
 export {
   createApiSecurity,
+  formDataWithLimit,
+  readBodyBytesWithLimit,
   withApiSecurity,
   withLegacyApiSecurity,
 } from './with-api-security';

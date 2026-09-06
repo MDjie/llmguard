@@ -4,6 +4,7 @@ import { readSecureMemorySnapshot, readSecureMemoryReplay, SecureMemoryReplayErr
 import {
   createEngineForPolicyBundle,
   evaluateWithSessionContext,
+  NormalizationBudgetExceededError,
 } from '@/lib/guard-engine-v2';
 import { loadRuntimePolicyBundle } from '@/lib/policy-bundle';
 import { requireTenantContext } from '@/lib/tenancy';
@@ -104,6 +105,14 @@ export const POST = withApiSecurity(
         throw new ApiProblem({status:error instanceof SecureMemoryReplayError && error.code==='SECURE_MEMORY_RECEIPT_KEY_UNAVAILABLE' ? 503 : 409,
           code:error instanceof SecureMemoryReplayError ? error.code : 'SECURE_MEMORY_VERSION_CONFLICT',
           title:'Session request cannot be replayed',detail:'Refresh the session or use a new request ID for a genuinely new request.'});
+      }
+      if (error instanceof NormalizationBudgetExceededError) {
+        throw new ApiProblem({
+          status: 413,
+          code: error.code,
+          title: 'Guard normalization budget exceeded',
+          detail: `The request content exceeded the ${error.budgetName} normalization budget.`,
+        });
       }
       if (error instanceof GuardResourceAdmissionError) {
         const status = error.code === 'GUARD_QUOTA_EXCEEDED' ||

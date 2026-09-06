@@ -6,6 +6,13 @@ import { detectionSessions, detectionRecords, riskFindings, detectionDimensions 
 import { sql, eq, and, gte, lt } from 'drizzle-orm';
 import { requireTenantContext, scopePredicate } from '@/lib/tenancy';
 
+function localDayString(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 async function getStats(
   _request: Request,
   _routeContext: unknown,
@@ -13,43 +20,39 @@ async function getStats(
 ) {
   try {
     const scope = requireTenantContext(apiContext.principal);
-    // 获取总检测次数
-    const totalCountResult = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(detectionSessions)
-      .where(scopePredicate(detectionSessions, scope));
-    
-    const totalCount = Number(totalCountResult[0]?.count || 0);
-
-    // 获取今日检测次数
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+    const tomorrowStart = new Date(todayStart);
+    tomorrowStart.setDate(tomorrowStart.getDate() + 1);
+    const weekStart = new Date(todayStart);
+    weekStart.setDate(weekStart.getDate() - 6);
+    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
 
-    const todayCountResult = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(detectionSessions)
-      .where(and(
-        gte(detectionSessions.createdAt, todayStart),
-        scopePredicate(detectionSessions, scope),
-      ));
-
-    const todayCount = Number(todayCountResult[0]?.count || 0);
-
-    // 获取动作分布
-    const sessionsData = await db
-      .select({ finalAction: detectionSessions.finalAction })
+    // 总量/今日量/动作分布合并为一条数据库端聚合查询
+    const [summary] = await db
+      .select({
+        total: sql<number>`count(*)`,
+        today: sql<number>`count(*) filter (where ${detectionSessions.createdAt} >= ${todayStart})`,
+        allow: sql<number>`count(*) filter (where ${detectionSessions.finalAction} = 'allow')`,
+        warn: sql<number>`count(*) filter (where ${detectionSessions.finalAction} = 'warn')`,
+        block: sql<number>`count(*) filter (where ${detectionSessions.finalAction} = 'block')`,
+        mask: sql<number>`count(*) filter (where ${detectionSessions.finalAction} = 'mask')`,
+        rewrite: sql<number>`count(*) filter (where ${detectionSessions.finalAction} = 'rewrite')`,
+      })
       .from(detectionSessions)
       .where(scopePredicate(detectionSessions, scope));
 
+    const totalCount = Number(summary?.total ?? 0);
+    const todayCount = Number(summary?.today ?? 0);
     const actionDistribution = {
-      allow: sessionsData.filter(s => s.finalAction === 'allow').length,
-      warn: sessionsData.filter(s => s.finalAction === 'warn').length,
-      block: sessionsData.filter(s => s.finalAction === 'block').length,
-      mask: sessionsData.filter(s => s.finalAction === 'mask').length,
-      rewrite: sessionsData.filter(s => s.finalAction === 'rewrite').length,
+      allow: Number(summary?.allow ?? 0),
+      warn: Number(summary?.warn ?? 0),
+      block: Number(summary?.block ?? 0),
+      mask: Number(summary?.mask ?? 0),
+      rewrite: Number(summary?.rewrite ?? 0),
     };
 
-    // 获取风险维度分布
+    // 获取风险维度分布（数据库端 GROUP BY，仅回传每个维度的计数）
     const dimensions = await db
       .select({ code: detectionDimensions.code })
       .from(detectionDimensions)
@@ -58,76 +61,68 @@ async function getStats(
         scopePredicate(detectionDimensions, scope),
       ));
 
-    const findingsData = await db
-      .select({ dimension: riskFindings.dimension })
+    const findingsByDimension = await db
+      .select({ dimension: riskFindings.dimension, count: sql<number>`count(*)` })
       .from(riskFindings)
-      .where(scopePredicate(riskFindings, scope));
+      .where(scopePredicate(riskFindings, scope))
+      .groupBy(riskFindings.dimension);
 
+    const findingsCount = new Map(
+      findingsByDimension.map((row) => [row.dimension, Number(row.count)]),
+    );
     const riskDistribution: Record<string, number> = {};
     for (const dim of dimensions) {
-      riskDistribution[dim.code] = findingsData.filter(f => f.dimension === dim.code).length;
+      riskDistribution[dim.code] = findingsCount.get(dim.code) ?? 0;
     }
 
-    // 获取检测记录统计
-    const recordsData = await db
+    // 检测记录均值（数据库端 AVG；coalesce 保持空值按 0 计入的既有口径）
+    const [recordStats] = await db
       .select({
-        overallScore: detectionRecords.overallScore,
-        totalLatencyMs: detectionRecords.totalLatencyMs,
+        avgScore: sql<number>`coalesce(avg(coalesce(${detectionRecords.overallScore}, 0)), 0)`,
+        avgLatency: sql<number>`coalesce(avg(coalesce(${detectionRecords.totalLatencyMs}, 0)), 0)`,
       })
       .from(detectionRecords)
       .where(scopePredicate(detectionRecords, scope));
 
-    const avgScore = recordsData.length > 0
-      ? recordsData.reduce((sum, r) => sum + (r.overallScore ? parseFloat(r.overallScore) : 0), 0) / recordsData.length
-      : 0;
+    const avgScore = Number(recordStats?.avgScore ?? 0);
+    const avgLatency = Number(recordStats?.avgLatency ?? 0);
 
-    const avgLatency = recordsData.length > 0
-      ? recordsData.reduce((sum, r) => sum + (r.totalLatencyMs || 0), 0) / recordsData.length
-      : 0;
+    // 最近7天趋势：单条 GROUP BY 聚合（按服务器本地时区的日边界分桶），
+    // 缺失日期在内存中补零
+    const trendRows = await db
+      .select({
+        day: sql<string>`to_char(date_trunc('day', ${detectionSessions.createdAt} at time zone ${timeZone}), 'YYYY-MM-DD')`,
+        total: sql<number>`count(*)`,
+        block: sql<number>`count(*) filter (where ${detectionSessions.finalAction} = 'block')`,
+        warn: sql<number>`count(*) filter (where ${detectionSessions.finalAction} = 'warn')`,
+        mask: sql<number>`count(*) filter (where ${detectionSessions.finalAction} = 'mask')`,
+      })
+      .from(detectionSessions)
+      .where(and(
+        gte(detectionSessions.createdAt, weekStart),
+        lt(detectionSessions.createdAt, tomorrowStart),
+        scopePredicate(detectionSessions, scope),
+      ))
+      .groupBy(sql`1`);
 
-    // 获取最近7天的趋势数据（按动作分类）
+    const trendByDay = new Map(trendRows.map((row) => [row.day, row]));
     const last7Days = [];
-    const trendTodayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
-    
     for (let i = 6; i >= 0; i--) {
-      const dayStart = new Date(trendTodayStart);
+      const dayStart = new Date(todayStart);
       dayStart.setDate(dayStart.getDate() - i);
-      
-      const dayEnd = new Date(dayStart);
-      dayEnd.setDate(dayEnd.getDate() + 1);
-
-      // 按动作分类统计当天数据
-      const daySessions = await db
-        .select({ finalAction: detectionSessions.finalAction })
-        .from(detectionSessions)
-        .where(and(
-          gte(detectionSessions.createdAt, dayStart),
-          lt(detectionSessions.createdAt, dayEnd),
-          scopePredicate(detectionSessions, scope),
-        ));
-
-      const dayTotal = daySessions.length;
-      const dayBlock = daySessions.filter(s => s.finalAction === 'block').length;
-      const dayWarn = daySessions.filter(s => s.finalAction === 'warn').length;
-      const dayMask = daySessions.filter(s => s.finalAction === 'mask').length;
-
-      // 格式化日期为 YYYY-MM-DD
-      const year = dayStart.getFullYear();
-      const month = String(dayStart.getMonth() + 1).padStart(2, '0');
-      const day = String(dayStart.getDate()).padStart(2, '0');
-      const dateStr = `${year}-${month}-${day}`;
-
+      const dateStr = localDayString(dayStart);
+      const row = trendByDay.get(dateStr);
       last7Days.push({
         date: dateStr,
-        count: dayTotal,
-        blockCount: dayBlock,
-        warnCount: dayWarn,
-        maskCount: dayMask,
+        count: Number(row?.total ?? 0),
+        blockCount: Number(row?.block ?? 0),
+        warnCount: Number(row?.warn ?? 0),
+        maskCount: Number(row?.mask ?? 0),
       });
     }
 
     // 计算拦截率
-    const blockRate = totalCount > 0 
+    const blockRate = totalCount > 0
       ? ((actionDistribution.block / totalCount) * 100).toFixed(2)
       : '0.00';
 

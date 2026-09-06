@@ -1,5 +1,5 @@
 import { timingSafeEqual } from 'node:crypto';
-import type { NextRequest } from 'next/server';
+import { NextRequest } from 'next/server';
 import { authenticateRequest } from '@/lib/auth/authenticator';
 import { ApiProblem, createProblemResponse, validationErrors } from './problem';
 import { MemoryRateLimiter } from './rate-limit';
@@ -84,6 +84,95 @@ function assertBodyLimit(request: Request, maxBodyBytes: number): void {
   }
 }
 
+/**
+ * 增量读取请求体并在超过上限时立即断开流。
+ * Content-Length 预检可被分块传输（无 Content-Length）绕过，
+ * 因此任何把 body 读入内存的路径都必须经过这里做二次设限。
+ */
+export async function readBodyBytesWithLimit(
+  request: Request,
+  maxBodyBytes: number,
+): Promise<Uint8Array<ArrayBuffer>> {
+  const reader = request.body?.getReader();
+  if (!reader) return new Uint8Array(0);
+  const chunks: Uint8Array[] = [];
+  let received = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (value === undefined) continue;
+    received += value.byteLength;
+    if (received > maxBodyBytes) {
+      await reader.cancel().catch(() => undefined);
+      throw new ApiProblem({
+        status: 413,
+        code: 'REQUEST_BODY_TOO_LARGE',
+        title: 'Request body too large',
+        detail: `The request body exceeds the ${maxBodyBytes} byte limit.`,
+      });
+    }
+    chunks.push(value);
+  }
+  const body = new Uint8Array(received);
+  let offset = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return body;
+}
+
+/**
+ * 在字节上限内解析 multipart 表单：先增量读取到有界缓冲，
+ * 再基于该缓冲构造请求做 formData 解析，避免 formData() 无界缓冲分块上传。
+ */
+export async function formDataWithLimit(
+  request: Request,
+  maxBodyBytes: number,
+): Promise<FormData> {
+  const body = await readBodyBytesWithLimit(request, maxBodyBytes);
+  return new Request(request.url, {
+    method: 'POST',
+    headers: {
+      'content-type': request.headers.get('content-type') ?? 'multipart/form-data',
+    },
+    body,
+  }).formData();
+}
+
+/**
+ * 把请求体包一层字节限额流：下游无论用 json()/text()/formData() 哪种方式读取，
+ * 累计超过上限都会以 ApiProblem(413) 失败。Content-Length 预检可被分块传输绕过，
+ * 这是所有 handler 自行读取 body 的路由（无 bodySchema 的旧式路由）的兜底防线。
+ */
+function withBoundedBody(request: NextRequest, maxBodyBytes: number): NextRequest {
+  if (maxBodyBytes <= 0) return request;
+  if (request.method === 'GET' || request.method === 'HEAD' || !request.body) return request;
+  let received = 0;
+  const bounded = request.body.pipeThrough(new TransformStream<Uint8Array, Uint8Array>({
+    transform(chunk, controller) {
+      received += chunk.byteLength;
+      if (received > maxBodyBytes) {
+        controller.error(new ApiProblem({
+          status: 413,
+          code: 'REQUEST_BODY_TOO_LARGE',
+          title: 'Request body too large',
+          detail: `The request body exceeds the ${maxBodyBytes} byte limit.`,
+        }));
+        return;
+      }
+      controller.enqueue(chunk);
+    },
+  }));
+  return new NextRequest(request.url, {
+    method: request.method,
+    headers: request.headers,
+    body: bounded,
+    signal: request.signal,
+    duplex: 'half',
+  });
+}
+
 function assertJsonMediaType(request: Request): void {
   const mediaType = request.headers.get('content-type')?.split(';')[0]?.trim().toLowerCase();
   if (mediaType !== JSON_MEDIA_TYPE && !mediaType?.endsWith('+json')) {
@@ -124,16 +213,10 @@ async function parseJsonBody<TBody>(
   maxBodyBytes: number,
 ): Promise<TBody> {
   assertJsonMediaType(request);
-  const rawBody = await request.text();
-  const actualLength = new TextEncoder().encode(rawBody).byteLength;
-  if (actualLength > maxBodyBytes) {
-    throw new ApiProblem({
-      status: 413,
-      code: 'REQUEST_BODY_TOO_LARGE',
-      title: 'Request body too large',
-      detail: `The request body exceeds the ${maxBodyBytes} byte limit.`,
-    });
-  }
+  // 增量读取：超限时立即取消流，避免分块传输在检查前把全部内容缓冲进内存
+  const rawBody = new TextDecoder().decode(
+    await readBodyBytesWithLimit(request, maxBodyBytes),
+  );
 
   let candidate: unknown;
   try {
@@ -403,14 +486,15 @@ export function createApiSecurity(dependencies: ApiSecurityDependencies = {}) {
       throw new Error('rateLimitPolicy limits must be greater than zero');
     }
 
-    return async (request: NextRequest, routeContext: TRouteContext): Promise<Response> => {
-      const requestContext = createRequestContext(request, now);
+    return async (rawRequest: NextRequest, routeContext: TRouteContext): Promise<Response> => {
+      const requestContext = createRequestContext(rawRequest, now);
       let principal: AuthenticatedPrincipal | null = null;
       let rateLimitResult: RateLimitResult | undefined;
       let response: Response;
 
       try {
-        assertBodyLimit(request, options.maxBodyBytes);
+        assertBodyLimit(rawRequest, options.maxBodyBytes);
+        const request = withBoundedBody(rawRequest, options.maxBodyBytes);
         if (!options.public) {
           principal = await authenticate(request, requestContext);
           if (!principal) {

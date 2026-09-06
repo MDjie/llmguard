@@ -54,6 +54,42 @@ describe('bounded normalization security pipeline', () => {
     expect(views.length).toBeLessThanOrEqual(24);
   });
 
+  it('handles inputs beyond the engine spread-argument limit without RangeError', () => {
+    // Inputs whose mapped-span count exceeds the JS engine argument limit
+    // (~125k) previously crashed whole-view mappedSpan (Math.min(...spreads))
+    // and range-gap pushes (push(...slice)) with an unclassified RangeError.
+    const filler = 'a'.repeat(130_000);
+    // Relax only the CPU budget: this test targets the spread-argument crash,
+    // while maxCpuMs already has dedicated coverage above.
+    const relaxedCpu = { maxCpuMs: 30_000 };
+
+    const urlInput = `${filler}%41`;
+    const urlDecoded = buildNormalizedViews(urlInput, relaxedCpu).find((view) =>
+      view.id.startsWith('url_percent'));
+    expect(urlDecoded).toBeDefined();
+    expect(urlDecoded!.text.endsWith('A')).toBe(true);
+    expect(mapViewRange(urlDecoded!, 0, urlDecoded!.text.length)).toEqual({
+      start: 0,
+      end: urlInput.length,
+    });
+
+    const entityInput = `${filler}&amp;`;
+    const entityDecoded = buildNormalizedViews(entityInput, relaxedCpu).find((view) =>
+      view.id.startsWith('html_entity'));
+    expect(entityDecoded).toBeDefined();
+    expect(entityDecoded!.text.endsWith('&')).toBe(true);
+    expect(mapViewRange(entityDecoded!, 0, entityDecoded!.text.length)).toEqual({
+      start: 0,
+      end: entityInput.length,
+    });
+
+    const slicedInput = 'i . g . n . o . r . e '.repeat(1) + filler;
+    const slicedViews = buildNormalizedViews(slicedInput, relaxedCpu);
+    for (const view of slicedViews) {
+      expect(view.originSpans).toHaveLength(view.text.length);
+    }
+  }, 15_000);
+
   it('has a named decoder registry without duplicate methods', () => {
     const ids = NORMALIZATION_DECODER_REGISTRY.map((decoder) => decoder.id);
     expect(ids).toEqual(expect.arrayContaining([

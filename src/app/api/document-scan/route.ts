@@ -1,7 +1,7 @@
 import { and, desc, eq, sql } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { db, documentScanTasks } from '@/lib/db';
-import { withApiSecurity } from '@/lib/api-security';
+import { formDataWithLimit, withApiSecurity } from '@/lib/api-security';
 import { ApiProblem, validationErrors } from '@/lib/api-security/problem';
 import { jsonObjectResponseSchema } from '@/contracts/http/common';
 import { documentTaskQuerySchema, documentUploadMetadataSchema } from '@/contracts/http/documents';
@@ -92,7 +92,8 @@ export const POST = withApiSecurity(
     const scope = requireTenantContext(principal);
     let taskId: string | null = null;
     try {
-      const formData = await request.formData();
+      // 有界解析：分块传输无 Content-Length 时，预检不生效，必须在此二次设限
+      const formData = await formDataWithLimit(request, MULTIPART_BODY_LIMIT);
       const fileEntry = formData.get('file');
       if (!(fileEntry instanceof File)) {
         throw problem(400, 'DOCUMENT_FILE_REQUIRED', 'A document file is required.');

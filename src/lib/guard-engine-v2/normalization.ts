@@ -108,11 +108,36 @@ function mappedSpan(view: NormalizedView, start: number, end: number): OriginSpa
   if (start === end) {
     return view.originSpans[start] ?? view.originSpans[start - 1] ?? { start: 0, end: 0 };
   }
-  const selected = view.originSpans.slice(start, end);
-  return {
-    start: Math.min(...selected.map((span) => span.start)),
-    end: Math.max(...selected.map((span) => span.end)),
-  };
+  // Avoid slice + spread here: ranges can exceed the engine argument limit (~125k)
+  // and Math.min(...largeArray) throws a RangeError on the hot decode paths.
+  let minStart = Number.POSITIVE_INFINITY;
+  let maxEnd = Number.NEGATIVE_INFINITY;
+  const last = Math.min(end, view.originSpans.length);
+  for (let index = Math.max(0, start); index < last; index += 1) {
+    const span = view.originSpans[index];
+    if (span === undefined) continue;
+    if (span.start < minStart) minStart = span.start;
+    if (span.end > maxEnd) maxEnd = span.end;
+  }
+  if (minStart === Number.POSITIVE_INFINITY || maxEnd === Number.NEGATIVE_INFINITY) {
+    return view.originSpans[start] ?? view.originSpans[start - 1] ?? { start: 0, end: 0 };
+  }
+  return { start: minStart, end: maxEnd };
+}
+
+function appendOriginSpans(
+  target: OriginSpan[],
+  source: readonly OriginSpan[],
+  from: number,
+  to: number,
+): void {
+  // Push segment-by-segment: spread of a large slice throws a RangeError
+  // once the gap between matches exceeds the engine argument limit.
+  const end = Math.min(to, source.length);
+  for (let index = Math.max(0, from); index < end; index += 1) {
+    const span = source[index];
+    if (span !== undefined) target.push(span);
+  }
 }
 
 function wholeViewCandidate(
@@ -183,7 +208,7 @@ function slicedTokenCandidates(view: NormalizedView): readonly CandidateView[] {
     const end = start + match[0].length;
     if (start > cursor) {
       parts.push(view.text.slice(cursor, start));
-      spans.push(...view.originSpans.slice(cursor, start));
+      appendOriginSpans(spans, view.originSpans, cursor, start);
     }
     let localOffset = start;
     for (const character of match[0]) {
@@ -196,7 +221,7 @@ function slicedTokenCandidates(view: NormalizedView): readonly CandidateView[] {
   }
   if (cursor < view.text.length) {
     parts.push(view.text.slice(cursor));
-    spans.push(...view.originSpans.slice(cursor));
+    appendOriginSpans(spans, view.originSpans, cursor, view.text.length);
   }
   return [{
     text: parts.join(''),
@@ -219,7 +244,7 @@ function replaceMappedRanges(
   for (const replacement of replacements) {
     if (replacement.start < cursor) continue;
     parts.push(view.text.slice(cursor, replacement.start));
-    spans.push(...view.originSpans.slice(cursor, replacement.start));
+    appendOriginSpans(spans, view.originSpans, cursor, replacement.start);
     appendMapped(
       parts,
       spans,
@@ -229,7 +254,7 @@ function replaceMappedRanges(
     cursor = replacement.end;
   }
   parts.push(view.text.slice(cursor));
-  spans.push(...view.originSpans.slice(cursor));
+  appendOriginSpans(spans, view.originSpans, cursor, view.text.length);
   return [{ text: parts.join(''), originSpans: spans, method, confidence }];
 }
 

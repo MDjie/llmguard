@@ -13,6 +13,9 @@ const handle = app.getRequestHandler();
 app.prepare().then(() => {
   const server = createServer(async (req, res) => {
     try {
+      // 客户端可任意伪造请求头，因此真实对端地址只能由本服务器在 TCP 层写入：
+      // 无条件覆盖客户端传入的同名头，供 api-security 解析不可伪造的客户端 IP。
+      req.headers['x-guardllm-remote'] = req.socket.remoteAddress ?? '';
       await handle(req, res);
     } catch (err) {
       console.error('Error occurred handling', req.url, err);

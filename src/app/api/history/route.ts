@@ -10,30 +10,46 @@ import {
 } from '@/lib/api-security';
 import { db } from '@/lib/db';
 import { detectionSessions, detectionRecords, riskFindings } from '@/lib/db';
-import { sql, eq, desc, inArray, and, gte, lte } from 'drizzle-orm';
+import { sql, eq, desc, inArray, and, gte, lte, ilike } from 'drizzle-orm';
+import type { z } from 'zod';
 import { requireTenantContext, scopePredicate, type TenantScope } from '@/lib/tenancy';
 
+function escapeLike(value: string): string {
+  return value.replace(/[\\%_]/g, (character) => `\\${character}`);
+}
+
 async function getHistory(
-  request: Request,
+  query: z.infer<typeof historyQuerySchema>,
   principal: AuthenticatedPrincipal,
   scope: TenantScope,
 ) {
   try {
-    const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get('page') || '1', 10);
-    const limit = parseInt(searchParams.get('limit') || '20', 10);
-    const action = searchParams.get('action');
-    const search = searchParams.get('search');
-    const dimension = searchParams.get('dimension');
-    const startDate = searchParams.get('startDate');
-    const endDate = searchParams.get('endDate');
-
+    const { page, limit, action, search, dimension, startDate, endDate } = query;
     const offset = (page - 1) * limit;
 
-    // 构建查询条件
+    // 所有过滤条件（动作/搜索/维度）前置进 SQL，
+    // 使分页与总数基于同一组条件，保证每页条数与 total 一致
     const conditions = [scopePredicate(detectionSessions, scope)];
     if (!principal.permissions.includes('audit:read')) {
       conditions.push(eq(detectionSessions.userId, principal.subject));
+    }
+    if (action && action !== 'all') {
+      conditions.push(eq(detectionSessions.finalAction, action));
+    }
+    if (search) {
+      conditions.push(ilike(detectionSessions.id, `%${escapeLike(search)}%`));
+    }
+    if (dimension && dimension !== 'all') {
+      const sessionIdsWithDimension = db
+        .select({ id: detectionRecords.sessionId })
+        .from(detectionRecords)
+        .innerJoin(riskFindings, eq(riskFindings.recordId, detectionRecords.id))
+        .where(and(
+          eq(riskFindings.dimension, dimension),
+          scopePredicate(detectionRecords, scope),
+          scopePredicate(riskFindings, scope),
+        ));
+      conditions.push(inArray(detectionSessions.id, sessionIdsWithDimension));
     }
     if (startDate) {
       conditions.push(gte(detectionSessions.createdAt, new Date(startDate)));
@@ -44,35 +60,24 @@ async function getHistory(
       end.setHours(23, 59, 59, 999);
       conditions.push(lte(detectionSessions.createdAt, end));
     }
+    const where = and(...conditions);
 
-    // 查询总数
+    // 查询总数（与列表使用同一组过滤条件）
     const countResult = await db
       .select({ count: sql<number>`count(*)` })
       .from(detectionSessions)
-      .where(and(...conditions));
+      .where(where);
 
     const total = Number(countResult[0]?.count || 0);
 
     // 查询会话数据
-    let sessions = await db
+    const sessions = await db
       .select()
       .from(detectionSessions)
-      .where(and(...conditions))
+      .where(where)
       .orderBy(desc(detectionSessions.createdAt))
       .limit(limit)
       .offset(offset);
-
-    // 按动作过滤
-    if (action && action !== 'all') {
-      sessions = sessions.filter(s => s.finalAction === action);
-    }
-
-    // 搜索过滤
-    if (search) {
-      sessions = sessions.filter((session) =>
-        session.id.toLowerCase().includes(search.toLowerCase()),
-      );
-    }
 
     // 获取所有会话ID
     const sessionIds = sessions.map(s => s.id);
@@ -102,17 +107,6 @@ async function getHistory(
           inArray(riskFindings.recordId, recordIds),
           scopePredicate(riskFindings, scope),
         ));
-    }
-
-    // 如果指定了维度筛选，过滤会话
-    if (dimension && dimension !== 'all') {
-      const recordIdsWithDimension = new Set(
-        findings.filter(f => f.dimension === dimension).map(f => f.recordId)
-      );
-      const sessionIdsWithDimension = new Set(
-        records.filter(r => recordIdsWithDimension.has(r.id)).map(r => r.sessionId)
-      );
-      sessions = sessions.filter(s => sessionIdsWithDimension.has(s.id));
     }
 
     // 构建记录ID到findings的映射
@@ -203,11 +197,8 @@ async function getHistory(
   }
 }
 
-async function deleteHistory(request: Request, scope: TenantScope) {
+async function deleteHistory(id: string, scope: TenantScope) {
   try {
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
-
     if (!id) {
       return NextResponse.json(
         { success: false, error: '缺少会话ID' },
@@ -276,11 +267,11 @@ export const GET = withApiSecurity(
       scope: 'principal',
     },
   },
-  async ({ request, principal }) => {
+  async ({ query, principal }) => {
     if (!principal) {
       throw new Error('Authenticated principal missing after authorization');
     }
-    return getHistory(request, principal, requireTenantContext(principal));
+    return getHistory(query, principal, requireTenantContext(principal));
   },
 );
 
@@ -298,7 +289,7 @@ export const DELETE = withApiSecurity(
       scope: 'principal',
     },
   },
-  async ({ request, principal }) => deleteHistory(request, requireTenantContext(principal)),
+  async ({ query, principal }) => deleteHistory(query.id, requireTenantContext(principal)),
 );
 
 // 维度名称映射
