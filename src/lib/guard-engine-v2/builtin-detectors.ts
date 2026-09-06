@@ -229,8 +229,10 @@ const CONTENT_SAFETY_INTENTS: readonly MatchSpec[] = [
   },
   {
     id: 'COORDINATED_AD_REQUEST',
+    // 协同广告的判定核心是“可疑链接 + 交易”或“任意链接 + 传播/返利激励”：
+    // “点击以下链接购买”这类正常电商文案不应命中
     riskType: 'ad_detection',
-    pattern: /(?:(?:点击|访问|打开|click|visit|open)[\s\S]{0,52}(?:陌生|未知|指定|以下|unknown|provided|this)?[\s\S]{0,12}(?:链接|网址|link|url)[\s\S]{0,88}(?:购买|下单|转发|推广|返利|佣金|赚钱|buy|order|share|refer|commission|profit)|(?:购买|下单|buy|order)[\s\S]{0,56}(?:转发|推广|推荐|share|promote|refer)[\s\S]{0,36}(?:返利|佣金|收益|commission|profit))/giu,
+    pattern: /(?:(?:点击|访问|打开|click|visit|open)[\s\S]{0,52}(?:陌生|未知|可疑|指定|unknown|provided|suspicious)[\s\S]{0,12}(?:链接|网址|link|url)[\s\S]{0,88}(?:购买|下单|转发|推广|返利|佣金|赚钱|buy|order|share|refer|commission|profit)|(?:点击|访问|打开|click|visit|open)[\s\S]{0,52}(?:链接|网址|link|url)[\s\S]{0,88}(?:转发|推广|返利|佣金|赚钱|share|promote|refer|commission|profit)|(?:购买|下单|buy|order)[\s\S]{0,56}(?:转发|推广|推荐|share|promote|refer)[\s\S]{0,36}(?:返利|佣金|收益|commission|profit))/giu,
     score: 0.9,
     severity: 'HIGH',
     suppressInDefensiveContext: true,

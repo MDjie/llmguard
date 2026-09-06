@@ -55,4 +55,14 @@ describe('V2 main-path configurable judge',()=>{
     const safe:Observation={...o,detectorId:'configurable-judge',riskType:'self_harm',score:0,status:'NO_MATCH',decisionRole:'CLEARED',semanticCoverage:'COMPLETE'};
     const result=aggregateGuardDecision({request:request(),policy:{...p,judgeProfiles:[profile()]},observations:[o,o,safe],requiredDetectorFailures:[],latencyMs:0});expect(result.action).toBe('WARN');
   });
+  it('applies per-risk thresholds in v1 so one dimension cannot lower the bar for others',()=>{
+    // v1 此前对所有风险套用全局阈值（构建时取各维度最小值），
+    // 某维度低阈值会把其它维度的拦截线一并拉低
+    const o:Observation={detectorId:'builtin',detectorVersion:'1',riskType:'mobile_phone',status:'MATCH',score:.86,severity:'HIGH',evidence:[]};
+    const p={...policy,decisionPolicyVersion:1 as const,riskThresholds:{'mobile_phone':{warn:.5,block:.95},'other':{warn:.5,block:.6}}};
+    const result=aggregateGuardDecision({request:request(),policy:p,observations:[o],requiredDetectorFailures:[],latencyMs:0});
+    expect(result.action).toBe('WARN');
+    const harsh=aggregateGuardDecision({request:request(),policy:{...p,riskThresholds:{'mobile_phone':{warn:.5,block:.8}}},observations:[{...o,score:.81}],requiredDetectorFailures:[],latencyMs:0});
+    expect(harsh.action).toBe('BLOCK');
+  });
 });

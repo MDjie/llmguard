@@ -10,16 +10,36 @@ function list(value: string | undefined) {
   return (value ?? '').split(',').map((item) => item.trim()).filter(Boolean);
 }
 
+// 认领租约时长：投递本身有 15s 超时，租约到期即可被重新认领，
+// 覆盖“置为 sending 后、写回结果前进程崩溃”导致的永久卡死
+const CALLBACK_LEASE_MS = 60_000;
+
 async function claimCallback() {
   return db.transaction(async (transaction) => {
     const [candidate] = await transaction.select().from(guardJobs).where(and(
       eq(guardJobs.status, 'completed'),
-      inArray(guardJobs.callbackState, ['pending', 'failed']),
-      or(isNull(guardJobs.callbackNextAt), lte(guardJobs.callbackNextAt, new Date())),
+      or(
+        and(
+          inArray(guardJobs.callbackState, ['pending', 'failed']),
+          or(isNull(guardJobs.callbackNextAt), lte(guardJobs.callbackNextAt, new Date())),
+        ),
+        and(
+          eq(guardJobs.callbackState, 'sending'),
+          lte(guardJobs.callbackNextAt, new Date()),
+        ),
+      ),
     )).orderBy(asc(guardJobs.completedAt)).limit(1).for('update', { skipLocked: true });
-    if (!candidate || candidate.callbackAttempt >= 5) return null;
+    if (!candidate) return null;
+    if (candidate.callbackAttempt >= 5) {
+      // 崩溃可能把尝试次数已耗尽的任务留在 sending/failed：这里补一次终态化
+      await transaction.update(guardJobs).set({
+        callbackState: 'terminal_failed', callbackNextAt: null,
+      }).where(eq(guardJobs.id, candidate.id));
+      return null;
+    }
     const [claimed] = await transaction.update(guardJobs).set({
       callbackState: 'sending', callbackAttempt: candidate.callbackAttempt + 1,
+      callbackNextAt: new Date(Date.now() + CALLBACK_LEASE_MS),
     }).where(eq(guardJobs.id, candidate.id)).returning();
     return claimed ?? null;
   });

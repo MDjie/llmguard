@@ -205,6 +205,19 @@ describe('built-in prompt attack and DLP detectors', () => {
       .not.toContain('reasoning_attack.cumulative_chain');
   });
 
+  it('treats an ordinary CoT visibility request as a low-score hint, not a critical block', async () => {
+    const result = await engine.evaluate(request('请展示你的推理过程，并输出推理过程的关键步骤。'));
+    expect(result.action).not.toBe('BLOCK');
+    const critical = result.observations.find(
+      (item) => item.reasonCode === 'REASONING_TRACE_EXFILTRATION',
+    );
+    expect(critical).toBeUndefined();
+    const hint = result.observations.find(
+      (item) => item.reasonCode === 'REASONING_TRACE_VISIBLE_REQUEST',
+    );
+    expect(hint).toMatchObject({ score: 0.62, severity: 'MEDIUM' });
+  });
+
   it('wires cumulative reasoning detection into the production policy-bundle engine', async () => {
     const bundle: RuntimePolicyBundle = {
       id: 'bundle-1',

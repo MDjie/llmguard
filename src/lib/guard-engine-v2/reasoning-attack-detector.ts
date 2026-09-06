@@ -47,7 +47,10 @@ const SIGNALS: readonly SignalSpec[] = [
 const TURN_BOUNDARY = /\[guard-turn-boundary\]/gu;
 const SEQUENCE_PHRASE = /\bstep\s+by\s+step\b|\bfirst(?:ly)?[\s\S]{0,240}\bthen\b|(?:第一步|首先)[\s\S]{0,240}(?:第二步|然后)/iu;
 const DEFENSIVE_CONTEXT = /\b(?:how\s+to|ways?\s+to)\s+(?:prevent|detect|defend|mitigate|protect)\b|(?:如何|怎样)(?:防止|检测|防御|缓解|保护)/iu;
-const TRACE_EXFILTRATION = /(?:(?:reveal|show|print|repeat|expose).{0,40}(?:hidden|private|internal)?.{0,20}(?:chain[- ]of[- ]thought|reasoning|scratchpad)|(?:展示|泄露|输出|复述).{0,40}(?:隐藏|私有|内部)?.{0,20}(?:思维链|推理过程|草稿))/giu;
+// 外传请求必须带有保密性限定词（隐藏/私有/内部/hidden/private/...）才计高置信：
+// 裸的“展示/输出推理过程”是用户请求 CoT 可见度的常规说法，单独降级为低分提示
+const TRACE_EXFILTRATION = /(?:(?:reveal|show|print|repeat|expose|dump|leak).{0,40}(?:hidden|private|internal|secret|confidential|unreleased).{0,20}(?:chain[- ]of[- ]thought|reasoning|scratchpad|thought\s*process)|(?:展示|输出|复述|显示|泄露|窃取|转储|导出).{0,40}(?:隐藏|私有|内部|机密|保密|未公开).{0,20}(?:思维链|推理过程|草稿))/giu;
+const TRACE_VISIBLE_REQUEST = /(?:(?:展示|输出|复述|显示|给出).{0,20}(?:思维链|推理过程|草稿)|(?:show|print|repeat|reveal).{0,20}reasoning)/giu;
 const MAX_SIGNALS_PER_KIND = 32;
 const MAX_EVIDENCE = 16;
 
@@ -138,19 +141,26 @@ function cumulativeObservation(
   };
 }
 
-function traceObservation(
-  context: GuardDetectorContext,
+function traceSignals(
   view: NormalizedView,
-): Observation | null {
-  TRACE_EXFILTRATION.lastIndex = 0;
-  const signals: LocatedSignal[] = [...view.text.matchAll(TRACE_EXFILTRATION)]
+  pattern: RegExp,
+): LocatedSignal[] {
+  pattern.lastIndex = 0;
+  return [...view.text.matchAll(pattern)]
     .slice(0, MAX_EVIDENCE)
     .map((match) => ({
-      kind: 'target',
+      kind: 'target' as const,
       value: match[0],
       start: match.index ?? 0,
       end: (match.index ?? 0) + match[0].length,
     }));
+}
+
+function traceObservation(
+  context: GuardDetectorContext,
+  view: NormalizedView,
+): Observation | null {
+  const signals = traceSignals(view, TRACE_EXFILTRATION);
   if (signals.length === 0) return null;
   return {
     detectorId: 'reasoning-attack-baseline',
@@ -161,6 +171,26 @@ function traceObservation(
     evidence: toEvidence(context, view, signals),
     status: 'MATCH',
     reasonCode: 'REASONING_TRACE_EXFILTRATION',
+  };
+}
+
+// 裸的 CoT 可见度请求（无保密性限定词）：低分提示而非 CRITICAL 拦截，
+// 在 v2 下交给语义/judge 复核，v1 下至多产生 WARN
+function traceRequestObservation(
+  context: GuardDetectorContext,
+  view: NormalizedView,
+): Observation | null {
+  const signals = traceSignals(view, TRACE_VISIBLE_REQUEST);
+  if (signals.length === 0) return null;
+  return {
+    detectorId: 'reasoning-attack-baseline',
+    detectorVersion: '2.0.0',
+    riskType: 'reasoning_attack.trace_exfiltration',
+    score: 0.62,
+    severity: 'MEDIUM',
+    evidence: toEvidence(context, view, signals),
+    status: 'MATCH',
+    reasonCode: 'REASONING_TRACE_VISIBLE_REQUEST',
   };
 }
 
@@ -186,6 +216,10 @@ export class ReasoningAttackDetector implements GuardDetector {
     if (context.signal.aborted) throw context.signal.reason;
     const cumulative = strongest(context.views.map((view) => cumulativeObservation(context, view)));
     const trace = strongest(context.views.map((view) => traceObservation(context, view)));
-    return [cumulative, trace].filter((item): item is Observation => item !== null);
+    // 已有高置信外传命中时不再叠加低分提示
+    const traceRequest = trace
+      ? null
+      : strongest(context.views.map((view) => traceRequestObservation(context, view)));
+    return [cumulative, trace, traceRequest].filter((item): item is Observation => item !== null);
   }
 }

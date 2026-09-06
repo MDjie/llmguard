@@ -115,11 +115,11 @@ export function preparePolicyBundleEngine(bundle:RuntimePolicyBundle) {
       detectorDag,
     },detectors};
 }
-export function createEngineForPolicyBundle(
+function buildEngineForPolicyBundle(
   bundle: RuntimePolicyBundle,
-  hmacKey = process.env.CONTENT_HASH_KEY ?? '',
-  protectedContextFingerprints: GuardEngineDependencies['protectedContextFingerprints'] = [],
-  runtimeOptions: PolicyBundleEngineRuntimeOptions = {},
+  hmacKey: string,
+  protectedContextFingerprints: GuardEngineDependencies['protectedContextFingerprints'],
+  runtimeOptions: PolicyBundleEngineRuntimeOptions,
 ) {
   const {policy,detectors}=preparePolicyBundleEngine(bundle);
   const outputSecurityEventSink=runtimeOptions.outputSecurityEventSink??(process.env.NODE_ENV==='production'?recordOutputControlFailure:undefined);
@@ -144,4 +144,39 @@ export function createEngineForPolicyBundle(
       });
     },
   };
+}
+
+// 引擎构建（词法自动机 + DAG 校验）在上千条规则时要几十毫秒 CPU；
+// bundle 内容与 id 绑定（签名后不可变），按 id 复用可避免每请求重建。
+// 仅缓存“全部使用默认参数”的引擎（现有 15 个调用点均如此）。
+const ENGINE_CACHE_MAX_ENTRIES = 16;
+const engineCache = new Map<string, ReturnType<typeof buildEngineForPolicyBundle>>();
+
+export function createEngineForPolicyBundle(
+  bundle: RuntimePolicyBundle,
+  hmacKey = process.env.CONTENT_HASH_KEY ?? '',
+  protectedContextFingerprints: GuardEngineDependencies['protectedContextFingerprints'] = [],
+  runtimeOptions: PolicyBundleEngineRuntimeOptions = {},
+): ReturnType<typeof buildEngineForPolicyBundle> {
+  const cacheable = hmacKey === (process.env.CONTENT_HASH_KEY ?? '')
+    && protectedContextFingerprints.length === 0
+    && runtimeOptions.dlpTokenizationHmacKey === undefined
+    && runtimeOptions.outputSecurityEventSink === undefined;
+  if (!cacheable) {
+    return buildEngineForPolicyBundle(bundle, hmacKey, protectedContextFingerprints, runtimeOptions);
+  }
+  const cached = engineCache.get(bundle.id);
+  if (cached) {
+    // LRU 触碰：Map 迭代序即插入序，删后重插使其回到最新位置
+    engineCache.delete(bundle.id);
+    engineCache.set(bundle.id, cached);
+    return cached;
+  }
+  const engine = buildEngineForPolicyBundle(bundle, hmacKey, protectedContextFingerprints, runtimeOptions);
+  engineCache.set(bundle.id, engine);
+  if (engineCache.size > ENGINE_CACHE_MAX_ENTRIES) {
+    const oldest = engineCache.keys().next().value;
+    if (oldest !== undefined) engineCache.delete(oldest);
+  }
+  return engine;
 }

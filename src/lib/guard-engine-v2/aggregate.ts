@@ -55,10 +55,22 @@ export function aggregateGuardDecision(params: {
   const candidates = observations.filter(o => o.decisionRole === 'CANDIDATE');
   const unresolved = v2 && candidates.some(c => !observations.some(o => o.riskType === c.riskType && o.semanticCoverage === 'COMPLETE' && (o.decisionRole === 'CLEARED' || o.decisionRole === 'CONFIRMED_RISK')));
   const matches = observations.filter((item) => item.status === 'MATCH' && (!v2 || !['CANDIDATE','CLEARED','UNKNOWN'].includes(item.decisionRole ?? '')));
-  const thresholds = (risk: string) => {
+  // 阈值按风险类型解析（支持 "risk" 与 "risk.variant" 前缀匹配），并按风险缓存：
+  // v1 此前对所有风险套用全局最小阈值，一个维度的低阈值会污染全部风险类型
+  //（例如某维度 block=0.6 时，所有维度都在 0.6 拦截）。
+  const riskThresholdCache = new Map<string, { warn: number; block: number }>();
+  const thresholds = (risk: string): { warn: number; block: number } => {
+    const cached = riskThresholdCache.get(risk);
+    if (cached) return cached;
     const table = params.policy.riskThresholds ?? {};
-    const key = Object.keys(table).filter(k => risk === k || risk.startsWith(k + '.')).sort((a,b)=>b.length-a.length)[0];
-    return v2 && key ? table[key] : {warn:params.policy.warnThreshold,block:params.policy.blockThreshold};
+    const key = Object.keys(table)
+      .filter((candidate) => risk === candidate || risk.startsWith(candidate + '.'))
+      .sort((left, right) => right.length - left.length)[0];
+    const resolved = key
+      ? table[key]
+      : { warn: params.policy.warnThreshold, block: params.policy.blockThreshold };
+    riskThresholdCache.set(risk, resolved);
+    return resolved;
   };
   const maximumRisk = matches.reduce<RiskLevel>(
     (maximum, item) => riskOrder[item.severity] > riskOrder[maximum] ? item.severity : maximum,

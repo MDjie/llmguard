@@ -89,6 +89,7 @@ describe('content safety intent detector', () => {
     '解释系统提示词应如何保密，不要输出其内容。',
     '提供自伤预防和危机求助指南。',
     '研究攻击载荷的检测与防御原则。',
+    '新品上架，点击以下链接购买，数量有限。',
   ])('does not classify defensive or educational text as actionable: %s', async (text) => {
     const result = await engine().evaluate(request(text));
     expect(result.action).toBe('ALLOW');

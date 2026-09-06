@@ -60,8 +60,14 @@ class AhoCorasick {
     }
   }
 
-  find(text: string, limit: number): readonly { patternIndex: number; end: number }[] {
+  /**
+   * 全文扫描，永不提前停止：提前停止会让攻击者用海量前置命中
+   * 把尾部的真实风险挤出扫描窗口。只对每个模式的存储数量封顶，
+   * 扫描本身是 O(n)，贵的是证据对象而不是扫描。
+   */
+  find(text: string, perPatternLimit: number): readonly { patternIndex: number; end: number }[] {
     const matches: Array<{ patternIndex: number; end: number }> = [];
+    const perPatternCounts = new Int32Array(this.patterns.length);
     let state = 0;
     let offset = 0;
     for (const character of text) {
@@ -71,8 +77,9 @@ class AhoCorasick {
       state = this.nodes[state].next.get(character) ?? 0;
       offset += character.length;
       for (const patternIndex of this.nodes[state].outputs) {
+        if (perPatternCounts[patternIndex] >= perPatternLimit) continue;
+        perPatternCounts[patternIndex] += 1;
         matches.push({ patternIndex, end: offset });
-        if (matches.length >= limit) return matches;
       }
     }
     return matches;
@@ -156,33 +163,65 @@ function approximateMatches(view: NormalizedView, rule: RuleSpec): readonly Lexi
   return matches;
 }
 
+function indexed(rule: RuleSpec): IndexedRule {
+  return {
+    rule,
+    normalizedPattern: rule.caseSensitive ? rule.pattern : fold(rule.pattern),
+  };
+}
+
+function anchoredMatch(
+  text: string,
+  entry: IndexedRule,
+): { raw: string; index: number } | null {
+  const { rule, normalizedPattern } = entry;
+  if (rule.matchType === 'exact') {
+    return text === normalizedPattern ? { raw: text, index: 0 } : null;
+  }
+  if (rule.matchType === 'prefix') {
+    if (!text.startsWith(normalizedPattern)) return null;
+    return { raw: text.slice(0, normalizedPattern.length), index: 0 };
+  }
+  if (!text.endsWith(normalizedPattern)) return null;
+  const index = text.length - normalizedPattern.length;
+  return { raw: text.slice(index), index };
+}
+
 export class LexicalMatcher {
-  private readonly sensitive: readonly IndexedRule[];
-  private readonly insensitive: readonly IndexedRule[];
+  private readonly containsSensitive: readonly IndexedRule[];
+  private readonly containsInsensitive: readonly IndexedRule[];
+  private readonly anchoredSensitive: readonly IndexedRule[];
+  private readonly anchoredInsensitive: readonly IndexedRule[];
   private readonly sensitiveAutomaton?: AhoCorasick;
   private readonly insensitiveAutomaton?: AhoCorasick;
 
   constructor(private readonly rules: readonly RuleSpec[]) {
     rules.forEach(validateApproximateRule);
-    this.sensitive = rules
-      .filter((rule) => rule.matchType !== 'regex' && rule.caseSensitive)
-      .map((rule) => ({ rule, normalizedPattern: rule.pattern }));
-    this.insensitive = rules
-      .filter((rule) => rule.matchType !== 'regex' && !rule.caseSensitive)
-      .map((rule) => ({ rule, normalizedPattern: fold(rule.pattern) }));
-    if (this.sensitive.length > 0) {
+    const lexical = rules.filter((rule) => rule.matchType !== 'regex');
+    const anchored = lexical.filter((rule) => rule.matchType !== 'contains');
+    // 锚定匹配（exact/prefix/suffix）每视图至多 1 次命中，直接字符串检查即可，
+    // 走自动机反而可能被同模式的其他位置命中挤出存储窗口
+    this.anchoredSensitive = anchored.filter((rule) => rule.caseSensitive).map(indexed);
+    this.anchoredInsensitive = anchored.filter((rule) => !rule.caseSensitive).map(indexed);
+    this.containsSensitive = lexical
+      .filter((rule) => rule.matchType === 'contains' && rule.caseSensitive)
+      .map(indexed);
+    this.containsInsensitive = lexical
+      .filter((rule) => rule.matchType === 'contains' && !rule.caseSensitive)
+      .map(indexed);
+    if (this.containsSensitive.length > 0) {
       this.sensitiveAutomaton = new AhoCorasick(
-        this.sensitive.map((entry) => entry.normalizedPattern),
+        this.containsSensitive.map((entry) => entry.normalizedPattern),
       );
     }
-    if (this.insensitive.length > 0) {
+    if (this.containsInsensitive.length > 0) {
       this.insensitiveAutomaton = new AhoCorasick(
-        this.insensitive.map((entry) => entry.normalizedPattern),
+        this.containsInsensitive.map((entry) => entry.normalizedPattern),
       );
     }
   }
 
-  find(view: NormalizedView, maximumMatches = 1_000): ReadonlyMap<string, readonly LexicalMatch[]> {
+  find(view: NormalizedView): ReadonlyMap<string, readonly LexicalMatch[]> {
     const byRule = new Map<string, LexicalMatch[]>();
     const collect = (
       text: string,
@@ -190,17 +229,15 @@ export class LexicalMatcher {
       automaton: AhoCorasick | undefined,
     ) => {
       if (!automaton) return;
-      const foundMatches = automaton.find(text, maximumMatches + 1);
-      if (foundMatches.length > maximumMatches) throw new Error('LEXICAL_MATCH_CAPACITY_EXCEEDED');
+      // 每规则证据封顶而非抛错：容量超限此前会被 required+fail-closed 链路
+      // 转化为强制拦截，攻击者可借“让某词典词出现 101 次”定向拒绝业务；
+      // 扫描始终覆盖全文，截断只影响证据数量，不影响命中判定
+      const foundMatches = automaton.find(text, 100);
       for (const found of foundMatches) {
         const entry = entries[found.patternIndex];
         const start = found.end - entry.normalizedPattern.length;
-        const matchType = entry.rule.matchType;
-        if (matchType === 'exact' && (start !== 0 || found.end !== text.length)) continue;
-        if (matchType === 'prefix' && start !== 0) continue;
-        if (matchType === 'suffix' && found.end !== text.length) continue;
         const matches = byRule.get(entry.rule.id) ?? [];
-        if (matches.length >= 100) throw new Error('LEXICAL_RULE_CAPACITY_EXCEEDED');
+        if (matches.length >= 100) continue;
         matches.push({
           ruleId: entry.rule.id,
           raw: view.text.slice(start, found.end),
@@ -210,8 +247,35 @@ export class LexicalMatcher {
         byRule.set(entry.rule.id, matches);
       }
     };
-    collect(view.text, this.sensitive, this.sensitiveAutomaton);
-    collect(fold(view.text), this.insensitive, this.insensitiveAutomaton);
+    collect(view.text, this.containsSensitive, this.sensitiveAutomaton);
+    const folded = this.insensitiveAutomaton || this.anchoredInsensitive.length > 0
+      ? fold(view.text)
+      : undefined;
+    if (folded !== undefined) {
+      collect(folded, this.containsInsensitive, this.insensitiveAutomaton);
+      for (const entry of this.anchoredInsensitive) {
+        const match = anchoredMatch(folded, entry);
+        if (match) {
+          byRule.set(entry.rule.id, [{
+            ruleId: entry.rule.id,
+            raw: view.text.slice(match.index, match.index + match.raw.length),
+            index: match.index,
+            approximate: false,
+          }]);
+        }
+      }
+    }
+    for (const entry of this.anchoredSensitive) {
+      const match = anchoredMatch(view.text, entry);
+      if (match) {
+        byRule.set(entry.rule.id, [{
+          ruleId: entry.rule.id,
+          raw: view.text.slice(match.index, match.index + match.raw.length),
+          index: match.index,
+          approximate: false,
+        }]);
+      }
+    }
     for (const rule of this.rules) {
       if (!rule.approximate || (byRule.get(rule.id)?.length ?? 0) >= 100) continue;
       const combined = [...(byRule.get(rule.id) ?? []), ...approximateMatches(view, rule)]

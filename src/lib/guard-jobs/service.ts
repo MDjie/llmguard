@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { and, asc, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, lt, lte, or, sql } from 'drizzle-orm';
 import { ProviderEndpointPolicy } from '@/lib/egress';
 import { canonicalJson, loadVerifiedPolicyBundle } from '@/lib/policy-bundle';
 import { getSecretProvider } from '@/lib/secrets';
@@ -133,9 +133,71 @@ export async function submitGuardJob(input: {
   return submission;
 }
 
+/**
+ * 回收心跳超时的 running 任务：worker 崩溃/OOM 后任务会永久停留在 running。
+ * 与 evaluation 服务的 recoverStaleRuns 保持同一模式：
+ * 尝试次数已耗尽的直接终态化，其余回到 retrying（受退避门控）。
+ */
+async function recoverStaleGuardJobs(): Promise<void> {
+  const staleAfterMs = Math.max(
+    60_000,
+    Number(process.env.GUARD_JOB_STALE_MS ?? 10 * 60_000),
+  );
+  const cutoff = new Date(Date.now() - staleAfterMs);
+  const stale = and(
+    eq(guardJobs.status, 'running'),
+    or(isNull(guardJobs.heartbeatAt), lt(guardJobs.heartbeatAt, cutoff)),
+  );
+  await db.update(guardJobs).set({
+    status: 'failed',
+    stage: 'failed',
+    completedAt: new Date(),
+    heartbeatAt: new Date(),
+  }).where(and(stale, sql`${guardJobs.attempt} >= ${guardJobs.maxAttempts}`));
+  const reclaimed = await db.update(guardJobs).set({
+    status: 'retrying',
+    stage: 'retry_wait',
+    heartbeatAt: new Date(),
+  }).where(stale).returning({
+    id: guardJobs.id,
+    tenantId: guardJobs.tenantId,
+    applicationId: guardJobs.applicationId,
+    attempt: guardJobs.attempt,
+  });
+  for (const job of reclaimed) {
+    await event(
+      { tenantId: job.tenantId, applicationId: job.applicationId },
+      job.id,
+      'job.reclaimed_after_stale_heartbeat',
+      { attempt: job.attempt, hint: 'Worker crashed or stalled while the job was running' },
+    );
+  }
+}
+
+const STALE_RECOVERY_INTERVAL_MS = 30_000;
+let lastStaleRecoveryAt = 0;
+
 export async function claimNextGuardJob(jobTypes?: readonly string[]) {
+  // 节流地顺带回收僵尸任务：所有 worker 都经过这里，无需各自接线
+  if (Date.now() - lastStaleRecoveryAt > STALE_RECOVERY_INTERVAL_MS) {
+    lastStaleRecoveryAt = Date.now();
+    await recoverStaleGuardJobs().catch(() => undefined);
+  }
   return db.transaction(async (transaction) => {
-    const conditions = [inArray(guardJobs.status, ['pending', 'retrying'])];
+    // retrying 任务按指数退避（10s 起、封顶 5 分钟）延迟重新认领，
+    // 否则失败任务会在下一次轮询（约 2 秒后）立即被重新领走形成重试风暴
+    const conditions = [
+      or(
+        eq(guardJobs.status, 'pending'),
+        and(
+          eq(guardJobs.status, 'retrying'),
+          lte(
+            guardJobs.heartbeatAt,
+            sql`now() - make_interval(secs => least(300, 5 * power(2, ${guardJobs.attempt})))`,
+          ),
+        ),
+      ),
+    ];
     if (jobTypes?.length) conditions.push(inArray(guardJobs.jobType, [...jobTypes]));
     const [candidate] = await transaction.select().from(guardJobs)
       .where(and(...conditions)).orderBy(asc(guardJobs.createdAt))
