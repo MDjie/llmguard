@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 
-export const AUDIT_CHAIN_VERSION = 1;
+export const AUDIT_CHAIN_VERSION = 2;
 export const AUDIT_GENESIS_HASH = '0'.repeat(64);
 
 export interface AuditChainPayload {
@@ -17,6 +17,10 @@ export interface AuditChainPayload {
   readonly tenantId: string | null;
   readonly applicationId: string | null;
   readonly createdAt: string;
+  /** v2 起纳入哈希保护的来源归因字段（旧链条目为 null，不参与其 v1 哈希） */
+  readonly queryString?: string | null;
+  readonly clientIp?: string | null;
+  readonly userAgent?: string | null;
 }
 
 export interface AuditChainEntry extends AuditChainPayload {
@@ -72,27 +76,38 @@ export function computeAuditEventHash(
   entry: Omit<AuditChainEntry, 'eventHash'>,
   key: string,
 ): string {
+  if (entry.chainVersion < 1 || entry.chainVersion > AUDIT_CHAIN_VERSION) {
+    throw new Error(`AUDIT_CHAIN_VERSION_UNSUPPORTED:${entry.chainVersion}`);
+  }
+  const payload: Record<string, unknown> = {
+    id: entry.id,
+    event: entry.event,
+    outcome: entry.outcome,
+    status: entry.status,
+    requestId: entry.requestId,
+    traceId: entry.traceId,
+    method: entry.method,
+    path: entry.path,
+    latencyMs: entry.latencyMs,
+    principalId: entry.principalId,
+    tenantId: entry.tenantId,
+    applicationId: entry.applicationId,
+    createdAt: entry.createdAt,
+  };
+  // v2 起把来源归因（query/IP/UA）纳入防篡改保护；v1 旧条目保持原字段集，
+  // 同一条链中新旧版本条目各自按自身版本校验
+  if (entry.chainVersion >= 2) {
+    payload.queryString = entry.queryString ?? null;
+    payload.clientIp = entry.clientIp ?? null;
+    payload.userAgent = entry.userAgent ?? null;
+  }
   const protectedEntry = {
     chainVersion: entry.chainVersion,
     partitionKey: entry.partitionKey,
     chainSequence: entry.chainSequence,
     previousHash: entry.previousHash,
     hashKeyId: entry.hashKeyId,
-    payload: {
-      id: entry.id,
-      event: entry.event,
-      outcome: entry.outcome,
-      status: entry.status,
-      requestId: entry.requestId,
-      traceId: entry.traceId,
-      method: entry.method,
-      path: entry.path,
-      latencyMs: entry.latencyMs,
-      principalId: entry.principalId,
-      tenantId: entry.tenantId,
-      applicationId: entry.applicationId,
-      createdAt: entry.createdAt,
-    },
+    payload,
   };
   return createHmac('sha256', requireKey(key)).update(canonicalJson(protectedEntry)).digest('hex');
 }
@@ -120,7 +135,7 @@ export function verifyAuditChainWithKeyResolver(
   let previousHash = expectedPreviousHash;
   let expectedSequence = expectedFirstSequence;
   for (const entry of entries) {
-    if (entry.chainVersion !== AUDIT_CHAIN_VERSION) {
+    if (entry.chainVersion < 1 || entry.chainVersion > AUDIT_CHAIN_VERSION) {
       return { valid: false, checked: expectedSequence - expectedFirstSequence, headHash: previousHash, error: 'VERSION_UNSUPPORTED', errorSequence: entry.chainSequence };
     }
     if (entry.chainSequence !== expectedSequence) {

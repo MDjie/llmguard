@@ -14,6 +14,7 @@ export const GET = withApiSecurity(
     maxBodyBytes: 0,
     auditEvent: 'health.summary',
     auditFailureMode: 'open',
+    skipAudit: true,
     rateLimitPolicy: {
       id: 'health-summary',
       windowMs: 60_000,

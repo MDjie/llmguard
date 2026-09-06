@@ -42,6 +42,7 @@ export const GET = withApiSecurity(
     maxBodyBytes: 0,
     auditEvent: 'health.policy.readiness',
     auditFailureMode: 'open',
+    skipAudit: true,
     rateLimitPolicy: {
       id: 'health-policy-readiness',
       windowMs: 60_000,

@@ -447,6 +447,9 @@ function auditRecord(
     traceId: context.traceId,
     method: context.method,
     path: context.path,
+    ...(context.queryString ? { queryString: context.queryString } : {}),
+    ...(context.clientIp !== 'unknown' ? { clientIp: context.clientIp } : {}),
+    ...(context.userAgent ? { userAgent: context.userAgent } : {}),
     latencyMs: Math.max(0, now() - context.startedAt),
     ...(principal ? { principalId: principal.subject } : {}),
     ...(principal?.tenantId ? { tenantId: principal.tenantId } : {}),
@@ -579,26 +582,28 @@ export function createApiSecurity(dependencies: ApiSecurityDependencies = {}) {
       }
       response = applyContextHeaders(response, requestContext);
 
-      try {
-        await auditor.record(
-          auditRecord(options.auditEvent, response, requestContext, principal, now),
-        );
-      } catch (error) {
-        reportError(error, requestContext);
-        if (options.auditFailureMode !== 'open') {
-          response = applyContextHeaders(
-            createProblemResponse(
-              new ApiProblem({
-                status: 503,
-                code: 'AUDIT_UNAVAILABLE',
-                title: 'Service unavailable',
-                detail: 'The security audit service is unavailable.',
-              }),
-              requestContext.path,
-              requestContext.traceId,
-            ),
-            requestContext,
+      if (!options.skipAudit) {
+        try {
+          await auditor.record(
+            auditRecord(options.auditEvent, response, requestContext, principal, now),
           );
+        } catch (error) {
+          reportError(error, requestContext);
+          if (options.auditFailureMode !== 'open') {
+            response = applyContextHeaders(
+              createProblemResponse(
+                new ApiProblem({
+                  status: 503,
+                  code: 'AUDIT_UNAVAILABLE',
+                  title: 'Service unavailable',
+                  detail: 'The security audit service is unavailable.',
+                }),
+                requestContext.path,
+                requestContext.traceId,
+              ),
+              requestContext,
+            );
+          }
         }
       }
 

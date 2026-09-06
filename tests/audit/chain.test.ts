@@ -78,4 +78,32 @@ describe('UPG-AUD-001 tamper-evident audit chain', () => {
     expect(verifyAuditChainWithKeyResolver([first, second], (keyId) => keyId === 'test-v1' ? key : undefined).error)
       .toBe('KEY_UNAVAILABLE');
   });
+
+  it('verifies a mixed v1/v2 chain and protects source attribution fields in v2 only', () => {
+    // v1 旧条目：不含来源归因字段，按旧字段集哈希
+    const legacyUnsigned = {
+      ...entry(1, AUDIT_GENESIS_HASH),
+      chainVersion: 1,
+    };
+    const legacy = { ...legacyUnsigned, eventHash: computeAuditEventHash(legacyUnsigned, key) };
+    // v2 条目：query/IP/UA 参与哈希
+    const v2Unsigned = {
+      ...entry(2, legacy.eventHash),
+      queryString: '?id=user-42',
+      clientIp: '203.0.113.7',
+      userAgent: 'audit-test-agent',
+    };
+    const attributed = { ...v2Unsigned, eventHash: computeAuditEventHash(v2Unsigned, key) };
+    expect(verifyAuditChain([legacy, attributed], key).valid).toBe(true);
+
+    // v2 条目的来源归因被篡改必须能被发现
+    expect(verifyAuditChain([
+      legacy,
+      { ...attributed, clientIp: '6.6.6.6' },
+    ], key).error).toBe('EVENT_HASH_MISMATCH');
+
+    // v1 条目的哈希不受新增字段影响（旧库数据可继续校验）
+    const legacyEquivalent = { ...legacyUnsigned, queryString: '?ignored=1' };
+    expect(computeAuditEventHash(legacyEquivalent, key)).toBe(legacy.eventHash);
+  });
 });

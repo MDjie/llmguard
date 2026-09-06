@@ -49,9 +49,15 @@ export function aggregateGuardDecision(params: {
   const observations = stableObservations(params.observations);
   const v2 = params.policy.decisionPolicyVersion === 2;
   const selectedJudge = selectJudgeProfile(params.policy.judgeProfiles ?? [], params.request.context);
+  // 语义能力（judge 或 classifier）被声明时才要求覆盖到位：
+  // 两者皆未配置的 v2 策略是纯词法模式，不应因“没有 ENFORCE judge”全场
+  // fail-closed（那会把误配变成拒绝服务）；配置了语义组件的旧 bundle 行为不变
+  const semanticCapabilityConfigured =
+    (params.policy.judgeProfiles ?? []).some((profile) => profile.enabled) ||
+    params.policy.semanticClassifier !== undefined;
   const coverageMode=params.policy.semanticDecisionMode==='coverage-v1';
   const missingRisks=coverageGaps(params.policy,params.request,observations);
-  const judgeMissing = coverageMode ? missingRisks.length>0 : (v2 && selectedJudge?.mode !== 'ENFORCE') || (selectedJudge?.mode === 'ENFORCE' && selectedJudge.riskIds.some(id => !observations.some(o => o.detectorId === 'configurable-judge' && o.riskType === id && o.semanticCoverage === 'COMPLETE' && (o.decisionRole === 'CLEARED' || o.decisionRole === 'CONFIRMED_RISK'))));
+  const judgeMissing = coverageMode ? missingRisks.length>0 : (v2 && semanticCapabilityConfigured && selectedJudge?.mode !== 'ENFORCE') || (selectedJudge?.mode === 'ENFORCE' && selectedJudge.riskIds.some(id => !observations.some(o => o.detectorId === 'configurable-judge' && o.riskType === id && o.semanticCoverage === 'COMPLETE' && (o.decisionRole === 'CLEARED' || o.decisionRole === 'CONFIRMED_RISK'))));
   const candidates = observations.filter(o => o.decisionRole === 'CANDIDATE');
   const unresolved = v2 && candidates.some(c => !observations.some(o => o.riskType === c.riskType && o.semanticCoverage === 'COMPLETE' && (o.decisionRole === 'CLEARED' || o.decisionRole === 'CONFIRMED_RISK')));
   const matches = observations.filter((item) => item.status === 'MATCH' && (!v2 || !['CANDIDATE','CLEARED','UNKNOWN'].includes(item.decisionRole ?? '')));

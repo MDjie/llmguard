@@ -5,13 +5,15 @@
 
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
+import { config as loadDotEnv } from 'dotenv';
 import * as schema from './schema';
-import { loadEnv } from '../supabase-client';
 import { logger } from '@/lib/observability/logger';
 import { resolveDatabaseTls } from './tls';
 
-// 加载环境变量
-loadEnv();
+// 加载环境变量（原 supabase-client 中的 dotenv 加载逻辑内联于此）
+if (process.env.NEXT_PHASE !== 'phase-production-build') {
+  loadDotEnv({ quiet: true });
+}
 
 // 获取数据库连接 URL
 function getDatabaseUrl(): string | null {

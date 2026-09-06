@@ -133,6 +133,7 @@ services:
       - ./drizzle/0041_policy_operations_governance.sql:/docker-entrypoint-initdb.d/50-policy-operations-governance.sql:ro
       - ./drizzle/0042_dictionary_release_sets.sql:/docker-entrypoint-initdb.d/51-dictionary-release-sets.sql:ro
       - ./drizzle/0043_session_request_receipts.sql:/docker-entrypoint-initdb.d/52-session-request-receipts.sql:ro
+      - ./drizzle/0044_audit_source_attribution.sql:/docker-entrypoint-initdb.d/53-audit-source-attribution.sql:ro
     ports:
       - "127.0.0.1:${DB_PORT:-5434}:5432"
     healthcheck:

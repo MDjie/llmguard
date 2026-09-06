@@ -73,6 +73,7 @@ export interface RequestContext {
   readonly startedAt: number;
   readonly method: string;
   readonly path: string;
+  readonly queryString?: string;
   readonly clientIp: string;
   readonly userAgent?: string;
 }
@@ -108,6 +109,9 @@ export interface ApiAuditRecord {
   readonly traceId: string;
   readonly method: string;
   readonly path: string;
+  readonly queryString?: string;
+  readonly clientIp?: string;
+  readonly userAgent?: string;
   readonly latencyMs: number;
   readonly principalId?: string;
   readonly tenantId?: string;
@@ -151,6 +155,8 @@ export interface ApiSecurityOptions<TBody, TQuery, TResponse> {
   readonly maxBodyBytes: number;
   readonly auditEvent: string;
   readonly auditFailureMode?: 'closed' | 'open';
+  /** 探针类端点（健康检查等）不写审计：高频探测会持续冲击审计表并制造噪声 */
+  readonly skipAudit?: boolean;
 }
 
 export interface ApiContext<TBody, TQuery, TRouteContext> {

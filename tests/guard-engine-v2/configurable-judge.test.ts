@@ -47,7 +47,7 @@ describe('V2 main-path configurable judge',()=>{
   it('blocks an unsupported business scenario even without a lexical hit',async()=>{const p={...profile(),industries:['insurance']};approve(p);expect((await engine(p,invoke('SAFE')).evaluate(request('hello'))).action).toBe('BLOCK');});
   it('marks over-limit input as incomplete without sending a truncated prompt',async()=>{const p={...profile(),maxInputChars:128};approve(p);const call=vi.fn(invoke('SAFE'));const result=await engine(p,call).evaluate(request('a'.repeat(129)));expect(result.action).toBe('BLOCK');expect(call).not.toHaveBeenCalled();});
   it('requires operator-bound quality approval, not just a UI evidence ID',async()=>{const p=profile();vi.stubEnv('JUDGE_QUALITY_APPROVALS_JSON','[]');const call=vi.fn(invoke('SAFE'));expect((await engine(p,call).evaluate(request('hello'))).action).toBe('BLOCK');expect(call).not.toHaveBeenCalled();});
-  it('requires review instead of silent allow when fail-closed is disabled',()=>{const result=aggregateGuardDecision({request:request('hello'),policy:{...policy,failClosedOnRequiredDetectorFailure:false},observations:[],requiredDetectorFailures:[],latencyMs:0});expect(result.action).toBe('REQUIRE_REVIEW');});
+  it('requires review instead of silent allow when fail-closed is disabled',()=>{const p=profile();const result=aggregateGuardDecision({request:request('hello'),policy:{...policy,failClosedOnRequiredDetectorFailure:false,judgeProfiles:[p]},observations:[],requiredDetectorFailures:[],latencyMs:0});expect(result.action).toBe('REQUIRE_REVIEW');});
   it('keeps per-risk thresholds independent and duplicate evidence does not add scores',()=>{
     const o:Observation={detectorId:'entity',detectorVersion:'1',riskType:'entity.email',status:'MATCH',score:.6,severity:'MEDIUM',evidence:[]};
     const p={...policy,decisionPolicyVersion:2 as const,riskThresholds:{'entity':{warn:.4,block:.9},'unrelated':{warn:.1,block:.2}}};
@@ -64,5 +64,14 @@ describe('V2 main-path configurable judge',()=>{
     expect(result.action).toBe('WARN');
     const harsh=aggregateGuardDecision({request:request(),policy:{...p,riskThresholds:{'mobile_phone':{warn:.5,block:.8}}},observations:[{...o,score:.81}],requiredDetectorFailures:[],latencyMs:0});
     expect(harsh.action).toBe('BLOCK');
+  });
+  it('does not fail closed on a v2 policy that configures no judge at all',()=>{
+    // 语义能力（judge/classifier）皆未配置的 v2 是纯词法模式：
+    // 不应因缺 ENFORCE judge 而全场拦截（误配不应变成拒绝服务）
+    const o:Observation={detectorId:'builtin',detectorVersion:'1',riskType:'example',status:'MATCH',score:.2,severity:'LOW',evidence:[]};
+    const p={...policy,decisionPolicyVersion:2 as const,judgeProfiles:[]};
+    const result=aggregateGuardDecision({request:request(),policy:p,observations:[o],requiredDetectorFailures:[],latencyMs:0});
+    expect(result.action).toBe('ALLOW');
+    expect(result.degradationReasons).not.toContain('JUDGE_COVERAGE_INCOMPLETE');
   });
 });

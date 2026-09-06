@@ -138,12 +138,15 @@ export function createRequestContext(
   request: NextRequest,
   now: () => number,
 ): RequestContext {
+  const search = request.nextUrl.search;
   return {
     requestId: randomUUID(),
     traceId: traceIdFrom(request),
     startedAt: now(),
     method: request.method.toUpperCase(),
     path: request.nextUrl.pathname,
+    // query 串用于审计追溯目标资源（如 ?id=xxx），截断到列宽上限
+    ...(search ? { queryString: search.slice(0, 1_024) } : {}),
     clientIp: clientIpFrom(request),
     ...(request.headers.get('user-agent')
       ? { userAgent: request.headers.get('user-agent')?.slice(0, 256) }

@@ -3,6 +3,7 @@ import { and, desc, eq, gte, inArray, lte } from 'drizzle-orm';
 import { jsonObjectResponseSchema } from '@/contracts/http/common';
 import { exportHistoryQuerySchema } from '@/contracts/http/history';
 import { withApiSecurity } from '@/lib/api-security';
+import { csvCell } from '@/lib/csv';
 import {
   db,
   detectionRecords,
@@ -127,11 +128,6 @@ async function loadSafeExportSessions(
         !query.riskType ||
         session.findings.some((finding) => finding.dimension === query.riskType),
     );
-}
-
-function csvCell(value: unknown): string {
-  const text = value === null || value === undefined ? '' : String(value);
-  return `"${text.replace(/"/g, '""')}"`;
 }
 
 function toCsv(sessions: SafeExportSession[]): string {

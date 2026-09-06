@@ -7,6 +7,7 @@ import {
   policyParamsSchema,
 } from '@/contracts/http/policies';
 import { withLegacyApiSecurity } from '@/lib/api-security';
+import { csvCell } from '@/lib/csv';
 import { getDb } from '@/lib/db';
 
 type ImportKeywordInput = z.infer<typeof importKeywordSchema>;
@@ -48,9 +49,14 @@ async function exportKeywords(
     if (format === 'csv') {
       const header = 'keyword,dimension,score,match_type,case_sensitive,description\n';
       const rows = (data || [])
-        .map((k) => 
-          `"${k.keyword}","${k.dimension}",${k.score},"${k.match_type}",${k.case_sensitive},"${k.description || ''}"`
-        )
+        .map((k) => [
+          csvCell(k.keyword),
+          csvCell(k.dimension),
+          csvCell(k.score),
+          csvCell(k.match_type),
+          csvCell(k.case_sensitive),
+          csvCell(k.description || ''),
+        ].join(','))
         .join('\n');
 
       return new NextResponse(header + rows, {

@@ -14,6 +14,7 @@ export const GET = withApiSecurity(
     maxBodyBytes: 0,
     auditEvent: 'health.live.read',
     auditFailureMode: 'open',
+    skipAudit: true,
     rateLimitPolicy: {
       id: 'health-live',
       windowMs: 60_000,

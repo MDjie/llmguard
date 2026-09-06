@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import type { z } from 'zod';
 import { jsonObjectResponseSchema } from '@/contracts/http/common';
 import {
   createKeywordSchema,
@@ -10,19 +11,19 @@ import {
 import { withLegacyApiSecurity } from '@/lib/api-security';
 import { getDb } from '@/lib/db';
 
+function escapeLike(value: string): string {
+  return value.replace(/[\\%_]/g, (character) => `\\${character}`);
+}
+
 // 获取策略的关键词列表
 async function getKeywords(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  routeContext: { params: Promise<{ id: string }> },
+  apiContext: { query: z.infer<typeof keywordQuerySchema> },
 ) {
   try {
-    const { id: policyId } = await params;
-    const { searchParams } = new URL(request.url);
-    const categoryId = searchParams.get('categoryId');
-    const dimension = searchParams.get('dimension');
-    const search = searchParams.get('search');
-    const page = parseInt(searchParams.get('page') || '1');
-    const pageSize = parseInt(searchParams.get('pageSize') || '50');
+    const { id: policyId } = await routeContext.params;
+    const { categoryId, dimension, search, page, pageSize } = apiContext.query;
 
     const client = getDb();
 
@@ -38,7 +39,7 @@ async function getKeywords(
       query = query.eq('dimension', dimension);
     }
     if (search) {
-      query = query.ilike('keyword', `%${search}%`);
+      query = query.ilike('keyword', `%${escapeLike(search)}%`);
     }
 
     const { data, error, count } = await query

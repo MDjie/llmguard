@@ -24,6 +24,9 @@ export interface AuditExportPayload {
   readonly traceId: string;
   readonly method: string;
   readonly path: string;
+  readonly queryString?: string | null;
+  readonly clientIp?: string | null;
+  readonly userAgent?: string | null;
   readonly latencyMs: number;
   readonly principalId: string | null;
   readonly tenantId: string | null;
