@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { providerAuthHeaderNameSchema, providerAuthModeSchema } from '@/lib/providers/deployment';
 
 export const judgeProviderTypes = ['deepseek','glm','qwen','kimi','ollama','openai_compatible','custom','doubao'] as const;
 export const judgeDirectionSchema = z.enum(['INPUT','OUTPUT_COMPLETE','OUTPUT_CHUNK','RAG_INGEST','RAG_CONTEXT','TOOL_REQUEST','TOOL_RESULT']);
@@ -25,7 +26,8 @@ export const judgeProfileSchema = z.object({
   mutableAlias: z.boolean().default(true),
   deploymentMode: z.enum(['private','cloud']),
   dataBoundaryPolicyId: id,
-  authMode: z.enum(['bearer','none']).default('bearer'),
+  authMode: providerAuthModeSchema.default('bearer'),
+  authHeaderName: providerAuthHeaderNameSchema.optional(),
   secretRef: z.string().min(1).max(128).optional(),
   directions: z.array(judgeDirectionSchema).min(1).max(7),
   industries: z.array(id).max(50).default([]),
@@ -52,6 +54,8 @@ export const judgeProfileSchema = z.object({
   if (url.username || url.password || url.hash || url.search || !['http:','https:'].includes(url.protocol)) ctx.addIssue({ code:'custom', message:'ENDPOINT_COMPONENT_INVALID', path:['baseUrl'] });
   if (p.deploymentMode === 'cloud' && (url.protocol !== 'https:' || p.authMode === 'none')) ctx.addIssue({code:'custom',message:'CLOUD_REQUIRES_HTTPS_AND_AUTH'});
   if (p.authMode === 'bearer' && !p.secretRef) ctx.addIssue({code:'custom',message:'SECRET_REF_REQUIRED',path:['secretRef']});
+  if (p.authMode === 'api_key_header' && (!p.secretRef || !p.authHeaderName)) ctx.addIssue({code:'custom',message:'CUSTOM_HEADER_CONFIG_REQUIRED',path:['authHeaderName']});
+  if (p.authMode !== 'api_key_header' && p.authHeaderName) ctx.addIssue({code:'custom',message:'AUTH_HEADER_NAME_NOT_APPLICABLE',path:['authHeaderName']});
   if (p.perAttemptTimeoutMs > p.totalTimeoutMs) ctx.addIssue({code:'custom',message:'ATTEMPT_EXCEEDS_TOTAL_BUDGET'});
   if (!/^[a-zA-Z0-9_/-]+$/.test(p.path) || p.path.startsWith('/') || p.path.includes('..')) ctx.addIssue({code:'custom',message:'PATH_INVALID'});
   if (new Set(p.riskIds).size !== p.riskIds.length || new Set(p.directions).size !== p.directions.length) ctx.addIssue({code:'custom',message:'DUPLICATE_SCOPE'});

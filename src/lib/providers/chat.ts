@@ -4,6 +4,7 @@ import { getSecretProvider, type SecretProvider } from '@/lib/secrets';
 import type { llmProviders } from '@/storage/database/shared/schema';
 import { privateEndpointApproved } from '@/lib/judge/profile-registry';
 import { readProviderDeployment } from './deployment';
+import { providerAuthHeaderNameSchema, type ProviderAuthMode } from './deployment';
 
 type ProviderRecord = typeof llmProviders.$inferSelect;
 export type ProviderConnection = Pick<ProviderRecord, 'tenantId' | 'applicationId' | 'providerType' | 'baseUrl' | 'secretRef' | 'apiKeyEncrypted' | 'defaultModel'> & {
@@ -60,7 +61,8 @@ export interface ProviderChatOptions {
   readonly model?: string;
   readonly temperature?: number | null;
   readonly path?: string;
-  readonly authMode?: 'bearer' | 'none';
+  readonly authMode?: ProviderAuthMode;
+  readonly authHeaderName?: string;
   readonly responseFormat?: 'json_object'|'json_schema';
   readonly responseSchema?: Record<string,unknown>;
   readonly thinkingMode?: 'enabled' | 'disabled';
@@ -115,7 +117,7 @@ function chatPath(baseUrl: string): string {
 export async function resolveProviderSecret(
   provider: ProviderConnection,
   secretProvider?: SecretProvider,
-  authMode?: 'bearer' | 'none',
+  authMode?: ProviderAuthMode,
 ): Promise<string | undefined> {
   const providerType = parseProviderType(provider.providerType);
   if (authMode === 'none') {
@@ -137,6 +139,21 @@ export async function resolveProviderSecret(
     );
   }
   throw new ProviderConfigurationError('PROVIDER_SECRET_REQUIRED', 'Provider secret is not configured');
+}
+
+export function providerAuthHeaders(
+  authMode: ProviderAuthMode | undefined,
+  secret: string | undefined,
+  authHeaderName?: string,
+): Readonly<Record<string, string>> | undefined {
+  if (authMode === 'none' || (!authMode && !secret)) return undefined;
+  if (!secret) throw new ProviderConfigurationError('PROVIDER_SECRET_REQUIRED', 'Provider secret is not configured');
+  if (authMode === 'api_key_header') {
+    const parsedHeader = providerAuthHeaderNameSchema.safeParse(authHeaderName);
+    if (!parsedHeader.success) throw new ProviderConfigurationError('PROVIDER_AUTH_HEADER_INVALID', 'Provider authentication header is invalid');
+    return { [parsedHeader.data]: secret };
+  }
+  return { authorization: `Bearer ${secret}` };
 }
 
 export async function callProviderChat(
@@ -168,7 +185,7 @@ export async function callProviderChat(
       max_tokens: options.maxTokens ?? 2_048,
       stream: false,
     },
-    headers: apiKey ? { authorization: `Bearer ${apiKey}` } : undefined,
+    headers: providerAuthHeaders(options.authMode ?? deployment?.authMode, apiKey, options.authHeaderName ?? deployment?.authHeaderName),
     signal: options.signal,
     timeoutMs: options.timeoutMs,
   });

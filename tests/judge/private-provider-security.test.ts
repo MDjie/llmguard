@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { judgeProfileSchema, selectJudgeProfile } from '../../src/lib/judge/profile';
 import { assertJudgeQuality, privateEndpointApproved, qualityBindingDigest } from '../../src/lib/judge/profile-registry';
-import { callProviderChat, resolveProviderSecret } from '../../src/lib/providers/chat';
+import { callProviderChat, providerAuthHeaders, resolveProviderSecret } from '../../src/lib/providers/chat';
 import { safeFetchJson } from '../../src/lib/egress';
 import { runJudge } from '../../src/lib/judge/router';
 import { selftestJudge } from '../../src/lib/judge/selftest';
@@ -36,6 +36,19 @@ describe('private provider configuration and quality boundaries',()=>{
     expect(vi.mocked(safeFetchJson).mock.calls[0][0].body).not.toHaveProperty('temperature');
     vi.stubEnv('JUDGE_PRIVATE_ENDPOINT_APPROVALS_JSON','[]');
     await expect(callProviderChat(connection,[{role:'user',content:'ping'}])).rejects.toThrow('No-auth requires an approved private endpoint');
+  });
+  it('supports a validated custom API-key header without exposing the secret elsewhere',async()=>{
+    vi.mocked(safeFetchJson).mockResolvedValue({model:'customer-model',choices:[{message:{content:'pong'},finish_reason:'stop'}]});
+    const secrets={put:vi.fn(),get:vi.fn(async()=>'synthetic-secret'),delete:vi.fn()};
+    const connection={...p(),authMode:'api_key_header' as const,authHeaderName:'X-API-Key',secretRef:'secure-ref',apiKeyEncrypted:null,defaultModel:'customer-model'};
+    await callProviderChat(connection,[{role:'user',content:'synthetic'}],{authMode:'api_key_header',authHeaderName:'X-API-Key',secretProvider:secrets});
+    const request=vi.mocked(safeFetchJson).mock.calls[0][0];
+    expect(request.headers).toEqual({'X-API-Key':'synthetic-secret'});
+    expect(JSON.stringify(request.body)).not.toContain('synthetic-secret');
+  });
+  it.each(['Authorization','Host','Cookie','X-Forwarded-For','bad header'])('rejects unsafe custom authentication header %s',authHeaderName=>{
+    expect(()=>judgeProfileSchema.parse({...p(),authMode:'api_key_header',authHeaderName,secretRef:'secure-ref'})).toThrow();
+    expect(()=>providerAuthHeaders('api_key_header','synthetic-secret',authHeaderName)).toThrow('Provider authentication header is invalid');
   });
   it('does not select a higher-priority backup as the primary',async()=>{
     const main={...p(),fallbackProfileIds:['backup']};const backup={...p(),profileId:'backup',priority:999};

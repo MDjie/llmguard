@@ -25,7 +25,6 @@ import {
   Info,
   Save,
   Loader2,
-  Database,
   Lock,
   Eye,
 } from 'lucide-react';

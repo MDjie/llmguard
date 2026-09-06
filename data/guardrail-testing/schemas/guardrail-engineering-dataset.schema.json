@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://guardllm.local/schemas/guardrail-engineering-dataset.v1.json",
+  "title": "GuardLLM engineering guardrail dataset",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "kind", "qualityStatus", "annotationStatus", "independentBusinessGold", "sourceHash", "cases"],
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "kind": { "const": "guardrail-engineering-dataset" },
+    "qualityStatus": { "const": "INSUFFICIENT_EVIDENCE" },
+    "annotationStatus": { "const": "needs_review" },
+    "independentBusinessGold": { "const": false },
+    "sourceHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "cases": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 10000,
+      "items": { "$ref": "#/$defs/case" }
+    }
+  },
+  "$defs": {
+    "case": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["caseId", "groupId", "suite", "family", "locale", "direction", "text", "expectedRiskIds", "acceptableActions", "annotationStatus", "sourceId", "sourceHash", "tags"],
+      "properties": {
+        "caseId": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "groupId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "suite": { "enum": ["attack", "benign", "anti_bypass"] },
+        "family": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "locale": { "enum": ["zh-CN", "en", "mixed"] },
+        "direction": { "enum": ["INPUT", "OUTPUT_COMPLETE", "OUTPUT_CHUNK", "RAG_INGEST", "RAG_CONTEXT", "TOOL_REQUEST", "TOOL_RESULT"] },
+        "text": { "type": "string", "minLength": 1, "maxLength": 1048576 },
+        "expectedRiskIds": { "type": "array", "maxItems": 20, "items": { "type": "string", "minLength": 1 } },
+        "acceptableActions": { "type": "array", "minItems": 1, "items": { "enum": ["ALLOW", "WARN", "BLOCK"] } },
+        "annotationStatus": { "const": "needs_review" },
+        "sourceId": { "type": "string", "minLength": 1 },
+        "sourceHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "tags": { "type": "array", "maxItems": 20, "items": { "type": "string", "minLength": 1 } }
+      }
+    }
+  }
+}

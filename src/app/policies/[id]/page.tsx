@@ -57,6 +57,7 @@ import { JudgeConfigPanel } from './components/JudgeConfigPanel';
 import { EscalationConfigPanel } from './components/EscalationConfigPanel';
 import { csrfHeaders } from '@/lib/auth/csrf-client';
 import { PromptInjectionCatalogPanel } from '@/components/content-safety/PromptInjectionCatalogPanel';
+import { parseKeywordBatchText } from '@/lib/policy/keyword-batch-parser';
 
 interface PolicyDetail {
   id: string;
@@ -277,24 +278,18 @@ export default function PolicyDetailPage() {
 
   // 批量添加关键词
   const handleBatchAdd = async () => {
-    const keywords = batchKeywords
-      .split('\n')
-      .map((line) => line.trim())
-      .filter(Boolean)
-      .map((line) => {
-        const parts = line.split(',');
-        return {
-          keyword: parts[0]?.trim() || '',
-          score: parseInt(parts[1]?.trim()) || 90,
-          description: parts[2]?.trim() || '',
-        };
-      })
-      .filter((k) => k.keyword);
+    const parsed = parseKeywordBatchText(batchKeywords);
+    const keywords = parsed.items;
 
-    if (keywords.length === 0) {
-      toast.error('请输入关键词');
+    if (parsed.issues.length > 0) {
+      toast.error(parsed.issues[0]?.message ?? '批量导入格式错误');
       return;
     }
+    if (keywords.length === 0) {
+      toast.error('请输入有效关键词');
+      return;
+    }
+    if (parsed.duplicateRows > 0) toast.info(`已忽略 ${parsed.duplicateRows} 条重复关键词`);
 
     try {
       const res = await fetch(`/api/policies/${policyId}/keywords/batch`, {

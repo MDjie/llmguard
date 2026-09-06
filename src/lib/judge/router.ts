@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { callProviderChat, type ProviderChatResult } from '@/lib/providers/chat';
+import { callProviderChat, providerAuthHeaders, type ProviderChatResult } from '@/lib/providers/chat';
 import { safeFetchJson, EgressRequestError } from '@/lib/egress';
 import { getSecretProvider } from '@/lib/secrets';
 import { riskDefinition } from '@/lib/guard-engine-v2/risk-registry';
@@ -26,14 +26,14 @@ export const invokeConfiguredJudge: JudgeInvoker = async (profile, request, sign
   if (profile.backendKind === 'safety_classifier') {
     const secret = profile.secretRef ? await getSecretProvider(profile).get(profile.secretRef) : undefined;
     const data = await safeFetchJson({ baseUrl:profile.baseUrl, path:profile.path, providerType:profile.providerType,
-      headers:secret ? {authorization:'Bearer ' + secret} : undefined,
+      headers:providerAuthHeaders(profile.authMode, secret, profile.authHeaderName),
       body:{...envelope, operation:'classify', model:profile.modelId}, signal,
       timeoutMs:profile.perAttemptTimeoutMs, maxResponseBytes:65536 });
     return { id:request.assessmentId, content:JSON.stringify(data), latencyMs:0 };
   }
   return callProviderChat({ ...profile, defaultModel:profile.modelId, apiKeyEncrypted:null, secretRef:profile.secretRef ?? null },
     [{role:'system',content:JUDGE_SYSTEM_PROMPT},{role:'user',content:JSON.stringify(envelope)}],
-    { model:profile.modelId, path:profile.path, authMode:profile.authMode, temperature:profile.temperature,
+    { model:profile.modelId, path:profile.path, authMode:profile.authMode, authHeaderName:profile.authHeaderName, temperature:profile.temperature,
       maxTokens:profile.maxOutputTokens, responseFormat:profile.structuredOutputMode === 'strict_text_json' ? undefined : profile.structuredOutputMode,
       ...(profile.structuredOutputMode==='json_schema'?{responseSchema:judgeWireSchema(request.assessmentId,profile.riskIds,request.text.length)}:{}),
       thinkingMode:profile.thinkingMode === 'omit' ? undefined : profile.thinkingMode,

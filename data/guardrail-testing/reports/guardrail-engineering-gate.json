@@ -1,0 +1,60 @@
+{
+  "schemaVersion": "1.0",
+  "kind": "guardrail-engineering-gate",
+  "status": "PASS",
+  "checks": [
+    {
+      "id": "24_ATTACK_FAMILIES",
+      "pass": true,
+      "actual": 24
+    },
+    {
+      "id": "240_ATTACK_VARIANTS",
+      "pass": true,
+      "actual": 240
+    },
+    {
+      "id": "BENIGN_SET_PRESENT",
+      "pass": true,
+      "actual": 48
+    },
+    {
+      "id": "ANTI_BYPASS_SET_PRESENT",
+      "pass": true,
+      "actual": 10
+    },
+    {
+      "id": "SYNTHETIC_ATTACK_RECALL",
+      "pass": true,
+      "actual": 1
+    },
+    {
+      "id": "SYNTHETIC_BENIGN_HARD_BLOCK_RATE",
+      "pass": true,
+      "actual": 0
+    },
+    {
+      "id": "ANTI_BYPASS_BLOCK_RATE",
+      "pass": true,
+      "actual": 1
+    },
+    {
+      "id": "NO_EXTERNAL_SIDE_EFFECTS",
+      "pass": true,
+      "actual": {
+        "node": "v24.15.0",
+        "platform": "win32",
+        "productionDatabaseChanged": false,
+        "onlinePolicyChanged": false,
+        "productionDeployed": false,
+        "realModelCalls": 0,
+        "customerAcceptance": false
+      }
+    },
+    {
+      "id": "CUSTOMER_QUALITY_NOT_OVERCLAIMED",
+      "pass": true,
+      "actual": "INSUFFICIENT_EVIDENCE"
+    }
+  ]
+}

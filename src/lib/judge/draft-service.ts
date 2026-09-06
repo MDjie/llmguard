@@ -8,6 +8,7 @@ import { providerBaseUrl, parseProviderType } from '@/lib/providers/chat';
 import { assertJudgeEndpoint, profileDigest } from './profile-registry';
 import { riskDefinition } from '@/lib/guard-engine-v2/risk-registry';
 import { semanticCoveragePolicySchema,type SemanticCoveragePolicy } from '@/lib/guard-engine-v2/semantic-coverage';
+import { readProviderDeployment } from '@/lib/providers/deployment';
 
 const draftSchema = z.object({profilesV2:judgeProfileListSchema.default([]),revision:z.number().int().nonnegative().default(0),decisionPolicyVersion:z.union([z.literal(1),z.literal(2)]).default(1),
   semanticDecisionMode:z.literal('coverage-v1').optional(),semanticCoverage:semanticCoveragePolicySchema.optional()}).strict();
@@ -37,7 +38,12 @@ export async function saveJudgeDraft(scope:TenantScope, policyId:string, profile
       if (new URL(candidate.baseUrl).href.replace(/\/$/,'') !== new URL(baseUrl).href.replace(/\/$/,'') || candidate.providerType !== provider.providerType) throw new Error('JUDGE_PROVIDER_SNAPSHOT_MISMATCH');
       const previous = current.profilesV2.find(p=>p.profileId === candidate.profileId);
       const riskDefinitions = Object.fromEntries(candidate.riskIds.map(id=>[id,riskDefinition(id,candidate.riskDefinitions)]));
-      let p = judgeProfileSchema.parse({...candidate,baseUrl,riskDefinitions,secretRef:candidate.authMode === 'bearer' ? provider.secretRef ?? undefined : undefined,revision:previous?.revision ?? 1});
+      const deployment = readProviderDeployment(provider.configJson);
+      const boundAuthMode = deployment?.authMode ?? candidate.authMode;
+      let p = judgeProfileSchema.parse({...candidate,baseUrl,riskDefinitions,
+        ...(deployment ? {deploymentMode:deployment.deploymentMode,dataBoundaryPolicyId:deployment.dataBoundaryPolicyId,authMode:deployment.authMode} : {}),
+        authHeaderName:deployment?.authHeaderName,
+        secretRef:boundAuthMode !== 'none' ? provider.secretRef ?? undefined : undefined,revision:previous?.revision ?? 1});
       if (p.enabled) await assertJudgeEndpoint(p);
       if (previous && profileDigest(previous) !== profileDigest(p)) p = {...p,revision:previous.revision+1};
       bound.push(p);

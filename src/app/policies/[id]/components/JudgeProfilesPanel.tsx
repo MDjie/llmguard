@@ -14,7 +14,7 @@ import { csrfHeaders } from '@/lib/auth/csrf-client';
 import { judgeProfileListSchema, judgeProfileSchema, judgeProviderTypes, judgeDirectionSchema, type JudgeProfile } from '@/lib/judge/profile';
 import { semanticCoveragePolicySchema } from '@/lib/guard-engine-v2/semantic-coverage';
 import { toast } from 'sonner';
-import { providerDeploymentSchema } from '@/lib/providers/deployment';
+import { providerDeploymentSchema, type ProviderDeployment } from '@/lib/providers/deployment';
 
 const providerSchema = z.object({id:z.string(),displayName:z.string(),providerType:z.enum(judgeProviderTypes),baseUrl:z.string().nullable(),defaultModel:z.string().nullable(),useCase:z.string().nullable(),hasSecret:z.boolean(),deploymentConfig:providerDeploymentSchema.nullable().optional()});
 const scopeSchema = z.object({tenantId:z.string(),applicationId:z.string()});
@@ -142,7 +142,8 @@ export function JudgeProfilesPanel({policyId}:{policyId:string}) {
         <div className="grid gap-3 md:grid-cols-2">
           <div><Label>模型服务</Label><Select value={p.providerId} onValueChange={id=>{
             const selected=providers.find(x=>x.id===id);if (!selected?.baseUrl)return;
-            setProfiles(items=>items.map(x=>x.profileId===p.profileId ? {...x,providerId:id,providerType:selected.providerType,baseUrl:selected.baseUrl!,secretRef:selected.hasSecret?'server-resolved':undefined,authMode:selected.hasSecret?'bearer':'none'}:x));
+            const deployment:ProviderDeployment=selected.deploymentConfig ?? {deploymentMode:'private',dataBoundaryPolicyId:'customer-private',authMode:selected.hasSecret?'bearer':'none'};
+            setProfiles(items=>items.map(x=>x.profileId===p.profileId ? {...x,providerId:id,providerType:selected.providerType,baseUrl:selected.baseUrl!,...deployment,authHeaderName:deployment.authHeaderName,secretRef:selected.hasSecret?'server-resolved':undefined}:x));
           }}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{providers.map(x=><SelectItem key={x.id} value={x.id}>{x.displayName} · {x.providerType}</SelectItem>)}</SelectContent></Select></div>
           <div><Label>模型 ID（可自定义私有模型名）</Label><Input value={p.modelId} onChange={e=>update(p.profileId,'modelId',e.target.value)}/></div>
           <div><Label>服务地址（来源于模型管理）</Label><Input value={p.baseUrl} readOnly/></div>
@@ -162,7 +163,7 @@ export function JudgeProfilesPanel({policyId}:{policyId:string}) {
           <div><Label>单次 / 总时限（毫秒）</Label><div className="flex gap-2"><Input type="number" min={50} max={60000} value={p.perAttemptTimeoutMs} onChange={e=>update(p.profileId,'perAttemptTimeoutMs',Number(e.target.value))}/><Input type="number" min={50} max={60000} value={p.totalTimeoutMs} onChange={e=>update(p.profileId,'totalTimeoutMs',Number(e.target.value))}/></div></div>
           <div><Label>优先级</Label><Input type="number" min={0} max={1000} value={p.priority} onChange={e=>update(p.profileId,'priority',Number(e.target.value))}/></div>
           <div><Label>备用场景</Label><Select value={p.fallbackProfileIds[0]??'none'} onValueChange={v=>update(p.profileId,'fallbackProfileIds',v==='none'?[]:[v])}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="none">无备用</SelectItem>{profiles.filter(x=>x.profileId!==p.profileId).map(x=><SelectItem key={x.profileId} value={x.profileId}>{x.displayName}</SelectItem>)}</SelectContent></Select></div>
-          <div><Label>认证</Label><Select value={p.authMode} onValueChange={v=>update(p.profileId,'authMode',v==='none'?'none':'bearer')}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="bearer">Bearer（安全密钥存储）</SelectItem><SelectItem value="none">无认证（仅获准私网）</SelectItem></SelectContent></Select></div>
+          <div><Label>认证（来源于模型管理）</Label><Select value={p.authMode} disabled><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="bearer">Bearer（安全密钥存储）</SelectItem><SelectItem value="api_key_header">自定义密钥请求头</SelectItem><SelectItem value="none">无认证（仅获准私网）</SelectItem></SelectContent></Select>{p.authMode==='api_key_header'&&<Input aria-label="密钥请求头名称" value={p.authHeaderName??''} readOnly/>}</div>
         </div>
         <details><summary className="cursor-pointer text-sm">高级配置 JSON（协议能力、模型版本、质量证据和自定义风险定义）</summary>
           <Textarea className="mt-2 font-mono text-xs" rows={8} value={advanced[p.profileId]?.text ?? JSON.stringify(p,null,2)} onChange={e=>{const text=e.target.value;setAdvanced(items=>({...items,[p.profileId]:{base:items[p.profileId]?.base ?? JSON.stringify(p),text}}));}}/>

@@ -10,6 +10,7 @@ import {
 } from '@/contracts/http/policies';
 import { withLegacyApiSecurity } from '@/lib/api-security';
 import { getDb } from '@/lib/db';
+import { prepareKeywordCreateRow } from '@/lib/policy/keyword-batch';
 
 function escapeLike(value: string): string {
   return value.replace(/[\\%_]/g, (character) => `\\${character}`);
@@ -108,18 +109,12 @@ async function createKeyword(
 
     const { data, error } = await client
       .from('keyword_rules')
-      .insert({
-        policy_id: policyId,
-        category_id: categoryId || null,
+      .insert(prepareKeywordCreateRow({
+        policyId,
+        categoryId,
         dimension,
-        keyword,
-        score: score || 90,
-        match_type: matchType || 'exact',
-        case_sensitive: caseSensitive || false,
-        enabled: true,
-        description: description || '',
-        tags: tags || [],
-      })
+        item: { keyword, score, matchType, caseSensitive, description, tags },
+      }))
       .select()
       .single();
 

@@ -89,4 +89,19 @@ describe('safeFetchJson', () => {
       ),
     ).rejects.toMatchObject({ code: 'RESPONSE_TOO_LARGE' } satisfies Partial<EgressRequestError>);
   });
+
+  it.each([401, 403, 429, 500])('preserves upstream status %s without exposing response content', async (status) => {
+    const fetchImpl = vi.fn<typeof fetch>(async () =>
+      new Response(JSON.stringify({ secret: 'must-not-escape' }), {
+        status,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+    const rejection = safeFetchJson(
+      { baseUrl: 'https://api.deepseek.com/v1', path: 'chat/completions', providerType: 'deepseek', body: {} },
+      { policy: new ProviderEndpointPolicy({ resolver: publicResolver }), fetchImpl },
+    );
+    await expect(rejection).rejects.toMatchObject({ code: 'UPSTREAM_HTTP_ERROR', status } satisfies Partial<EgressRequestError>);
+    await expect(rejection).rejects.not.toThrow('must-not-escape');
+  });
 });

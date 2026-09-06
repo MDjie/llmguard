@@ -85,6 +85,7 @@ export default function ProvidersPage() {
     useCase: 'both',
     deploymentMode: 'cloud',
     authMode: 'bearer',
+    authHeaderName: '',
     dataBoundaryPolicyId: 'customer-cloud-approved',
   });
 
@@ -125,7 +126,12 @@ export default function ProvidersPage() {
         baseUrl: formData.baseUrl || null,
         defaultModel: formData.defaultModel || null,
         useCase: formData.useCase,
-        deploymentConfig: {deploymentMode:formData.deploymentMode,authMode:formData.authMode,dataBoundaryPolicyId:formData.dataBoundaryPolicyId},
+        deploymentConfig: {
+          deploymentMode: formData.deploymentMode,
+          authMode: formData.authMode,
+          dataBoundaryPolicyId: formData.dataBoundaryPolicyId,
+          ...(formData.authMode === 'api_key_header' ? { authHeaderName: formData.authHeaderName } : {}),
+        },
       };
 
       // 只在创建时或提供了新密钥时才发送 apiKey
@@ -167,6 +173,7 @@ export default function ProvidersPage() {
       useCase: provider.useCase,
       deploymentMode: provider.deploymentConfig?.deploymentMode ?? (provider.providerType === 'ollama' ? 'private' : 'cloud'),
       authMode: provider.deploymentConfig?.authMode ?? (provider.providerType === 'ollama' && !provider.hasSecret ? 'none' : 'bearer'),
+      authHeaderName: provider.deploymentConfig?.authHeaderName ?? '',
       dataBoundaryPolicyId: provider.deploymentConfig?.dataBoundaryPolicyId ?? 'customer-default',
     });
     setShowForm(true);
@@ -310,6 +317,7 @@ export default function ProvidersPage() {
             useCase: 'both',
             deploymentMode: 'cloud',
             authMode: 'bearer',
+            authHeaderName: '',
             dataBoundaryPolicyId: 'customer-cloud-approved',
           });
           setShowForm(true);
@@ -399,9 +407,10 @@ export default function ProvidersPage() {
 
               <div className="grid gap-4 md:grid-cols-3">
                 <div><label className="block text-sm font-medium mb-1">部署方式</label><Select value={formData.deploymentMode} onValueChange={v=>setFormData({...formData,deploymentMode:v,authMode:v==='cloud'?'bearer':formData.authMode})}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="cloud">授权云 API</SelectItem><SelectItem value="private">本客户私有部署</SelectItem></SelectContent></Select></div>
-                <div><label className="block text-sm font-medium mb-1">认证方式</label><Select value={formData.authMode} onValueChange={v=>setFormData({...formData,authMode:v})}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="bearer">Bearer 密钥</SelectItem><SelectItem value="none" disabled={formData.deploymentMode!=='private'}>无认证（已批准私网）</SelectItem></SelectContent></Select></div>
+                <div><label className="block text-sm font-medium mb-1">认证方式</label><Select value={formData.authMode} onValueChange={v=>setFormData({...formData,authMode:v})}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="bearer">Bearer 密钥</SelectItem><SelectItem value="api_key_header">自定义密钥请求头</SelectItem><SelectItem value="none" disabled={formData.deploymentMode!=='private'}>无认证（已批准私网）</SelectItem></SelectContent></Select></div>
                 <div><label className="block text-sm font-medium mb-1">数据边界编号</label><Input value={formData.dataBoundaryPolicyId} onChange={e=>setFormData({...formData,dataBoundaryPolicyId:e.target.value})} required/></div>
               </div>
+              {formData.authMode === 'api_key_header' && <div><label className="block text-sm font-medium mb-1">密钥请求头名称</label><Input value={formData.authHeaderName} onChange={e=>setFormData({...formData,authHeaderName:e.target.value})} placeholder="例如: X-API-Key" required/></div>}
               <p className="text-xs text-muted-foreground">每套产品服务一个客户。私有模型可使用客户自定义模型名与地址；保存前须由部署管理员批准端点和数据边界，模型品牌不代表部署位置。</p>
 
               <div>

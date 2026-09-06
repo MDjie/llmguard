@@ -4,6 +4,7 @@
  */
 
 import type { LLMChatRequest, LLMMessage } from './types'
+import { z } from 'zod'
 
 export interface JudgeResult {
   /** 是否存在风险 */
@@ -101,49 +102,35 @@ ${text}
 /**
  * 解析Judge LLM响应
  */
+const judgeResultSchema = z.object({
+  hasRisk: z.boolean(),
+  score: z.number().min(0).max(100),
+  confidence: z.number().min(0).max(1),
+  dimensions: z.array(z.object({
+    dimension: z.string().min(1).max(64),
+    score: z.number().min(0).max(100),
+    confidence: z.number().min(0).max(1),
+    reason: z.string().max(2_000),
+    evidence: z.array(z.string().max(1_000)).max(20),
+  }).strict()).max(50),
+  reason: z.string().max(4_000),
+  suggestedAction: z.enum(['allow', 'warn', 'block']),
+}).strict().superRefine((value, context) => {
+  if (value.suggestedAction === 'allow' && value.hasRisk && value.score > 60) context.addIssue({ code: 'custom', message: 'JUDGE_ACTION_INCONSISTENT' });
+  if (value.suggestedAction === 'block' && (!value.hasRisk || value.score <= 60)) context.addIssue({ code: 'custom', message: 'JUDGE_ACTION_INCONSISTENT' });
+});
+
+function reviewRequired(reason: 'JUDGE_RESPONSE_INVALID_REVIEW_REQUIRED' | 'JUDGE_PROVIDER_FAILED_REVIEW_REQUIRED'): JudgeResult {
+  return { hasRisk: true, score: 50, confidence: 0, dimensions: [], reason, suggestedAction: 'warn' };
+}
+
 function parseJudgeResponse(response: string): JudgeResult {
-  const defaultResult: JudgeResult = {
-    hasRisk: false,
-    score: 10,
-    confidence: 0.5,
-    dimensions: [],
-    reason: '无法解析LLM响应，使用默认低风险评分',
-    suggestedAction: 'allow'
-  }
-  
   try {
-    // 尝试提取JSON
-    const jsonMatch = response.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) {
-      return defaultResult
-    }
-    
-    const parsed = JSON.parse(jsonMatch[0])
-    
-    // 验证必要字段
-    if (typeof parsed.score !== 'number' || typeof parsed.hasRisk !== 'boolean') {
-      return defaultResult
-    }
-    
-    return {
-      hasRisk: parsed.hasRisk,
-      score: Math.min(100, Math.max(0, parsed.score)),
-      confidence: Math.min(1, Math.max(0, parsed.confidence || 0.5)),
-      dimensions: (parsed.dimensions || []).map((d: Record<string, unknown>) => ({
-        dimension: d.dimension as string,
-        score: Math.min(100, Math.max(0, (d.score as number) || 0)),
-        confidence: Math.min(1, Math.max(0, (d.confidence as number) || 0.5)),
-        reason: (d.reason as string) || '',
-        evidence: (d.evidence as string[]) || []
-      })),
-      reason: parsed.reason || '',
-      suggestedAction: ['allow', 'warn', 'block'].includes(parsed.suggestedAction) 
-        ? parsed.suggestedAction 
-        : 'allow',
-      rawResponse: response
-    }
+    const parsedJson: unknown = JSON.parse(response);
+    const parsed = judgeResultSchema.safeParse(parsedJson);
+    return parsed.success ? { ...parsed.data, rawResponse: response } : reviewRequired('JUDGE_RESPONSE_INVALID_REVIEW_REQUIRED');
   } catch {
-    return defaultResult
+    return reviewRequired('JUDGE_RESPONSE_INVALID_REVIEW_REQUIRED');
   }
 }
 
@@ -228,18 +215,17 @@ export async function judgeWithLLM(
     
     // 解析结果
     return parseJudgeResponse(response.content)
-  } catch (error) {
-    console.error('Judge LLM调用失败:', error)
-    
-    // 返回降级结果
+  } catch {
+    console.error('Judge LLM call failed', { code: 'JUDGE_PROVIDER_FAILURE' })
     const quickResult = quickRuleCheck(text)
+    if (!quickResult.hasRisk) return reviewRequired('JUDGE_PROVIDER_FAILED_REVIEW_REQUIRED')
     return {
       hasRisk: quickResult.hasRisk,
       score: quickResult.score,
-      confidence: 0.5,
+      confidence: 0.9,
       dimensions: [],
-      reason: `LLM调用失败，使用规则引擎降级评估: ${error instanceof Error ? error.message : '未知错误'}`,
-      suggestedAction: quickResult.score > 60 ? 'warn' : 'allow'
+      reason: 'JUDGE_PROVIDER_FAILED_RULE_BLOCK',
+      suggestedAction: 'block'
     }
   }
 }

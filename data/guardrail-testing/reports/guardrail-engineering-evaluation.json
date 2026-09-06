@@ -1,0 +1,503 @@
+{
+  "schemaVersion": "1.0",
+  "kind": "guardrail-engineering-evaluation",
+  "capturedAt": "2026-09-06T08:04:48.021Z",
+  "git": {
+    "branch": "codex/detection-optimization-v2",
+    "revision": "facba2c490a1a70f255dd083daed516f36a4ca4a"
+  },
+  "environment": {
+    "node": "v24.15.0",
+    "platform": "win32",
+    "productionDatabaseChanged": false,
+    "onlinePolicyChanged": false,
+    "productionDeployed": false,
+    "realModelCalls": 0,
+    "customerAcceptance": false
+  },
+  "dataset": {
+    "digest": "5e0564dd8c0e1029af437691df0bf91c5258e546ad9d551b928445e51fefff2b",
+    "cases": 298,
+    "attack": 240,
+    "benign": 48,
+    "antiBypass": 10,
+    "families": 24,
+    "annotationStatus": "needs_review",
+    "independentBusinessGold": false
+  },
+  "engineeringMetrics": {
+    "binaryRiskMetrics": {
+      "confusionMatrix": {
+        "truePositive": 250,
+        "trueNegative": 44,
+        "falsePositive": 4,
+        "falseNegative": 0
+      },
+      "accuracy": 0.9865771812080537,
+      "precision": 0.984251968503937,
+      "recall": 1,
+      "f1": 0.9920634920634921,
+      "falsePositiveRate": 0.08333333333333333,
+      "falseNegativeRate": 0
+    },
+    "byRisk": {
+      "prompt_injection.adversarial_response": {
+        "truePositive": 10,
+        "trueNegative": 230,
+        "falsePositive": 0,
+        "falseNegative": 0,
+        "precision": 1,
+        "recall": 1
+      },
+      "prompt_injection.coercion": {
+        "truePositive": 10,
+        "trueNegative": 230,
+        "falsePositive": 0,
+        "falseNegative": 0,
+        "precision": 1,
+        "recall": 1
+      },
+      "prompt_injection.data_exfiltration": {
+        "truePositive": 10,
+        "trueNegative": 230,
+        "falsePositive": 0,
+        "falseNegative": 0,
+        "precision": 1,
+        "recall": 1
+      },
+      "prompt_injection.direct": {
+        "truePositive": 10,
+        "trueNegative": 208,
+        "falsePositive": 22,
+        "falseNegative": 0,
+        "precision": 0.3125,
+        "recall": 1
+      },
+      "prompt_injection.encoded_instruction": {
+        "truePositive": 10,
+        "trueNegative": 230,
+        "falsePositive": 0,
+        "falseNegative": 0,
+        "precision": 1,
+        "recall": 1
+      },
+      "prompt_injection.goal_hijack": {
+        "truePositive": 10,
+        "trueNegative": 230,
+        "falsePositive": 0,
+        "falseNegative": 0,
+        "precision": 1,
+        "recall": 1
+      },
+      "prompt_injection.indirect": {
+        "truePositive": 10,
+        "trueNegative": 230,
+        "falsePositive": 0,
+        "falseNegative": 0,
+        "precision": 1,
+        "recall": 1
+      },
+      "prompt_injection.judge_manipulation": {
+        "truePositive": 10,
+        "trueNegative": 230,
+        "falsePositive": 0,
+        "falseNegative": 0,
+        "precision": 1,
+        "recall": 1
+      },
+      "prompt_injection.memory_poisoning": {
+        "truePositive": 10,
+        "trueNegative": 230,
+        "falsePositive": 0,
+        "falseNegative": 0,
+        "precision": 1,
+        "recall": 1
+      },
+      "prompt_injection.multimodal_hidden": {
+        "truePositive": 10,
+        "trueNegative": 230,
+        "falsePositive": 0,
+        "falseNegative": 0,
+        "precision": 1,
+        "recall": 1
+      },
+      "prompt_injection.obfuscated_override": {
+        "truePositive": 10,
+        "trueNegative": 230,
+        "falsePositive": 0,
+        "falseNegative": 0,
+        "precision": 1,
+        "recall": 1
+      },
+      "prompt_injection.payload_splitting": {
+        "truePositive": 10,
+        "trueNegative": 230,
+        "falsePositive": 0,
+        "falseNegative": 0,
+        "precision": 1,
+        "recall": 1
+      },
+      "prompt_injection.privilege_escalation": {
+        "truePositive": 10,
+        "trueNegative": 230,
+        "falsePositive": 0,
+        "falseNegative": 0,
+        "precision": 1,
+        "recall": 1
+      },
+      "prompt_injection.prompt_exfiltration": {
+        "truePositive": 20,
+        "trueNegative": 216,
+        "falsePositive": 4,
+        "falseNegative": 0,
+        "precision": 0.8333333333333334,
+        "recall": 1
+      },
+      "prompt_injection.rag_poisoning": {
+        "truePositive": 10,
+        "trueNegative": 230,
+        "falsePositive": 0,
+        "falseNegative": 0,
+        "precision": 1,
+        "recall": 1
+      },
+      "prompt_injection.refusal_suppression": {
+        "truePositive": 10,
+        "trueNegative": 213,
+        "falsePositive": 17,
+        "falseNegative": 0,
+        "precision": 0.37037037037037035,
+        "recall": 1
+      },
+      "prompt_injection.repeated_search": {
+        "truePositive": 10,
+        "trueNegative": 230,
+        "falsePositive": 0,
+        "falseNegative": 0,
+        "precision": 1,
+        "recall": 1
+      },
+      "prompt_injection.role_escalation": {
+        "truePositive": 10,
+        "trueNegative": 230,
+        "falsePositive": 0,
+        "falseNegative": 0,
+        "precision": 1,
+        "recall": 1
+      },
+      "prompt_injection.structured_disguise": {
+        "truePositive": 10,
+        "trueNegative": 230,
+        "falsePositive": 0,
+        "falseNegative": 0,
+        "precision": 1,
+        "recall": 1
+      },
+      "prompt_injection.tool_abuse": {
+        "truePositive": 10,
+        "trueNegative": 230,
+        "falsePositive": 0,
+        "falseNegative": 0,
+        "precision": 1,
+        "recall": 1
+      },
+      "prompt_injection.tool_result_spoofing": {
+        "truePositive": 10,
+        "trueNegative": 230,
+        "falsePositive": 0,
+        "falseNegative": 0,
+        "precision": 1,
+        "recall": 1
+      },
+      "prompt_injection.wrapped_objective": {
+        "truePositive": 10,
+        "trueNegative": 230,
+        "falsePositive": 0,
+        "falseNegative": 0,
+        "precision": 1,
+        "recall": 1
+      },
+      "reasoning_attack.trace_exfiltration": {
+        "truePositive": 10,
+        "trueNegative": 230,
+        "falsePositive": 0,
+        "falseNegative": 0,
+        "precision": 1,
+        "recall": 1
+      }
+    },
+    "legacyExactActionMetrics": {
+      "metricVersion": "legacy-action-proxy-1.0",
+      "total": 298,
+      "exactMatches": 44,
+      "confusionMatrix": {
+        "truePositive": 250,
+        "trueNegative": 44,
+        "falsePositive": 4,
+        "falseNegative": 0
+      },
+      "accuracy": 0.1476510067114094,
+      "precision": 0.984251968503937,
+      "recall": 1,
+      "f1": 0.9920634920634921,
+      "falsePositiveRate": 0.08333333333333333,
+      "falseNegativeRate": 0,
+      "latencyMs": {
+        "p50": 0.32129999999995107,
+        "p95": 0.8047000000000253,
+        "p99": 11.585399999999936,
+        "max": 23.95360000000005
+      }
+    },
+    "attackRecall": 1,
+    "benignHardBlockRate": 0,
+    "benignReviewRate": 0.08333333333333333,
+    "antiBypassBlockRate": 1,
+    "benignNonAllowCases": [
+      {
+        "caseId": "BENIGN-019",
+        "action": "WARN"
+      },
+      {
+        "caseId": "BENIGN-020",
+        "action": "WARN"
+      },
+      {
+        "caseId": "BENIGN-021",
+        "action": "WARN"
+      },
+      {
+        "caseId": "BENIGN-042",
+        "action": "WARN"
+      }
+    ],
+    "failedCases": []
+  },
+  "strata": {
+    "byAttackFamily": {
+      "PI01": {
+        "cases": 10,
+        "recall": 1,
+        "hardBlocks": 10
+      },
+      "PI02": {
+        "cases": 10,
+        "recall": 1,
+        "hardBlocks": 10
+      },
+      "PI03": {
+        "cases": 10,
+        "recall": 1,
+        "hardBlocks": 10
+      },
+      "PI04": {
+        "cases": 10,
+        "recall": 1,
+        "hardBlocks": 10
+      },
+      "PI05": {
+        "cases": 10,
+        "recall": 1,
+        "hardBlocks": 10
+      },
+      "PI06": {
+        "cases": 10,
+        "recall": 1,
+        "hardBlocks": 10
+      },
+      "PI07": {
+        "cases": 10,
+        "recall": 1,
+        "hardBlocks": 10
+      },
+      "PI08": {
+        "cases": 10,
+        "recall": 1,
+        "hardBlocks": 10
+      },
+      "PI09": {
+        "cases": 10,
+        "recall": 1,
+        "hardBlocks": 10
+      },
+      "PI10": {
+        "cases": 10,
+        "recall": 1,
+        "hardBlocks": 10
+      },
+      "PI11": {
+        "cases": 10,
+        "recall": 1,
+        "hardBlocks": 10
+      },
+      "PI12": {
+        "cases": 10,
+        "recall": 1,
+        "hardBlocks": 10
+      },
+      "PI13": {
+        "cases": 10,
+        "recall": 1,
+        "hardBlocks": 10
+      },
+      "PI14": {
+        "cases": 10,
+        "recall": 1,
+        "hardBlocks": 10
+      },
+      "PI15": {
+        "cases": 10,
+        "recall": 1,
+        "hardBlocks": 10
+      },
+      "PI16": {
+        "cases": 10,
+        "recall": 1,
+        "hardBlocks": 10
+      },
+      "PI17": {
+        "cases": 10,
+        "recall": 1,
+        "hardBlocks": 10
+      },
+      "PI18": {
+        "cases": 10,
+        "recall": 1,
+        "hardBlocks": 10
+      },
+      "PI19": {
+        "cases": 10,
+        "recall": 1,
+        "hardBlocks": 10
+      },
+      "PI20": {
+        "cases": 10,
+        "recall": 1,
+        "hardBlocks": 10
+      },
+      "PI21": {
+        "cases": 10,
+        "recall": 1,
+        "hardBlocks": 10
+      },
+      "PI22": {
+        "cases": 10,
+        "recall": 1,
+        "hardBlocks": 10
+      },
+      "PI23": {
+        "cases": 10,
+        "recall": 1,
+        "hardBlocks": 10
+      },
+      "PI24": {
+        "cases": 10,
+        "recall": 1,
+        "hardBlocks": 10
+      }
+    },
+    "byAttackLocale": {
+      "en": {
+        "cases": 72,
+        "recall": 1,
+        "hardBlocks": 72
+      },
+      "mixed": {
+        "cases": 48,
+        "recall": 1,
+        "hardBlocks": 48
+      },
+      "zh-CN": {
+        "cases": 120,
+        "recall": 1,
+        "hardBlocks": 120
+      }
+    },
+    "byAttackDirection": {
+      "INPUT": {
+        "cases": 216,
+        "recall": 1,
+        "hardBlocks": 216
+      },
+      "RAG_CONTEXT": {
+        "cases": 24,
+        "recall": 1,
+        "hardBlocks": 24
+      }
+    }
+  },
+  "performance": {
+    "scope": "local rule engine synthetic workload; not customer capacity evidence",
+    "memoryDeltaBytes": 21338680,
+    "concurrency": [
+      {
+        "concurrency": 10,
+        "requests": 100,
+        "wallMs": 27.17560000000003,
+        "p50Ms": 1.996499999999969,
+        "p95Ms": 2.7093999999999596,
+        "p99Ms": 2.8514000000000124
+      },
+      {
+        "concurrency": 50,
+        "requests": 100,
+        "wallMs": 28.53559999999993,
+        "p50Ms": 8.983600000000024,
+        "p95Ms": 14.262399999999957,
+        "p99Ms": 14.860199999999963
+      },
+      {
+        "concurrency": 100,
+        "requests": 100,
+        "wallMs": 27.03570000000002,
+        "p50Ms": 15.26679999999999,
+        "p95Ms": 26.07280000000003,
+        "p99Ms": 26.7808
+      }
+    ]
+  },
+  "providerCompatibility": {
+    "execution": "mock-only",
+    "providers": [
+      "deepseek",
+      "glm",
+      "qwen",
+      "kimi",
+      "openai_compatible",
+      "custom",
+      "ollama"
+    ],
+    "authentication": [
+      "bearer",
+      "api_key_header",
+      "approved_private_none"
+    ],
+    "responseMode": "non-streaming strict judge contract; SSE streaming is intentionally unsupported for judge decisions",
+    "realConnectivity": "NOT_RUN_NO_PAID_CALLS",
+    "tests": [
+      "tests/judge/provider-matrix.test.ts",
+      "tests/judge/private-provider-security.test.ts",
+      "tests/llm/gateway.test.ts",
+      "tests/security/egress.test.ts",
+      "tests/guardrail-automation/legacy-judge-fail-safe.test.ts"
+    ]
+  },
+  "whitelist": {
+    "tests": [
+      "tests/detection/dynamic-engine-behavior.test.ts",
+      "tests/guardrail-automation/whitelist-scope.test.ts"
+    ],
+    "guarantees": [
+      "local target-rule suppression only",
+      "mandatory deny cannot be suppressed",
+      "approval, named reviewer, direction and validity required"
+    ]
+  },
+  "qualityStatus": "INSUFFICIENT_EVIDENCE",
+  "qualificationReasons": [
+    "SYNTHETIC_PROJECT_AUTHORED_CASES",
+    "INDEPENDENT_DOUBLE_REVIEW_MISSING",
+    "REAL_MODEL_CONNECTIVITY_NOT_RUN",
+    "CUSTOMER_TEST_DEPLOYMENT_NOT_VALIDATED"
+  ]
+}
