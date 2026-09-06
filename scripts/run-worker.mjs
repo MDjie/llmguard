@@ -1,5 +1,6 @@
 const workerEntrypoints = Object.freeze({
   artifact: './artifact-verifier-worker.ts',
+  'audit-chain': './audit-chain-worker.ts',
   'audit-export': './audit-export-worker.ts',
   'audit-timestamp': './audit-timestamp-worker.ts',
   callback: './callback-dispatcher-worker.ts',

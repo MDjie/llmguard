@@ -56,9 +56,9 @@ function getDb() {
       database: databaseUrl.pathname.replace(/^\//, ''),
     });
 
-    // 创建 postgres-js 客户端
+    // 创建 postgres-js 客户端（池大小可配：10+ 常驻 worker 各持一池时需按总量规划）
     _client = postgres(connectionString, {
-      max: 10,
+      max: Math.max(1, Math.floor(Number(process.env.DATABASE_POOL_MAX ?? 10)) || 10),
       idle_timeout: 20,
       connect_timeout: 10,
       ssl: resolveDatabaseTls(connectionString, {

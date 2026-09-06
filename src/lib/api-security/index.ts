@@ -1,5 +1,10 @@
 export { ApiProblem, createProblemResponse } from './problem';
 export { MemoryRateLimiter } from './rate-limit';
+export {
+  PostgresRateLimiter,
+  databaseRateLimitConfigured,
+  type SqlExecutor,
+} from './postgres-rate-limit';
 export { isPlatformPermission, PLATFORM_PERMISSIONS, PLATFORM_ROLES } from './types';
 export {
   createApiSecurity,

@@ -73,7 +73,17 @@ export async function verifyScopedAuditChain(
   scope: TenantScope,
   environment: Readonly<Record<string, string | undefined>> = process.env,
 ): Promise<{ readonly valid: true; readonly checked: number; readonly headHash: string }> {
-  const partition = auditPartitionKey(scope.tenantId, scope.applicationId);
+  return verifyAuditChainPartition(
+    auditPartitionKey(scope.tenantId, scope.applicationId),
+    environment,
+  );
+}
+
+/** 按分区键直接校验（定时后台校验任务按 distinct partitionKey 枚举调用） */
+export async function verifyAuditChainPartition(
+  partition: string,
+  environment: Readonly<Record<string, string | undefined>> = process.env,
+): Promise<{ readonly valid: true; readonly checked: number; readonly headHash: string }> {
   const keys = keyRing(environment);
   let cursor = 0;
   let checked = 0;

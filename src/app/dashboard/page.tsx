@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, CheckCircle, AlertTriangle, Shield, Eye, Clock, TrendingUp, BarChart3, RefreshCw, XCircle } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart, PieChart, Pie, Cell } from 'recharts';
+import { DIMENSION_LABELS } from '@/lib/dimension-labels';
 
 interface StatsData {
   totalDetections: number;
@@ -38,24 +39,8 @@ interface InterceptionItem {
   }>;
 }
 
-const dimensionLabels: Record<string, string> = {
-  malicious_code: '恶意代码',
-  violence_hate: '暴力仇恨',
-  illegal_content: '非法内容',
-  spam_detection: '垃圾信息',
-  ad_detection: '广告检测',
-  prompt_injection: '提示词注入',
-  sensitive_compliance: '敏感合规',
-  adult_content: '成人内容',
-  self_harm: '自我伤害',
-  credential_secret_leak: '密钥泄露',
-  fraud_scam: '诈骗欺诈',
-  misinformation: '虚假信息',
-  copyright_risk: '版权风险',
-  business_sensitive: '商业敏感',
-  output_leak: '输出泄露',
-  pii_leak: 'PII泄露',
-};
+// 统一使用共享维度标签（见 src/lib/dimension-labels.ts）
+const dimensionLabels: Record<string, string> = { ...DIMENSION_LABELS };
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<StatsData | null>(null);

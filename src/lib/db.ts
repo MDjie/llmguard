@@ -158,8 +158,17 @@ class QueryBuilder<T extends object = CompatibilityRow> {
     const scope = getCurrentTenantScope();
     const tenantId = getSchemaField(this.schema, 'tenantId');
     const applicationId = getSchemaField(this.schema, 'applicationId');
-    if (!scope || !tenantId || !applicationId) {
+    if (tenantId === null || applicationId === null) {
+      // 平台级表（无租户列）不适用租户过滤
       return this.conditions;
+    }
+    if (!scope) {
+      // fail-closed：租户表绝不允许无作用域查询。
+      // 此前静默返回裸条件等于跨租户全量查询——任何后台任务/定时器
+      // 误用兼容层即静默越权，现在改为显式失败。
+      throw new Error(
+        `TENANT_SCOPE_REQUIRED: table "${this.tableName}" is tenant-scoped but no tenant context is active`,
+      );
     }
     return [
       ...this.conditions,

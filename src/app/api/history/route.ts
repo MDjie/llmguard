@@ -10,8 +10,10 @@ import {
 } from '@/lib/api-security';
 import { db } from '@/lib/db';
 import { detectionSessions, detectionRecords, riskFindings } from '@/lib/db';
+import { llmProviders, policyProfiles } from '@/storage/database/shared/schema';
 import { sql, eq, desc, inArray, and, gte, lte, ilike } from 'drizzle-orm';
 import type { z } from 'zod';
+import { dimensionLabel } from '@/lib/dimension-labels';
 import { requireTenantContext, scopePredicate, type TenantScope } from '@/lib/tenancy';
 
 function escapeLike(value: string): string {
@@ -125,6 +127,27 @@ async function getHistory(
       recordsBySessionId.set(record.sessionId, existing);
     }
 
+    // 批量取本页涉及的策略与提供商名称（替代硬编码的“默认策略/模型”占位）
+    const policyIds = [...new Set(sessions.map(s => s.policyId).filter((id): id is string => Boolean(id)))];
+    const providerIds = [...new Set(sessions.map(s => s.targetProviderId).filter((id): id is string => Boolean(id)))];
+    const [policies, providers] = await Promise.all([
+      policyIds.length > 0
+        ? db.select({ id: policyProfiles.id, name: policyProfiles.name })
+            .from(policyProfiles)
+            .where(and(inArray(policyProfiles.id, policyIds), scopePredicate(policyProfiles, scope)))
+        : Promise.resolve([]),
+      providerIds.length > 0
+        ? db.select({
+            id: llmProviders.id,
+            name: llmProviders.displayName,
+            model: llmProviders.defaultModel,
+          }).from(llmProviders)
+            .where(and(inArray(llmProviders.id, providerIds), scopePredicate(llmProviders, scope)))
+        : Promise.resolve([]),
+    ]);
+    const policyNames = new Map(policies.map(p => [p.id, p.name]));
+    const providerInfo = new Map(providers.map(p => [p.id, p]));
+
     // 组装最终数据
     const resultSessions = sessions.map(session => {
       const sessionRecords = recordsBySessionId.get(session.id) || [];
@@ -137,13 +160,15 @@ async function getHistory(
       
       const allFindings = [...inputFindings, ...outputFindings].map(f => ({
         dimension: f.dimension,
-        dimensionName: getDimensionName(f.dimension),
+        dimensionName: dimensionLabel(f.dimension),
         score: f.score ? Number(f.score) : null,
         severity: f.severity,
         matchedRules: f.matchedRules as string[] || [],
         evidence: [],
         reason: null,
       }));
+
+      const provider = session.targetProviderId ? providerInfo.get(session.targetProviderId) : undefined;
 
       return {
         id: session.id,
@@ -158,11 +183,11 @@ async function getHistory(
         inputAction: session.inputAction,
         outputAction: session.outputAction,
         policyId: session.policyId,
-        policyName: '默认策略',
+        policyName: session.policyId ? policyNames.get(session.policyId) ?? null : null,
         direction: 'input' as const,
         providerId: session.targetProviderId,
-        providerName: '模型',
-        modelUsed: '模型',
+        providerName: provider?.name ?? null,
+        modelUsed: provider?.model ?? null,
         latencyMs: session.durationMs,
         findings: allFindings,
         hasRisk: allFindings.length > 0,
@@ -206,42 +231,16 @@ async function deleteHistory(id: string, scope: TenantScope) {
       );
     }
 
-    // 获取关联的检测记录
-    const records = await db
-      .select()
-      .from(detectionRecords)
-      .where(and(
-        eq(detectionRecords.sessionId, id),
-        scopePredicate(detectionRecords, scope),
-      ));
-
-    const recordIds = records.map(r => r.id);
-
-    // 删除关联的风险发现
-    if (recordIds.length > 0) {
-      await db
-        .delete(riskFindings)
+    // 级联删除（detection_records/risk_findings 的 FK 均为 onDelete: cascade）
+    // + 事务包裹，避免中途失败留下孤儿数据
+    await db.transaction(async (transaction) => {
+      await transaction
+        .delete(detectionSessions)
         .where(and(
-          inArray(riskFindings.recordId, recordIds),
-          scopePredicate(riskFindings, scope),
+          eq(detectionSessions.id, id),
+          scopePredicate(detectionSessions, scope),
         ));
-    }
-
-    // 删除关联的检测记录
-    await db
-      .delete(detectionRecords)
-      .where(and(
-        eq(detectionRecords.sessionId, id),
-        scopePredicate(detectionRecords, scope),
-      ));
-
-    // 删除会话
-    await db
-      .delete(detectionSessions)
-      .where(and(
-        eq(detectionSessions.id, id),
-        scopePredicate(detectionSessions, scope),
-      ));
+    });
 
     return NextResponse.json({ success: true, message: '删除成功' });
   } catch (error) {
@@ -291,26 +290,3 @@ export const DELETE = withApiSecurity(
   },
   async ({ query, principal }) => deleteHistory(query.id, requireTenantContext(principal)),
 );
-
-// 维度名称映射
-function getDimensionName(code: string): string {
-  const names: Record<string, string> = {
-    prompt_injection: '提示词注入',
-    pii_leak: 'PII泄露',
-    credential_secret_leak: '凭证泄露',
-    malicious_code: '恶意代码',
-    violence_hate: '暴力仇恨',
-    illegal_content: '非法内容',
-    spam_detection: '垃圾信息',
-    ad_detection: '广告检测',
-    sensitive_compliance: '敏感合规',
-    adult_content: '成人内容',
-    self_harm: '自残',
-    fraud_scam: '欺诈诈骗',
-    misinformation: '虚假信息',
-    copyright_risk: '版权风险',
-    business_sensitive: '商业敏感',
-    output_leak: '输出泄露',
-  };
-  return names[code] || code;
-}

@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, varchar, text, timestamp, boolean, integer, bigint, decimal, jsonb, index, uniqueIndex, serial, uuid, type AnyPgColumn } from "drizzle-orm/pg-core";
+import { pgTable, varchar, text, timestamp, boolean, integer, bigint, decimal, jsonb, index, uniqueIndex, serial, uuid, primaryKey, type AnyPgColumn } from "drizzle-orm/pg-core";
 
 // ============================================
 // 系统表 - 必须保留，禁止删除
@@ -69,6 +69,19 @@ function tenantScopeColumns() {
 		applicationId: varchar("application_id", { length: 36 }).notNull().references(() => applications.id, { onDelete: "restrict" }),
 	};
 }
+
+// 分布式限流桶：固定窗口共享计数（多副本部署），bucket_key 为 sha256(policyId:subject)
+export const rateLimitBuckets = pgTable(
+	"rate_limit_buckets",
+	{
+		bucketKey: varchar("bucket_key", { length: 64 }).notNull(),
+		windowStart: timestamp("window_start", { withTimezone: true }).notNull(),
+		count: integer("count").notNull().default(0),
+	},
+	(table) => [
+		primaryKey({ columns: [table.bucketKey, table.windowStart] }),
+	]
+);
 
 export const securityAuditEvents = pgTable(
 	"security_audit_events",
@@ -852,6 +865,7 @@ export const detectionSessions = pgTable(
 		index("detection_sessions_final_action_idx").on(table.finalAction),
 		index("detection_sessions_created_at_idx").on(table.createdAt),
 		index("detection_sessions_policy_id_idx").on(table.policyId),
+		index("detection_sessions_scope_created_idx").on(table.tenantId, table.applicationId, table.createdAt),
 	]
 );
 
@@ -883,6 +897,7 @@ export const detectionRecords = pgTable(
 		index("detection_records_session_id_idx").on(table.sessionId),
 		index("detection_records_direction_idx").on(table.direction),
 		index("detection_records_action_idx").on(table.action),
+		index("detection_records_scope_session_idx").on(table.tenantId, table.applicationId, table.sessionId),
 	]
 );
 
@@ -909,6 +924,7 @@ export const riskFindings = pgTable(
 		index("risk_findings_record_id_idx").on(table.recordId),
 		index("risk_findings_dimension_idx").on(table.dimension),
 		index("risk_findings_severity_idx").on(table.severity),
+		index("risk_findings_scope_record_idx").on(table.tenantId, table.applicationId, table.recordId),
 	]
 );
 

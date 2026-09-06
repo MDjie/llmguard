@@ -9,6 +9,8 @@ x-runtime-environment: &runtime-environment
   SECRET_MASTER_KEY: "${SECRET_MASTER_KEY:?SECRET_MASTER_KEY is required}"
   SECRET_MASTER_KEY_ID: "${SECRET_MASTER_KEY_ID:-local-v1}"
   CONTENT_HASH_KEY: "${CONTENT_HASH_KEY:?CONTENT_HASH_KEY is required}"
+  # 独立凭证 pepper（可选）：未设置时回落 CONTENT_HASH_KEY 以保持既有凭证有效
+  CREDENTIAL_PEPPER: "${CREDENTIAL_PEPPER:-}"
   DLP_TOKENIZATION_HMAC_KEY: "${DLP_TOKENIZATION_HMAC_KEY:?DLP_TOKENIZATION_HMAC_KEY is required}"
   AUDIT_CHAIN_KEY: "${AUDIT_CHAIN_KEY:?AUDIT_CHAIN_KEY is required}"
   AUDIT_CHAIN_KEY_ID: "${AUDIT_CHAIN_KEY_ID:-audit-hmac-v1}"
@@ -134,6 +136,8 @@ services:
       - ./drizzle/0042_dictionary_release_sets.sql:/docker-entrypoint-initdb.d/51-dictionary-release-sets.sql:ro
       - ./drizzle/0043_session_request_receipts.sql:/docker-entrypoint-initdb.d/52-session-request-receipts.sql:ro
       - ./drizzle/0044_audit_source_attribution.sql:/docker-entrypoint-initdb.d/53-audit-source-attribution.sql:ro
+      - ./drizzle/0045_distributed_rate_limiting.sql:/docker-entrypoint-initdb.d/54-distributed-rate-limiting.sql:ro
+      - ./drizzle/0046_tenant_composite_indexes.sql:/docker-entrypoint-initdb.d/55-tenant-composite-indexes.sql:ro
     ports:
       - "127.0.0.1:${DB_PORT:-5434}:5432"
     healthcheck:
@@ -265,6 +269,10 @@ services:
   audit-timestamp-worker:
     <<: *worker-service
     command: ["node", "--import", "tsx", "scripts/run-worker.mjs", "audit-timestamp"]
+
+  audit-chain-worker:
+    <<: *worker-service
+    command: ["node", "--import", "tsx", "scripts/run-worker.mjs", "audit-chain"]
 
 
 volumes:

@@ -15,6 +15,7 @@ import { Search, Trash2, Eye, RefreshCw, AlertCircle, AlertTriangle, CheckCircle
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { dimensionLabel } from '@/lib/dimension-labels';
 import JudgeModelResultCard from '@/components/judge/JudgeModelResultCard';
 import { csrfHeaders } from '@/lib/auth/csrf-client';
 
@@ -68,16 +69,20 @@ interface DecisionTrace {
 
 interface Session {
   id: string;
-  inputText: string;
+  inputText: string | null;
   outputText: string | null;
   action: string;
   inputAction: string | null;
   outputAction: string | null;
   inputScore: number | null;
   outputScore: number | null;
-  policyName: string;
+  contentStored?: boolean;
+  policyId?: string | null;
+  policyName: string | null;
   direction: string;
-  modelUsed: string;
+  providerId?: string | null;
+  providerName?: string | null;
+  modelUsed: string | null;
   latencyMs: number | null;
   hasRisk: boolean;
   riskLevel: string;
@@ -209,16 +214,8 @@ export default function HistoryPage() {
     );
   };
 
-  const getDimensionName = (dimension: string) => {
-    const names: Record<string, string> = {
-      'prompt_injection': '提示词注入',
-      'pii_leak': 'PII泄露',
-      'malicious_code': '恶意代码',
-      'violence_hate': '暴力仇恨',
-      'illegal_content': '非法内容',
-    };
-    return names[dimension] || dimension;
-  };
+  // 统一使用共享维度标签（此前本页仅维护 5/16 项，缺失维度显示英文码）
+  const getDimensionName = dimensionLabel;
 
   const getSeverityBadge = (severity: string) => {
     const colors: Record<string, string> = {
@@ -415,15 +412,20 @@ export default function HistoryPage() {
                       <span className="text-xs text-gray-500">
                         {new Date(session.createdAt).toLocaleString()}
                       </span>
-                      <span className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
-                        {session.policyName}
-                      </span>
-                      <span className="text-xs text-gray-500">
-                        {session.modelUsed}
-                      </span>
+                      {session.policyName && (
+                        <span className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
+                          {session.policyName}
+                        </span>
+                      )}
+                      {(session.providerName || session.modelUsed) && (
+                        <span className="text-xs text-gray-500">
+                          {[session.providerName, session.modelUsed].filter(Boolean).join(' / ')}
+                        </span>
+                      )}
                     </div>
                     <div className="text-sm text-gray-900 font-medium">
-                      用户输入: {session.inputText}
+                      {/* 原文已按数据最小化策略不再保留（contentStored 标识是否曾存储） */}
+                      用户输入: {session.inputText ?? '（原文未保留）'}
                     </div>
                     {session.outputText && (
                       <div className="text-sm text-gray-600 mt-1">
@@ -698,11 +700,12 @@ export default function HistoryPage() {
                     </div>
                   </div>
 
-                  {/* 用户输入 */}
+                  {/* 用户输入（原文按数据最小化策略不再返回，仅在曾存储时提示） */}
                   <div className="space-y-1">
                     <div className="text-sm font-medium text-gray-700">用户输入</div>
                     <div className="p-3 bg-gray-50 rounded-lg text-sm whitespace-pre-wrap break-all max-h-40 overflow-y-auto">
-                      {detailSession.inputText || '-'}
+                      {detailSession.inputText
+                        ?? (detailSession.contentStored ? '（原文未保留：已按数据最小化策略脱敏）' : '（无输入内容）')}
                     </div>
                   </div>
 

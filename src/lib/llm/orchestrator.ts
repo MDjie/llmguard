@@ -19,6 +19,7 @@ import type {
 } from './types';
 import { PromptInjectionDetector } from './detectors/prompt-injection';
 import { PIILeakDetector } from './detectors/pii-leak';
+import { dimensionLabel } from '@/lib/dimension-labels';
 import { MaliciousCodeDetector } from './detectors/malicious-code';
 import { ViolenceHateDetector } from './detectors/violence-hate';
 import { IllegalContentDetector } from './detectors/illegal-content';
@@ -271,17 +272,10 @@ export class DetectionOrchestrator {
   }
 
   /**
-   * 获取维度名称
+   * 获取维度名称（统一使用共享维度标签，见 @/lib/dimension-labels）
    */
   private getDimensionName(dimension: string): string {
-    const names: Record<string, string> = {
-      prompt_injection: '提示词注入',
-      pii_leak: 'PII泄露',
-      malicious_code: '恶意代码',
-      violence_hate: '暴力仇恨',
-      illegal_content: '非法内容',
-    };
-    return names[dimension] || dimension;
+    return dimensionLabel(dimension);
   }
 
   /**

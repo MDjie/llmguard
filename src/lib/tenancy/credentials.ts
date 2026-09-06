@@ -17,12 +17,28 @@ const ALLOWED_SERVICE_PERMISSIONS = new Set<Permission>([
   'application:integrate',
 ]);
 
+let pepperFallbackWarned = false;
+
 function credentialPepper(environment: NodeJS.ProcessEnv = process.env): string {
-  const value = environment.CONTENT_HASH_KEY;
-  if (!value || Buffer.byteLength(value, 'utf8') < 32) {
-    throw new Error('CONTENT_HASH_KEY must be configured with at least 32 bytes');
+  // 凭证 pepper 与内容指纹密钥分离：此前共用 CONTENT_HASH_KEY，
+  // 泄露面与轮换互相耦合（轮换内容密钥会作废全部应用 API Key）。
+  // 未配置 CREDENTIAL_PEPPER 时回落旧密钥以保持既有凭证有效。
+  const dedicated = environment.CREDENTIAL_PEPPER;
+  if (dedicated && Buffer.byteLength(dedicated, 'utf8') >= 32) {
+    return dedicated;
   }
-  return value;
+  const legacy = environment.CONTENT_HASH_KEY;
+  if (!legacy || Buffer.byteLength(legacy, 'utf8') < 32) {
+    throw new Error('CREDENTIAL_PEPPER (or legacy CONTENT_HASH_KEY) must be configured with at least 32 bytes');
+  }
+  if (!pepperFallbackWarned) {
+    pepperFallbackWarned = true;
+    console.warn(
+      '[tenancy] CREDENTIAL_PEPPER 未配置，凭证哈希回落使用 CONTENT_HASH_KEY；' +
+      '建议配置独立的 CREDENTIAL_PEPPER（注意：迁移后已签发凭证将失效，需重新签发）',
+    );
+  }
+  return legacy;
 }
 
 export function hashApplicationSecret(

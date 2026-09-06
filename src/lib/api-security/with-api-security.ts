@@ -1,8 +1,13 @@
 import { timingSafeEqual } from 'node:crypto';
 import { NextRequest } from 'next/server';
 import { authenticateRequest } from '@/lib/auth/authenticator';
+import { db } from '@/storage/database/shared/db';
 import { ApiProblem, createProblemResponse, validationErrors } from './problem';
 import { MemoryRateLimiter } from './rate-limit';
+import {
+  PostgresRateLimiter,
+  databaseRateLimitConfigured,
+} from './postgres-rate-limit';
 import { createRequestContext } from './request-context';
 import type {
   ApiAuditOutcome,
@@ -457,9 +462,33 @@ function auditRecord(
   };
 }
 
+let rateLimitFallbackWarnedAt = 0;
+
+/**
+ * 默认限流器：数据库已配置时使用 Postgres 共享计数（多副本安全），
+ * 否则（如本地开发/测试）退回进程内计数。DB 故障时降级内存限流并节流告警。
+ */
+function defaultRateLimiter(now: () => number) {
+  if (!databaseRateLimitConfigured()) return new MemoryRateLimiter(now);
+  return new PostgresRateLimiter(
+    // drizzle 的 execute 直接解析为行数组（RowList），适配为 { rows }
+    async (query) => ({ rows: await db.execute(query) as unknown as Record<string, unknown>[] }),
+    now,
+    new MemoryRateLimiter(now),
+    (error) => {
+      if (Date.now() - rateLimitFallbackWarnedAt < 60_000) return;
+      rateLimitFallbackWarnedAt = Date.now();
+      logger.warn('rate-limit.database.unavailable', {
+        error: error instanceof Error ? error.message : String(error),
+        fallback: 'in-process',
+      });
+    },
+  );
+}
+
 export function createApiSecurity(dependencies: ApiSecurityDependencies = {}) {
   const now = dependencies.now ?? Date.now;
-  const rateLimiter = dependencies.rateLimiter ?? new MemoryRateLimiter(now);
+  const rateLimiter = dependencies.rateLimiter ?? defaultRateLimiter(now);
   const authenticate = dependencies.authenticator ?? authenticateRequest;
   const authorize = dependencies.authorizer ?? defaultAuthorizer;
   const auditor = dependencies.auditor ?? databaseApiAuditor;
