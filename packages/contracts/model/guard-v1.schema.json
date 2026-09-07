@@ -681,6 +681,13 @@
             "minLength": 1,
             "maxLength": 128
           }
+        },
+        "locations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EvidenceLocation"
+          },
+          "maxItems": 1000
         }
       }
     },
@@ -802,17 +809,35 @@
         },
         "decisionRole": {
           "type": "string",
-          "enum": ["HARD_DENY", "CANDIDATE", "CONFIRMED_RISK", "CLEARED", "UNKNOWN"]
+          "enum": [
+            "HARD_DENY",
+            "CANDIDATE",
+            "CONFIRMED_RISK",
+            "CLEARED",
+            "UNKNOWN"
+          ]
         },
         "semanticCoverage": {
           "type": "string",
-          "enum": ["COMPLETE", "INCOMPLETE", "UNSUPPORTED", "NOT_APPLICABLE"]
+          "enum": [
+            "COMPLETE",
+            "INCOMPLETE",
+            "UNSUPPORTED",
+            "NOT_APPLICABLE"
+          ]
         },
         "assessmentId": {
-          "type": "string", "minLength": 1, "maxLength": 128
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
         },
         "scoreMeaning": {
-          "type": "string", "enum": ["PROBABILITY", "POLICY", "UNCALIBRATED"]
+          "type": "string",
+          "enum": [
+            "PROBABILITY",
+            "POLICY",
+            "UNCALIBRATED"
+          ]
         }
       }
     },
@@ -1265,6 +1290,98 @@
           "type": "string",
           "minLength": 1,
           "maxLength": 128
+        }
+      }
+    },
+    "EvidenceLocation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifactId",
+        "sourceDigest",
+        "contentVersion",
+        "contentPath",
+        "mappingVersion",
+        "offsetEncoding"
+      ],
+      "properties": {
+        "artifactId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "sourceDigest": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "contentVersion": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "contentPath": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "mappingVersion": {
+          "type": "string",
+          "const": "guard-evidence-location-1"
+        },
+        "offsetEncoding": {
+          "type": "string",
+          "const": "UTF16"
+        },
+        "viewId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "textStart": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "textEnd": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "textLength": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "startMs": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "endMs": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "frameIndex": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "channel": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "page": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "speakerId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "region": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "minItems": 4,
+          "maxItems": 4
         }
       }
     }

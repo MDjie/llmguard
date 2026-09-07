@@ -3,3 +3,12 @@
 
 # Keep the bilingual catalog and checksum-locked candidates portable across checkouts.
 /data/content-safety/lexicon/prompt-injection-bilingual.v1.* text eol=lf
+
+# Owned contract sources and generated digests use canonical LF on every platform.
+/packages/contracts/** text=auto eol=lf
+/packages/contracts-appliance/** text=auto eol=lf
+/src/contracts/http/gateway-v2.ts text eol=lf
+/services/guard-gateway/src/main/proto/** text eol=lf
+
+# This lockfile is byte-hashed by the integrated acceptance manifest.
+/pnpm-lock.yaml text eol=lf

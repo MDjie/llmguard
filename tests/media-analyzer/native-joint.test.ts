@@ -1,0 +1,23 @@
+import {afterEach,describe,expect,it,vi} from 'vitest';
+import {readFile,access} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
+import {analyzeNativeJoint} from '../../services/media-analyzer/src/native-joint';
+import {nativeBindingDigest} from '@/lib/multimodal/native-gate';
+import type {NativeBinding} from '@/contracts/http/native-multimodal';
+import type {CommandRunner} from '../../services/media-analyzer/src/command-runner';
+const fixture=vi.hoisted(()=>({active:new Set<string>(),loaded:0}));
+vi.mock('../../services/media-analyzer/src/artifact-loader',()=>({withLoadedArtifact:async<T>(artifact:{id:string},callback:(file:string,workspace:string)=>Promise<T>)=>{
+ const fs=await import('node:fs/promises'),path=await import('node:path'),os=await import('node:os');const dir=await fs.mkdtemp(path.join(os.tmpdir(),'guard-native-joint-test-')),file=path.join(dir,'original');fixture.loaded++;await fs.writeFile(file,artifact.id);fixture.active.add(file);
+ try{return await callback(file,dir);}finally{fixture.active.delete(file);if(path.dirname(dir)!==path.resolve(os.tmpdir())||!path.basename(dir).startsWith('guard-native-joint-test-'))throw new Error('UNSAFE_TEST_CLEANUP');await fs.rm(dir,{recursive:true,force:true});}
+}}));
+const hash=(value:string)=>createHash('sha256').update(value).digest('hex');
+const binding:NativeBinding={version:'1.0',tenantId:'tenant',applicationId:'app',bundleDigest:'b'.repeat(64),direction:'INPUT',contextDigest:hash('question'),requiredRiskIds:['prompt_injection'],sources:[{sourceId:'text',artifactId:'context',sha256:hash('question'),contentVersion:'1',modality:'TEXT'},{sourceId:'image',artifactId:'image',sha256:hash('image'),contentVersion:'1',modality:'IMAGE'},{sourceId:'audio',artifactId:'audio',sha256:hash('audio'),contentVersion:'1',modality:'AUDIO'}]};
+const request={contractVersion:'1.0',binding,contextText:'question',artifacts:[{id:'image',kind:'IMAGE',mediaType:'image/png',sizeBytes:5,sha256:hash('image'),parts:[{partNumber:1,sizeBytes:5,sha256:hash('image'),url:'https://fixtures.invalid/image'}]},{id:'audio',kind:'AUDIO',mediaType:'audio/wav',sizeBytes:5,sha256:hash('audio'),parts:[{partNumber:1,sizeBytes:5,sha256:hash('audio'),url:'https://fixtures.invalid/audio'}]}]};
+const output={version:'1.0',bindingDigest:nativeBindingDigest(binding),modelId:'synthetic',modelDigest:'c'.repeat(64),analyzerVersion:'test',verdict:'NOT_DETECTED',riskIds:[],analyzedSourceIds:['text','image','audio'],coverageScope:'GLOBAL',processingComplete:true,relations:[],reasonCodes:[]};
+afterEach(()=>{vi.unstubAllEnvs();expect(fixture.active.size).toBe(0);fixture.loaded=0;});
+describe('native joint command boundary',()=>{
+ it('retains all original inputs simultaneously and binds the result to context and ordered sources',async()=>{vi.stubEnv('ANALYZER_NATIVE_JOINT_COMMAND','fixed-adapter');const visited:string[]=[];const runner:CommandRunner={async run(program,args,options){expect(program).toBe('fixed-adapter');expect(options.timeoutMs).toBe(120000);const manifest=JSON.parse(await readFile(args[1],'utf8')) as {files:{sourceId:string;path:string;sha256:string}[];bindingDigest:string;instructionCapability:string};expect(manifest.bindingDigest).toBe(output.bindingDigest);expect(manifest.instructionCapability).toBe('FORBIDDEN');expect(fixture.active.size).toBe(2);for(const file of manifest.files){visited.push(file.path);expect(hash(await readFile(file.path,'utf8'))).toBe(file.sha256);}return{stdout:JSON.stringify(output),stderr:'',exitCode:0};}};expect(await analyzeNativeJoint(request,runner)).toEqual(output);for(const file of visited)await expect(access(file)).rejects.toThrow();});
+ it('rejects context/source changes before loading artifacts',async()=>{vi.stubEnv('ANALYZER_NATIVE_JOINT_COMMAND','fixed-adapter');const runner:CommandRunner={run:vi.fn()};await expect(analyzeNativeJoint({...request,contextText:'changed'},runner)).rejects.toThrow('CONTEXT_MISMATCH');await expect(analyzeNativeJoint({...request,artifacts:[...request.artifacts].reverse()},runner)).rejects.toThrow('SOURCE_MISMATCH');expect(fixture.loaded).toBe(0);});
+ it('cleans up originals on malformed or substituted command output',async()=>{vi.stubEnv('ANALYZER_NATIVE_JOINT_COMMAND','fixed-adapter');for(const stdout of ['not-json',JSON.stringify({...output,bindingDigest:'a'.repeat(64)})])await expect(analyzeNativeJoint(request,{async run(){return{stdout,stderr:'',exitCode:0};}})).rejects.toThrow();});
+ it('does not call an unconfigured model command',async()=>{vi.stubEnv('ANALYZER_NATIVE_JOINT_COMMAND','');await expect(analyzeNativeJoint(request,{run:vi.fn()})).rejects.toThrow('COMMAND_REQUIRED');expect(fixture.loaded).toBe(0);});
+});

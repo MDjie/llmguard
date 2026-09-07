@@ -17,6 +17,7 @@ const regionSchema = z.tuple([
 const analysisSchema = z.object({
   coverage:analysisCoverageSchema.optional(),
   analyzerVersion: z.string().min(1).max(100),
+  coordinateMappings:z.array(z.record(z.string(),z.unknown())).max(10000).optional(),
   ocr: z.array(z.object({
     viewId: z.string().min(1).max(100),
     text: z.string().max(100_000),

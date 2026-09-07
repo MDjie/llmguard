@@ -57,6 +57,8 @@ const navigationGroups: readonly {
       { name: '总览大屏', href: '/dashboard', icon: BarChart3, desc: '运行态势与风险总览', permission: 'history:read' },
       { name: '安全对话', href: '/', icon: MessageCircle, desc: '双引擎安全对话', permission: 'guard:use' },
       { name: '链路实验', href: '/simulate', icon: Zap, desc: '非生产检测流程', permission: 'guard:use', experimental: true },
+      { name: '告警明细', href: '/security-alerts', icon: Shield, desc: '统一风险告警与命中证据', permission: 'security:operate' },
+      { name: '对话归档', href: '/conversations', icon: Shield, desc: '180 天内容版本与归档完整性', permission: 'history:read' },
       { name: '文档检测', href: '/document-scan', icon: FileText, desc: '文档安全扫描', permission: 'security:operate' },
     ]
   },

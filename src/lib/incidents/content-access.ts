@@ -1,3 +1,4 @@
+import { readAccessResourceDigest, type ContentResourceType } from '@/lib/content-access/resources';
 import { and, desc, eq, gt, sql } from 'drizzle-orm';
 import { ApiProblem } from '@/lib/api-security';
 import { maskPII } from '@/lib/guardrail/pii-masker';
@@ -52,30 +53,25 @@ function publicRequest(row: typeof contentAccessRequests.$inferSelect, now = new
   };
 }
 
-export async function requestIncidentEvidenceAccess(
+export async function requestEvidenceAccess(
   scope: TenantContext,
   incidentId: string,
   input: { readonly purpose: ContentAccessPurpose; readonly reason: string },
+  resourceType: ContentResourceType = 'INCIDENT_EVIDENCE',
 ) {
   const result = await db.transaction(async (transaction) => {
     await transaction.execute(sql`select pg_advisory_xact_lock(hashtext(${scope.tenantId + ':' + scope.applicationId + ':' + incidentId + ':' + scope.principalId}))`);
-    const [incident] = await transaction.select({
-      id: securityIncidents.id,
-      answerEvidence: securityIncidents.answerEvidence,
-    }).from(securityIncidents).where(and(
-      scopePredicate(securityIncidents, scope),
-      eq(securityIncidents.id, incidentId),
-    )).limit(1);
-    if (!incident) throw problem(404, 'INCIDENT_NOT_FOUND', 'The incident does not exist in this application scope.');
-    const sourceDigest = incidentEvidenceDigest(incident.answerEvidence);
+    const sourceDigest = await readAccessResourceDigest(transaction, scope, resourceType, incidentId);
+    if (!sourceDigest) throw problem(404, 'CONTENT_RESOURCE_NOT_FOUND', 'The resource is unavailable in this application.');
     const [existing] = await transaction.select().from(contentAccessRequests).where(and(
       scopePredicate(contentAccessRequests, scope),
-      eq(contentAccessRequests.resourceType, 'INCIDENT_EVIDENCE'),
+      eq(contentAccessRequests.resourceType, resourceType),
       eq(contentAccessRequests.resourceId, incidentId),
       eq(contentAccessRequests.requesterId, scope.principalId),
       eq(contentAccessRequests.status, 'pending'),
     )).limit(1);
     if (existing) {
+      if (existing.purpose !== input.purpose) throw problem(409, 'CONTENT_ACCESS_PURPOSE_CONFLICT', 'A pending request already exists for another purpose; resolve it before requesting a different use.');
       if (existing.sourceDigest !== sourceDigest) {
         throw problem(409, 'CONTENT_ACCESS_SOURCE_CHANGED', 'The evidence changed after the pending request was created.');
       }
@@ -84,7 +80,7 @@ export async function requestIncidentEvidenceAccess(
     const [created] = await transaction.insert(contentAccessRequests).values({
       tenantId: scope.tenantId,
       applicationId: scope.applicationId,
-      resourceType: 'INCIDENT_EVIDENCE',
+      resourceType,
       resourceId: incidentId,
       sourceDigest,
       requesterId: scope.principalId,
@@ -118,13 +114,14 @@ export async function listContentAccessRequests(
   return { items: rows.map((row) => publicRequest(row, now)), total: Number(counts[0]?.count ?? 0) };
 }
 
-export async function listRequesterIncidentEvidenceAccess(
+export async function listRequesterEvidenceAccess(
   scope: TenantContext,
   incidentId: string,
+  resourceType: ContentResourceType = 'INCIDENT_EVIDENCE',
 ) {
   const rows = await db.select().from(contentAccessRequests).where(and(
     scopePredicate(contentAccessRequests, scope),
-    eq(contentAccessRequests.resourceType, 'INCIDENT_EVIDENCE'),
+    eq(contentAccessRequests.resourceType, resourceType),
     eq(contentAccessRequests.resourceId, incidentId),
     eq(contentAccessRequests.requesterId, scope.principalId),
   )).orderBy(desc(contentAccessRequests.createdAt)).limit(20);
@@ -146,14 +143,8 @@ export async function reviewContentAccessRequest(
     if (current.requesterId === scope.principalId) {
       throw problem(409, 'CONTENT_ACCESS_INDEPENDENT_APPROVAL_REQUIRED', 'The requester cannot review their own access request.');
     }
-    const [incident] = await transaction.select({ answerEvidence: securityIncidents.answerEvidence })
-      .from(securityIncidents).where(and(
-        scopePredicate(securityIncidents, scope),
-        eq(securityIncidents.id, current.resourceId),
-      )).limit(1);
-    if (!incident || incidentEvidenceDigest(incident.answerEvidence) !== current.sourceDigest) {
-      throw problem(409, 'CONTENT_ACCESS_SOURCE_CHANGED', 'The evidence no longer matches the reviewed digest.');
-    }
+    const digest = await readAccessResourceDigest(transaction, scope, current.resourceType, current.resourceId, new Date(), true);
+    if (!digest || digest !== current.sourceDigest) throw problem(409, 'CONTENT_ACCESS_SOURCE_CHANGED', 'The evidence no longer matches the reviewed digest.');
     const now = new Date();
     const status = input.action === 'approve' ? 'approved' : 'rejected';
     const [updated] = await transaction.update(contentAccessRequests).set({
@@ -220,3 +211,6 @@ export async function consumeIncidentEvidenceAccess(
     };
   });
 }
+
+export const requestIncidentEvidenceAccess = requestEvidenceAccess;
+export const listRequesterIncidentEvidenceAccess = listRequesterEvidenceAccess;

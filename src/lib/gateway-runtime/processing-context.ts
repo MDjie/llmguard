@@ -8,10 +8,10 @@ import { ragContextProofSchema } from './rag-context';
 import { GatewayError } from './protocol';
 import { openReceipt } from './security';
 
-interface ProcessingContext { inputSegments: ContentSegment[]; memory?: SecureMemorySnapshot }
+interface ProcessingContext { inputSegments: ContentSegment[]; nativeExecution: boolean; memory?: SecureMemorySnapshot }
 export function readProcessingContext(row: typeof gatewayRequests.$inferSelect): ProcessingContext {
   if (!row.sessionSnapshot) throw new GatewayError('REQUEST_CONTEXT_UNAVAILABLE', 503);
   const value = openReceipt(row.sessionSnapshot, row.id + ':memory');
-  const parsed = z.object({ inputSegments: z.array(contentSegmentSchema), memory: z.unknown().optional(), ragContextProof: ragContextProofSchema.optional(), artifactContextProof: artifactContextProofSchema.optional() }).strict().parse(value);
-  return { inputSegments: parsed.inputSegments, ...(parsed.memory ? { memory: parsed.memory as SecureMemorySnapshot } : {}) };
+  const parsed = z.object({ inputSegments: z.array(contentSegmentSchema), preparedRequest: z.unknown().optional(), memory: z.unknown().optional(), ragContextProof: ragContextProofSchema.optional(), artifactContextProof: artifactContextProofSchema.optional() }).strict().parse(value);
+  return { inputSegments: parsed.inputSegments, nativeExecution: Boolean(parsed.artifactContextProof?.manifest.nativeExecution), ...(parsed.memory ? { memory: parsed.memory as SecureMemorySnapshot } : {}) };
 }

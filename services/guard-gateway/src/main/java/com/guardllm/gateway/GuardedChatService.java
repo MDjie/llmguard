@@ -21,10 +21,12 @@ final class GuardedChatService {
         final GatewayRuntimeClient.Authorization auth;
         int seq;
         int windowSeq;
+        int rawOutputSequence;
         int released;
         boolean sendStarted;
         boolean upstreamFinished;
         boolean completed;
+        ModelRouteRegistry.Selection archiveRoute;
         Execution(GatewayRuntimeClient.Authorization auth) { this.auth = auth; }
     }
     private final GatewayRuntimeClient runtime;
@@ -48,7 +50,9 @@ final class GuardedChatService {
                     .then(inspect(execution, authorizedRequest, input, "INPUT"))
                     .flatMap(approvedInput -> {
                         if (approvedInput.originalAction().equals("SAFE_RESPONSE")) return release(execution, approvedInput, approvedInput.originalAction(), List.of(), request.path("stream").asBoolean(), writer);
-                        return event(execution, "UPSTREAM_SEND_INTENT", approvedInput, null)
+                        if (auth.context().path("archiveRequired").asBoolean()) execution.archiveRoute = model.authorizedRoute(approvedInput.body(), routeKey(execution), auth.context(), auth.snapshot().path("manifest"));
+                        return archiveExecution(execution, "MODEL_INPUT", approvedInput)
+                                .then(event(execution, "UPSTREAM_SEND_INTENT", approvedInput, null))
                                 .then(event(execution, "UPSTREAM_SEND_STARTED", null, null))
                                 .then(Mono.defer(() -> {
                                     execution.sendStarted = true;
@@ -59,9 +63,9 @@ final class GuardedChatService {
     }
     private Mono<Void> upstream(Execution execution, Approved input, boolean stream, Function<Reply, Mono<Void>> writer) {
         var auth = execution.auth;
-        String routeKey = CanonicalJson.encode(json.valueToTree(List.of(auth.context().path("tenantId").stringValue(), auth.context().path("applicationId").stringValue(), auth.context().path("sessionId").asText(auth.id()))));
+        String routeKey = routeKey(execution);
         int outputLimit = auth.snapshot().path("manifest").path("budgets").path("maxOutputChars").asInt(262144);
-        if (!stream) return bulkhead.execute(auth.legacyContext(), "chat.model", () -> model.chatAuthorized(input.body(), routeKey, auth.context(), auth.snapshot().path("manifest")))
+        if (!stream) return bulkhead.execute(auth.legacyContext(), "chat.model", () -> execution.archiveRoute == null ? model.chatAuthorized(input.body(), routeKey, auth.context(), auth.snapshot().path("manifest")) : model.chatArchived(execution.archiveRoute, response -> archiveModelResponse(execution, response)))
                 .doOnNext(response -> execution.upstreamFinished = true)
                 .flatMap(response -> inspect(execution, response, content.segments(response, false, outputLimit), "OUTPUT_COMPLETE"))
                 .flatMap(output -> release(execution, output, input.originalAction(), List.of(), false, writer));
@@ -70,8 +74,10 @@ final class GuardedChatService {
         if (!Set.of("FULL_BUFFER", "WINDOW").contains(mode)) return Mono.error(new GatewayFailure("STREAM_MODE_NOT_IMPLEMENTED", 503));
         var buffer = new BufferedCompletion(json, auth.snapshot().path("manifest").path("budgets").path("maxStreamEvents").asInt(16384), outputLimit);
         long idle = auth.snapshot().path("manifest").path("budgets").path("idleTimeoutMs").asLong(15000);
-        return bulkhead.executeFlux(auth.legacyContext(), "chat.model", () -> model.chatStreamAuthorized(input.body(), routeKey, auth.context(), auth.snapshot().path("manifest")))
-                .timeout(Duration.ofMillis(idle)).doOnNext(buffer::accept).then(Mono.fromCallable(buffer::complete))
+        return bulkhead.executeFlux(auth.legacyContext(), "chat.model", () -> execution.archiveRoute == null ? model.chatStreamAuthorized(input.body(), routeKey, auth.context(), auth.snapshot().path("manifest")) : model.streamArchived(execution.archiveRoute, event -> archiveModelEvent(execution, event)))
+                .timeout(Duration.ofMillis(idle)).concatMap(event -> Mono.fromRunnable(() -> buffer.accept(event)), 1)
+                .then(Mono.fromCallable(buffer::complete))
+                .flatMap(response -> archiveOutputComplete(execution).thenReturn(response))
                 .doOnNext(response -> execution.upstreamFinished = true)
                 .flatMap(response -> inspect(execution, response, content.segments(response, false, outputLimit), "OUTPUT_COMPLETE"))
                 .flatMap(output -> release(execution, output, input.originalAction(), buffer.events(), true, writer));
@@ -81,10 +87,10 @@ final class GuardedChatService {
         JsonNode manifest = auth.snapshot().path("manifest"), policy = manifest.path("windowPolicy");
         if (!manifest.path("windowQualified").asBoolean() || !policy.isObject() || policy.path("qualificationExpiresAt").asLong() <= System.currentTimeMillis()) return Mono.error(new GatewayFailure("STREAM_WINDOW_NOT_QUALIFIED", 503));
         var buffer = new BufferedCompletion(json, manifest.path("budgets").path("maxStreamEvents").asInt(16384), outputLimit);
-        return bulkhead.executeFlux(auth.legacyContext(), "chat.model", () -> model.chatStreamAuthorized(input.body(), routeKey, auth.context(), manifest))
+        return bulkhead.executeFlux(auth.legacyContext(), "chat.model", () -> execution.archiveRoute == null ? model.chatStreamAuthorized(input.body(), routeKey, auth.context(), manifest) : model.streamArchived(execution.archiveRoute, event -> archiveModelEvent(execution, event)))
                 .timeout(Duration.ofMillis(manifest.path("budgets").path("idleTimeoutMs").asLong(15000)))
-                .concatMap(event -> { buffer.accept(event); return drainWindows(execution, input, buffer, writer, false); }, 1)
-                .then(Mono.defer(() -> { buffer.complete(); execution.upstreamFinished = true; return drainWindows(execution, input, buffer, writer, true); }));
+                .concatMap(event -> Mono.defer(() -> { buffer.accept(event); return drainWindows(execution, input, buffer, writer, false); }), 1)
+                .then(Mono.defer(() -> { buffer.complete(); execution.upstreamFinished = true; return archiveOutputComplete(execution).then(drainWindows(execution, input, buffer, writer, true)); }));
     }
     private Mono<Void> drainWindows(Execution execution, Approved input, BufferedCompletion buffer, GatewayWindowWriter writer, boolean complete) {
         return Mono.defer(() -> {
@@ -106,7 +112,8 @@ final class GuardedChatService {
                 var events = new java.util.ArrayList<ServerSentEvent<String>>(); events.add(ServerSentEvent.builder(json.writeValueAsString(chunk)).build());
                 if (range.last()) events.add(ServerSentEvent.builder("[DONE]").build());
                 Reply reply = new Reply(released, events, execution.auth.id(), execution.auth.snapshotId(), input.originalAction(), action, decision.path("decisionId").stringValue());
-                return windowEvent(execution, "RELEASE_INTENT", decision, releasedSegments, range)
+                return Mono.defer(() -> execution.auth.context().path("archiveRequired").asBoolean() ? runtime.archiveContent(execution.auth, "RELEASED_OUTPUT", execution.seq + 1, "MODEL_RESPONSE_JSON", released, decision, releasedSegments, execution.seq + 1, range.releaseStart(), range.releaseEnd()) : Mono.empty())
+                    .then(windowEvent(execution, "RELEASE_INTENT", decision, releasedSegments, range))
                     .then(Mono.defer(() -> writer.writeWindow(reply)))
                     .then(windowEvent(execution, "WRITE_ACCEPTED", decision, releasedSegments, range))
                     .then(Mono.defer(() -> {
@@ -156,18 +163,52 @@ final class GuardedChatService {
     private Mono<Void> release(Execution execution, Approved output, String inputAction, List<ServerSentEvent<String>> original, boolean stream, Function<Reply, Mono<Void>> writer) {
         List<ServerSentEvent<String>> events = stream ? (Set.of("ALLOW", "WARN").contains(output.originalAction()) && !original.isEmpty() ? original : BufferedCompletion.replacement(json, output.body())) : List.of();
         Reply reply = new Reply(output.body(), events, execution.auth.id(), execution.auth.snapshotId(), inputAction, output.originalAction(), output.decision().path("decisionId").stringValue());
-        return event(execution, "RELEASE_INTENT", output, null)
+        return archiveExecution(execution, "RELEASED_OUTPUT", output)
+                .then(event(execution, "RELEASE_INTENT", output, null))
                 .then(Mono.defer(() -> writer.apply(reply)))
                 // writeWith/send completion means the server accepted the write; it is not a delivery receipt.
                 .then(event(execution, "WRITE_ACCEPTED", output, null))
                 .then(event(execution, "COMPLETED", null, null)).doOnSuccess(ignored -> execution.completed = true);
+    }
+    private String routeKey(Execution execution) {
+        var auth = execution.auth;
+        return CanonicalJson.encode(json.valueToTree(List.of(auth.context().path("tenantId").stringValue(), auth.context().path("applicationId").stringValue(), auth.context().path("sessionId").asText(auth.id()))));
+    }
+    private Mono<Void> archiveExecution(Execution execution, String purpose, Approved approved) {
+        if (!execution.auth.context().path("archiveRequired").asBoolean()) return Mono.empty();
+        return Mono.defer(() -> {
+            int length = 0; for (JsonNode segment : approved.segments()) length += segment.path("text").stringValue().length();
+            return runtime.archiveContent(execution.auth, purpose, execution.seq + 1, purpose.equals("MODEL_INPUT") ? "REQUEST_JSON" : "MODEL_RESPONSE_JSON",
+                    purpose.equals("MODEL_INPUT") && execution.archiveRoute != null ? execution.archiveRoute.request() : approved.body(), approved.decision(), approved.segments(), execution.seq + 1, 0, length);
+        });
+    }
+    private Mono<Void> archiveModelResponse(Execution execution, JsonNode response) {
+        if (!execution.auth.context().path("archiveRequired").asBoolean()) return Mono.empty();
+        return runtime.archiveContent(execution.auth, "MODEL_OUTPUT", 0, "MODEL_RESPONSE_JSON", response, null, null, null, 0, 0)
+                .then(runtime.archiveOutputComplete(execution.auth, 0));
+    }
+    private Mono<Void> archiveOutputComplete(Execution execution) {
+        return execution.auth.context().path("archiveRequired").asBoolean() ? runtime.archiveOutputComplete(execution.auth, execution.rawOutputSequence - 1) : Mono.empty();
+    }
+    private Mono<Void> archiveModelEvent(Execution execution, ServerSentEvent<String> event) {
+        if (!execution.auth.context().path("archiveRequired").asBoolean()) return Mono.empty();
+        return Mono.defer(() -> {
+            ObjectNode stored = json.createObjectNode();
+            if (event.data() != null) stored.put("data", event.data()); else stored.putNull("data");
+            if (event.id() != null) stored.put("id", event.id());
+            if (event.event() != null) stored.put("event", event.event());
+            if (event.comment() != null) stored.put("comment", event.comment());
+            if (event.retry() != null) stored.put("retryMillis", event.retry().toMillis());
+            return runtime.archiveContent(execution.auth, "MODEL_OUTPUT", execution.rawOutputSequence, "SSE_EVENT", stored, null, null, null, 0, 0)
+                    .doOnSuccess(ignored -> execution.rawOutputSequence++);
+        });
     }
     private Mono<Void> event(Execution execution, String kind, Approved approved, String reason) {
         return Mono.defer(() -> runtime.event(execution.auth, execution.seq + 1, kind, approved == null ? null : approved.decision(), approved == null ? null : approved.originalDecision(), approved == null ? null : approved.segments(), reason).doOnSuccess(ignored -> execution.seq++));
     }
     private Mono<Void> terminate(Execution execution, Throwable error) {
         if (execution.completed) return Mono.empty();
-        String reason = execution.sendStarted && !execution.upstreamFinished ? "UPSTREAM_OUTCOME_UNKNOWN" : error instanceof GatewayFailure failure ? failure.code() : "GATEWAY_EXECUTION_FAILED";
+        String reason = error instanceof GatewayFailure nativeFailure && nativeFailure.code().equals("NATIVE_OUTPUT_REVIEW_REQUIRED") ? nativeFailure.code() : execution.sendStarted && !execution.upstreamFinished ? "UPSTREAM_OUTCOME_UNKNOWN" : error instanceof GatewayFailure failure ? failure.code() : "GATEWAY_EXECUTION_FAILED";
         return event(execution, "TERMINATED", null, reason).onErrorResume(ignored -> {
             org.slf4j.LoggerFactory.getLogger(GuardedChatService.class).error("GATEWAY_TERMINATION_RECONCILIATION_REQUIRED requestId={}", execution.auth.id());
             return Mono.empty();

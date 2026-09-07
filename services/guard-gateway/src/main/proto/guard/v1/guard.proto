@@ -1,5 +1,5 @@
 // Generated from model/guard-v1.schema.json. Do not edit.
-// Source SHA-256: 01bb211282221f91e3fb858d2d0b4c19d0904d24c50e9d5d83e8326500e5aa3a
+// Source SHA-256: 44b9580b162406dfe22418cf70f016c246763510e54d36c1ee3658f2b3a62cf9
 syntax = "proto3";
 
 package guardllm.contracts.v1;
@@ -233,6 +233,7 @@ message EvidenceRef {
   optional int64 normalized_start = 13;
   optional int64 normalized_end = 14;
   repeated string normalization_transforms = 15;
+  repeated EvidenceLocation locations = 16;
 }
 
 message Observation {
@@ -364,6 +365,26 @@ message ComplianceContext {
   string business_line = 4;
   string policy_version = 5;
   string legal_disclaimer_version = 6;
+}
+
+message EvidenceLocation {
+  string artifact_id = 1;
+  string source_digest = 2;
+  string content_version = 3;
+  string content_path = 4;
+  string mapping_version = 5;
+  string offset_encoding = 6;
+  optional string view_id = 7;
+  optional int64 text_start = 8;
+  optional int64 text_end = 9;
+  optional int64 text_length = 10;
+  optional int64 start_ms = 11;
+  optional int64 end_ms = 12;
+  optional int64 frame_index = 13;
+  optional int64 channel = 14;
+  optional int64 page = 15;
+  optional string speaker_id = 16;
+  repeated double region = 17;
 }
 
 service GuardService {

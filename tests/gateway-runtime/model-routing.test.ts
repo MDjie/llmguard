@@ -1,5 +1,5 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
-import { captureModelRouting } from '@/lib/gateway-runtime/model-routing';
+import { captureModelRouting, mappedModelRequest } from '@/lib/gateway-runtime/model-routing';
 
 describe('signed model destinations and data boundaries',()=>{
   beforeEach(()=>{
@@ -26,4 +26,27 @@ describe('signed model destinations and data boundaries',()=>{
     vi.stubEnv('GATEWAY_MODEL_ROUTE_BOUNDARIES_JSON','{"test":["internal"],"public":["public"]}');
     expect(()=>captureModelRouting(['test'],'internal')).not.toThrow();expect(()=>captureModelRouting(['unknown'],'internal')).toThrow();
   });
+});
+
+describe('archived provider request reconstruction',()=>{
+ const identity={tenantId:'tenant',applicationId:'app',businessRequestId:'request'};
+ const config=(routes:unknown)=>JSON.stringify({routes,defaultBaseUrl:'https://model.example',defaultBearerTokenRef:'MODEL_BEARER_TOKEN',boundaries:{route:['internal']}});
+ it('retains identity routing without inventing provider fields',()=>{
+  const request={model:'test',messages:[{role:'user',content:'original'}]};expect(mappedModelRequest(request,config(null),identity)).toEqual(request);
+ });
+ it('applies pinned model renames and move/copy rules without changing the source',()=>{
+  const request={model:'alias',messages:[{role:'user',content:'original'}],max_tokens:128,temperature:0.2};
+  const routes=[{id:'alias',baseUrl:'https://model.example',weight:1,targetModel:'actual-provider-model',requestMappings:[{from:'/max_tokens',to:'/max_completion_tokens'},{from:'/temperature',to:'/top_p',move:false}]}];
+  expect(mappedModelRequest(request,config(routes),identity)).toEqual({model:'actual-provider-model',messages:request.messages,max_completion_tokens:128,temperature:0.2,top_p:0.2});expect(request.model).toBe('alias');expect(request.max_tokens).toBe(128);
+ });
+ it('uses exact route IDs ahead of model patterns and safely rejects invalid mapping parents',()=>{
+  expect(mappedModelRequest({model:'alias'},config([{id:'other',modelPattern:'*',baseUrl:'https://model.example',weight:100,targetModel:'wrong'},{id:'alias',baseUrl:'https://model.example',weight:1,targetModel:'right'}]),identity)).toEqual({model:'right'});
+  expect(()=>mappedModelRequest({model:'alias',messages:['text']},config([{id:'alias',baseUrl:'https://model.example',weight:1,requestMappings:[{from:'/model',to:'/messages/0/child'}]}]),identity)).toThrow('MODEL_MAPPING_PARENT_INVALID');
+ });
+ it('binds routing to the frozen settings and supports a single wildcard array mapping',()=>{
+  const request={model:'alias',messages:[{role:'user',content:'one'},{role:'user',content:'two'}]};
+  const result=mappedModelRequest(request,config([{id:'alias',baseUrl:'https://model.example',weight:1,requestMappings:[{from:'/messages/*/content',to:'/messages/*/text'}]}]),identity);
+  expect(result).toEqual({model:'alias',messages:[{role:'user',text:'one'},{role:'user',text:'two'}]});
+  expect(()=>mappedModelRequest(request,config([{id:'alias',baseUrl:'https://model.example',weight:1,requestMappings:[{from:'/model',to:'/__proto__/polluted'}]}]),identity)).toThrow('MODEL_MAPPING_PATH_INVALID');
+ });
 });

@@ -109,6 +109,8 @@ async function probe(
       7 * 24 * 60 * 60 * 1_000,
       Math.round((Number.isFinite(seconds) ? seconds : 0) * 1_000),
     )),
+    audioTrackCount: parsed.streams.filter(stream => stream.codec_type === 'audio').length,
+    subtitleTrackCount: parsed.streams.filter(stream => stream.codec_type === 'subtitle').length,
     hasAudio: parsed.streams.some((stream) => stream.codec_type === 'audio'),
     hasVideo: parsed.streams.some((stream) => stream.codec_type === 'video'),
     hasSubtitles: parsed.streams.some((stream) => stream.codec_type === 'subtitle'),
@@ -499,6 +501,7 @@ export async function analyzeAudioVideo(
     const versions = new Set<string>();
     const failures: AnalysisFailure[] = [];
     const generatedPaths: string[] = [];
+    const coordinateMappings:Record<string,unknown>[]=[];
     let transcript: TranscriptSegment[] = [];
     let subtitles: SubtitleSegment[] = [];
     let anomalies: Awaited<ReturnType<typeof classifyAudioAnomalies>>['anomalies'] = [];
@@ -537,6 +540,7 @@ export async function analyzeAudioVideo(
       } catch (error) {
         failures.push(failure('AUDIO_CLASSIFIER', true, error));
       }
+      coordinateMappings.push(...audioViews.map(view=>({viewId:view.id,mappingVersion:'audio-time-to-source-1',basis:'SOURCE_TIME_MS',timeScale:view.timeScale,reverseDurationMs:view.reverseDurationMs??null,sourceDurationMs:metadata.durationMs})));
       const asrViews = await mapInBatches(
         audioViews,
         request.sampling.batchSize,
@@ -663,15 +667,31 @@ export async function analyzeAudioVideo(
       });
     }
     const analysisFailures = uniqueFailures(failures);
+    // These are observed transcript intervals and sampled frame instants, not semantic proof of the whole recording.
+    const intervals = transcript.map(segment => ({ startMs: Math.max(0, segment.startMs), endMs: Math.min(metadata.durationMs, segment.endMs) }))
+      .filter(interval => interval.startMs < interval.endMs).sort((left, right) => left.startMs - right.startMs);
+    const processedIntervals: Array<{ startMs: number; endMs: number }> = [];
+    for (const interval of intervals) { const previous = processedIntervals.at(-1); if (previous && interval.startMs <= previous.endMs) previous.endMs = Math.max(previous.endMs, interval.endMs); else processedIntervals.push({ ...interval }); }
+    const sampledAtMs = [...new Set(frames.map(frame => frame.timeMs))].sort((left, right) => left - right);
+    const boundaries = [0, ...sampledAtMs, metadata.durationMs];
+    const maximumGapMs = boundaries.slice(1).reduce((maximum, time, index) => Math.max(maximum, time - boundaries[index]), 0);
+    const audioFailed = analysisFailures.some(item => item.component === 'ASR' || item.component === 'AUDIO_CLASSIFIER');
+    const subtitleFailed = analysisFailures.some(item => item.component === 'SUBTITLE');
     return {
       analyzerVersion: analyzerVersion(versions, analysisFailures.length > 0),
       coverage:{artifactSha256:request.artifact.sha256,modality:request.artifact.kind,
         state:analysisFailures.length?'INCOMPLETE' as const:'SAMPLED' as const,
-        expectedUnits:Math.max(1,metadata.durationMs),processedUnits:Math.max(0,metadata.durationMs),
+        unit:'MILLISECOND' as const,expectedUnits:Math.max(1,metadata.durationMs),processedUnits:processedIntervals.reduce((total, interval) => total + interval.endMs - interval.startMs, 0),
+        processingCoverage: [
+          { unit: 'AUDIO_TRACK' as const, expected: metadata.audioTrackCount, processed: metadata.hasAudio && !audioFailed ? 1 : 0, failed: metadata.hasAudio && audioFailed ? 1 : 0, skipped: Math.max(0, metadata.audioTrackCount - 1) },
+          { unit: 'SUBTITLE_TRACK' as const, expected: metadata.subtitleTrackCount, processed: metadata.hasSubtitles && !subtitleFailed ? 1 : 0, failed: metadata.hasSubtitles && subtitleFailed ? 1 : 0, skipped: Math.max(0, metadata.subtitleTrackCount - 1) },
+        ],
+        temporalCoverage: { durationMs: metadata.durationMs, processedIntervals, sampledAtMs, maximumGapMs, enumerationComplete: false },
         analyzerVersion:analyzerVersion(versions,analysisFailures.length>0),
         reasonCodes:[...analysisFailures.map(f=>f.code),'FRAME_OR_TRANSCRIPT_COVERAGE_NOT_FULL_SEMANTIC_PROOF']},
       format: metadata.format,
       durationMs: metadata.durationMs,
+      coordinateMappings:[...coordinateMappings,...frames.map(frame=>({viewId:'frame_'+frame.frameIndex,mappingVersion:'video-frame-to-source-1',basis:'SOURCE_TIME_MS',frameIndex:frame.frameIndex,timeMs:frame.timeMs}))],
       transcript,
       subtitles,
       frames: frames.slice(0, request.sampling.maxFrames),

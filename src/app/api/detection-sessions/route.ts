@@ -1,3 +1,5 @@
+import { enqueueDecisionRecord } from '@/lib/security-alerts/service';
+import { fromLegacySession } from '@/lib/security-alerts/record';
 import type { z } from 'zod';
 import { jsonObjectResponseSchema } from '@/contracts/http/common';
 import { recordDetectionSessionSchema } from '@/contracts/http/history';
@@ -254,6 +256,8 @@ async function recordDetectionSession(
         }
       }
     }
+
+    for (const record of fromLegacySession(sessionId, params)) await enqueueDecisionRecord(transaction, scope, record);
 
     if (finalAction === 'block') {
       const records = buildIncidentPersistenceRecords(

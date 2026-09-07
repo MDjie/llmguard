@@ -153,6 +153,27 @@ final class GatewayRuntimeClient {
         long deadline = kind.equals("TERMINATED") || kind.equals("WRITE_ACCEPTED") || kind.equals("COMPLETED") ? System.currentTimeMillis() + 5000 : auth.deadline();
         return post("events", body, new HttpHeaders(), deadline).then();
     }
+    Mono<Void> archiveContent(Authorization auth, String purpose, int sequence, String representation, JsonNode content,
+                              JsonNode decision, JsonNode segments, Integer eventSequence, int rangeStart, int rangeEnd) {
+        if (!auth.context().path("archiveRequired").asBoolean()) return Mono.empty();
+        return Mono.defer(() -> {
+            ObjectNode body = json.createObjectNode().put("contractVersion", "2.0").put("purpose", purpose).put("sequence", sequence)
+                    .put("representation", representation).put("contentJson", json.writeValueAsString(content));
+            body.set("auth", auth.auth());
+            if (decision != null && segments != null && eventSequence != null) {
+                body.put("sourceStepId", decision.path("stepId").stringValue()).put("eventSequence", eventSequence)
+                        .put("payloadDigest", CanonicalJson.sha256(CanonicalJson.encode(segments))).put("rangeStart", rangeStart).put("rangeEnd", rangeEnd);
+            }
+            long deadline = purpose.equals("MODEL_OUTPUT") ? Math.max(auth.deadline(), System.currentTimeMillis() + 5000) : auth.deadline();
+            return post("archive", body, new HttpHeaders(), deadline).flatMap(response -> response.path("state").asText().equals("MANIFEST_COMMITTED")
+                    ? Mono.empty() : Mono.error(new GatewayFailure("ARCHIVE_PERSISTENCE_NOT_CONFIRMED", 503)));
+        });
+    }
+    Mono<Void> archiveOutputComplete(Authorization auth, int finalSequence) {
+        if (!auth.context().path("archiveRequired").asBoolean()) return Mono.empty();
+        ObjectNode body = json.createObjectNode().put("contractVersion", "2.0").put("finalSequence", finalSequence); body.set("auth", auth.auth());
+        return post("archive/complete", body, new HttpHeaders(), Math.max(auth.deadline(), System.currentTimeMillis() + 5000)).then();
+    }
     private Mono<JsonNode> post(String operation, JsonNode body, HttpHeaders identity, long deadline) {
         return Mono.defer(() -> {
             if (nodeId == null || secret == null || secret.length() < 32) throw new GatewayFailure("WORKLOAD_CONFIGURATION_MISSING", 503);

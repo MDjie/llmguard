@@ -1,3 +1,8 @@
+import { z } from 'zod';
+import { enqueueMediaEvidenceSnapshot, type PrivateMediaEvidence } from '@/lib/evidence/media-snapshots';
+import { resolveArchivePolicy } from '@/lib/conversation-archive/policy';
+import { enqueueDecisionRecord } from '@/lib/security-alerts/service';
+import { fromJobResult, fromJobFailure } from '@/lib/security-alerts/record';
 import { createHash } from 'node:crypto';
 import { and, asc, eq, inArray, isNull, lt, lte, or, sql } from 'drizzle-orm';
 import { ProviderEndpointPolicy } from '@/lib/egress';
@@ -49,6 +54,8 @@ export async function submitGuardJob(input: {
   ownerId: string;
   artifactId: string;
   contextArtifactId?: string;
+  nativeArtifactIds?: string[];
+  direction?: 'INPUT'|'OUTPUT_COMPLETE'|'OUTPUT_CHUNK'|'TOOL_RESULT';
   bundleId: string;
   jobType: string;
   idempotencyKey: string;
@@ -92,7 +99,13 @@ export async function submitGuardJob(input: {
       'Generated-content media marking only supports image, audio and video artifacts',
     );
   }
-  const executionBinding = jobType === 'code_scan' ? await (await import('@/lib/connectors/code-sentinel-config')).captureCodeScanBinding(input.scope, input.ownerId, input.artifactId) : undefined;
+  if (jobType !== 'native_joint' && (input.nativeArtifactIds || input.direction)) throw new GuardJobError('GRD_NATIVE_JOB_OPTIONS_INVALID', 'Native options require a native_joint job');
+  if (jobType === 'native_joint' && (!input.contextArtifactId || !input.nativeArtifactIds || input.nativeArtifactIds[0] !== input.artifactId)) throw new GuardJobError('GRD_NATIVE_JOB_CONTEXT_REQUIRED', 'Native jobs require an ordered source list beginning with the primary artifact and an owned context artifact');
+  let executionBinding: Record<string, unknown> | undefined;
+  if (jobType === 'native_joint') {
+    try { executionBinding = (await (await import('./native-binding')).captureNativeJobBinding(input.scope, input.ownerId, input.nativeArtifactIds!, input.contextArtifactId!, input.direction)).binding; }
+    catch { throw new GuardJobError('GRD_NATIVE_JOB_SOURCE_INVALID', 'Native sources must be accepted, current, uniquely ordered and owned by this principal'); }
+  } else if (jobType === 'code_scan') executionBinding = await (await import('@/lib/connectors/code-sentinel-config')).captureCodeScanBinding(input.scope, input.ownerId, input.artifactId);
   const requestHash = createHash('sha256').update(canonicalJson({
     ...(executionBinding ? { executionBinding } : {}),
     artifactId: input.artifactId,
@@ -288,9 +301,15 @@ export async function updateGuardJobProgress(
 export async function completeGuardJob(
   job: typeof guardJobs.$inferSelect,
   result: Record<string, unknown>,
+  privateEvidence?: PrivateMediaEvidence,
 ): Promise<void> {
+  result=z.record(z.string(),z.unknown()).parse(JSON.parse(JSON.stringify(result)));
   const scope = { tenantId: job.tenantId, applicationId: job.applicationId };
   await db.transaction(async (transaction) => {
+    if(privateEvidence && resolveArchivePolicy(scope).mode==='STRICT_OBJECT'){
+      const snapshot=await enqueueMediaEvidenceSnapshot(transaction,job,privateEvidence);
+      result={...result,evidenceArchive:{id:snapshot.id,state:snapshot.state,sourceDigest:snapshot.sourceDigest}};
+    }
     const [completed] = await transaction.update(guardJobs).set({
       status: 'completed', stage: 'completed', progress: 100, result,
       heartbeatAt: new Date(), completedAt: new Date(),
@@ -306,6 +325,8 @@ export async function completeGuardJob(
       );
     }
     await transaction.insert(guardJobEvents).values({ ...scope, jobId: job.id, eventType: 'job.completed', payload: { resultHash: createHash('sha256').update(canonicalJson(result)).digest('hex') } });
+    const record = fromJobResult(job, result);
+    if (record) await enqueueDecisionRecord(transaction, scope, record);
   });
 }
 
@@ -331,6 +352,7 @@ export async function failGuardJob(job: typeof guardJobs.$inferSelect, error: un
       scopePredicate(guardJobs, scope),
     )).returning({ id: guardJobs.id });
     if (failed) {
+      if (terminal) await enqueueDecisionRecord(transaction, scope, fromJobFailure(job));
       await transaction.insert(guardJobEvents).values({ ...scope, jobId: job.id, eventType: terminal ? 'job.failed' : 'job.retrying', payload: history.at(-1) });
     }
   });

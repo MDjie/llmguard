@@ -1,3 +1,5 @@
+import { enqueueDecisionRecord } from '@/lib/security-alerts/service';
+import { fromGuardDecision } from '@/lib/security-alerts/record';
 import { readProcessingContext } from './processing-context';
 export { readProcessingContext } from './processing-context';
 import { queueGatewayShadow } from './shadow';
@@ -72,6 +74,7 @@ export async function evaluateGateway(body: GatewayRequest, signal: AbortSignal)
   if ((body.stage.endsWith('RECHECK') ? 'RECHECK' : 'INITIAL') !== body.attemptKind) throw new GatewayError('STEP_ATTEMPT_INVALID', 400);
   const inputHmac = evidenceHmac(canonicalJson({ stage: body.stage, segments: body.segments, snapshotId: body.snapshotId, ...(body.window ? { window: body.window } : {}) }));
   const processing = readProcessingContext(row);
+  if (processing.nativeExecution && body.stage === 'INPUT_RECHECK') throw new GatewayError('NATIVE_JOINT_RECHECK_REQUIRED', 422);
   if (body.stage === 'INPUT' && canonicalJson(body.segments) !== canonicalJson(processing.inputSegments)) throw new GatewayError('AUTHORIZED_INPUT_CHANGED', 403);
   if (body.stage.endsWith('RECHECK')) {
     const initialStage = body.stage === 'INPUT_RECHECK' ? 'INPUT' : row.state === 'AUTHORIZED' ? 'INPUT' : 'OUTPUT_COMPLETE';
@@ -130,6 +133,7 @@ export async function evaluateGateway(body: GatewayRequest, signal: AbortSignal)
     await db.transaction(async tx => {
     await tx.update(gatewaySteps).set({ decisionId: decision.decisionId, outputHmac, action: decision.action, coverage: decision.coverage, status: decision.status, latencyMs: decision.latencyMs,
       modelVersions: [...decision.modelVersions], decisionEnvelope: sealReceipt({ decision, legacy, request, segments: body.segments, ...(body.window ? { window: body.window } : {}) }, body.stepId) }).where(and(scopePredicate(gatewaySteps, context), eq(gatewaySteps.id, body.stepId)));
+    await enqueueDecisionRecord(tx, context, fromGuardDecision({ sourceId: body.stepId, requestId: row.id, sessionId: row.sessionId ?? undefined, stage: body.stage, decision: legacy, spans }));
     await queueGatewayShadow(tx, context, row.id, body.stepId, body.stage, row.shadowSnapshotId);
     });
     return decision;

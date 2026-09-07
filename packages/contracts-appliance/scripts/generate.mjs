@@ -5,7 +5,8 @@ import { fileURLToPath } from 'node:url';
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const sourcePath = join(packageRoot, 'model', 'appliance-v1.schema.json');
-const sourceText = readFileSync(sourcePath, 'utf8');
+// Source digests are defined over canonical LF, including non-Git source exports.
+const sourceText = readFileSync(sourcePath, 'utf8').replace(/\r\n/g, '\n');
 const source = JSON.parse(sourceText);
 const sourceHash = createHash('sha256').update(sourceText).digest('hex');
 const definitions = source.$defs;

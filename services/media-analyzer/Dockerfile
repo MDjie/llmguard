@@ -5,6 +5,14 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY scripts/enforce-pnpm.mjs ./scripts/enforce-pnpm.mjs
 RUN pnpm install --frozen-lockfile
 COPY services/media-analyzer services/media-analyzer
+COPY tsconfig.json ./tsconfig.json
+COPY src/lib/evidence/coordinate-mapping.ts src/lib/evidence/coordinate-mapping.ts
+COPY src/contracts/http/native-multimodal.ts src/contracts/http/native-multimodal.ts
+COPY src/lib/multimodal/native-gate.ts src/lib/multimodal/native-gate.ts
+COPY src/lib/gateway-runtime/protocol.ts src/lib/gateway-runtime/protocol.ts
+COPY src/lib/gateway-runtime/native-content.ts src/lib/gateway-runtime/native-content.ts
+COPY src/lib/gateway-runtime/error.ts src/lib/gateway-runtime/error.ts
+COPY src/lib/gateway-runtime/completion-fields.ts src/lib/gateway-runtime/completion-fields.ts
 RUN pnpm analyzer:build
 
 FROM node:24.20.0-alpine

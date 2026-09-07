@@ -1,3 +1,4 @@
+import { analyzeNativeJoint } from './native-joint';
 import { timingSafeEqual } from 'node:crypto';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import {
@@ -71,6 +72,7 @@ async function route(request: IncomingMessage, response: ServerResponse) {
     '/v1/analyze/document-image',
     '/v1/analyze/audio-video',
     '/v1/mark/media',
+    '/v1/analyze/native-joint',
   ].includes(request.url ?? '')) {
     respond(response, 404, { code: 'ANALYZER_ROUTE_NOT_FOUND' });
     return;
@@ -93,6 +95,7 @@ async function route(request: IncomingMessage, response: ServerResponse) {
   try {
     const body = await jsonBody(request);
     const runner = new ProcessCommandRunner(controller.signal);
+    if (request.url === '/v1/analyze/native-joint') { respond(response, 200, await analyzeNativeJoint(body, runner, controller.signal)); return; }
     const result = request.url === '/v1/analyze/document-image'
       ? await analyzeDocumentImage(documentImageRequestSchema.parse(body), runner, controller.signal)
       : request.url === '/v1/analyze/audio-video'

@@ -56,7 +56,7 @@ export class S3Presigner {
   async presign(
     method: 'GET' | 'PUT' | 'DELETE',
     key: string,
-    options: { expiresSeconds?: number; sha256Header?: string; now?: Date } = {},
+    options: { expiresSeconds?: number; sha256Header?: string; now?: Date; versionId?: string; ifNoneMatch?: boolean; checksumSha256?: string } = {},
   ): Promise<{ url: string; headers: Readonly<Record<string, string>> }> {
     await this.endpointPolicy.assertAllowed(this.config.endpoint, 'custom');
     const expires = Math.min(3_600, Math.max(30, options.expiresSeconds ?? 900));
@@ -67,6 +67,8 @@ export class S3Presigner {
       .replace(/\/+/g, '/');
     const headers: Record<string, string> = { host: this.config.endpoint.host };
     if (options.sha256Header) headers['x-amz-meta-sha256'] = options.sha256Header;
+    if (options.ifNoneMatch) { if (method !== 'PUT') throw new Error('OBJECT_CONDITIONAL_METHOD_INVALID'); headers['if-none-match'] = '*'; }
+    if (options.checksumSha256) { if (!/^[A-Za-z0-9+/]{43}=$/.test(options.checksumSha256)) throw new Error('OBJECT_CHECKSUM_INVALID'); headers['x-amz-checksum-sha256'] = options.checksumSha256; }
     const signedHeaders = Object.keys(headers).sort().join(';');
     const query = new URLSearchParams({
       'X-Amz-Algorithm': 'AWS4-HMAC-SHA256',
@@ -75,6 +77,7 @@ export class S3Presigner {
       'X-Amz-Expires': String(expires),
       'X-Amz-SignedHeaders': signedHeaders,
     });
+    if (options.versionId) { if (method === 'PUT' || options.versionId.length > 1024) throw new Error('OBJECT_VERSION_INVALID'); query.set('versionId', options.versionId); }
     query.sort();
     const canonicalHeaders = Object.entries(headers).sort(([left], [right]) => left.localeCompare(right))
       .map(([name, value]) => `${name}:${value.trim()}\n`).join('');

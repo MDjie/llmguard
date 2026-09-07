@@ -1,12 +1,16 @@
+import { makeEvidenceView } from '@/lib/evidence/media-views';
+import { validateEvidenceLocation } from '@/lib/evidence/location';
 import { createHash } from 'node:crypto';
 import type { GuardAction, GuardDecision, GuardRequest } from '@guardllm/contracts';
 import { createEngineForPolicyBundle } from '@/lib/guard-engine-v2';
+import { ACTION_PRIORITY, combineActionConstraints } from '@/lib/guard-engine-v2/action-constraints';
 import type { RuntimePolicyBundle } from '@/lib/policy-bundle';
 import { assessAnalysisCoverage,type AnalysisCoverage } from './coverage';
 
 export interface OcrFusionRegion {
   readonly text: string;
   readonly artifactId: string;
+  readonly artifactSha256?: string;
   readonly viewId: string;
   readonly region: readonly [number, number, number, number];
   readonly page?: number;
@@ -21,6 +25,7 @@ export interface VisualFusionFinding {
   readonly riskType: string;
   readonly score: number;
   readonly artifactId: string;
+  readonly artifactSha256?: string;
   readonly viewId: string;
   readonly region?: readonly [number, number, number, number];
   readonly reasonCode: string;
@@ -36,21 +41,15 @@ type SegmentSource = 'user_text' | 'image_ocr' | 'qr_code';
 interface SegmentSpan {
   readonly start: number;
   readonly end: number;
+  readonly textVersion: string;
   readonly source: SegmentSource;
   readonly artifactId?: string;
+  readonly artifactSha256?: string;
   readonly viewId?: string;
   readonly region?: readonly [number, number, number, number];
   readonly page?: number;
 }
-type InputSegment = Omit<SegmentSpan, 'start' | 'end'> & { readonly text: string };
-
-const ACTION_RANK: Readonly<Record<GuardAction, number>> = {
-  ALLOW: 0, WARN: 1, MASK: 2, REWRITE: 2, REQUIRE_REVIEW: 3, SAFE_RESPONSE: 4, BLOCK: 5,
-};
-
-function stronger(left: GuardAction, right: GuardAction): GuardAction {
-  return ACTION_RANK[right] > ACTION_RANK[left] ? right : left;
-}
+type InputSegment = Omit<SegmentSpan, 'start' | 'end' | 'textVersion'> & { readonly text: string };
 
 function actionForScore(score: number, reviewThreshold: number, blockThreshold: number): GuardAction {
   if (score >= blockThreshold) return 'BLOCK';
@@ -68,26 +67,37 @@ function buildText(segments: readonly InputSegment[]) {
     const start = text.length;
     text += segment.text;
     const { text: _text, ...provenance } = segment;
-    spans.push({ ...provenance, start, end: text.length });
+    spans.push({ ...provenance, start, end: text.length, textVersion: createHash('sha256').update(segment.text).digest('hex') });
   }
   return { text, spans };
 }
 
 async function evaluate(
   bundle: RuntimePolicyBundle,
-  base: Omit<GuardRequest['context'], 'requestId' | 'direction' | 'policyBundleId'>,
+  base: Omit<GuardRequest['context'], 'requestId' | 'direction' | 'policyBundleId'> &
+    Partial<Pick<GuardRequest['context'], 'direction'>>,
   requestSuffix: string,
   text: string,
 ): Promise<GuardDecision> {
+  const requestId = `${base.traceId}-${requestSuffix}`.slice(0, 128);
+  // Absent optional tracks must not invoke detectors on synthetic business content.
+  // Required analysis/quality coverage is still enforced by the enclosing fusion.
+  if (!text) return {
+    contractVersion: '1.0', decisionId: `dec_${createHash('sha256').update(JSON.stringify([requestId, bundle.id, base.direction ?? 'INPUT'])).digest('hex').slice(0, 32)}`,
+    traceId: base.traceId, action: 'ALLOW', riskLevel: 'NONE', observations: [],
+    policyPath: [bundle.payload.policyId, 'modality-not-applicable'], bundleId: bundle.id,
+    latencyMs: 0, degraded: false, reasonCodes: ['MODALITY_NOT_APPLICABLE'],
+    degradationReasons: [], failMode: 'NORMAL', evidenceComplete: false,
+  };
   return createEngineForPolicyBundle(bundle).evaluate({
     contractVersion: '1.0',
     context: {
       ...base,
-      requestId: `${base.traceId}-${requestSuffix}`.slice(0, 128),
-      direction: 'INPUT',
+      requestId,
+      direction: base.direction ?? 'INPUT',
       policyBundleId: bundle.id,
     },
-    content: { text: text || '[empty modality]' },
+    content: { text },
   });
 }
 
@@ -113,8 +123,24 @@ function mappedEvidence(
       viewId: span.viewId,
       region: span.region,
       page: span.page,
+      artifactSha256: span.artifactSha256,
+      textLength: span.end - span.start, textVersion: span.textVersion,
+      textStart: Math.max(evidence.start ?? span.start, span.start) - span.start,
+      textEnd: Math.min(evidence.end ?? span.end, span.end) - span.start,
+    }));
+    const locations = sources.map(source => validateEvidenceLocation({
+      artifactId: source.artifactId, sourceDigest: source.artifactSha256, contentVersion: source.textVersion,
+      contentPath: '/views/' + encodeURIComponent(source.viewId ?? 'original'), mappingVersion: 'guard-evidence-location-1', offsetEncoding: 'UTF16',
+      viewId: source.viewId, textStart: source.textStart, textEnd: source.textEnd, textLength: source.textLength, page: source.page, region: source.region,
     }));
     const base = {
+      locations: locations.flatMap(item => item.location ? [item.location] : []),
+      locationState: locations.length > 0 && locations.every(item => item.state === 'VERIFIED') ? 'VERIFIED' as const : 'UNVERIFIED' as const,
+      detectorId: observation.detectorId,
+      status: observation.status, decisionRole: observation.decisionRole,
+      detectorVersion: observation.detectorVersion,
+      ruleId: observation.ruleId,
+      ruleVersion: observation.ruleVersion,
       riskType: observation.riskType,
       score: observation.score,
       action: decision.action,
@@ -131,7 +157,8 @@ function mappedEvidence(
 export async function fuseMultimodal(input: {
   readonly analysisCoverage?:AnalysisCoverage;readonly artifactSha256?:string;
   readonly bundle: RuntimePolicyBundle;
-  readonly context: Omit<GuardRequest['context'], 'requestId' | 'direction' | 'policyBundleId'>;
+  readonly context: Omit<GuardRequest['context'], 'requestId' | 'direction' | 'policyBundleId'> &
+    Partial<Pick<GuardRequest['context'], 'direction'>>;
   readonly userText?: string;
   readonly contextArtifactId?: string;
   readonly ocr: readonly OcrFusionRegion[];
@@ -147,12 +174,13 @@ export async function fuseMultimodal(input: {
   const userSegments: InputSegment[] = input.userText ? [{
     text: input.userText,
     source: 'user_text',
-    artifactId: input.contextArtifactId,
+    artifactId: input.contextArtifactId, artifactSha256: input.contextArtifactId && input.userText ? createHash('sha256').update(input.userText).digest('hex') : undefined,
   }] : [];
   const ocrSegments: InputSegment[] = input.ocr.map((region) => ({
     text: region.text,
     source: 'image_ocr',
     artifactId: region.artifactId,
+    artifactSha256: region.artifactSha256,
     viewId: region.viewId,
     region: region.region,
     page: region.page,
@@ -161,6 +189,7 @@ export async function fuseMultimodal(input: {
     text: region.text,
     source: 'qr_code',
     artifactId: region.artifactId,
+    artifactSha256: region.artifactSha256,
     viewId: region.viewId,
     region: region.region,
     page: region.page,
@@ -176,13 +205,13 @@ export async function fuseMultimodal(input: {
     evaluate(input.bundle, input.context, 'combined', combined.text),
   ]);
   const strongestIndividual = Math.max(
-    ACTION_RANK[userDecision.action],
-    ACTION_RANK[imageDecision.action],
-    ACTION_RANK[codeDecision.action],
+    ACTION_PRIORITY[userDecision.action],
+    ACTION_PRIORITY[imageDecision.action],
+    ACTION_PRIORITY[codeDecision.action],
   );
   const populatedModalities = [user.text, image.text, codes.text].filter(Boolean).length;
   const cooperativeAttack = populatedModalities >= 2 &&
-    ACTION_RANK[combinedDecision.action] > strongestIndividual;
+    ACTION_PRIORITY[combinedDecision.action] > strongestIndividual;
   const reviewThreshold = input.reviewThreshold ?? 0.65;
   const blockThreshold = input.blockThreshold ?? 0.8;
   const visualScore = Math.max(input.anomalyScore ?? 0, 0, ...input.visual.map((item) => item.score));
@@ -201,12 +230,21 @@ export async function fuseMultimodal(input: {
           input.instructionCapability !== 'FORBIDDEN' && combined.text
         ? 'WARN'
         : 'ALLOW';
-  const coverage=assessAnalysisCoverage({coverage:input.analysisCoverage,artifactSha256:input.artifactSha256,...input.context,requiredRiskIds:input.bundle.payload.semanticCoverage?.requiredRiskIds??[]});
+  const coverage=assessAnalysisCoverage({coverage:input.analysisCoverage,artifactSha256:input.artifactSha256,...input.context,requiredRiskIds:input.bundle.payload.semanticCoverage?.requiredRiskIds??[],combination:input.userText ? 'TEXT+' + (input.analysisCoverage?.modality ?? 'IMAGE') : input.analysisCoverage?.modality});
   const coverageAction:GuardAction=input.bundle.payload.semanticDecisionMode==='coverage-v1'&&!coverage.complete?'REQUIRE_REVIEW':'ALLOW';
-  const action = [visualAction, failureAction, trustAction,coverageAction]
-    .reduce(stronger, combinedDecision.action);
+  const individual = [
+    ...(user.text ? [userDecision.action] : []),
+    ...(image.text ? [imageDecision.action] : []),
+    ...(codes.text ? [codeDecision.action] : []),
+  ];
+  const { action } = combineActionConstraints([
+    ...individual, combinedDecision.action, visualAction, failureAction, trustAction, coverageAction,
+  ]);
   const visualEvidence = input.visual.map((item) => {
+    const position = validateEvidenceLocation({ artifactId: item.artifactId, sourceDigest: item.artifactSha256, contentVersion: item.artifactSha256,
+      contentPath: `/views/${item.viewId}`, mappingVersion: 'guard-evidence-location-1', offsetEncoding: 'UTF16', viewId: item.viewId, region: item.region });
     const base = {
+      locations: position.location ? [position.location] : [], locationState: position.state,
       riskType: item.riskType,
       score: item.score,
       action: actionForScore(item.score, reviewThreshold, blockThreshold),
@@ -232,11 +270,20 @@ export async function fuseMultimodal(input: {
     };
     return { ...base, evidenceRef: evidenceIdentity(input.context.traceId, base) };
   });
+  // Map each branch against its own offsets before deduplicating the same finding.
+  const textEvidence = [
+    ...mappedEvidence(userDecision, user.spans, input.context.traceId),
+    ...mappedEvidence(imageDecision, image.spans, input.context.traceId),
+    ...mappedEvidence(codeDecision, codes.spans, input.context.traceId),
+    ...mappedEvidence(combinedDecision, combined.spans, input.context.traceId),
+  ];
   return {
+    privateEvidenceViews: [...userSegments,...ocrSegments,...codeSegments].flatMap(segment=>segment.artifactId&&segment.artifactSha256?[makeEvidenceView({artifactId:segment.artifactId,sourceDigest:segment.artifactSha256,text:segment.text,source:segment.source,
+      contentPath:'/views/'+encodeURIComponent(segment.viewId??'original'),viewId:segment.viewId,page:segment.page,region:segment.region})]:[]),
     action,
     coverage,
     cooperativeAttack,
-    degraded: failures.length > 0,
+    degraded: failures.length > 0 || (input.bundle.payload.semanticDecisionMode === 'coverage-v1' && !coverage.complete),
     textDecisions: {
       user: userDecision,
       image: imageDecision,
@@ -244,7 +291,7 @@ export async function fuseMultimodal(input: {
       combined: combinedDecision,
     },
     evidence: [
-      ...mappedEvidence(combinedDecision, combined.spans, input.context.traceId),
+      ...new Map(textEvidence.map((item) => [item.evidenceRef, item])).values(),
       ...visualEvidence,
       ...failureEvidence,
     ],

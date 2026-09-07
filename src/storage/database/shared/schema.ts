@@ -255,6 +255,7 @@ export const securityIncidents = pgTable(
 		closedAt: timestamp("closed_at", { withTimezone: true }),
 	},
 	(table) => [
+		uniqueIndex("security_incidents_scope_id_uq").on(table.tenantId, table.applicationId, table.id),
 		uniqueIndex("security_incidents_scope_number_uq").on(table.tenantId, table.applicationId, table.incidentNumber),
 		index("security_incidents_status_sla_idx").on(table.status, table.slaDueAt),
 		index("security_incidents_trace_id_idx").on(table.traceId),
@@ -301,6 +302,7 @@ export const contentAccessRequests = pgTable(
 		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 	},
 	(table) => [
+		uniqueIndex("content_access_requests_scope_id_uq").on(table.tenantId,table.applicationId,table.id),
 		index("content_access_requests_scope_status_idx")
 			.on(table.tenantId, table.applicationId, table.status, table.createdAt),
 		index("content_access_requests_resource_idx")
@@ -2669,3 +2671,73 @@ export const gatewayRuntimePublications = pgTable("gateway_runtime_publications"
   uniqueIndex("gateway_runtime_publications_scope_id_uq").on(table.tenantId, table.applicationId, table.id),
   index("gateway_runtime_publications_pending_idx").on(table.createdAt).where(sql`${table.dispatchState} = 'PENDING'`),
 ]);
+
+
+export const decisionRecordOutbox = pgTable('decision_record_outbox', {
+  id: varchar('id', { length: 64 }).primaryKey(), tenantId: varchar('tenant_id', { length: 36 }).notNull(), applicationId: varchar('application_id', { length: 36 }).notNull(),
+  payload: jsonb('payload').$type<import('../../../contracts/http/security-alerts').DecisionRecorded>().notNull(), payloadDigest: varchar('payload_digest', { length: 64 }).notNull(),
+  failureCode: varchar('failure_code', { length: 64 }), failedAt: timestamp('failed_at', { withTimezone: true }), retryCount: integer('retry_count').notNull().default(0),
+  state: varchar('state', { length: 16 }).notNull().default('PENDING'), createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(), projectedAt: timestamp('projected_at', { withTimezone: true }),
+}, table => [foreignKey({ columns: [table.tenantId, table.applicationId], foreignColumns: [applications.tenantId, applications.id] }), uniqueIndex('decision_record_scope_id_uq').on(table.tenantId, table.applicationId, table.id)]);
+
+export const securityAlerts = pgTable('security_alerts', {
+  id: varchar('id', { length: 64 }).primaryKey(), tenantId: varchar('tenant_id', { length: 36 }).notNull(), applicationId: varchar('application_id', { length: 36 }).notNull(),
+  recordId: varchar('record_id', { length: 64 }).notNull(), source: varchar('source', { length: 32 }).notNull(), sourceId: varchar('source_id', { length: 128 }).notNull(),
+  requestId: varchar('request_id', { length: 128 }), jobId: varchar('job_id', { length: 128 }), traceId: varchar('trace_id', { length: 128 }).notNull(), sessionId: varchar('session_id', { length: 128 }),
+  decisionId: varchar('decision_id', { length: 128 }).notNull(), bundleId: varchar('bundle_id', { length: 128 }), stage: varchar('stage', { length: 128 }).notNull(), riskId: varchar('risk_id', { length: 128 }).notNull(),
+  category: varchar('category', { length: 32 }).notNull(), action: varchar('action', { length: 32 }).notNull(), score: integer('score').notNull(),
+  evidence: jsonb('evidence').$type<import('../../../contracts/http/security-alerts').AlertView['evidence']>().notNull().default([]), coverage: jsonb('coverage').$type<Record<string, unknown>>().notNull().default({}),
+  reasonCodes: jsonb('reason_codes').$type<string[]>().notNull().default([]), incidentId: uuid('incident_id'), occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull(), createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, table => [foreignKey({ columns: [table.tenantId, table.applicationId], foreignColumns: [applications.tenantId, applications.id] }),
+  foreignKey({ columns: [table.tenantId, table.applicationId, table.recordId], foreignColumns: [decisionRecordOutbox.tenantId, decisionRecordOutbox.applicationId, decisionRecordOutbox.id] }),
+  foreignKey({ columns: [table.tenantId, table.applicationId, table.requestId], foreignColumns: [gatewayRequests.tenantId, gatewayRequests.applicationId, gatewayRequests.id] }),
+  foreignKey({ columns: [table.tenantId, table.applicationId, table.jobId], foreignColumns: [guardJobs.tenantId, guardJobs.applicationId, guardJobs.id] }),
+  foreignKey({ columns: [table.tenantId, table.applicationId, table.incidentId], foreignColumns: [securityIncidents.tenantId, securityIncidents.applicationId, securityIncidents.id] }),
+  uniqueIndex('security_alerts_scope_id_uq').on(table.tenantId, table.applicationId, table.id), index('security_alerts_scope_time_idx').on(table.tenantId, table.applicationId, table.occurredAt, table.id)]);
+
+
+export const conversationArchives = pgTable('conversation_archives', {
+  requestId: varchar('request_id', { length: 128 }).primaryKey(), tenantId: varchar('tenant_id', { length: 36 }).notNull(), applicationId: varchar('application_id', { length: 36 }).notNull(),
+  conversationId: varchar('conversation_id', { length: 128 }).notNull(), subjectId: varchar('subject_id', { length: 128 }).notNull(), policy: jsonb('policy').$type<import('../../../contracts/http/conversation-archive').ArchivePolicy>().notNull(),
+  state: varchar('state', { length: 16 }).notNull().default('OPEN'), integrity: jsonb('integrity').$type<Record<string, unknown>>().notNull().default({}), version: integer('version').notNull().default(0),
+  modelOutputFinalSequence: integer('model_output_final_sequence'), modelOutputUnavailableReason: varchar('model_output_unavailable_reason', { length: 128 }), mediaComplete: boolean('media_complete').notNull().default(true),
+  deletionProofId: uuid('deletion_proof_id').references(() => dataDeletionProofs.proofId), holdUntil: timestamp('hold_until', { withTimezone: true }), acceptedAt: timestamp('accepted_at', { withTimezone: true }).notNull(), expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  committedAt: timestamp('committed_at', { withTimezone: true }), reconciledAt: timestamp('reconciled_at', { withTimezone: true }),
+}, table => [foreignKey({ columns: [table.tenantId, table.applicationId, table.requestId], foreignColumns: [gatewayRequests.tenantId, gatewayRequests.applicationId, gatewayRequests.id] }),
+  uniqueIndex('conversation_archives_scope_id_uq').on(table.tenantId, table.applicationId, table.requestId), index('conversation_archives_scope_time_idx').on(table.tenantId, table.applicationId, table.acceptedAt, table.requestId),
+  index('conversation_archives_session_idx').on(table.tenantId, table.applicationId, table.conversationId, table.acceptedAt, table.requestId)]);
+export const archivedContentObjects = pgTable('archived_content_objects', {
+  id: varchar('id', { length: 64 }).primaryKey(), tenantId: varchar('tenant_id', { length: 36 }).notNull(), applicationId: varchar('application_id', { length: 36 }).notNull(), requestId: varchar('request_id', { length: 128 }).notNull(),
+  purpose: varchar('purpose', { length: 32 }).notNull(), sequence: integer('sequence').notNull(), representation: varchar('representation', { length: 32 }).notNull(), state: varchar('state', { length: 24 }).notNull().default('PENDING'),
+  sourceHmac: varchar('source_hmac', { length: 64 }).notNull(), contentHmac: varchar('content_hmac', { length: 64 }).notNull(), ciphertextSha256: varchar('ciphertext_sha256', { length: 64 }).notNull(),
+  sizeBytes: integer('size_bytes').notNull(), objectKey: varchar('object_key', { length: 1024 }).notNull(), objectVersion: varchar('object_version', { length: 1024 }), keyIds: jsonb('key_ids').$type<string[]>().notNull(),
+  spool: jsonb('spool').$type<import('../../../lib/secrets/types').SecretEnvelope[]>(), sourceStepId: varchar('source_step_id', { length: 128 }), eventSequence: integer('event_sequence'), rangeStart: integer('range_start'), rangeEnd: integer('range_end'),
+  attempt: integer('attempt').notNull().default(0), errorCode: varchar('error_code', { length: 128 }), retryAt: timestamp('retry_at', { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(), expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(), objectWrittenAt: timestamp('object_written_at', { withTimezone: true }),
+  committedAt: timestamp('committed_at', { withTimezone: true }), deletedAt: timestamp('deleted_at', { withTimezone: true }),
+}, table => [foreignKey({ columns: [table.tenantId, table.applicationId, table.requestId], foreignColumns: [conversationArchives.tenantId, conversationArchives.applicationId, conversationArchives.requestId] }),
+  foreignKey({ columns: [table.tenantId, table.applicationId, table.requestId, table.sourceStepId], foreignColumns: [gatewaySteps.tenantId, gatewaySteps.applicationId, gatewaySteps.requestId, gatewaySteps.id] }),
+  uniqueIndex('archived_content_scope_id_uq').on(table.tenantId, table.applicationId, table.id), uniqueIndex('archived_content_identity_uq').on(table.tenantId, table.applicationId, table.requestId, table.purpose, table.sequence),
+  uniqueIndex('archived_content_object_key_uq').on(table.objectKey), index('archived_content_request_idx').on(table.tenantId, table.applicationId, table.requestId, table.purpose, table.sequence)]);
+
+// Independent triage of alert feedback. This is not a dataset quality approval or a policy publication.
+export const badcaseFeedbackReviews = pgTable('badcase_feedback_reviews', {
+ ...tenantScopeColumns(), feedbackId: uuid('feedback_id').primaryKey(), submittedBy: varchar('submitted_by',{length:100}).notNull(),
+ reviewedBy: varchar('reviewed_by',{length:100}).notNull(), decision: varchar('decision',{length:16}).notNull(), reason: varchar('reason',{length:500}).notNull(),
+ sourceDigest: varchar('source_digest',{length:64}).notNull(), createdAt: timestamp('created_at',{withTimezone:true}).defaultNow().notNull(),
+}, table => [foreignKey({columns:[table.tenantId,table.applicationId,table.feedbackId],foreignColumns:[badcaseFeedback.tenantId,badcaseFeedback.applicationId,badcaseFeedback.id]}).onDelete('restrict')]);
+
+export const mediaEvidenceSnapshots=pgTable('media_evidence_snapshots',{
+ id:varchar('id',{length:64}).primaryKey(),tenantId:varchar('tenant_id',{length:36}).notNull(),applicationId:varchar('application_id',{length:36}).notNull(),jobId:varchar('job_id',{length:36}).notNull(),
+ state:varchar('state',{length:20}).notNull().default('PENDING'),contentHmac:varchar('content_hmac',{length:64}).notNull(),ciphertextSha256:varchar('ciphertext_sha256',{length:64}).notNull(),sizeBytes:integer('size_bytes').notNull(),
+ objectKey:text('object_key').notNull(),objectVersion:text('object_version'),keyIds:jsonb('key_ids').$type<string[]>().notNull(),spool:jsonb('spool').$type<import('../../../lib/secrets/types').SecretEnvelope[]>(),
+ errorCode:varchar('error_code',{length:128}),attempt:integer('attempt').notNull().default(0),retryAt:timestamp('retry_at',{withTimezone:true}).notNull().defaultNow(),
+ createdAt:timestamp('created_at',{withTimezone:true}).notNull().defaultNow(),expiresAt:timestamp('expires_at',{withTimezone:true}).notNull(),holdUntil:timestamp('hold_until',{withTimezone:true}),
+ verifiedAt:timestamp('verified_at',{withTimezone:true}),deletedAt:timestamp('deleted_at',{withTimezone:true}),deletionProof:jsonb('deletion_proof').$type<Record<string,unknown>>(),
+},t=>[foreignKey({columns:[t.tenantId,t.applicationId,t.jobId],foreignColumns:[guardJobs.tenantId,guardJobs.applicationId,guardJobs.id]}),uniqueIndex('media_evidence_job_uq').on(t.tenantId,t.applicationId,t.jobId)]);
+
+export const feedbackCandidateExports=pgTable('feedback_candidate_exports',{
+ id:varchar('id',{length:64}).primaryKey(),tenantId:varchar('tenant_id',{length:36}).notNull(),applicationId:varchar('application_id',{length:36}).notNull(),
+ feedbackId:uuid('feedback_id').notNull(),grantId:uuid('grant_id').notNull(),resourceType:varchar('resource_type',{length:32}).notNull(),resourceId:varchar('resource_id',{length:128}).notNull(),
+ sourceDigest:varchar('source_digest',{length:64}).notNull(),candidateDigest:varchar('candidate_digest',{length:64}).notNull(),createdBy:varchar('created_by',{length:100}).notNull(),createdAt:timestamp('created_at',{withTimezone:true}).notNull().defaultNow(),
+},t=>[foreignKey({columns:[t.tenantId,t.applicationId,t.feedbackId],foreignColumns:[badcaseFeedback.tenantId,badcaseFeedback.applicationId,badcaseFeedback.id]}),foreignKey({columns:[t.tenantId,t.applicationId,t.grantId],foreignColumns:[contentAccessRequests.tenantId,contentAccessRequests.applicationId,contentAccessRequests.id]}),uniqueIndex('feedback_candidate_grant_uq').on(t.tenantId,t.applicationId,t.grantId)]);

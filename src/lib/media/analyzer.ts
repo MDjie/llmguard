@@ -13,6 +13,7 @@ import {
 const region = z.tuple([z.number().nonnegative(), z.number().nonnegative(), z.number().nonnegative(), z.number().nonnegative()]);
 const mediaAnalysisSchema = z.object({
   analyzerVersion: z.string().min(1).max(100),
+  coordinateMappings:z.array(z.record(z.string(),z.unknown())).max(10000).optional(),
   coverage:analysisCoverageSchema.optional(),
   format: z.string().min(1).max(100),
   durationMs: z.number().int().nonnegative().max(7 * 24 * 60 * 60 * 1_000),

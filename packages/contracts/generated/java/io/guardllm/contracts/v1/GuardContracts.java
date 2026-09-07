@@ -1,5 +1,5 @@
 // Generated from model/guard-v1.schema.json. Do not edit.
-// Source SHA-256: 01bb211282221f91e3fb858d2d0b4c19d0904d24c50e9d5d83e8326500e5aa3a
+// Source SHA-256: 44b9580b162406dfe22418cf70f016c246763510e54d36c1ee3658f2b3a62cf9
 package io.guardllm.contracts.v1;
 
 import java.util.List;
@@ -7,7 +7,7 @@ import java.util.Map;
 
 public final class GuardContracts {
   public static final String CONTRACT_VERSION = "1.0";
-  public static final String SOURCE_SHA256 = "01bb211282221f91e3fb858d2d0b4c19d0904d24c50e9d5d83e8326500e5aa3a";
+  public static final String SOURCE_SHA256 = "44b9580b162406dfe22418cf70f016c246763510e54d36c1ee3658f2b3a62cf9";
   private GuardContracts() {}
 
   public enum Direction { INPUT, OUTPUT_COMPLETE, OUTPUT_CHUNK, RAG_INGEST, RAG_CONTEXT, TOOL_REQUEST, TOOL_RESULT }
@@ -132,7 +132,8 @@ public final class GuardContracts {
     String tokenizerId,
     Long normalizedStart,
     Long normalizedEnd,
-    List<String> normalizationTransforms
+    List<String> normalizationTransforms,
+    List<EvidenceLocation> locations
   ) {}
 
   public record Observation(
@@ -250,6 +251,26 @@ public final class GuardContracts {
     String businessLine,
     String policyVersion,
     String legalDisclaimerVersion
+  ) {}
+
+  public record EvidenceLocation(
+    String artifactId,
+    String sourceDigest,
+    String contentVersion,
+    String contentPath,
+    String mappingVersion,
+    String offsetEncoding,
+    String viewId,
+    Long textStart,
+    Long textEnd,
+    Long textLength,
+    Long startMs,
+    Long endMs,
+    Long frameIndex,
+    Long channel,
+    Long page,
+    String speakerId,
+    List<Double> region
   ) {}
 
 }

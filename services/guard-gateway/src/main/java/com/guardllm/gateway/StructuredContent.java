@@ -15,6 +15,7 @@ final class StructuredContent {
     private final ObjectMapper json;
     StructuredContent(ObjectMapper json) { this.json = json; }
     ArrayNode segments(JsonNode root, boolean input, int limit) {
+        if (!input) assertTextOutput(root);
         CompletionFields.validate(root, input);
         var result = json.createArrayNode();
         JsonNode items = root.path(input ? "messages" : "choices");
@@ -46,6 +47,16 @@ final class StructuredContent {
         if (result.isEmpty()) throw new GatewayFailure("CONTENT_COVERAGE_EMPTY", 422);
         return result;
     }
+    static void assertTextOutput(JsonNode root) {
+        JsonNode choices = root.path("choices");
+        if (!choices.isArray()) return;
+        for (JsonNode choice : choices) for (String name : new String[]{"message", "delta"}) {
+            JsonNode message = choice.path(name);
+            for (String field : new String[]{"audio", "images", "video"}) if (message.hasNonNull(field)) throw new GatewayFailure("NATIVE_OUTPUT_REVIEW_REQUIRED", 409);
+            JsonNode content = message.path("content");
+            if (content.isArray()) for (JsonNode block : content) if (Set.of("image_url", "input_audio", "output_audio", "video_url", "image", "audio", "video").contains(block.path("type").asText(""))) throw new GatewayFailure("NATIVE_OUTPUT_REVIEW_REQUIRED", 409);
+        }
+    }
     ArrayNode authorizedSegments(JsonNode prepared, JsonNode supplied, int limit) {
         ArrayNode expected = segments(prepared, true, limit);
         if (!supplied.isArray() || supplied.size() != expected.size()) throw new GatewayFailure("PREPARED_SEGMENTS_INVALID", 503);
@@ -76,6 +87,10 @@ final class StructuredContent {
         if (content.isString()) add(result, content.stringValue(), path + "/content", role, source);
         else if (content.isArray()) for (int i = 0; i < content.size(); i++) {
             JsonNode block = content.get(i);
+            if (input && role.equals("user") && Set.of("image_url", "input_audio", "video_url").contains(block.path("type").asText(""))) {
+                add(result, CanonicalJson.encode(nativeMetadata(block)), path + "/content/" + i, role, "FILE");
+                continue;
+            }
             allowed(block, Set.of("type", "text"));
             if (!Set.of("text", "input_text", "output_text").contains(block.path("type").asText(""))) throw new GatewayFailure("ARTIFACT_PIPELINE_REQUIRED", 422);
             add(result, requiredText(block, "text"), path + "/content/" + i + "/text", role, source);
@@ -94,6 +109,34 @@ final class StructuredContent {
                 add(result, args, path + "/tool_calls/" + i + "/function/arguments", role, "TOOL");
             }
         }
+    }
+    private ObjectNode nativeMetadata(JsonNode block) {
+        String field = block.path("type").asText("");
+        allowed(block, Set.of("type", field));
+        JsonNode inner = block.path(field);
+        String modality, mime, base64;
+        if (field.equals("input_audio")) {
+            allowed(inner, Set.of("data", "format"));
+            String format = requiredText(inner, "format");
+            if (!Set.of("mp3", "wav").contains(format)) throw new GatewayFailure("NATIVE_MEDIA_BLOCK_INVALID", 422);
+            modality = "AUDIO"; mime = format.equals("mp3") ? "audio/mpeg" : "audio/wav";
+            base64 = requiredText(inner, "data");
+        } else {
+            allowed(inner, Set.of("url"));
+            var matcher = java.util.regex.Pattern.compile("^data:((?:image/(?:png|jpeg|webp|gif))|video/mp4);base64,([A-Za-z0-9+/]*={0,2})$").matcher(requiredText(inner, "url"));
+            if (!matcher.matches()) throw new GatewayFailure("NATIVE_MEDIA_BLOCK_INVALID", 422);
+            mime = matcher.group(1); base64 = matcher.group(2); modality = field.equals("image_url") ? "IMAGE" : "VIDEO";
+            if (modality.equals("IMAGE") != mime.startsWith("image/")) throw new GatewayFailure("NATIVE_MEDIA_BLOCK_INVALID", 422);
+        }
+        if (base64.isEmpty() || base64.length() > 1398104 || !base64.matches("[A-Za-z0-9+/]*={0,2}")) throw new GatewayFailure("NATIVE_MEDIA_BLOCK_INVALID", 422);
+        byte[] bytes;
+        try { bytes = java.util.Base64.getDecoder().decode(base64); } catch (IllegalArgumentException error) { throw new GatewayFailure("NATIVE_MEDIA_BLOCK_INVALID", 422); }
+        try {
+            if (bytes.length == 0 || bytes.length > 1048576 || !java.util.Base64.getEncoder().encodeToString(bytes).equals(base64)) throw new GatewayFailure("NATIVE_MEDIA_BLOCK_INVALID", 422);
+            String digest = java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(bytes));
+            return json.createObjectNode().put("kind", "native_media").put("modality", modality).put("mimeType", mime).put("sha256", digest).put("bytes", bytes.length);
+        } catch (java.security.GeneralSecurityException error) { throw new IllegalStateException(error); }
+        finally { java.util.Arrays.fill(bytes, (byte) 0); }
     }
     private void add(ArrayNode result, String text, String path, String role, String source) {
         CanonicalJson.unicode(text);

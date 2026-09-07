@@ -7,6 +7,24 @@ import tools.jackson.databind.json.JsonMapper;
 
 class GatewayV2ContentTest {
     private final JsonMapper json = JsonMapper.builder().build();
+    @Test void nativeBytesHaveIdenticalMetadataAndUntrustedUrlsFailClosed() {
+        var content = new StructuredContent(json);
+        String template = "{\"model\":\"test\",\"messages\":[{\"role\":\"user\",\"content\":[%s]}]}";
+        var request = json.readTree(template.formatted("{\"type\":\"image_url\",\"image_url\":{\"url\":\"data:image/png;base64,YQ==\"}}"));
+        var segment = content.segments(request, true, 1000).get(0);
+        assertEquals("FILE", segment.path("sourceType").asText());
+        assertEquals("/messages/0/content/0", segment.path("contentPath").asText());
+        assertEquals("{\"bytes\":1,\"kind\":\"native_media\",\"mimeType\":\"image/png\",\"modality\":\"IMAGE\",\"sha256\":\"ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb\"}", segment.path("text").asText());
+        assertThrows(GatewayFailure.class, () -> content.segments(json.readTree(template.formatted("{\"type\":\"image_url\",\"image_url\":{\"url\":\"https://untrusted.example/a.png\"}}")), true, 1000));
+        assertThrows(GatewayFailure.class, () -> content.segments(json.readTree(template.formatted("{\"type\":\"input_audio\",\"input_audio\":{\"format\":\"wav\",\"data\":\"YQ\"}}")), true, 1000));
+        assertThrows(GatewayFailure.class, () -> content.segments(json.readTree("{\"choices\":[{\"message\":{\"role\":\"assistant\",\"content\":[{\"type\":\"image_url\",\"image_url\":{\"url\":\"data:image/png;base64,YQ==\"}}]}}]}"), false, 1000));
+    }
+    @Test void nativeOutputNeverBecomesTextCoverageThroughResponseMapping() {
+        for (String value : new String[]{"{\"choices\":[{\"message\":{\"role\":\"assistant\",\"content\":\"caption\",\"audio\":{\"data\":\"secret-audio\"}}}]}", "{\"choices\":[{\"delta\":{\"content\":[{\"type\":\"video_url\",\"video_url\":{\"url\":\"https://example.invalid/video\"}}]}}]}"}) {
+            GatewayFailure failure = assertThrows(GatewayFailure.class, () -> StructuredContent.assertTextOutput(json.readTree(value)));
+            assertEquals("NATIVE_OUTPUT_REVIEW_REQUIRED", failure.code());
+        }
+    }
     @Test void canonicalNumbersAndUnicodeMatchNode() {
         assertEquals("{\"a\":0.0000001,\"emoji\":\"😀\",\"z\":0}", CanonicalJson.encode(json.readTree("{\"z\":-0.0,\"emoji\":\"😀\",\"a\":1e-7}")));
         assertEquals("100000000000000000000000", CanonicalJson.encode(json.readTree("1e23")));

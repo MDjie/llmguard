@@ -1,8 +1,8 @@
 // Generated from model/gateway-v2.schema.json. Do not edit.
-// Source SHA-256: 121c28d9326b01100816725fd291a43f2d45a2d698a2d3d2749ab8f83cddb810
+// Source SHA-256: 86662f37d842ad3909ba66deeea55d6fc0db3671a0aeb4f3c477fc70ae380f19
 
 export const GUARD_CONTRACT_VERSION = '2.0' as const;
-export const GUARD_CONTRACT_SOURCE_SHA256 = '121c28d9326b01100816725fd291a43f2d45a2d698a2d3d2749ab8f83cddb810' as const;
+export const GUARD_CONTRACT_SOURCE_SHA256 = '86662f37d842ad3909ba66deeea55d6fc0db3671a0aeb4f3c477fc70ae380f19' as const;
 
 export type GatewayAction = "ALLOW" | "WARN" | "BLOCK" | "MASK" | "REWRITE" | "SAFE_RESPONSE" | "REQUIRE_REVIEW";
 
@@ -99,6 +99,7 @@ export interface AuthContext {
   readonly subjectVersion?: number;
   readonly preparedRequestDigest?: string;
   readonly inputSegmentsDigest?: string;
+  readonly archiveRequired?: boolean;
 }
 
 export interface SignedAuthContext {

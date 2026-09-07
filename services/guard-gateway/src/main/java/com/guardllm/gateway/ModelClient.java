@@ -33,14 +33,18 @@ final class ModelClient {
     Mono<JsonNode> chatAuthorized(JsonNode request, String routeKey, JsonNode auth, JsonNode manifest) {
         return chatRoute(authorizedRoute(request, routeKey, auth, manifest));
     }
-    private Mono<JsonNode> chatRoute(ModelRouteRegistry.Selection route) {
+    Mono<JsonNode> chatArchived(ModelRouteRegistry.Selection route, java.util.function.Function<JsonNode, Mono<Void>> archive) {
+        return chatRoute(route, archive);
+    }
+    private Mono<JsonNode> chatRoute(ModelRouteRegistry.Selection route) { return chatRoute(route, ignored -> Mono.empty()); }
+    private Mono<JsonNode> chatRoute(ModelRouteRegistry.Selection route, java.util.function.Function<JsonNode, Mono<Void>> archive) {
         WebClient.RequestBodySpec call = webClient.post().uri(route.chatUri())
                 .contentType(MediaType.APPLICATION_JSON);
         if (route.bearerToken() != null && !route.bearerToken().isBlank()) {
             call.header(HttpHeaders.AUTHORIZATION, "Bearer " + route.bearerToken());
         }
         return call.bodyValue(route.request()).retrieve().bodyToMono(JsonNode.class)
-                .map(response -> routes.normalize(route, response));
+                .flatMap(response -> archive.apply(response).then(Mono.fromSupplier(() -> { StructuredContent.assertTextOutput(response); return routes.normalize(route, response); })));
     }
 
     Flux<ServerSentEvent<String>> chatStream(JsonNode request, String routeKey) {
@@ -49,7 +53,11 @@ final class ModelClient {
     Flux<ServerSentEvent<String>> chatStreamAuthorized(JsonNode request, String routeKey, JsonNode auth, JsonNode manifest) {
         return streamRoute(authorizedRoute(request, routeKey, auth, manifest));
     }
-    private Flux<ServerSentEvent<String>> streamRoute(ModelRouteRegistry.Selection route) {
+    Flux<ServerSentEvent<String>> streamArchived(ModelRouteRegistry.Selection route, java.util.function.Function<ServerSentEvent<String>, Mono<Void>> archive) {
+        return streamRoute(route, archive);
+    }
+    private Flux<ServerSentEvent<String>> streamRoute(ModelRouteRegistry.Selection route) { return streamRoute(route, ignored -> Mono.empty()); }
+    private Flux<ServerSentEvent<String>> streamRoute(ModelRouteRegistry.Selection route, java.util.function.Function<ServerSentEvent<String>, Mono<Void>> archive) {
         WebClient.RequestBodySpec call = webClient.post().uri(route.chatUri())
                 .contentType(MediaType.APPLICATION_JSON)
                 .accept(MediaType.TEXT_EVENT_STREAM);
@@ -58,10 +66,10 @@ final class ModelClient {
         }
         return call.bodyValue(route.request()).retrieve().bodyToFlux(
                         new ParameterizedTypeReference<ServerSentEvent<String>>() { })
-                .map(event -> normalizeEvent(route, event));
+                .concatMap(event -> archive.apply(event).then(Mono.fromSupplier(() -> normalizeEvent(route, event))), 1);
     }
 
-    private ModelRouteRegistry.Selection authorizedRoute(JsonNode request, String routeKey, JsonNode auth, JsonNode manifest) {
+    ModelRouteRegistry.Selection authorizedRoute(JsonNode request, String routeKey, JsonNode auth, JsonNode manifest) {
         boolean permitted = false;
         for (JsonNode alias : auth.path("allowedModelRoutes")) if (alias.equals(request.path("model"))) permitted = true;
         if (!permitted) throw new GatewayFailure("MODEL_ROUTE_NOT_AUTHORIZED", 403);
@@ -82,6 +90,7 @@ final class ModelClient {
         if (data == null || data.isBlank() || "[DONE]".equals(data.trim())) return event;
         try {
             JsonNode parsed = objectMapper.readTree(data);
+            StructuredContent.assertTextOutput(parsed);
             String normalized = objectMapper.writeValueAsString(routes.normalize(route, parsed));
             ServerSentEvent.Builder<String> builder = ServerSentEvent.builder(normalized);
             if (event.id() != null) builder.id(event.id());
@@ -89,6 +98,8 @@ final class ModelClient {
             if (event.retry() != null) builder.retry(event.retry());
             if (event.comment() != null) builder.comment(event.comment());
             return builder.build();
+        } catch (GatewayFailure error) {
+            throw error;
         } catch (Exception error) {
             throw new IllegalArgumentException("Upstream returned malformed SSE JSON", error);
         }

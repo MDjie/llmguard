@@ -1,4 +1,6 @@
 const workerEntrypoints = Object.freeze({
+  archive: './archive-worker.ts',
+  'native-multimodal': './native-multimodal-worker.ts',
   artifact: './artifact-verifier-worker.ts',
   'code-sentinel': './code-sentinel-worker.ts',
   'gateway-request': './gateway-request-worker.ts',

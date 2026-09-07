@@ -200,6 +200,8 @@ export default function IncidentsPage() {
     }
   }, []);
 
+  useEffect(() => { const id = new URLSearchParams(window.location.search).get('id'); if (id && /^[a-f0-9-]{36}$/i.test(id)) void loadDetail(id); }, [loadDetail]);
+
   const pageStats = useMemo(() => ({
     critical: items.filter((item) => item.severity === 'CRITICAL').length,
     overdue: items.filter((item) => item.slaBreached).length,

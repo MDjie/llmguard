@@ -1,8 +1,8 @@
 // Generated from model/guard-v1.schema.json. Do not edit.
-// Source SHA-256: 01bb211282221f91e3fb858d2d0b4c19d0904d24c50e9d5d83e8326500e5aa3a
+// Source SHA-256: 44b9580b162406dfe22418cf70f016c246763510e54d36c1ee3658f2b3a62cf9
 
 export const GUARD_CONTRACT_VERSION = '1.0' as const;
-export const GUARD_CONTRACT_SOURCE_SHA256 = '01bb211282221f91e3fb858d2d0b4c19d0904d24c50e9d5d83e8326500e5aa3a' as const;
+export const GUARD_CONTRACT_SOURCE_SHA256 = '44b9580b162406dfe22418cf70f016c246763510e54d36c1ee3658f2b3a62cf9' as const;
 
 export type Direction = "INPUT" | "OUTPUT_COMPLETE" | "OUTPUT_CHUNK" | "RAG_INGEST" | "RAG_CONTEXT" | "TOOL_REQUEST" | "TOOL_RESULT";
 
@@ -127,6 +127,7 @@ export interface EvidenceRef {
   readonly normalizedStart?: number;
   readonly normalizedEnd?: number;
   readonly normalizationTransforms?: readonly string[];
+  readonly locations?: readonly EvidenceLocation[];
 }
 
 export interface Observation {
@@ -244,4 +245,24 @@ export interface ComplianceContext {
   readonly businessLine: string;
   readonly policyVersion: string;
   readonly legalDisclaimerVersion: string;
+}
+
+export interface EvidenceLocation {
+  readonly artifactId: string;
+  readonly sourceDigest: string;
+  readonly contentVersion: string;
+  readonly contentPath: string;
+  readonly mappingVersion: "guard-evidence-location-1";
+  readonly offsetEncoding: "UTF16";
+  readonly viewId?: string;
+  readonly textStart?: number;
+  readonly textEnd?: number;
+  readonly textLength?: number;
+  readonly startMs?: number;
+  readonly endMs?: number;
+  readonly frameIndex?: number;
+  readonly channel?: number;
+  readonly page?: number;
+  readonly speakerId?: string;
+  readonly region?: readonly number[];
 }

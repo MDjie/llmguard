@@ -1,14 +1,16 @@
+import { enqueueDecisionRecord } from '@/lib/security-alerts/service';
+import { reconcileConversationArchive } from '@/lib/conversation-archive/service';
 import { settleGatewayResources } from './resources';
 import { randomUUID } from 'node:crypto';
 import { and, asc, eq, sql } from 'drizzle-orm';
 import { db } from '@/storage/database/shared/db';
-import { gatewayExecutionEvents, gatewayNodeAcks, gatewayRequests, gatewayRuntimeSnapshots, gatewaySteps, securityIncidents, incidentTransitions } from '@/storage/database/shared/schema';
+import { gatewayExecutionEvents, gatewayNodeAcks, gatewayRequests, gatewayRuntimeSnapshots, gatewaySteps, securityIncidents, incidentTransitions, conversationArchives, archivedContentObjects } from '@/storage/database/shared/schema';
 import { scopePredicate } from '@/lib/tenancy';
 import type { GuardDecision, GuardRequest } from '@guardllm/contracts';
 import { appendSecureMemoryEvaluation, readSecureMemorySnapshot } from '@/lib/secure-memory';
 import { gatewayDecisionSchema } from '@/contracts/http/gateway-v2';
 import type { ContentSegment, ExecutionEvent, GatewayEvents, GatewayNodeAck, WindowInspection } from '../../../packages/contracts/generated/typescript/gateway-v2';
-import { canonicalJson, GatewayError } from './protocol';
+import { canonicalJson, GatewayError, sha256 } from './protocol';
 import { evidenceHmac, openReceipt, verifyAuthContext, verifyPayload } from './security';
 import { buildIncidentPersistenceRecords } from '@/lib/incidents/service';
 import { gatewayReviewId } from './review';
@@ -23,7 +25,7 @@ const terminals = new Set(['COMPLETED','TERMINATED','REVIEW_REQUIRED','UPSTREAM_
 
 export function nextExecutionState(state: string, kind: ExecutionEvent['kind'], reason?: string): string {
   if (terminals.has(state)) throw new GatewayError('REQUEST_ALREADY_TERMINAL', 409);
-  if (kind === 'TERMINATED') return reason === 'REVIEW_REQUIRED' ? 'REVIEW_REQUIRED' : reason === 'UPSTREAM_OUTCOME_UNKNOWN' ? 'UPSTREAM_OUTCOME_UNKNOWN' : 'TERMINATED';
+  if (kind === 'TERMINATED') return ['REVIEW_REQUIRED','NATIVE_OUTPUT_REVIEW_REQUIRED'].includes(reason ?? '') ? 'REVIEW_REQUIRED' : reason === 'UPSTREAM_OUTCOME_UNKNOWN' ? 'UPSTREAM_OUTCOME_UNKNOWN' : 'TERMINATED';
   const transitions: Record<string, readonly [string[], string]> = {
     UPSTREAM_SEND_INTENT: [['AUTHORIZED'], 'SEND_INTENT'], UPSTREAM_SEND_STARTED: [['SEND_INTENT'], 'UPSTREAM_STARTED'],
     RELEASE_INTENT: [['UPSTREAM_STARTED','AUTHORIZED','WRITTEN'], 'RELEASING'], WRITE_ACCEPTED: [['RELEASING'], 'WRITTEN'], COMPLETED: [['WRITTEN'], 'COMPLETED'],
@@ -49,6 +51,10 @@ export async function recordGatewayEvents(body: GatewayEvents): Promise<{ accept
     const [request] = await tx.select().from(gatewayRequests).where(and(scopePredicate(gatewayRequests, context), eq(gatewayRequests.id, context.businessRequestId))).for('update');
     if (!request || request.authContext.signature !== auth.signature) throw new GatewayError('EXECUTION_CONTEXT_MISMATCH', 403);
     let state = request.state; let sequence = request.lastEventSeq;
+    if (context.archiveRequired && privileged) {
+      const [received] = await tx.select({ id: archivedContentObjects.id }).from(archivedContentObjects).where(and(scopePredicate(archivedContentObjects, context), eq(archivedContentObjects.requestId, request.id), eq(archivedContentObjects.purpose, 'RECEIVED_INPUT'), eq(archivedContentObjects.sequence, 0), eq(archivedContentObjects.state, 'MANIFEST_COMMITTED'))).limit(1);
+      if (!received) throw new GatewayError('ARCHIVE_RECEIVED_INPUT_NOT_COMMITTED', 503);
+    }
     if (body.terminalReconciliation && body.events[0].snapshotId !== request.snapshotId) throw new GatewayError('EVENT_SNAPSHOT_MISMATCH', 403);
     if (body.terminalReconciliation && terminals.has(state)) return { acceptedThrough: sequence, state };
     // A cancelled response can lose an ACK after the database committed it. Only
@@ -91,6 +97,11 @@ export async function recordGatewayEvents(body: GatewayEvents): Promise<{ accept
           }
         } else if (event.kind === 'RELEASE_INTENT' && state === 'WRITTEN') throw new GatewayError('FULL_BUFFER_ALREADY_RELEASED', 409);
         validateExecutionProof(event, { decision, segments: stored.segments, ...(stored.window ? { window: stored.window } : {}) }, original);
+        if (context.archiveRequired && (event.kind === 'UPSTREAM_SEND_INTENT' || event.kind === 'RELEASE_INTENT')) {
+          const [content] = await tx.select().from(archivedContentObjects).where(and(scopePredicate(archivedContentObjects, context), eq(archivedContentObjects.requestId, request.id),
+            eq(archivedContentObjects.purpose, event.kind === 'UPSTREAM_SEND_INTENT' ? 'MODEL_INPUT' : 'RELEASED_OUTPUT'), eq(archivedContentObjects.eventSequence, event.eventSeq))).limit(1);
+          if (!content || content.state !== 'MANIFEST_COMMITTED' || content.sourceStepId !== event.stepId || content.sourceHmac !== evidenceHmac(event.payloadDigest) || content.rangeStart !== event.rangeStart || content.rangeEnd !== event.rangeEnd) throw new GatewayError('ARCHIVE_EXECUTION_CONTENT_NOT_COMMITTED', 503);
+        }
         if (event.kind === 'WRITE_ACCEPTED') {
           const [intent] = await tx.select().from(gatewayExecutionEvents).where(and(scopePredicate(gatewayExecutionEvents, context), eq(gatewayExecutionEvents.requestId, request.id), eq(gatewayExecutionEvents.eventSeq, sequence))).limit(1);
           if (!intent || intent.kind !== 'RELEASE_INTENT' || intent.stepId !== event.stepId || intent.decisionId !== event.decisionId
@@ -104,6 +115,11 @@ export async function recordGatewayEvents(body: GatewayEvents): Promise<{ accept
           const [lastStep] = await tx.select().from(gatewaySteps).where(and(scopePredicate(gatewaySteps, context), eq(gatewaySteps.id, lastWrite.stepId))).limit(1);
           if (lastStep?.stage === 'OUTPUT_CHUNK' && (!lastStep.decisionEnvelope || !(openReceipt(lastStep.decisionEnvelope, lastStep.id) as StoredDecision).window?.final)) throw new GatewayError('WINDOW_FINAL_WRITE_REQUIRED', 409);
         }
+      }
+      if (event.kind === 'TERMINATED' && event.reasonCode === 'NATIVE_OUTPUT_REVIEW_REQUIRED') {
+        const [rawOutput] = await tx.select({id:archivedContentObjects.id,representation:archivedContentObjects.representation}).from(archivedContentObjects).where(and(scopePredicate(archivedContentObjects,context),eq(archivedContentObjects.requestId,request.id),eq(archivedContentObjects.purpose,'MODEL_OUTPUT'),eq(archivedContentObjects.state,'MANIFEST_COMMITTED'))).limit(1);
+        const decisionId=sha256(canonicalJson([request.id,event.eventSeq,event.reasonCode]));
+        await enqueueDecisionRecord(tx,context,{version:'1.0',source:'GATEWAY',sourceId:decisionId,requestId:request.id,sessionId:context.sessionId,traceId:context.traceId,decisionId,bundleId:context.policy.bundleId,stage:rawOutput?.representation==='SSE_EVENT'?'OUTPUT_CHUNK':'OUTPUT_COMPLETE',action:'REQUIRE_REVIEW',occurredAt:new Date().toISOString(),coverage:{nativeOutputSupported:false,rawModelResponseArchived:Boolean(rawOutput),archiveContentId:rawOutput?.id??null,semanticComplete:false,automaticResume:false},findings:[{riskId:'system.native_output_unqualified',score:0,reasonCode:'NATIVE_OUTPUT_REVIEW_REQUIRED',category:'UNDETERMINED',evidence:[]}]});
       }
       if (event.kind === 'TERMINATED' && event.reasonCode === 'REVIEW_REQUIRED') {
         const [reviewStep] = await tx.select().from(gatewaySteps).where(and(scopePredicate(gatewaySteps, context), eq(gatewaySteps.requestId, request.id), eq(gatewaySteps.action, 'REQUIRE_REVIEW'), eq(gatewaySteps.status, 'SUCCEEDED'))).limit(1);
@@ -125,8 +141,12 @@ export async function recordGatewayEvents(body: GatewayEvents): Promise<{ accept
     }
     await tx.update(gatewayRequests).set({ state, lastEventSeq: sequence }).where(and(scopePredicate(gatewayRequests, context), eq(gatewayRequests.id, request.id)));
     await settleGatewayResources(tx, context, request.id, state);
+    if (context.archiveRequired && terminals.has(state)) {
+      await tx.update(conversationArchives).set({ modelOutputUnavailableReason: 'UPSTREAM_OUTPUT_NOT_FULLY_OBSERVED' }).where(and(scopePredicate(conversationArchives, context), eq(conversationArchives.requestId, request.id), sql`${conversationArchives.modelOutputFinalSequence} IS NULL`, sql`exists (select 1 from gateway_execution_events e where e.tenant_id = ${context.tenantId} and e.application_id = ${context.applicationId} and e.request_id = ${request.id} and e.kind = 'UPSTREAM_SEND_STARTED')`));
+    }
     return { acceptedThrough: sequence, state };
   });
+  if (context.archiveRequired && terminals.has(result.state)) await reconcileConversationArchive(context, context.businessRequestId).catch(() => console.error('ARCHIVE_RECONCILIATION_PENDING'));
   if (terminals.has(result.state)) await commitSession(body).catch(() => {
     // The durable terminal event is the reconciliation source; never erase an accepted write.
     console.error('GATEWAY_SESSION_COMMIT_PENDING');

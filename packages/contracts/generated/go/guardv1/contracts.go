@@ -1,9 +1,9 @@
 // Code generated from model/guard-v1.schema.json. DO NOT EDIT.
-// Source SHA-256: 01bb211282221f91e3fb858d2d0b4c19d0904d24c50e9d5d83e8326500e5aa3a
+// Source SHA-256: 44b9580b162406dfe22418cf70f016c246763510e54d36c1ee3658f2b3a62cf9
 package guardv1
 
 const GuardContractVersion = "1.0"
-const GuardContractSourceSHA256 = "01bb211282221f91e3fb858d2d0b4c19d0904d24c50e9d5d83e8326500e5aa3a"
+const GuardContractSourceSHA256 = "44b9580b162406dfe22418cf70f016c246763510e54d36c1ee3658f2b3a62cf9"
 
 type Direction string
 
@@ -241,6 +241,7 @@ type EvidenceRef struct {
 	NormalizedStart *int64 `json:"normalizedStart,omitempty"`
 	NormalizedEnd *int64 `json:"normalizedEnd,omitempty"`
 	NormalizationTransforms []string `json:"normalizationTransforms,omitempty"`
+	Locations []EvidenceLocation `json:"locations,omitempty"`
 }
 
 type Observation struct {
@@ -374,4 +375,24 @@ type ComplianceContext struct {
 	BusinessLine string `json:"businessLine"`
 	PolicyVersion string `json:"policyVersion"`
 	LegalDisclaimerVersion string `json:"legalDisclaimerVersion"`
+}
+
+type EvidenceLocation struct {
+	ArtifactId string `json:"artifactId"`
+	SourceDigest string `json:"sourceDigest"`
+	ContentVersion string `json:"contentVersion"`
+	ContentPath string `json:"contentPath"`
+	MappingVersion string `json:"mappingVersion"`
+	OffsetEncoding string `json:"offsetEncoding"`
+	ViewId *string `json:"viewId,omitempty"`
+	TextStart *int64 `json:"textStart,omitempty"`
+	TextEnd *int64 `json:"textEnd,omitempty"`
+	TextLength *int64 `json:"textLength,omitempty"`
+	StartMs *int64 `json:"startMs,omitempty"`
+	EndMs *int64 `json:"endMs,omitempty"`
+	FrameIndex *int64 `json:"frameIndex,omitempty"`
+	Channel *int64 `json:"channel,omitempty"`
+	Page *int64 `json:"page,omitempty"`
+	SpeakerId *string `json:"speakerId,omitempty"`
+	Region []float64 `json:"region,omitempty"`
 }

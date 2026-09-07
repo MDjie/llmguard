@@ -114,3 +114,8 @@ export function openReceipt(envelopes: readonly SecretEnvelope[], reference: str
   const buffers = envelopes.map((envelope, i) => Buffer.from(openSecret(envelope, reference + ':' + i, keyFor(envelope.keyId)), 'base64'));
   try { return JSON.parse(Buffer.concat(buffers).toString('utf8')); } finally { buffers.forEach((buffer) => buffer.fill(0)); }
 }
+
+/** Archive integrity follows the retained encryption-key ring, independently of short-lived gateway fingerprints. */
+export function archiveContentHmac(value: string, keyId: string): string {
+  return createHmac('sha256', keyFor(keyId).bytes).update('guard-archive-content-v1\0').update(value).digest('hex');
+}

@@ -1,15 +1,15 @@
 {
   "contractVersion": "2.0",
   "source": "model/gateway-v2.schema.json",
-  "sourceSha256": "121c28d9326b01100816725fd291a43f2d45a2d698a2d3d2749ab8f83cddb810",
+  "sourceSha256": "86662f37d842ad3909ba66deeea55d6fc0db3671a0aeb4f3c477fc70ae380f19",
   "outputs": {
-    "../../src/contracts/http/gateway-v2.ts": "8bd1a704c2283e0e0f2327f132a183e4cb4a42853f16fbbaae298e1d79840d17",
-    "generated/typescript/gateway-v2.ts": "150ebc73006c3001cf2ceafe90c789b6ec5a3f244da89143b939290d5d9c6dd0",
-    "generated/java/io/guardllm/contracts/v2/GuardContracts.java": "21cbac9a61497a838439436937c081ed6b8f31ae25b194869b701da2abe7ad16",
-    "generated/python/gateway_contracts_v2.py": "72372f41de53370c25ff33a49e8a0bd5dffa193c1a2a7c097ae13e2cffdb4c4a",
-    "generated/go/gatewayv2/contracts.go": "84db80d3670efca35f07a08d613f8dd55236b25a64546317bee42af9f632e462",
-    "openapi/gateway-v2.openapi.json": "3acd58f0d23dbab50b4bd98b1d61e234881d9fce23cb7de6007c0400099aa4ba",
-    "proto/gateway/v2/guard.proto": "865f174922c150bc305845e5cfab3d49cd46af78b931d5160dacb4a7db054e78",
-    "../../services/guard-gateway/src/main/proto/gateway/v2/guard.proto": "865f174922c150bc305845e5cfab3d49cd46af78b931d5160dacb4a7db054e78"
+    "../../src/contracts/http/gateway-v2.ts": "6794a87b91088c0b807a81e05f844b7a5834c8d2f603dbd87789b2496f631a8e",
+    "generated/typescript/gateway-v2.ts": "df48ff920aa7398693b2218bacf2dc1c3c2b95d89add2f1cc19191218b58387a",
+    "generated/java/io/guardllm/contracts/v2/GuardContracts.java": "f5fc2b001d6bb3ba64b7891f395fd0c26ecdec0f6608a8e13a04f5f008ba3990",
+    "generated/python/gateway_contracts_v2.py": "0184bb1908b40994d82721199124e803aca08c328f564b858e5457ad45f83ca0",
+    "generated/go/gatewayv2/contracts.go": "64368cc706cdf8898cef4e61916b0b77a5f1cc61aabef17c169a3b970975afe6",
+    "openapi/gateway-v2.openapi.json": "6e4ada6267de144416111ea911185d6d55c7f0b621692d31f42774f30469b014",
+    "proto/gateway/v2/guard.proto": "6e0090ba04ed03f8a07a6ade43418b4ead6589307222596145c5e55297d29bdf",
+    "../../services/guard-gateway/src/main/proto/gateway/v2/guard.proto": "6e0090ba04ed03f8a07a6ade43418b4ead6589307222596145c5e55297d29bdf"
   }
 }

@@ -12,7 +12,7 @@ describe('modality completeness is distinct from extraction success',()=>{
     expect(assessAnalysisCoverage(request,'[]').complete).toBe(false);
   });
   it('never calls sampled frames or missing units complete',()=>{
-    expect(assessAnalysisCoverage({...request,coverage:{...coverage,state:'SAMPLED'}},registry).complete).toBe(false);
+    expect(assessAnalysisCoverage({...request,coverage:{...coverage,state:'SAMPLED'}},registry)).toMatchObject({complete:false,processingComplete:false,semanticQualified:true,semanticComplete:false});
     expect(assessAnalysisCoverage({...request,coverage:{...coverage,processedUnits:9}},registry).complete).toBe(false);
     expect(assessAnalysisCoverage({...request,coverage:{...coverage,reasonCodes:['LOW_CONFIDENCE']}},registry).complete).toBe(false);
   });

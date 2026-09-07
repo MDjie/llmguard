@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { and, asc, eq, inArray, isNull, lte, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '@/storage/database/shared/db';
-import { dataDeletionProofs, gatewayRequests, gatewaySteps } from '@/storage/database/shared/schema';
+import { dataDeletionProofs, gatewayRequests, gatewaySteps, conversationArchives } from '@/storage/database/shared/schema';
 import { scopePredicate, type TenantScope } from '@/lib/tenancy';
 import { appendAuditEventInTransaction } from '@/lib/audit/repository';
 import { buildDeletionProof, lineageObjectIdDigest } from '@/lib/data-protection/lineage';
@@ -19,10 +19,13 @@ export async function setGatewayContentHold(scope: TenantScope, actorId: string,
   return db.transaction(async transaction => {
     const [request] = await transaction.select().from(gatewayRequests).where(and(scopePredicate(gatewayRequests, scope), eq(gatewayRequests.id, input.requestId))).for('update');
     if (!request) throw new GatewayError('REQUEST_NOT_FOUND', 404);
-    if (request.contentPurgedAt) throw new GatewayError('CONTENT_ALREADY_PURGED', 409);
+    const [archive] = await transaction.select().from(conversationArchives).where(and(scopePredicate(conversationArchives, scope), eq(conversationArchives.requestId, request.id))).for('update');
+    if (archive && ['DELETE_PENDING','DELETED'].includes(archive.state)) throw new GatewayError('ARCHIVE_DELETION_ALREADY_STARTED', 409);
+    if (request.contentPurgedAt && !archive) throw new GatewayError('CONTENT_ALREADY_PURGED', 409);
     if (request.retentionVersion !== input.expectedVersion) throw new GatewayError('CONTENT_HOLD_VERSION_CONFLICT', 409);
     await transaction.update(gatewayRequests).set({ contentHoldUntil: until, contentHoldReasonHmac: evidenceHmac(input.reason), retentionVersion: request.retentionVersion + 1 })
       .where(and(scopePredicate(gatewayRequests, scope), eq(gatewayRequests.id, request.id)));
+    if (archive) await transaction.update(conversationArchives).set({ holdUntil: until, version: archive.version + 1 }).where(and(scopePredicate(conversationArchives, scope), eq(conversationArchives.requestId, request.id)));
     await appendAuditEventInTransaction(transaction, { ...scope, principalId: actorId, event: until ? 'gateway.content.hold' : 'gateway.content.hold-release',
       outcome: 'ALLOWED', status: 200, requestId: randomUUID(), traceId: request.id, method: 'POST', path: '/api/gateway/content-retention', latencyMs: 0,
       queryString: 'sha256=' + evidenceHmac(canonicalJson({ requestId: request.id, until: input.holdUntil, reason: input.reason, version: request.retentionVersion + 1 })) });
@@ -39,6 +42,7 @@ export async function purgeGatewayContent(scope?: TenantScope, now = new Date(),
   const eligible = and(isNull(gatewayRequests.contentPurgedAt), eq(gatewayRequests.sessionFinalized, true), lte(gatewayRequests.expiresAt, cutoff),
     inArray(gatewayRequests.state, ['COMPLETED', 'TERMINATED', 'REVIEW_REQUIRED', 'UPSTREAM_OUTCOME_UNKNOWN']),
     or(isNull(gatewayRequests.contentHoldUntil), lte(gatewayRequests.contentHoldUntil, now)),
+    sql`(COALESCE((${gatewayRequests.authContext}->'context'->>'archiveRequired')::boolean, false) = false OR EXISTS(SELECT 1 FROM conversation_archives ca WHERE ca.tenant_id=${gatewayRequests.tenantId} AND ca.application_id=${gatewayRequests.applicationId} AND ca.request_id=${gatewayRequests.id} AND ca.state='COMMITTED' AND ca.committed_at IS NOT NULL))`,
     sql`NOT EXISTS(SELECT 1 FROM gateway_steps st WHERE st.tenant_id=${gatewayRequests.tenantId} AND st.application_id=${gatewayRequests.applicationId} AND st.request_id=${gatewayRequests.id} AND st.status='RUNNING')`);
   return db.transaction(async transaction => {
     const [candidate] = scope ? [{ tenantId: scope.tenantId, applicationId: scope.applicationId }] : await transaction.select({ tenantId: gatewayRequests.tenantId, applicationId: gatewayRequests.applicationId })

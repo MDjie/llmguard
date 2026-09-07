@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { selectJudgeProfile } from '@/lib/judge/profile';
 import { coverageGaps } from './semantic-coverage';
+import { combineActionConstraints } from './action-constraints';
 import type {
   GuardDecision,
   GuardEnginePolicy,
@@ -16,16 +17,6 @@ const riskOrder: Readonly<Record<RiskLevel, number>> = {
   HIGH: 3,
   CRITICAL: 4,
 };
-
-const actionOrder = {
-  ALLOW: 0,
-  WARN: 1,
-  MASK: 2,
-  REWRITE: 3,
-  SAFE_RESPONSE: 4,
-  REQUIRE_REVIEW: 5,
-  BLOCK: 6,
-} as const;
 
 export function stableObservations(
   observations: readonly Observation[],
@@ -95,11 +86,11 @@ export function aggregateGuardDecision(params: {
       ?? thresholds(item.riskType).warn;
     return candidate && item.score >= threshold ? candidate : undefined;
   };
-  const override = matches.reduce<GuardDecision['action'] | undefined>((selected, item) => {
+  const overrideActions = matches.flatMap((item) => {
     const candidate = applicableOverride(item);
-    if (!candidate) return selected;
-    return !selected || actionOrder[candidate] > actionOrder[selected] ? candidate : selected;
-  }, undefined);
+    return candidate ? [candidate] : [];
+  });
+  const override = overrideActions.length > 0 ? combineActionConstraints(overrideActions).action : undefined;
   // Input thresholds remain terminal for compatibility. Output policies are independent:
   // an explicit MASK/REWRITE/REVIEW/SAFE_RESPONSE action may process a high-confidence
   // match, while unclassified high-confidence findings and explicit BLOCK overrides

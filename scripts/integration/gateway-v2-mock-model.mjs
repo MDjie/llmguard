@@ -18,6 +18,11 @@ const server = https.createServer({ cert:readFileSync(path.join(directory,'serve
   calls.push(body);
   if (calls.length > 1000) calls.shift();
   const text = body.messages.map(message => typeof message.content === 'string' ? message.content : JSON.stringify(message.content)).join('\n');
+  if(text.includes('NATIVE_OUTPUT_INLINE')||text.includes('NATIVE_OUTPUT_REMOTE')){
+    const media={type:'image_url',image_url:{url:text.includes('NATIVE_OUTPUT_REMOTE')?'https://untrusted.example.invalid/private-output':'data:image/png;base64,YQ=='}};
+    if(body.stream){response.writeHead(200,{'content-type':'text/event-stream'});response.end('data: '+JSON.stringify({id:'native-output',choices:[{index:0,delta:{content:[media]},finish_reason:null}]})+'\n\ndata: [DONE]\n\n');}
+    else {response.setHeader('content-type','application/json');response.end(JSON.stringify({id:'native-output',object:'chat.completion',choices:[{index:0,message:{role:'assistant',content:[media]},finish_reason:'stop'}]}));}return;
+  }
   const benchmark = /^GATEWAY_BENCHMARK (G0|G1|G2) ([a-f0-9-]{36}) /u.exec(text);
   const benchmarkStarted = performance.now();
   if (benchmark) response.once('finish', () => appendFileSync(path.join(directory,'../benchmark-upstream-timings.jsonl'), JSON.stringify({ requestId:benchmark[2], elapsedMs:performance.now()-benchmarkStarted })+'\n'));

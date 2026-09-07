@@ -1,9 +1,9 @@
 // Code generated from model/gateway-v2.schema.json. DO NOT EDIT.
-// Source SHA-256: 121c28d9326b01100816725fd291a43f2d45a2d698a2d3d2749ab8f83cddb810
+// Source SHA-256: 86662f37d842ad3909ba66deeea55d6fc0db3671a0aeb4f3c477fc70ae380f19
 package gatewayv2
 
 const GuardContractVersion = "2.0"
-const GuardContractSourceSHA256 = "121c28d9326b01100816725fd291a43f2d45a2d698a2d3d2749ab8f83cddb810"
+const GuardContractSourceSHA256 = "86662f37d842ad3909ba66deeea55d6fc0db3671a0aeb4f3c477fc70ae380f19"
 
 type GatewayAction string
 
@@ -151,6 +151,7 @@ type AuthContext struct {
 	SubjectVersion *int64 `json:"subjectVersion,omitempty"`
 	PreparedRequestDigest *string `json:"preparedRequestDigest,omitempty"`
 	InputSegmentsDigest *string `json:"inputSegmentsDigest,omitempty"`
+	ArchiveRequired *bool `json:"archiveRequired,omitempty"`
 }
 
 type SignedAuthContext struct {

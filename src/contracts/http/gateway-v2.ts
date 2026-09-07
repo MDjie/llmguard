@@ -97,6 +97,7 @@ export const authContextSchema: z.ZodType<AuthContext> = z.object({
   subjectVersion: z.number().int().min(0).max(9007199254740991).optional(),
   preparedRequestDigest: z.string().min(64).max(64).regex(new RegExp("^[a-f0-9]{64}$")).optional(),
   inputSegmentsDigest: z.string().min(64).max(64).regex(new RegExp("^[a-f0-9]{64}$")).optional(),
+  archiveRequired: z.boolean().optional(),
 }).strict();
 
 export const signedAuthContextSchema: z.ZodType<SignedAuthContext> = z.object({

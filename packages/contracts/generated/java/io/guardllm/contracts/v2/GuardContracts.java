@@ -1,5 +1,5 @@
 // Generated from model/gateway-v2.schema.json. Do not edit.
-// Source SHA-256: 121c28d9326b01100816725fd291a43f2d45a2d698a2d3d2749ab8f83cddb810
+// Source SHA-256: 86662f37d842ad3909ba66deeea55d6fc0db3671a0aeb4f3c477fc70ae380f19
 package io.guardllm.contracts.v2;
 
 import java.util.List;
@@ -7,7 +7,7 @@ import java.util.Map;
 
 public final class GuardContracts {
   public static final String CONTRACT_VERSION = "2.0";
-  public static final String SOURCE_SHA256 = "121c28d9326b01100816725fd291a43f2d45a2d698a2d3d2749ab8f83cddb810";
+  public static final String SOURCE_SHA256 = "86662f37d842ad3909ba66deeea55d6fc0db3671a0aeb4f3c477fc70ae380f19";
   private GuardContracts() {}
 
   public enum GatewayAction { ALLOW, WARN, BLOCK, MASK, REWRITE, SAFE_RESPONSE, REQUIRE_REVIEW }
@@ -104,7 +104,8 @@ public final class GuardContracts {
     long deadline,
     Long subjectVersion,
     String preparedRequestDigest,
-    String inputSegmentsDigest
+    String inputSegmentsDigest,
+    Boolean archiveRequired
   ) {}
 
   public record SignedAuthContext(

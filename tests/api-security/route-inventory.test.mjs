@@ -7,6 +7,7 @@ const workloadRoutes = new Set([
   'internal/gateway/authorize/route.ts', 'internal/gateway/evaluate/route.ts',
   'internal/gateway/events/route.ts', 'internal/gateway/runtime/ack/route.ts',
   'internal/gateway/runtime/route.ts',
+  'internal/gateway/archive/route.ts', 'internal/gateway/archive/complete/route.ts',
 ]);
 const publicRoutes = new Set([
   'auth/login/route.ts',

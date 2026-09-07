@@ -9,6 +9,9 @@ async function main() {
   const environment: Record<string, string> = JSON.parse(readFileSync(path.join(directory, 'environment.json'), 'utf8'));
   const fixture: { tenantId: string; applicationId: string; apiKey: string } = JSON.parse(readFileSync(path.join(directory, 'fixture.json'), 'utf8'));
   const url = new URL(environment.PGDATABASE_URL); if (url.hostname !== '127.0.0.1' || url.port !== '55447' || url.pathname !== '/guardllm_integration_gateway_v2') throw new Error('ISOLATED_DATABASE_REQUIRED');
+  const qualificationFile = path.resolve(environment.GATEWAY_STREAM_QUALIFICATIONS_FILE);
+  if (path.dirname(qualificationFile) !== directory) throw new Error('ISOLATED_QUALIFICATION_FILE_REQUIRED');
+  const originalQualifications = readFileSync(qualificationFile, 'utf8');
   Object.assign(process.env, environment, { GATEWAY_V2_ENABLED: 'true', AUDIT_EXPORT_SYSLOG_HOST: '127.0.0.1', AUDIT_EXPORT_SYSLOG_PORT: '16515', AUDIT_EXPORT_SYSLOG_PROTOCOL: 'tls', AUDIT_EXPORT_EVENT_PREFIXES: 'gateway.runtime.', AUDIT_EXPORT_OUTCOMES: '' });
   const [{ db, closeDatabaseConnection }, s, publication, policy, { scopePredicate }, security, { canonicalJson, sha256 }] = await Promise.all([
     import('../../src/storage/database/shared/db'), import('../../src/storage/database/shared/schema'), import('../../src/lib/gateway-runtime/publication'),
@@ -51,6 +54,32 @@ async function main() {
       assert.equal(current.activeSnapshotId, message.manifest.snapshots.active?.snapshotId); assert.equal(message.generation, current.generation); assert.equal(message.dispatchState, 'PENDING'); assert.equal(message.loadingState, 'AWAITING_LOAD');
       security.verifyPayload('gateway-publication-v1', message.manifest, message.keyId, message.signature); assert.ok(!JSON.stringify(message).includes(fixture.apiKey));
     });
+    await test('explicit refresh replaces a revoked WINDOW qualification with a signed FULL_BUFFER snapshot', async () => {
+      const before = await binding();
+      const [old] = await db.select().from(s.gatewayRuntimeSnapshots).where(eq(s.gatewayRuntimeSnapshots.id, before.activeSnapshotId!));
+      assert.equal(old.manifest.streamMode, 'WINDOW');
+      try {
+        writeFileSync(qualificationFile, '[]');
+        await publication.refreshGatewayPublication(scope, 'publication-fixture-operator', before.generation);
+        const current = await binding();
+        assert.equal(current.generation, before.generation + 1); assert.notEqual(current.activeSnapshotId, before.activeSnapshotId);
+        const [row] = await db.select().from(s.gatewayRuntimeSnapshots).where(eq(s.gatewayRuntimeSnapshots.id, current.activeSnapshotId!));
+        assert.equal(row.manifest.streamMode, 'FULL_BUFFER'); assert.equal(row.manifest.windowQualified, false);
+        assert.equal(row.digest, sha256(canonicalJson(row.manifest)));
+        security.verifyPayload('gateway-snapshot-v2', row.manifest, row.keyId, row.signature);
+      } finally {
+        writeFileSync(qualificationFile, originalQualifications);
+        await publication.refreshGatewayPublication(scope, 'publication-fixture-operator', (await binding()).generation);
+      }
+    });
+    await test('automatic renewal cannot recapture a revoked WINDOW qualification or advance its generation', async () => {
+      const before = await binding(), count = await snapshotCount();
+      try {
+        writeFileSync(qualificationFile, '[]');
+        await assert.rejects(publication.renewGatewayPublication(scope, before.generation), /STREAM_QUALIFICATION_REVOKED/);
+        assert.deepEqual(await binding(), before); assert.equal(await snapshotCount(), count);
+      } finally { writeFileSync(qualificationFile, originalQualifications); }
+    });
     await test('stale and concurrent publications cannot overwrite a newer binding', async () => {
       const before = await binding(); const outcomes = await Promise.allSettled([publication.refreshGatewayPublication(scope, 'publication-fixture-operator', before.generation), publication.refreshGatewayPublication(scope, 'publication-fixture-operator', before.generation)]);
       assert.equal(outcomes.filter(result => result.status === 'fulfilled').length, 1); assert.equal(outcomes.filter(result => result.status === 'rejected').length, 1);
@@ -82,6 +111,19 @@ async function main() {
       await transition(candidate, 'activate'); current = await binding(); assert.equal(current.activeBundleId, candidate); assert.equal(current.previousSnapshotId, baselineSnapshot); assert.equal(current.canarySnapshotId, null); assert.equal(current.shadowSnapshotId, null);
       const [message] = await publication.listGatewayPublications(scope, 1); assert.equal(message.manifest.snapshots.active?.snapshotId, current.activeSnapshotId);
     });
+    await test('rollback and withdrawal cannot restore an old WINDOW snapshot after qualification revocation', async () => {
+      const before = await binding(), count = await snapshotCount();
+      const states = await db.select().from(s.policyBundles).where(scopePredicate(s.policyBundles, scope));
+      try {
+        writeFileSync(qualificationFile, '[]');
+        for (const action of ['rollback', 'withdraw'] as const) {
+          await assert.rejects(transition(candidate, action), /STREAM_QUALIFICATION_REVOKED/);
+          assert.deepEqual(await binding(), before); assert.equal(await snapshotCount(), count);
+          const after = await db.select().from(s.policyBundles).where(scopePredicate(s.policyBundles, scope));
+          assert.deepEqual(after.sort((a, b) => a.id.localeCompare(b.id)), states.sort((a, b) => a.id.localeCompare(b.id)));
+        }
+      } finally { writeFileSync(qualificationFile, originalQualifications); }
+    });
     await test('rollback restores the complete prior snapshot without recompiling old configuration', async () => {
       await transition(candidate, 'rollback'); const current = await binding(); assert.equal(current.activeBundleId, original.activeBundleId); assert.equal(current.activeSnapshotId, baselineSnapshot);
     });
@@ -109,10 +151,11 @@ async function main() {
       assert.deepEqual(await publication.listGatewayPublications({ tenantId: scope.tenantId, applicationId: randomUUID() }), []);
     });
   } finally {
+    writeFileSync(qualificationFile, originalQualifications);
     const current = await binding(); await db.update(s.applicationPolicyBindings).set({ ...original, generation: Math.max(current.generation, original.generation) + 1, updatedAt: new Date() }).where(scopePredicate(s.applicationPolicyBindings, scope));
     for (const row of policyStates) await db.update(s.policyBundles).set({ state: row.state }).where(eq(s.policyBundles.id, row.id));
     for (const id of clones) await db.update(s.policyBundles).set({ state: 'retired' }).where(eq(s.policyBundles.id, id));
-    await closeDatabaseConnection(); writeFileSync(path.join(directory, 'publication-evidence.json'), JSON.stringify({ capturedAt: new Date().toISOString(), status: results.length === 11 ? 'PASS' : 'FAIL',
+    await closeDatabaseConnection(); writeFileSync(path.join(directory, 'publication-evidence.json'), JSON.stringify({ capturedAt: new Date().toISOString(), status: results.length === 14 ? 'PASS' : 'FAIL',
       isolatedDatabase: true, syntheticModel: true, independentModelQualityTested: false, results }, null, 2));
   }
 }

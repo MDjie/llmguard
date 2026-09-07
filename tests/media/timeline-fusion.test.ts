@@ -179,3 +179,22 @@ describe('audio/video timeline fusion', () => {
   });
 
 });
+
+describe('single-track risk preservation', () => {
+  it.each(['audio', 'subtitle', 'frame_ocr', 'qr_code'] as const)('keeps %s mandatory denial and its own timeline coordinates', async (source) => {
+    const previous = process.env.CONTENT_HASH_KEY;
+    process.env.CONTENT_HASH_KEY = 'media-preservation-test-hmac-key-at-least-32-bytes';
+    try {
+      const exactBundle: RuntimePolicyBundle = { ...bundle, payload: { ...bundle.payload, rules: [{ ...bundle.payload.rules[0], pattern: 'SINGLE_TRACK_DENY', matchType: 'exact' }] } };
+      const result = await fuseMediaTimeline({ bundle: exactBundle,
+        context: { traceId: 'media-preserve-' + source, tenantId: 'tenant-1', applicationId: 'app-1', absoluteDeadlineEpochMs: Date.now() + 5000 },
+        userText: 'public task', contextArtifactId: 'user-object',
+        segments: [{ source, text: 'SINGLE_TRACK_DENY', startMs: 7000, endMs: 7500, viewId: 'source-view', frameIndex: 7 }], visual: [],
+      });
+      expect(result.decisions.combined.action).toBe('ALLOW');
+      expect(result.action).toBe('BLOCK');
+      expect(result.evidence).toEqual(expect.arrayContaining([expect.objectContaining({ source, startMs: 7000, endMs: 7500, frameIndex: 7, viewId: 'source-view' })]));
+      expect(JSON.stringify(result.evidence)).not.toContain('SINGLE_TRACK_DENY');
+    } finally { process.env.CONTENT_HASH_KEY = previous; }
+  });
+});

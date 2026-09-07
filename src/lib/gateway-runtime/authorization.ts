@@ -1,3 +1,5 @@
+import { resolveArchivePolicy } from '@/lib/conversation-archive/policy';
+import { initializeConversationArchive, publishArchiveContent, writeArchiveContent } from '@/lib/conversation-archive/service';
 import { failGatewayPreparation } from './preparation';
 import { admitGatewayResources, preparedGatewayResources } from './resources';
 import { renewGatewayPublication } from './publication';
@@ -90,6 +92,8 @@ export async function authorizeGateway(body: GatewayAuthorize, request: NextRequ
   const scope: TenantScope = { tenantId: tenant.tenantId, applicationId: tenant.applicationId };
   const [application] = await db.select().from(applications).where(and(eq(applications.id, scope.applicationId), eq(applications.tenantId, scope.tenantId), eq(applications.status, 'active'))).limit(1);
   if (!application || !application.modelRoutes.includes(body.modelRoute)) throw new GatewayError('MODEL_ROUTE_NOT_AUTHORIZED', 403);
+  const archivePolicy = resolveArchivePolicy(scope);
+  let receivedArchiveId: string | undefined;
   const idempotencyKey = body.idempotencyKey;
   const consoleAssertionHmac = body.userAssertion ? evidenceHmac(body.userAssertion) : undefined;
   const identity = { subject: principal.subject, tokenVersion: principal.tokenVersion ?? 0, authVersion: application.authVersion, requestDigest: body.requestDigest, sessionId: body.sessionId ?? null, modelRoute: body.modelRoute };
@@ -104,7 +108,7 @@ export async function authorizeGateway(body: GatewayAuthorize, request: NextRequ
   const context: AuthContext = { contractVersion: '2.0', authContextId: randomUUID(), issuer: 'guard-control', audience: 'guard-gateway', keyId: process.env.GATEWAY_AUTH_KEY_ID ?? '',
     issuedAt: now, expiresAt: Math.min(body.deadline, snapshot.manifest.validUntil), ...scope, subjectId: principal.subject,
     ...(principal.authenticationMethod === 'service' ? { credentialId: principal.subject.replace('application-credential:', '') } : { subjectVersion: principal.tokenVersion ?? 0 }),
-    authVersion: application.authVersion, businessRequestId: body.businessRequestId, traceId: body.traceId, ...(body.sessionId ? { sessionId: body.sessionId } : {}), requestDigest: body.requestDigest,
+    ...(archivePolicy.mode === 'STRICT_OBJECT' ? { archiveRequired: true } : {}), authVersion: application.authVersion, businessRequestId: body.businessRequestId, traceId: body.traceId, ...(body.sessionId ? { sessionId: body.sessionId } : {}), requestDigest: body.requestDigest,
     policy: { snapshotId: snapshot.id, bundleId: snapshot.manifest.bundleId, generation: snapshot.manifest.generation, digest: snapshot.digest },
     allowedModelRoutes: application.modelRoutes, permissions: principal.permissions, dataBoundary: application.dataClass, deadline: body.deadline };
   // Shadow execution is opt-in; the approved reference is frozen once with the business request.
@@ -119,8 +123,11 @@ export async function authorizeGateway(body: GatewayAuthorize, request: NextRequ
         const [lease] = await tx.select({ id: gatewayRequests.id }).from(gatewayRequests).where(and(scopePredicate(gatewayRequests, scope), eq(gatewayRequests.sessionId, body.sessionId), eq(gatewayRequests.sessionFinalized, false))).limit(1);
         if (lease) throw new GatewayError('SESSION_REQUEST_IN_PROGRESS', 409);
       }
-      await tx.insert(gatewayRequests).values({ id: body.businessRequestId, ...scope, idempotencyKey, requestHmac, snapshotId: snapshot.id, subjectId: principal.subject,
-      sessionId: body.sessionId, shadowSnapshotId, state: 'AUTHORIZED', preparationState: 'PREPARING', authContext: provisionalAuth, expiresAt: new Date(body.deadline), consoleAssertionHmac });
+      const [accepted] = await tx.insert(gatewayRequests).values({ id: body.businessRequestId, ...scope, idempotencyKey, requestHmac, snapshotId: snapshot.id, subjectId: principal.subject,
+      sessionId: body.sessionId, shadowSnapshotId, state: 'AUTHORIZED', preparationState: 'PREPARING', authContext: provisionalAuth, expiresAt: new Date(body.deadline), consoleAssertionHmac }).returning();
+      if (!accepted) throw new GatewayError('REQUEST_INSERT_FAILED', 503);
+      const archived = await initializeConversationArchive(tx, accepted, archivePolicy, json, !(references?.length));
+      receivedArchiveId = archived?.id;
       await admitGatewayResources(tx, { ...scope, requestId: body.businessRequestId, snapshotId: snapshot.id, budgets: snapshot.manifest.budgets,
         expiresAt: body.deadline, references: (rag ? 20 : 0) + (references?.length ?? 0) });
     });
@@ -132,12 +139,14 @@ export async function authorizeGateway(body: GatewayAuthorize, request: NextRequ
   // The durable claim and admission precede reference reads; no database transaction spans I/O.
   try {
     request.signal.throwIfAborted();
+    if (receivedArchiveId) await publishArchiveContent(scope, receivedArchiveId, undefined, request.signal);
     const memory = body.sessionId ? await readSecureMemorySnapshot(scope, body.sessionId) : undefined;
   const preparedRag = rag ? await materializeRagRequest({ request: sourceRequest, options: rag, scope, principal, requestId: body.businessRequestId, traceId: body.traceId, bundleId: snapshot.manifest.bundleId, deadline: body.deadline, maxInputChars: snapshot.manifest.budgets.maxInputChars, signal: request.signal }) : undefined;
   const preparedArtifacts = references ? await materializeArtifactRequest({ ...scope, subjectId: principal.subject, requestId: body.businessRequestId, bundleId: snapshot.manifest.bundleId,
-    request: preparedRag?.request ?? sourceRequest, sourceSegments: preparedRag?.segments ?? inputSegments, references, deadline: body.deadline, maxInputChars: snapshot.manifest.budgets.maxInputChars, signal: request.signal }) : undefined;
+    archiveRequired: context.archiveRequired, modelRoute: body.modelRoute, routingDigest: snapshot.manifest.modelRouting?.configurationDigest, request: preparedRag?.request ?? sourceRequest, sourceSegments: preparedRag?.segments ?? inputSegments, references, deadline: body.deadline, maxInputChars: snapshot.manifest.budgets.maxInputChars, signal: request.signal }) : undefined;
   const prepared = preparedArtifacts ?? preparedRag;
   if (prepared) inputSegments = prepared.segments;
+  if (prepared && context.archiveRequired) await writeArchiveContent(scope, { requestId: body.businessRequestId, purpose: 'RECEIVED_INPUT', sequence: (references?.length ?? 0) + 1, representation: 'CONTENT_SEGMENTS', data: { kind: 'PREPARED_DETECTION_CONTEXT', segments: inputSegments } }, undefined, request.signal);
     request.signal.throwIfAborted();
     if (Date.now() >= context.expiresAt) throw new GatewayError('REQUEST_PREPARATION_EXPIRED', 408);
     const auth = issueAuthContext({ ...context, ...(prepared ? { preparedRequestDigest: sha256(canonicalJson(prepared.request)), inputSegmentsDigest: sha256(canonicalJson(inputSegments)) } : {}) });
@@ -145,7 +154,7 @@ export async function authorizeGateway(body: GatewayAuthorize, request: NextRequ
       const [claimed] = await tx.select().from(gatewayRequests).where(and(scopePredicate(gatewayRequests, scope), eq(gatewayRequests.id, body.businessRequestId))).for('update');
       if (!claimed || claimed.preparationState !== 'PREPARING' || claimed.state !== 'AUTHORIZED' || claimed.expiresAt.getTime() <= Date.now()) throw new GatewayError('REQUEST_PREPARATION_CLOSED', 409);
       await preparedGatewayResources(tx, scope, body.businessRequestId, inputSegments.reduce((sum, segment) => sum + segment.text.length, 0), (preparedRag?.proof.manifest.sourceReferences.length ?? 0) + (preparedArtifacts?.proof.manifest.references.length ?? 0));
-      await tx.update(gatewayRequests).set({ authContext: auth, preparationState: 'READY', sessionSnapshot: sealReceipt({ inputSegments, ...(preparedRag ? { ragContextProof: preparedRag.proof } : {}), ...(preparedArtifacts ? { artifactContextProof: preparedArtifacts.proof } : {}), ...(memory ? { memory } : {}) }, body.businessRequestId + ':memory') }).where(eq(gatewayRequests.id, body.businessRequestId));
+      await tx.update(gatewayRequests).set({ authContext: auth, preparationState: 'READY', sessionSnapshot: sealReceipt({ inputSegments, ...(context.archiveRequired ? { preparedRequest: prepared?.request ?? sourceRequest } : {}), ...(preparedRag ? { ragContextProof: preparedRag.proof } : {}), ...(preparedArtifacts ? { artifactContextProof: preparedArtifacts.proof } : {}), ...(memory ? { memory } : {}) }, body.businessRequestId + ':memory') }).where(eq(gatewayRequests.id, body.businessRequestId));
     });
     return { auth, snapshot, replayState: 'NEW', ...(prepared ? { preparedRequestJson: canonicalJson(prepared.request), inputSegments } : {}) };
   } catch (error) {

@@ -42,6 +42,18 @@ x-runtime-environment: &runtime-environment
   MULTIMODAL_CROSS_MODAL_WINDOW_MS: "${MULTIMODAL_CROSS_MODAL_WINDOW_MS:-30000}"
   ANALYZER_SHARED_TOKEN: "${ANALYZER_SHARED_TOKEN:?ANALYZER_SHARED_TOKEN is required}"
   EXPORT_APPROVAL_REQUIRED: "${EXPORT_APPROVAL_REQUIRED:-true}"
+  GATEWAY_ARCHIVE_MODE: "${GATEWAY_ARCHIVE_MODE:-DISABLED}"
+  GATEWAY_ARCHIVE_POLICIES_JSON: "${GATEWAY_ARCHIVE_POLICIES_JSON:-[]}"
+  SECRET_MASTER_KEY_RING_JSON: "${SECRET_MASTER_KEY_RING_JSON:-{}}"
+  DELETION_PROOF_HMAC_KEY: "${DELETION_PROOF_HMAC_KEY:-}"
+  DELETION_PROOF_HMAC_KEY_ID: "${DELETION_PROOF_HMAC_KEY_ID:-}"
+  OBJECT_STORE_ENDPOINT: "${OBJECT_STORE_ENDPOINT:-}"
+  OBJECT_STORE_BUCKET: "${OBJECT_STORE_BUCKET:-guard-artifacts}"
+  OBJECT_STORE_REGION: "${OBJECT_STORE_REGION:-us-east-1}"
+  OBJECT_STORE_ACCESS_KEY_ID: "${OBJECT_STORE_ACCESS_KEY_ID:-}"
+  OBJECT_STORE_SECRET_ACCESS_KEY: "${OBJECT_STORE_SECRET_ACCESS_KEY:-}"
+  OBJECT_STORE_ALLOWED_HOSTS: "${OBJECT_STORE_ALLOWED_HOSTS:-}"
+  OBJECT_STORE_ALLOWED_PRIVATE_HOSTS: "${OBJECT_STORE_ALLOWED_PRIVATE_HOSTS:-}"
   RAW_CONTENT_STORAGE_ENABLED: "${RAW_CONTENT_STORAGE_ENABLED:-false}"
   RAW_CONTENT_RETENTION_DAYS: "${RAW_CONTENT_RETENTION_DAYS:-7}"
   PROVIDER_ALLOWED_HOSTS: "${PROVIDER_ALLOWED_HOSTS:-}"
@@ -49,6 +61,9 @@ x-runtime-environment: &runtime-environment
   JUDGE_PRIVATE_ENDPOINT_APPROVALS_JSON: "${JUDGE_PRIVATE_ENDPOINT_APPROVALS_JSON:-[]}"
   JUDGE_QUALITY_APPROVALS_JSON: "${JUDGE_QUALITY_APPROVALS_JSON:-[]}"
   SEMANTIC_CLASSIFIER_QUALITY_APPROVALS_JSON: "${SEMANTIC_CLASSIFIER_QUALITY_APPROVALS_JSON:-[]}"
+  NATIVE_MEDIA_ROUTE_ADAPTERS_JSON: "${NATIVE_MEDIA_ROUTE_ADAPTERS_JSON:-[]}"
+  NATIVE_MULTIMODAL_ANALYSIS_ENABLED: "${NATIVE_MULTIMODAL_ANALYSIS_ENABLED:-false}"
+  NATIVE_MULTIMODAL_QUALIFICATIONS_JSON: "${NATIVE_MULTIMODAL_QUALIFICATIONS_JSON:-[]}"
   MULTIMODAL_QUALITY_APPROVALS_JSON: "${MULTIMODAL_QUALITY_APPROVALS_JSON:-[]}"
   CALLBACK_ALLOWED_HOSTS: "${CALLBACK_ALLOWED_HOSTS:-}"
   CALLBACK_ALLOWED_PRIVATE_HOSTS: "${CALLBACK_ALLOWED_PRIVATE_HOSTS:-}"
@@ -150,6 +165,12 @@ services:
       - ./drizzle/0056_gateway_runtime_publications.sql:/docker-entrypoint-initdb.d/66-gateway-runtime-publications.sql:ro
       - ./drizzle/0057_gateway_request_resources.sql:/docker-entrypoint-initdb.d/67-gateway-request-resources.sql:ro
       - ./drizzle/0058_gateway_shadow_evaluations.sql:/docker-entrypoint-initdb.d/68-gateway-shadow-evaluations.sql:ro
+      - ./drizzle/0059_security_alert_projection.sql:/docker-entrypoint-initdb.d/69-security-alert-projection.sql:ro
+      - ./drizzle/0060_conversation_archive.sql:/docker-entrypoint-initdb.d/70-conversation-archive.sql:ro
+      - ./drizzle/0061_badcase_independent_review.sql:/docker-entrypoint-initdb.d/71-badcase-independent-review.sql:ro
+      - ./drizzle/0062_alert_projection_recovery.sql:/docker-entrypoint-initdb.d/72-alert-projection-recovery.sql:ro
+      - ./drizzle/0063_media_evidence_snapshots.sql:/docker-entrypoint-initdb.d/73-media-evidence-snapshots.sql:ro
+      - ./drizzle/0064_feedback_candidate_exports.sql:/docker-entrypoint-initdb.d/74-feedback-candidate-exports.sql:ro
     ports:
       - "127.0.0.1:${DB_PORT:-5434}:5432"
     healthcheck:
@@ -174,6 +195,7 @@ services:
       ANALYZER_OBJECT_STORE_HOSTS: "${ANALYZER_OBJECT_STORE_HOSTS:-}"
       ANALYZER_MAX_IN_FLIGHT: "${ANALYZER_MAX_IN_FLIGHT:-4}"
       ANALYZER_CODE_READER_COMMAND: "${ANALYZER_CODE_READER_COMMAND:-zbarimg}"
+      ANALYZER_NATIVE_JOINT_COMMAND: "${ANALYZER_NATIVE_JOINT_COMMAND:-}"
       ANALYZER_VISUAL_COMMAND: "${ANALYZER_VISUAL_COMMAND:-}"
       ANALYZER_ASR_COMMAND: "${ANALYZER_ASR_COMMAND:-}"
       ANALYZER_AUDIO_CLASSIFIER_COMMAND: "${ANALYZER_AUDIO_CLASSIFIER_COMMAND:-}"
@@ -246,6 +268,10 @@ services:
     <<: *worker-service
     command: ["node", "--import", "tsx", "scripts/run-worker.mjs", "gateway-request"]
 
+  archive-worker:
+    <<: *worker-service
+    command: ["node", "--import", "tsx", "scripts/run-worker.mjs", "archive"]
+
   evaluation-worker:
     <<: *worker-service
     command: ["node", "--import", "tsx", "scripts/run-worker.mjs", "evaluation"]
@@ -257,6 +283,10 @@ services:
   artifact-worker:
     <<: *worker-service
     command: ["node", "--import", "tsx", "scripts/run-worker.mjs", "artifact"]
+
+  native-multimodal-worker:
+    <<: *worker-service
+    command: ["node", "--import", "tsx", "scripts/run-worker.mjs", "native-multimodal"]
 
   multimodal-worker:
     <<: *worker-service

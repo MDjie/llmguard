@@ -20,6 +20,7 @@ export function internalGatewayRoute<T>(schema: z.ZodType<T>, handler: (body: T,
       const result = await handler(body, request, workload.nodeId);
       return result instanceof Response ? result : Response.json(result, { headers: { 'Cache-Control': 'no-store' } });
     } catch (error) {
+      if (error instanceof z.ZodError) console.error('GATEWAY_CONTRACT_REJECTED', JSON.stringify(error.issues.slice(0, 12).map(issue => ({ code: issue.code, path: issue.path.map(key => typeof key === 'number' ? '#' : /^[A-Za-z_][A-Za-z0-9_]{0,63}$/.test(String(key)) ? key : '[redacted]').join('.') }))));
       const status = error instanceof GatewayError ? error.status : error instanceof z.ZodError || error instanceof SyntaxError ? 400 : 503;
       const code = error instanceof GatewayError ? error.code : status === 400 ? 'GATEWAY_CONTRACT_INVALID' : 'GATEWAY_DEPENDENCY_UNAVAILABLE';
       return Response.json({ contractVersion: '2.0', code, requestId, traceId: requestId, retryable: status >= 500 }, { status, headers: { 'Cache-Control': 'no-store' } });

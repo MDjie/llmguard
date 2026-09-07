@@ -1,3 +1,4 @@
+import { mapRegion, inverseRotation, tileMapping, type Affine } from '../../../src/lib/evidence/coordinate-mapping';
 import { copyFile, readdir, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { z } from 'zod';
@@ -23,6 +24,7 @@ interface ImageView {
   readonly path: string;
   readonly transform: string;
   readonly page: number;
+  readonly mapping: {viewId:string;page:number;basis:string;mappingVersion:string;sourceWidth:number;sourceHeight:number;matrix:Affine;transform:string;parameters:Readonly<Record<string,string|number|boolean>>};
 }
 
 const ocrGuard = new AnalyzerDependencyGuard({
@@ -172,10 +174,16 @@ async function materializeViews(
   }
   const result: ImageView[] = [];
   for (let pageIndex = 0; pageIndex < pages.length; pageIndex += 1) {
+    const dimensions=await imageDimensions(runner,process.env.ANALYZER_FFPROBE_COMMAND??'ffprobe',pages[pageIndex],workspace,signal);
     for (const plan of request.views) {
       const id = pages.length === 1 ? plan.id : `page_${pageIndex + 1}_${plan.id}`;
       const target = join(workspace, `view-${safeName(id)}.png`);
-      const filter = videoFilter(plan.transform, plan.parameters);
+      let filter = videoFilter(plan.transform, plan.parameters);
+      let matrix:Affine=inverseRotation(plan.transform==='rotate'?Number(plan.parameters.degrees):0);
+      if(plan.transform==='tile'){
+        const tile=tileMapping(dimensions.width,dimensions.height,Number(plan.parameters.row??0),Number(plan.parameters.column??0),Number(plan.parameters.rows??2),Number(plan.parameters.columns??2));
+        matrix=tile.matrix;filter=`crop=${tile.width}:${tile.height}:${tile.x}:${tile.y}:exact=1`;
+      }
       if (!filter) {
         await copyFile(pages[pageIndex], target);
       } else {
@@ -186,7 +194,7 @@ async function materializeViews(
           cwd: workspace, timeoutMs: request.limits.maxDecodeSeconds * 1_000, signal,
         });
       }
-      result.push({ id, path: target, transform: plan.transform, page: pageIndex + 1 });
+      result.push({ id, path: target, transform: plan.transform, page: pageIndex + 1,mapping:{viewId:id,page:pageIndex+1,basis:'DISPLAY_ORIENTED_SOURCE_PAGE',mappingVersion:'inverse-image-view-1',sourceWidth:dimensions.width,sourceHeight:dimensions.height,matrix,transform:plan.transform,parameters:plan.parameters} });
     }
   }
   return result;
@@ -338,7 +346,7 @@ export async function analyzeDocumentImage(
             page: view.page, signal: attemptSignal,
           }), signal),
         ]);
-        return { ocrResult, visualResult, codeResult };
+        return { view, ocrResult, visualResult, codeResult };
       },
       signal,
     );
@@ -347,7 +355,7 @@ export async function analyzeDocumentImage(
         if(analyzed.ocrResult.value.some(region=>region.confidence<request.limits.minimumConfidence))lowConfidenceOcr=true;
         ocr.push(...analyzed.ocrResult.value.filter(
           (region) => region.confidence >= request.limits.minimumConfidence,
-        ));
+        ).map(region=>({...region,region:mapRegion(region.region,analyzed.view.mapping.matrix)})));
       } else {
         failures.push(failure('OCR', true, analyzed.ocrResult.reason));
       }
@@ -355,15 +363,15 @@ export async function analyzeDocumentImage(
         versions.add(analyzed.visualResult.value.modelVersion);
         labels.push(...analyzed.visualResult.value.labels.filter(
           (label) => label.score >= request.limits.minimumConfidence,
-        ));
+        ).map(label=>({...label,...(label.region?{region:mapRegion(label.region,analyzed.view.mapping.matrix)}:{})})));
         visual.push(...analyzed.visualResult.value.risks.filter(
           (risk) => risk.score >= request.limits.minimumConfidence,
-        ));
+        ).map(risk=>({...risk,...(risk.region?{region:mapRegion(risk.region,analyzed.view.mapping.matrix)}:{})})));
       } else {
         failures.push(failure('VISUAL', true, analyzed.visualResult.reason));
       }
       if (analyzed.codeResult.status === 'fulfilled') {
-        codes.push(...analyzed.codeResult.value);
+        codes.push(...analyzed.codeResult.value.map(code=>({...code,region:mapRegion(code.region,analyzed.view.mapping.matrix)})));
       } else {
         failures.push(failure('CODE_READER', true, analyzed.codeResult.reason));
       }
@@ -394,9 +402,11 @@ export async function analyzeDocumentImage(
       analyzerVersion: `media-analyzer/1.1+${[...versions].sort().join(',') || 'degraded'}`,
       coverage:{artifactSha256:request.artifact.sha256,modality:request.artifact.kind,
         state:analysisFailures.length||lowConfidenceOcr?'INCOMPLETE' as const:'COMPLETE' as const,
-        expectedUnits:pages.length*request.views.length,processedUnits:views.length,
+        unit:'PAGE_VIEW' as const,expectedUnits:pages.length*request.views.length,processedUnits:views.length,
+        processingCoverage:[{unit:'PAGE_VIEW' as const,expected:pages.length*request.views.length,processed:views.length,failed:0,skipped:Math.max(0,pages.length*request.views.length-views.length)}],
         analyzerVersion:`media-analyzer/1.1+${[...versions].sort().join(',') || 'degraded'}`,
         reasonCodes:[...analysisFailures.map(f=>f.code),...(lowConfidenceOcr?['OCR_LOW_CONFIDENCE_REGIONS']:[])]},
+      coordinateMappings:views.map(view=>view.mapping),
       ocr,
       codes,
       labels,

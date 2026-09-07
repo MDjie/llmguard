@@ -1,3 +1,4 @@
+import { evidenceLocationSchema } from './multimodal-analysis';
 import { z } from 'zod';
 
 const id = z.string().min(1).max(128);
@@ -129,6 +130,7 @@ export const evidenceSchema = z.object({
   normalizedStart: z.number().int().nonnegative().optional(),
   normalizedEnd: z.number().int().nonnegative().optional(),
   normalizationTransforms: z.array(id).max(32).optional(),
+  locations: z.array(evidenceLocationSchema).max(1000).optional(),
 }).strict();
 
 export const observationSchema = z.object({

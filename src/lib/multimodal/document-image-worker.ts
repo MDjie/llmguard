@@ -1,3 +1,6 @@
+import { analyzeNativeArtifacts } from '@/lib/multimodal/native-analyzer';
+import { combineActionConstraints } from '@/lib/guard-engine-v2/action-constraints';
+import { coverageResult } from '@/lib/multimodal/coverage';
 import { and, asc, eq } from 'drizzle-orm';
 import { readAcceptedTextArtifact } from '@/lib/artifacts';
 import { buildLineageEdge } from '@/lib/data-protection/lineage';
@@ -64,6 +67,7 @@ export async function processNextDocumentImageJob() {
       analysisCoverage:analysis.coverage,artifactSha256:artifact.verifiedSha256??undefined,
       bundle,
       context: {
+        direction: 'INPUT',
         traceId: `job-trace-${job.id}`,
         tenantId: scope.tenantId,
         applicationId: scope.applicationId,
@@ -74,6 +78,7 @@ export async function processNextDocumentImageJob() {
       ocr: analysis.ocr.map((item) => ({
         text: item.text,
         artifactId: artifact.id,
+        artifactSha256: artifact.verifiedSha256 ?? undefined,
         viewId: item.viewId,
         region: item.region,
         page: item.page,
@@ -81,10 +86,12 @@ export async function processNextDocumentImageJob() {
       codes: analysis.codes.map((item) => ({
         ...item,
         artifactId: artifact.id,
+        artifactSha256: artifact.verifiedSha256 ?? undefined,
       })),
       visual: analysis.visual.map((item) => ({
         ...item,
         artifactId: artifact.id,
+        artifactSha256: artifact.verifiedSha256 ?? undefined,
       })),
       analysisFailures: analysis.analysisFailures,
       sourceTrust: 'UNTRUSTED',
@@ -93,6 +100,13 @@ export async function processNextDocumentImageJob() {
       reviewThreshold: detectionPolicy.reviewThreshold,
       blockThreshold: detectionPolicy.blockThreshold,
     });
+    const native = await analyzeNativeArtifacts({ scope, bundlePayload: bundle.payload, requiredRiskIds: bundle.payload.semanticCoverage?.requiredRiskIds ?? [],
+      direction: 'INPUT', contextText: userText, contextArtifactId: job.contextArtifactId ?? undefined, heuristicSuspected: fusion.cooperativeAttack,
+      artifacts: [{ artifact, parts }], signal: cancellation.signal });
+    const requireNative = bundle.payload.semanticDecisionMode === 'coverage-v1';
+    fusion.action = combineActionConstraints([fusion.action, ...(requireNative || native.gate.qualified ? [native.gate.action] : [])]).action;
+    const coverageSnapshot = coverageResult({ analysisCoverage: analysis.coverage, fusionCoverage: fusion.coverage, action: fusion.action,
+      failures: analysis.analysisFailures, strict: bundle.payload.semanticDecisionMode === 'coverage-v1', windowReasons: requireNative && !native.gate.eligible ? native.gate.reasonCodes : [] });
     if (analysis.derivatives.length > 0) {
       await db.transaction(async (transaction) => {
         const created = await transaction.insert(artifactDerivatives)
@@ -158,11 +172,13 @@ export async function processNextDocumentImageJob() {
     });
     const result = {
       contractVersion: '1.0',
+      ...coverageSnapshot,
       artifactId: artifact.id,
       bundleId: bundle.id,
       action: fusion.action,
       cooperativeAttack: fusion.cooperativeAttack,
-      degraded: fusion.degraded,
+      crossModalVerdict: native.gate.verdict, nativeCoverage: native.gate, relationSources: native.binding?.sources ?? [], relations: native.gate.relations,
+      degraded: coverageSnapshot.degraded,
       analysisFailures: analysis.analysisFailures,
       textDecisions: fusion.textDecisions,
       evidence: fusion.evidence,
@@ -182,7 +198,7 @@ export async function processNextDocumentImageJob() {
       analyzerVersion: analysis.analyzerVersion,
       coverage: analysis.coverage,
     };
-    await completeGuardJob(job, result as unknown as Record<string, unknown>);
+    await completeGuardJob(job, result as unknown as Record<string, unknown>, {views:fusion.privateEvidenceViews,mappings:(analysis.coordinateMappings??[]).map(mapping=>({...mapping,artifactId:artifact.id}))});
     return { jobId: job.id, status: 'completed' };
   } catch (error) {
     if (cancellation.signal.aborted || isGuardJobCancellationError(error)) {

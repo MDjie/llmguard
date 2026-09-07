@@ -89,8 +89,14 @@
     "security-hardening:verify-deliverables": "node scripts/acceptance/verify-security-hardening-deliverables.mjs",
     "ts-check": "tsc -p tsconfig.json",
     "validate": "pnpm contracts:check && pnpm plan:check && pnpm quality:full && pnpm test:unit --run",
+    "archive:worker": "tsx scripts/archive-worker.ts",
     "gateway:reconcile": "tsx scripts/gateway-request-worker.ts",
-    "test:integration:gateway-v2": "node scripts/integration/run-gateway-v2-e2e.mjs"
+    "test:integration:gateway-v2": "node scripts/integration/run-gateway-v2-e2e.mjs",
+    "financial:prepare": "tsx scripts/content-safety/prepare-financial-library.ts",
+    "financial:check": "tsx scripts/content-safety/prepare-financial-library.ts --check",
+    "alerts:backfill": "tsx scripts/content-safety/backfill-security-alerts.ts",
+    "native:worker": "tsx scripts/native-multimodal-worker.ts",
+    "alerts:recover": "tsx scripts/content-safety/recover-alert-projections.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

@@ -1,5 +1,5 @@
 // Generated from model/gateway-v2.schema.json. Do not edit.
-// Source SHA-256: 121c28d9326b01100816725fd291a43f2d45a2d698a2d3d2749ab8f83cddb810
+// Source SHA-256: 86662f37d842ad3909ba66deeea55d6fc0db3671a0aeb4f3c477fc70ae380f19
 syntax = "proto3";
 
 package guardllm.contracts.v2;
@@ -149,6 +149,7 @@ message AuthContext {
   optional int64 subject_version = 22;
   optional string prepared_request_digest = 23;
   optional string input_segments_digest = 24;
+  optional bool archive_required = 25;
 }
 
 message SignedAuthContext {

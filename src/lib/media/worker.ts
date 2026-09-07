@@ -1,3 +1,6 @@
+import { analyzeNativeArtifacts } from '@/lib/multimodal/native-analyzer';
+import { combineActionConstraints } from '@/lib/guard-engine-v2/action-constraints';
+import { coverageResult } from '@/lib/multimodal/coverage';
 import { and, asc, eq } from 'drizzle-orm';
 import {
   claimNextGuardJob,
@@ -58,8 +61,10 @@ export async function processNextAudioVideoJob() {
       : undefined;
     const anomalyScore = Math.max(0, ...analysis.anomalies.map((item) => item.score));
     const fusion = await fuseMediaTimeline({
+      artifactId: artifact.id,
       bundle,
       context: {
+        direction: 'INPUT',
         traceId: `media-trace-${job.id}`,
         tenantId: scope.tenantId,
         applicationId: scope.applicationId,
@@ -114,6 +119,13 @@ export async function processNextAudioVideoJob() {
       reviewThreshold: detectionPolicy.reviewThreshold,
       blockThreshold: detectionPolicy.blockThreshold,
     });
+    const native = await analyzeNativeArtifacts({ scope, bundlePayload: bundle.payload, requiredRiskIds: bundle.payload.semanticCoverage?.requiredRiskIds ?? [],
+      direction: 'INPUT', contextText: userText, contextArtifactId: job.contextArtifactId ?? undefined, heuristicSuspected: fusion.cooperativeAttack,
+      artifacts: [{ artifact, parts }], signal: cancellation.signal });
+    const requireNative = bundle.payload.semanticDecisionMode === 'coverage-v1';
+    fusion.action = combineActionConstraints([fusion.action, ...(requireNative || native.gate.qualified ? [native.gate.action] : [])]).action;
+    const coverageSnapshot = coverageResult({ analysisCoverage: analysis.coverage, fusionCoverage: fusion.coverage, action: fusion.action,
+      failures: analysis.analysisFailures, strict: bundle.payload.semanticDecisionMode === 'coverage-v1', windowReasons: [...fusion.windowCoverage.reasonCodes, ...(requireNative && !native.gate.eligible ? native.gate.reasonCodes : [])] });
     const rows = [
       ...fusion.evidence.map((item) => ({
         ...scope,
@@ -148,13 +160,16 @@ export async function processNextAudioVideoJob() {
     if (rows.length > 0) await db.insert(mediaTimelineFindings).values(rows);
     await completeGuardJob(job, {
       contractVersion: '1.0',
+      ...coverageSnapshot,
       artifactId: artifact.id,
       bundleId: bundle.id,
       action: fusion.action,
       cooperativeAttack: fusion.cooperativeAttack,
+      crossModalVerdict: native.gate.verdict, nativeCoverage: native.gate, relationSources: native.binding?.sources ?? [], relations: native.gate.relations,
       evidenceConflict: fusion.evidenceConflict,
-      degraded: fusion.degraded,
+      degraded: coverageSnapshot.degraded,
       analysisFailures: analysis.analysisFailures,
+      windowCoverage: fusion.windowCoverage,
       samplingPhase: analysis.samplingPhase,
       durationMs: analysis.durationMs,
       format: analysis.format,
@@ -170,7 +185,7 @@ export async function processNextAudioVideoJob() {
         riskCount: frame.risks.length,
       })),
       analyzerVersion: analysis.analyzerVersion,
-    } as unknown as Record<string, unknown>);
+    } as unknown as Record<string, unknown>, {views:fusion.privateEvidenceViews,mappings:(analysis.coordinateMappings??[]).map(mapping=>({...mapping,artifactId:artifact.id}))});
     return { jobId: job.id, status: 'completed' };
   } catch (error) {
     if (cancellation.signal.aborted || isGuardJobCancellationError(error)) {

@@ -16,6 +16,9 @@ async function main() {
         if (!anchored) break;
       }
       await reconcileExpiredGatewayRequests().catch(() => { console.error('GATEWAY_RECONCILIATION_RETRY_PENDING'); });
+      const { projectSecurityAlerts } = await import('../src/lib/security-alerts/service');
+      const projection = await projectSecurityAlerts().catch(() => { console.error('SECURITY_ALERT_PROJECTION_RETRY_PENDING'); return null; });
+      if (projection?.quarantined) console.error('SECURITY_ALERT_PROJECTION_FAILED_RECORDS=' + projection.quarantined);
       const { purgeGatewayContent } = await import('../src/lib/gateway-runtime/content-retention');
       await purgeGatewayContent().catch(() => { console.error('GATEWAY_CONTENT_PURGE_RETRY_PENDING'); });
       await reconcileToolExecutions().catch(() => { console.error('TOOL_EXECUTION_RECONCILIATION_RETRY_PENDING'); });

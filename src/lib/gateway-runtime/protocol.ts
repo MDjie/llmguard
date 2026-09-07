@@ -1,3 +1,4 @@
+import { nativeMediaMetadata } from './native-content';
 import { allowedFields, opaqueIdentifier, validateChoice, validateCompletionFields } from './completion-fields';
 import { createHash } from 'node:crypto';
 import type { ContentSegment, GatewayDecision, TransformPatch } from '../../../packages/contracts/generated/typescript/gateway-v2';
@@ -56,7 +57,7 @@ function object(value: JsonValue | undefined): { [key: string]: JsonValue } {
   return value;
 }
 
-export function extractSegments(value: JsonValue, side: 'INPUT' | 'OUTPUT', maxChars: number): ContentSegment[] {
+export function extractSegments(value: JsonValue, side: 'INPUT' | 'OUTPUT', maxChars: number, allowNative = false): ContentSegment[] {
   const root = object(value);
   validateCompletionFields(root, side === 'INPUT');
   const segments: ContentSegment[] = [];
@@ -78,6 +79,9 @@ export function extractSegments(value: JsonValue, side: 'INPUT' | 'OUTPUT', maxC
     if (typeof item.content === 'string') add(item.content, path + '/content', role, sourceType);
     else if (Array.isArray(item.content)) item.content.forEach((part, index) => {
       const block = object(part);
+      if (allowNative && sideValue === 'INPUT' && role === 'user' && ['image_url','input_audio','video_url'].includes(String(block.type))) {
+        add(canonicalJson(nativeMediaMetadata(block)), `${path}/content/${index}`, role, 'FILE'); return;
+      }
       if (!['text','input_text','output_text'].includes(String(block.type)) || Object.keys(block).some((key) => !['type','text'].includes(key))) throw new GatewayError('ARTIFACT_PIPELINE_REQUIRED');
       add(block.text, `${path}/content/${index}/text`, role, sourceType);
     });
