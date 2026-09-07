@@ -1,0 +1,82 @@
+{
+  "capturedAt": "2026-09-07T11:49:41.303Z",
+  "status": "PASS",
+  "isolatedDatabase": true,
+  "externalExecutor": "synthetic pinned-mTLS adapter",
+  "realThirdPartyCertification": false,
+  "requestBodiesStored": false,
+  "results": [
+    {
+      "name": "managed execution consumes permit before peer receives request",
+      "status": "PASS"
+    },
+    {
+      "name": "concurrent duplicate permits trigger exactly one external execution",
+      "status": "PASS"
+    },
+    {
+      "name": "changed parameters and principal are rejected before external execution",
+      "status": "PASS"
+    },
+    {
+      "name": "legacy result endpoint cannot consume managed execution permits",
+      "status": "PASS"
+    },
+    {
+      "name": "tool output is inspected using the authorized bundle before release",
+      "status": "PASS"
+    },
+    {
+      "name": "connection loss preserves UNKNOWN and forbids replay",
+      "status": "PASS"
+    },
+    {
+      "name": "forged receipt preserves UNKNOWN without releasing tool output",
+      "status": "PASS"
+    },
+    {
+      "name": "changed operator executor configuration invalidates previously issued permit",
+      "status": "PASS"
+    },
+    {
+      "name": "disabled tool cannot execute an outstanding permit",
+      "status": "PASS"
+    },
+    {
+      "name": "read-only outcome query recovers a lost receipt without replaying execution",
+      "status": "PASS"
+    },
+    {
+      "name": "UNKNOWN receipt remains immutable when later query resolves the execution",
+      "status": "PASS"
+    },
+    {
+      "name": "recovered unsafe result is blocked and never returned by reconciliation",
+      "status": "PASS"
+    },
+    {
+      "name": "forged status response retains UNKNOWN and appends only failed-query evidence",
+      "status": "PASS"
+    },
+    {
+      "name": "a different principal cannot query the original execution outcome",
+      "status": "PASS"
+    },
+    {
+      "name": "WRITE requires verified user evidence, different approver and exact approved parameters",
+      "status": "PASS"
+    },
+    {
+      "name": "compensation uses a fresh approval and permit with a durable original-effect binding",
+      "status": "PASS"
+    },
+    {
+      "name": "unconfirmed WRITE effect cannot be compensated until read-only reconciliation confirms it",
+      "status": "PASS"
+    },
+    {
+      "name": "first concurrent Agent run authorizations share one atomic risk budget",
+      "status": "PASS"
+    }
+  ]
+}

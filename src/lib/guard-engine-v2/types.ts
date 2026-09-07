@@ -168,8 +168,8 @@ export interface GuardEngineDependencies {
 
 export interface GuardEngine {
   readonly contextEvaluationMode?: 'unified-v1';
-  evaluateContextual?(combined:GuardRequest,current:GuardRequest):Promise<GuardDecision>;
-  evaluate(request: GuardRequest): Promise<GuardDecision>;
+  evaluateContextual?(combined:GuardRequest,current:GuardRequest,signal?:AbortSignal):Promise<GuardDecision>;
+  evaluate(request: GuardRequest, signal?: AbortSignal): Promise<GuardDecision>;
 }
 
 export interface RuleSpec {

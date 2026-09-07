@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0",
-  "generatedAt": "2026-09-02T05:37:14.497Z",
+  "generatedAt": "2026-09-04T08:47:30.690Z",
   "source": "acceptance/generated/requirements.json",
   "policy": "Path mapping is not functional acceptance. PASS requires signed target-environment evidence.",
   "summary": {

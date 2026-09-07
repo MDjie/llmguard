@@ -45,6 +45,9 @@ func TestChatAddsTrustedHeadersAndForcesNonStreaming(t *testing.T) {
 			request.Header.Get("X-Credential-Id") != "credential-1" {
 			t.Error("signed quota identity headers are missing")
 		}
+		if request.Header.Get("X-Guard-Api-Key") != "test-application-key" || request.Header.Get("X-Guard-Deadline") == "" || request.Header.Get("Idempotency-Key") != request.Header.Get("X-Request-Id") {
+			t.Error("application credential or v2 deadline/idempotency binding is missing")
+		}
 		var body map[string]any
 		if err := json.NewDecoder(request.Body).Decode(&body); err != nil {
 			t.Error(err)
@@ -58,7 +61,7 @@ func TestChatAddsTrustedHeadersAndForcesNonStreaming(t *testing.T) {
 	defer server.Close()
 	client, err := NewClient(Config{
 		BaseURL: server.URL, TenantID: "tenant-1", ApplicationID: "application-1",
-		CredentialID: "credential-1", ContextHMACSecret: testSecret,
+		CredentialID: "credential-1", ContextHMACSecret: testSecret, GuardAPIKey: "test-application-key",
 	})
 	if err != nil {
 		t.Fatal(err)

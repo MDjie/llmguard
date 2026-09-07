@@ -28,7 +28,7 @@ describe('Tool/MCP policy enforcement', () => {
   });
 
   it('binds permits to scope, tool, bundle, parameter hash and expiration', () => {
-    const environment = { ...process.env, TOOL_PERMIT_KEY: 'tool-permit-test-key-32-bytes-minimum' };
+    const environment = { TOOL_PERMIT_KEY: 'tool-permit-test-key-32-bytes-minimum' };
     const permit = {
       version: 2 as const, invocationId: 'inv-1', tenantId: 'tenant-1', applicationId: 'app-1',
       subjectId: 'user-1', agentRunId: 'agent-run-1', toolId: 'tool-1', toolVersion: '1.2.3',

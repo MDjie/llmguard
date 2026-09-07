@@ -1,0 +1,36 @@
+{
+  "capturedAt": "2026-09-07T12:07:06.193Z",
+  "status": "PASS",
+  "isolatedDatabase": true,
+  "externalSiemDeliveryTested": false,
+  "results": [
+    {
+      "name": "a bounded batch verifies its signed manifest and exact persisted event records",
+      "status": "PASS"
+    },
+    {
+      "name": "concurrent workers never anchor an execution event twice",
+      "status": "PASS"
+    },
+    {
+      "name": "export outbox failure rolls back anchor, chain record and event membership together",
+      "status": "PASS"
+    },
+    {
+      "name": "database refuses changed or deleted execution evidence and replaced audit membership",
+      "status": "PASS"
+    },
+    {
+      "name": "cross-application batch reads return no evidence",
+      "status": "PASS"
+    },
+    {
+      "name": "batch anchor and durable export payload carry the same authenticated digest",
+      "status": "PASS"
+    },
+    {
+      "name": "backlog drains in bounded batches and a retry creates no duplicate anchor",
+      "status": "PASS"
+    }
+  ]
+}

@@ -1,3 +1,4 @@
+import { gatewayAuditBacklog } from '@/lib/gateway-runtime/audit-batches';
 import { inArray, sql } from 'drizzle-orm';
 import { db } from '@/storage/database/shared/db';
 import {
@@ -10,7 +11,7 @@ import { replaceGauge, scopeMetricBucket } from './metrics';
 const ACTIVE_JOB_STATES = ['pending', 'retrying', 'running'] as const;
 
 export async function collectGuardJobMetrics(): Promise<void> {
-  const [activeRows, outcomeRows, bindingRows, badcaseRows] = await Promise.all([
+  const [activeRows, outcomeRows, bindingRows, badcaseRows, gatewayBacklog] = await Promise.all([
     db.select({
       jobType: guardJobs.jobType,
       status: guardJobs.status,
@@ -42,7 +43,10 @@ export async function collectGuardJobMetrics(): Promise<void> {
       badcaseFeedback.classification,
       badcaseFeedback.status,
     ),
+    gatewayAuditBacklog(),
   ]);
+  replaceGauge('guardllm_gateway_audit_unanchored_events', [{ labels: {}, value: gatewayBacklog.events }]);
+  replaceGauge('guardllm_gateway_audit_oldest_age_seconds', [{ labels: {}, value: gatewayBacklog.oldestAgeSeconds }]);
 
   replaceGauge('guardllm_guard_jobs_pending', activeRows.map((row) => ({
     labels: { job_type: row.jobType, status: row.status },

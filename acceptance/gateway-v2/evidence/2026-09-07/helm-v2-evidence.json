@@ -1,0 +1,32 @@
+{
+  "capturedAt": "2026-09-07T12:20:13.165Z",
+  "status": "PASS",
+  "validation": "Helm rendering and structural assertions",
+  "kubernetesRuntimeTested": false,
+  "results": [
+    {
+      "name": "proxy replicas retain separate StatefulSet ordinal identities",
+      "status": "PASS"
+    },
+    {
+      "name": "a proxy mounts only its own private certificate and workload secret",
+      "status": "PASS"
+    },
+    {
+      "name": "management probes remain on loopback and expose no management or legacy gRPC service",
+      "status": "PASS"
+    },
+    {
+      "name": "control has multiple replicas and keeps its signing secret away from the proxy",
+      "status": "PASS"
+    },
+    {
+      "name": "proxy and control spread across hosts and have disruption budgets",
+      "status": "PASS"
+    },
+    {
+      "name": "network policies deny implicit external egress and expose only approved service ports",
+      "status": "PASS"
+    }
+  ]
+}

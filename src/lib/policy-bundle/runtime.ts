@@ -215,6 +215,8 @@ export function parseCompiledPolicyBundlePayload(value: unknown): CompiledPolicy
 }
 
 export interface RuntimePolicyBundle {
+  readonly tenantId?: string;
+  readonly applicationId?: string;
   readonly id: string;
   readonly generation: number;
   readonly payload: CompiledPolicyBundle;
@@ -223,12 +225,22 @@ export interface RuntimePolicyBundle {
 interface CachedRuntimePolicyBundle {
   readonly bundle: RuntimePolicyBundle;
   readonly verifiedAt: number;
+  readonly estimatedBytes: number;
 }
 
 const lastKnownGood = new Map<string, CachedRuntimePolicyBundle>();
+const MAX_LKG_ENTRIES = 512;
+const MAX_LKG_BYTES = 32 * 1024 * 1024;
+let lastKnownGoodBytes = 0;
+export function policyLastKnownGoodCacheStats(){return {entries:lastKnownGood.size,estimatedBytes:lastKnownGoodBytes};}
+function dropLastKnownGood(key: string) {
+  const entry = lastKnownGood.get(key);
+  if (entry) { lastKnownGoodBytes -= entry.estimatedBytes; lastKnownGood.delete(key); }
+}
 
 function cacheKey(scope: TenantScope, routingKey: string): string {
-  return `${scope.tenantId}:${scope.applicationId}:${routingKey}`;
+  const bucket = createHash('sha256').update(routingKey).digest().readUInt32BE(0) % 100;
+  return `${scope.tenantId}:${scope.applicationId}:${bucket}`;
 }
 
 function databaseFailure(error: unknown): PolicyBundleRuntimeError {
@@ -287,7 +299,7 @@ export async function loadRuntimePolicyBundle(
   requestedBundleId?: string,
   routingKey = 'default',
 ): Promise<RuntimePolicyBundle> {
-  const key = cacheKey(scope, routingKey);
+  const key = cacheKey(scope, routingKey) + ':' + (requestedBundleId ?? 'binding');
   try {
     let binding: typeof applicationPolicyBindings.$inferSelect | undefined;
     try {
@@ -311,7 +323,15 @@ export async function loadRuntimePolicyBundle(
     }
     const verified = await loadVerifiedPolicyBundle(scope, bundleId);
     const result = { ...verified, generation: binding.generation };
-    lastKnownGood.set(key, { bundle: result, verifiedAt: Date.now() });
+    const now = Date.now();
+    for (const [entryKey, entry] of lastKnownGood) if (now - entry.verifiedAt > policyLastKnownGoodMaxAgeMs()) dropLastKnownGood(entryKey);
+    dropLastKnownGood(key);
+    const estimatedBytes = Buffer.byteLength(JSON.stringify(result.payload)) * 4;
+    if (estimatedBytes <= MAX_LKG_BYTES) {
+      lastKnownGood.set(key, { bundle: result, verifiedAt: now, estimatedBytes });
+      lastKnownGoodBytes += estimatedBytes;
+    }
+    while (lastKnownGood.size > MAX_LKG_ENTRIES || lastKnownGoodBytes > MAX_LKG_BYTES) dropLastKnownGood(lastKnownGood.keys().next().value!);
     return result;
   } catch (error) {
     if (
@@ -356,11 +376,11 @@ export async function loadRuntimePolicyBundle(
 export async function loadVerifiedPolicyBundle(
   scope: TenantScope,
   bundleId: string,
-  options: { readonly allowPreRelease?: boolean } = {},
+  options: { readonly allowPreRelease?: boolean; readonly transaction?: Parameters<Parameters<typeof db.transaction>[0]>[0] } = {},
 ): Promise<RuntimePolicyBundle> {
   let row: typeof policyBundles.$inferSelect | undefined;
   try {
-    [row] = await db.select().from(policyBundles).where(and(
+    [row] = await (options.transaction ?? db).select().from(policyBundles).where(and(
       eq(policyBundles.id, bundleId),
       scopePredicate(policyBundles, scope),
     )).limit(1);
@@ -384,7 +404,7 @@ export async function loadVerifiedPolicyBundle(
   try {
     payload = parseCompiledPolicyBundlePayload(row.canonicalJson);
   } catch (error) {
-    await recordPolicyIntegrityFailure({
+    if (!options.transaction) await recordPolicyIntegrityFailure({
       failure: 'POLICY_DIGEST_MISMATCH',
       scope,
       bundleId: row.id,
@@ -413,7 +433,7 @@ export async function loadVerifiedPolicyBundle(
     contentHash: row.contentHash,
     signature: row.signature,
   }, publicKey)) {
-    await recordPolicyIntegrityFailure({
+    if (!options.transaction) await recordPolicyIntegrityFailure({
       failure: 'POLICY_SIGNATURE_INVALID',
       scope,
       bundleId: row.id,
@@ -424,7 +444,7 @@ export async function loadVerifiedPolicyBundle(
       'Policy bundle signature verification failed',
     );
   }
-  return { id: row.id, generation: 0, payload };
+  return { ...scope, id: row.id, generation: 0, payload };
 }
 
 export async function loadLatestVerifiedPolicyBundleForPolicy(
@@ -473,4 +493,5 @@ export async function loadLatestVerifiedPolicyBundleForPolicy(
 
 export function clearRuntimePolicyBundleCache(): void {
   lastKnownGood.clear();
+  lastKnownGoodBytes = 0;
 }

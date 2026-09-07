@@ -127,7 +127,9 @@ async function evaluate(
   suffix: string,
   direction: GuardRequest['context']['direction'],
   segments: readonly ContextSegment[],
+  signal?: AbortSignal,
 ) {
+  signal?.throwIfAborted();
   return createEngineForPolicyBundle(bundle).evaluate({
     contractVersion: '1.0',
     context: {
@@ -140,7 +142,7 @@ async function evaluate(
           : direction === 'OUTPUT_COMPLETE' ? 'OUTPUT_POST' : 'INPUT_PRE',
     },
     content: materializeSegments(scope, bundle, suffix, segments),
-  });
+  }, signal);
 }
 
 async function mapWithConcurrency<T, R>(
@@ -176,7 +178,9 @@ export async function guardRagFlow(input: {
   citedChunkIds?: readonly string[];
   minimumTrustLevel?: number;
   maximumCandidatesPerSource?: number;
+  signal?: AbortSignal;
 }) {
+  input.signal?.throwIfAborted();
   const context = {
     traceId: input.traceId,
     tenantId: input.scope.tenantId,
@@ -190,7 +194,7 @@ export async function guardRagFlow(input: {
     trustLevel: 'CONTROLLED',
     instructionCapability: 'ALLOWED',
     sensitivityLabels: [],
-  }]);
+  }], input.signal);
   const rejected: Array<{ chunkId: string; code: string }> = [];
   const structurallyAccepted: RagCandidate[] = [];
   const sourceCounts = new Map<string, number>();
@@ -233,7 +237,7 @@ export async function guardRagFlow(input: {
           'classification:' + candidate.classification,
           'reputation:' + candidate.trustLevel,
         ],
-      }],
+      }], input.signal,
     ),
   );
   const accepted: RagCandidate[] = [];
@@ -288,7 +292,7 @@ export async function guardRagFlow(input: {
     input.scope,
     'combined-context',
     'RAG_CONTEXT',
-    contextSegments,
+    contextSegments, input.signal,
   );
   const combinationDecision = await evaluate(
     input.bundle,
@@ -306,7 +310,7 @@ export async function guardRagFlow(input: {
         'classification:' + candidate.classification,
         'reputation:' + candidate.trustLevel,
       ],
-    })),
+    })), input.signal,
   );
   const outputDecision = input.output === undefined
     ? null
@@ -317,7 +321,8 @@ export async function guardRagFlow(input: {
         trustLevel: 'CONTROLLED',
         instructionCapability: 'DATA_ONLY',
         sensitivityLabels: [],
-      }]);
+      }], input.signal);
+  input.signal?.throwIfAborted();
   const acceptedIds = new Set(accepted.map((item) => item.chunkId));
   const citations = input.citedChunkIds ?? [];
   const citationInvalid = input.output !== undefined && (

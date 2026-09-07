@@ -11,10 +11,13 @@ export const createTenantSchema = z.object({
   defaultApplicationName: z.string().trim().min(2).max(200).default('Default application'),
 }).strict();
 
-export const createApplicationSchema = z.object({
-  code,
-  name: z.string().trim().min(2).max(200),
-}).strict();
+export const applicationMetadataSchema = z.object({
+  owner:z.string().trim().max(200).nullable().optional(),department:z.string().trim().max(200).nullable().optional(),
+  environment:z.enum(['development','test','staging','production']).optional(),dataClass:z.enum(['public','internal','confidential','restricted']).optional(),
+  modelRoutes:z.array(z.string().trim().min(1).max(128)).max(64).refine(items=>new Set(items).size===items.length,'模型路由不可重复').optional(),
+});
+export const createApplicationSchema = applicationMetadataSchema.extend({code,name:z.string().trim().min(2).max(200)}).strict();
+export const updateApplicationSchema = applicationMetadataSchema.extend({id,expectedAuthVersion:z.number().int().positive(),name:z.string().trim().min(2).max(200)}).strict();
 
 export const selectApplicationScopeSchema = z.object({
   tenantId: id,
@@ -49,7 +52,8 @@ export const tenantResponseSchema = z.object({
   createdAt: z.string(),
 });
 
-export const applicationResponseSchema = z.object({
+export const applicationResponseSchema = applicationMetadataSchema.extend({
+  authVersion:z.number().int().positive().optional(),integrationState:z.string().optional(),
   id,
   tenantId: id,
   code,
@@ -74,6 +78,7 @@ export const tenantListResponseSchema = z.object({
 });
 
 export const applicationListResponseSchema = z.object({
+  currentApplicationId:z.string().optional(),
   items: z.array(applicationResponseSchema),
 });
 

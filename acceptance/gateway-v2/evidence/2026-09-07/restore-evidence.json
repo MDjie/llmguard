@@ -1,0 +1,79 @@
+{
+  "capturedAt": "2026-09-07T12:22:24.152Z",
+  "status": "PASS",
+  "isolatedDatabase": true,
+  "productionRecoveryAcceptance": false,
+  "durationSeconds": 7.501,
+  "restoredDatabase": "guardllm_integration_gateway_v2_restore_1788783736638",
+  "backupSha256": "36d95510cde46d567b873757dd90bf4761c6cb0dc217d9a7d2b6fd4324c1b3fb",
+  "migrations": [
+    "0047_gateway_execution_runtime.sql",
+    "0048_gateway_execution_references.sql",
+    "0049_tool_execution_receipts.sql",
+    "0050_rag_retrieval_proofs.sql",
+    "0051_tool_execution_reconciliation.sql",
+    "0052_tool_authority_compensation.sql",
+    "0053_guard_job_execution_binding.sql",
+    "0054_gateway_audit_batches.sql"
+  ],
+  "fingerprints": {
+    "applications": {
+      "count": 6,
+      "digest": "b6a8b6cf4dc363e11238381a79649f0a"
+    },
+    "policy_bundles": {
+      "count": 4,
+      "digest": "0b0d4bb8d8297a069a3f62f05af74110"
+    },
+    "gateway_runtime_snapshots": {
+      "count": 15,
+      "digest": "0af6b932035af287d571e48e2b6237cf"
+    },
+    "gateway_requests": {
+      "count": 275,
+      "digest": "0081a1ce667a2dea0654f1d227285646"
+    },
+    "gateway_steps": {
+      "count": 631,
+      "digest": "64685bf73a1ebfb4090c96487d83d9ab"
+    },
+    "gateway_execution_events": {
+      "count": 1252,
+      "digest": "96aa91d19e0e187c0ae2b819471b088b"
+    },
+    "gateway_node_acks": {
+      "count": 15,
+      "digest": "eab45c33f499bcdf7f661ed1ff252c8d"
+    },
+    "gateway_audit_batches": {
+      "count": 6,
+      "digest": "700f100493391b7ea0be3a1880f77406"
+    },
+    "tool_invocations": {
+      "count": 56,
+      "digest": "1cb9ef207560e95bbd31c4b3532c7d58"
+    },
+    "guard_jobs": {
+      "count": 7,
+      "digest": "5c6001373cd8f86fec1d33782c96ec37"
+    }
+  },
+  "results": [
+    {
+      "name": "isolated backup and restore preserve all ten selected table fingerprints",
+      "status": "PASS"
+    },
+    {
+      "name": "upgrade migrations can run twice after restore without changing existing data",
+      "status": "PASS"
+    },
+    {
+      "name": "legacy application reader remains compatible after expanded schema restore",
+      "status": "PASS"
+    },
+    {
+      "name": "restored evidence immutability trigger still rejects tampering",
+      "status": "PASS"
+    }
+  ]
+}

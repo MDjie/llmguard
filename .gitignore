@@ -167,3 +167,7 @@ Desktop.ini
 
 # Local runtime key material and generated operational state
 .guardllm/
+
+# Isolated gateway integration build output
+.next-upgrade-v2/
+.next-upgrade-build/

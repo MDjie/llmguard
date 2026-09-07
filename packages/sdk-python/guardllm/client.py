@@ -191,9 +191,12 @@ class GuardGatewayClient:
             headers={
                 "Content-Type": "application/json",
                 **gateway_context_headers(context, self._secret),
+                "X-Guard-Deadline": str(context.absolute_deadline_epoch_ms),
+                "Idempotency-Key": context.request_id,
+                **({"X-Guard-Api-Key": self._guard_api_key} if self._guard_api_key else {}),
             },
         )
-        with self._opener.open(request, timeout=self._timeout) as response:
+        with self._opener.open(request, timeout=max(0.001, (context.absolute_deadline_epoch_ms-int(time.time()*1000))/1000)) as response:
             return json.load(response)
 
     def chat_stream(
@@ -222,9 +225,12 @@ class GuardGatewayClient:
                 "Accept": "text/event-stream",
                 "Content-Type": "application/json",
                 **gateway_context_headers(context, self._secret),
+                "X-Guard-Deadline": str(context.absolute_deadline_epoch_ms),
+                "Idempotency-Key": context.request_id,
+                **({"X-Guard-Api-Key": self._guard_api_key} if self._guard_api_key else {}),
             },
         )
-        with self._opener.open(request, timeout=self._timeout) as response:
+        with self._opener.open(request, timeout=max(0.001, (context.absolute_deadline_epoch_ms-int(time.time()*1000))/1000)) as response:
             yield from parse_sse_lines(response)
 
     def evaluate(self, request_body: Mapping[str, Any]) -> dict[str, Any]:

@@ -38,6 +38,7 @@ export interface OutputInterventionOptions {
   readonly evaluateRecheck: (request: GuardRequest) => Promise<GuardDecision>;
   readonly securityEventSink?: OutputControlSecurityEventSink;
   readonly now?: () => number;
+  readonly deferRecheck?: boolean;
 }
 
 const TRANSFORM_RECHECK_ACTIONS = new Set<GuardAction>(['MASK', 'REWRITE', 'SAFE_RESPONSE']);
@@ -244,7 +245,7 @@ export async function applyOutputIntervention(
     }
   }
 
-  if (transformedText !== undefined && TRANSFORM_RECHECK_ACTIONS.has(action)) {
+  if (!options.deferRecheck && transformedText !== undefined && TRANSFORM_RECHECK_ACTIONS.has(action)) {
     const outputHash = createHash('sha256').update(transformedText, 'utf8').digest('hex');
     try {
       if (request.context.absoluteDeadlineEpochMs <= now()) throw new Error('OUTPUT_RECHECK_DEADLINE_EXCEEDED');

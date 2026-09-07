@@ -1,0 +1,10 @@
+import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { spawn } from 'node:child_process';
+import path from 'node:path';
+const root = path.resolve(import.meta.dirname, '../..');
+const environment = JSON.parse(readFileSync(path.join(root, '.artifact-build/upgrade-implementation-20260907/environment/environment.json'), 'utf8'));
+const cli = createRequire(import.meta.url).resolve('tsx/cli');
+const child = spawn(process.execPath, [cli, 'src/server.ts'], { cwd: root, env: { ...process.env, ...environment }, stdio: 'inherit', windowsHide: true });
+for (const signal of ['SIGINT','SIGTERM']) process.once(signal, () => child.kill(signal));
+child.on('exit', code => { process.exitCode = code ?? 1; });

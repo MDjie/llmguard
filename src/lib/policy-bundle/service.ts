@@ -1,7 +1,9 @@
+import { synchronizeGatewayPublication } from '@/lib/gateway-runtime/publication';
 import { and, desc, eq, ne, sql } from 'drizzle-orm';
 import { db } from '@/storage/database/shared/db';
 import {
   applicationPolicyBindings,
+  gatewayRuntimeSnapshots,
   evaluationRuns,
   policyBundles,
   policyBundleTransitions,
@@ -286,6 +288,8 @@ export async function transitionPolicyBundle(
       lifecycleVersion, reason: options.reason, evidenceId: options.evaluationRunId,
       metadata: action === 'canary' ? { canaryPercent } : {},
     }));
+    if (action === 'withdraw') await transaction.update(gatewayRuntimeSnapshots).set({ state: 'REVOKED' }).where(and(scopePredicate(gatewayRuntimeSnapshots, scope), eq(gatewayRuntimeSnapshots.bundleId, bundleId)));
+    if (['shadow', 'canary', 'activate', 'rollback', 'withdraw'].includes(action)) await synchronizeGatewayPublication(transaction, scope, action, actorId, binding);
     return result;
   });
   clearRuntimePolicyBundleCache();

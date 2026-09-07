@@ -18,7 +18,8 @@ public final class GatewayContextWebFilter implements WebFilter {
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
-        if (!exchange.getRequest().getPath().value().startsWith("/v1/")) {
+        String path = exchange.getRequest().getPath().value();
+        if (!path.startsWith("/v1/") || path.equals("/v1/chat/completions") || path.equals("/v1/chat/completions/stream") || path.equals("/v1/chat/completions/ws")) {
             return chain.filter(exchange);
         }
         try {

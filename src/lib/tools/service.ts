@@ -1,9 +1,11 @@
+import { assertToolAuthority, assertCompensationParent, requiresToolAuthority } from './authority';
 import { createHash } from 'node:crypto';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 import type { ActionIntent, SideEffect } from '@guardllm/contracts';
 import { contextContentHash } from '@/lib/context-trust';
 import { createEngineForPolicyBundle } from '@/lib/guard-engine-v2';
-import { canonicalJson, loadRuntimePolicyBundle } from '@/lib/policy-bundle';
+import { canonicalJson, loadRuntimePolicyBundle, loadVerifiedPolicyBundle } from '@/lib/policy-bundle';
+import { configuredToolExecutor, executorConfigurationHash } from './executor';
 import { scopePredicate, type TenantScope } from '@/lib/tenancy';
 import { db } from '@/storage/database/shared/db';
 import {
@@ -58,9 +60,11 @@ function permitFor(invocation: typeof toolInvocations.$inferSelect): string {
     resourceHash: valueHash(invocation.resource),
     parametersHash: invocation.parametersHash,
     actionIntentHash: invocation.actionIntentHash,
+    ...(invocation.compensatesInvocationId ? { compensatesInvocationId: invocation.compensatesInvocationId } : {}),
     ...(invocation.approvalDecisionId
       ? { approvalDecisionId: invocation.approvalDecisionId }
       : {}),
+    ...(invocation.executorConfigurationHash ? { executorConfigurationHash: invocation.executorConfigurationHash } : {}),
     expiresAt: invocation.permitExpiresAt.getTime(),
   });
 }
@@ -81,8 +85,10 @@ export async function authorizeToolInvocation(input: {
   maximumToolSteps: number;
   actionIntent: ActionIntent;
   contextTainted: boolean;
+  compensatesInvocationId?: string;
 }) {
-  await loadRuntimePolicyBundle(input.scope, input.bundleId, input.requestId);
+  const selectedBundle = await loadRuntimePolicyBundle(input.scope, input.bundleId, input.requestId);
+  input = { ...input, bundleId: selectedBundle.id };
   const [tool] = await db.select().from(toolRegistry).where(and(
     eq(toolRegistry.id, input.toolId), eq(toolRegistry.status, 'active'), scopePredicate(toolRegistry, input.scope),
   )).limit(1);
@@ -106,6 +112,8 @@ export async function authorizeToolInvocation(input: {
     throw new ToolPolicyError('TOOL_RESOURCE_DENIED', 'Tool resource is outside the approved patterns');
   }
   validateToolParameters(tool.parameterPolicy ?? {}, input.parameters);
+  const executor = configuredToolExecutor(input.scope, tool);
+  const executionHash = executor ? executorConfigurationHash(executor) : null;
   const parametersHash = parameterHash(input.parameters);
   const actionIntentHash = valueHash(canonicalJson(input.actionIntent));
   const firewall = evaluateActionIntent({
@@ -128,16 +136,22 @@ export async function authorizeToolInvocation(input: {
   if (firewall.disposition === 'BLOCK' || firewall.disposition === 'REWRITE') {
     return firewall;
   }
+  if (executor && (requiresToolAuthority(tool.sideEffect, tool.highRisk) || input.compensatesInvocationId)) await assertToolAuthority({ ...input, supportingEnvelopeIds: input.actionIntent.supportingEnvelopeIds });
+  if (input.compensatesInvocationId) {
+    if (!executor || !requiresToolAuthority(tool.sideEffect)) throw new ToolPolicyError('TOOL_COMPENSATION_EXECUTOR_REQUIRED', 'Compensation must use a managed executor and a separately approved side effect');
+    await assertCompensationParent({ ...input, parentId: input.compensatesInvocationId });
+  }
   return db.transaction(async (transaction) => {
     await transaction.execute(sql`select pg_advisory_xact_lock(hashtext(${`${input.scope.tenantId}:${input.scope.applicationId}:${input.requestId}`}))`);
     const [existing] = await transaction.select().from(toolInvocations).where(and(
       scopePredicate(toolInvocations, input.scope), eq(toolInvocations.requestId, input.requestId),
     )).limit(1).for('update');
     if (existing) {
-      if (existing.toolId !== input.toolId || existing.action !== input.action ||
+      if (existing.principalId !== input.principalId || existing.executorConfigurationHash !== executionHash ||
+          existing.toolVersion !== tool.version || existing.toolId !== input.toolId || existing.action !== input.action ||
           existing.resource !== input.resource || existing.parametersHash !== parametersHash ||
           existing.bundleId !== input.bundleId || existing.agentRunId !== input.agentRunId ||
-          existing.actionIntentHash !== actionIntentHash) {
+          existing.actionIntentHash !== actionIntentHash || existing.compensatesInvocationId !== (input.compensatesInvocationId ?? null)) {
         throw new ToolPolicyError('TOOL_IDEMPOTENCY_CONFLICT', 'Request ID was used for different tool claims');
       }
       if (existing.status === 'pending_approval') return { disposition: 'REQUIRE_APPROVAL' as const, invocation: existing };
@@ -153,6 +167,7 @@ export async function authorizeToolInvocation(input: {
       }
       throw new ToolPolicyError('TOOL_INVOCATION_TERMINAL', 'Invocation cannot be re-authorized');
     }
+    await transaction.execute(sql`select pg_advisory_xact_lock(hashtext(${`agent-budget:${input.scope.tenantId}:${input.scope.applicationId}:${input.agentRunId}`}))`);
     const [budget] = await transaction.select().from(agentLifecycleBudgets).where(and(
       scopePredicate(agentLifecycleBudgets, input.scope),
       eq(agentLifecycleBudgets.agentRunId, input.agentRunId),
@@ -216,7 +231,7 @@ export async function authorizeToolInvocation(input: {
         updatedAt: new Date(),
       },
     });
-    const requiresApproval = firewall.disposition === 'REQUIRE_APPROVAL';
+    const requiresApproval = firewall.disposition === 'REQUIRE_APPROVAL' || Boolean(input.compensatesInvocationId);
     const expiresAt = requiresApproval ? null : new Date(Date.now() + 60_000);
     const [invocation] = await transaction.insert(toolInvocations).values({
       ...input.scope,
@@ -226,12 +241,15 @@ export async function authorizeToolInvocation(input: {
       agentRunId: input.agentRunId,
       toolId: input.toolId,
       toolVersion: tool.version,
+      executorConfigurationHash: executionHash,
+      executorId: executor?.executorId,
       bundleId: input.bundleId,
       action: input.action,
       resource: input.resource,
       parametersHash,
       actionIntentHash,
       actionIntent: { ...input.actionIntent },
+      compensatesInvocationId: input.compensatesInvocationId,
       sideEffect: sideEffect(tool.sideEffect),
       riskCost: firewall.riskCost,
       riskBudget: input.actionIntent.riskBudget,
@@ -308,6 +326,7 @@ export async function guardToolResult(input: {
     }).where(and(
       eq(toolInvocations.id, input.invocationId),
       eq(toolInvocations.status, 'authorized'),
+      isNull(toolInvocations.executorConfigurationHash),
       eq(toolInvocations.toolId, permit.toolId),
       eq(toolInvocations.bundleId, permit.bundleId),
       eq(toolInvocations.parametersHash, permit.parametersHash),
@@ -327,8 +346,14 @@ export async function guardToolResult(input: {
     }
     return claimed;
   });
+  return evaluateInvocationResult(invocation, input.result);
+}
+
+/** The tool's result always uses the signed bundle selected before authorization. */
+export async function evaluateInvocationResult(invocation: typeof toolInvocations.$inferSelect, result: string) {
+  const input = { scope: { tenantId: invocation.tenantId, applicationId: invocation.applicationId }, result };
   try {
-    const bundle = await loadRuntimePolicyBundle(input.scope, invocation.bundleId, invocation.requestId);
+    const bundle = await loadVerifiedPolicyBundle(input.scope, invocation.bundleId);
     const decision = await createEngineForPolicyBundle(bundle).evaluate({
       contractVersion: '1.0',
       context: {
@@ -360,7 +385,7 @@ export async function guardToolResult(input: {
         }],
       },
     });
-    const blocked = !['ALLOW', 'WARN'].includes(decision.action);
+    const blocked = !['ALLOW', 'WARN'].includes(decision.action) || decision.degraded || decision.degradationReasons.length > 0 || decision.evidenceComplete === false;
     await db.update(toolInvocations).set({
       status: blocked ? 'result_blocked' : 'completed',
       resultDecision: decision as unknown as Record<string, unknown>,

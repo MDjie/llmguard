@@ -53,7 +53,7 @@ await Promise.all([
 const port = resolvePort();
 console.log(`Starting HTTP service on port ${port} for production...`);
 
-const child = spawn(process.execPath, [serverPath], {
+const child = spawn(process.execPath, [path.join(scriptDirectory, 'runtime-ingress.mjs'), serverPath], {
   cwd: workspaceDirectory,
   stdio: 'inherit',
   env: { ...process.env, PORT: port },

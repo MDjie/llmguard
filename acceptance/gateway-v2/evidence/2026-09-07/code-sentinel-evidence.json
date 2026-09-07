@@ -1,0 +1,37 @@
+{
+  "capturedAt": "2026-09-07T12:01:23.233Z",
+  "status": "PASS",
+  "isolatedDatabase": true,
+  "adapter": "synthetic pinned-mTLS protocol fixture",
+  "realCodeSentinelCertification": false,
+  "results": [
+    {
+      "name": "signed code scan uses owned verified content and persists no source in its result",
+      "status": "PASS"
+    },
+    {
+      "name": "high severity findings block and incomplete coverage requires review",
+      "status": "PASS"
+    },
+    {
+      "name": "forged receipt fails the job instead of publishing an allowed result",
+      "status": "PASS"
+    },
+    {
+      "name": "changed configuration invalidates a queued job before source read or scan",
+      "status": "PASS"
+    },
+    {
+      "name": "cross-principal and unapproved-language submissions read no object",
+      "status": "PASS"
+    },
+    {
+      "name": "source ownership revoked during analysis prevents publication",
+      "status": "PASS"
+    },
+    {
+      "name": "frozen adapter and source binding cannot be replaced in storage",
+      "status": "PASS"
+    }
+  ]
+}

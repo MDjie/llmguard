@@ -3,6 +3,11 @@ import { join, relative, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const apiRoot = join(process.cwd(), 'src', 'app', 'api');
+const workloadRoutes = new Set([
+  'internal/gateway/authorize/route.ts', 'internal/gateway/evaluate/route.ts',
+  'internal/gateway/events/route.ts', 'internal/gateway/runtime/ack/route.ts',
+  'internal/gateway/runtime/route.ts',
+]);
 const publicRoutes = new Set([
   'auth/login/route.ts',
   'health/db/route.ts',
@@ -31,9 +36,13 @@ describe('API route security inventory', () => {
     for (const file of routes) {
       const source = readFileSync(file, 'utf8');
       const exports = [...source.matchAll(/export const (GET|POST|PUT|PATCH|DELETE)\s*=/g)];
-      const secured = [...source.matchAll(
-        /export const (GET|POST|PUT|PATCH|DELETE)\s*=\s*with(?:Legacy)?ApiSecurity\s*\(/g,
-      )];
+      const workload = workloadRoutes.has(routeName(file));
+      const secured = [...source.matchAll(workload
+        ? /export const (GET|POST|PUT|PATCH|DELETE)\s*=\s*internalGatewayRoute\s*\(/g
+        : /export const (GET|POST|PUT|PATCH|DELETE)\s*=\s*with(?:Legacy)?ApiSecurity\s*\(/g)];
+      if (workload && !source.includes("from '@/lib/gateway-runtime/http'")) {
+        violations.push(`${routeName(file)}: workload boundary import is missing`);
+      }
       if (exports.length === 0 || secured.length !== exports.length) {
         violations.push(`${routeName(file)}: exported=${exports.length}, secured=${secured.length}`);
       }

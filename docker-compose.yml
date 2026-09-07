@@ -138,6 +138,18 @@ services:
       - ./drizzle/0044_audit_source_attribution.sql:/docker-entrypoint-initdb.d/53-audit-source-attribution.sql:ro
       - ./drizzle/0045_distributed_rate_limiting.sql:/docker-entrypoint-initdb.d/54-distributed-rate-limiting.sql:ro
       - ./drizzle/0046_tenant_composite_indexes.sql:/docker-entrypoint-initdb.d/55-tenant-composite-indexes.sql:ro
+      - ./drizzle/0047_gateway_execution_runtime.sql:/docker-entrypoint-initdb.d/57-gateway-execution-runtime.sql:ro
+      - ./drizzle/0048_gateway_execution_references.sql:/docker-entrypoint-initdb.d/58-gateway-execution-references.sql:ro
+      - ./drizzle/0049_tool_execution_receipts.sql:/docker-entrypoint-initdb.d/59-tool-execution-receipts.sql:ro
+      - ./drizzle/0050_rag_retrieval_proofs.sql:/docker-entrypoint-initdb.d/60-rag-retrieval-proofs.sql:ro
+      - ./drizzle/0051_tool_execution_reconciliation.sql:/docker-entrypoint-initdb.d/61-tool-execution-reconciliation.sql:ro
+      - ./drizzle/0052_tool_authority_compensation.sql:/docker-entrypoint-initdb.d/62-tool-authority-compensation.sql:ro
+      - ./drizzle/0053_guard_job_execution_binding.sql:/docker-entrypoint-initdb.d/63-guard-job-execution-binding.sql:ro
+      - ./drizzle/0054_gateway_audit_batches.sql:/docker-entrypoint-initdb.d/64-gateway-audit-batches.sql:ro
+      - ./drizzle/0055_gateway_content_retention.sql:/docker-entrypoint-initdb.d/65-gateway-content-retention.sql:ro
+      - ./drizzle/0056_gateway_runtime_publications.sql:/docker-entrypoint-initdb.d/66-gateway-runtime-publications.sql:ro
+      - ./drizzle/0057_gateway_request_resources.sql:/docker-entrypoint-initdb.d/67-gateway-request-resources.sql:ro
+      - ./drizzle/0058_gateway_shadow_evaluations.sql:/docker-entrypoint-initdb.d/68-gateway-shadow-evaluations.sql:ro
     ports:
       - "127.0.0.1:${DB_PORT:-5434}:5432"
     healthcheck:
@@ -229,6 +241,10 @@ services:
       retries: 5
       start_period: 30s
     stop_grace_period: 30s
+
+  gateway-request-worker:
+    <<: *worker-service
+    command: ["node", "--import", "tsx", "scripts/run-worker.mjs", "gateway-request"]
 
   evaluation-worker:
     <<: *worker-service

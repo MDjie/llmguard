@@ -84,3 +84,10 @@ temp
 
 # Host-managed policy signing material must never enter an image layer
 .guardllm
+
+# Isolated Next.js QA/build trees may contain runtime traces.
+.next-*
+
+# Environment overrides are always host managed.
+.env*
+services/guard-gateway/target

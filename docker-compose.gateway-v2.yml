@@ -1,0 +1,138 @@
+# Optional overlay: docker compose -f docker-compose.yml -f docker-compose.gateway-v2.yml ...
+# All private keys are operator-provisioned files; no generated/default production credentials.
+services:
+  app:
+    environment:
+      GATEWAY_V2_ENABLED: "true"
+      GATEWAY_INTERNAL_DEV_ALLOW_INSECURE: "false"
+      SESSION_COOKIE_SECURE: "true"
+      GATEWAY_AUTH_KEY_ID: "${GATEWAY_AUTH_KEY_ID:?Signing key ID is required}"
+      GATEWAY_AUTH_SIGNING_PRIVATE_KEY_FILE: /run/secrets/gateway_signing_private
+      GATEWAY_AUTH_PUBLIC_KEYS_FILE: /run/secrets/gateway_signing_public
+      GATEWAY_WORKLOAD_KEYS_FILE: /run/secrets/gateway_workload_registry
+      GATEWAY_CONTROL_TLS_CERT: /run/secrets/control_cert
+      GATEWAY_CONTROL_TLS_KEY: /run/secrets/control_key
+      GATEWAY_CONTROL_TLS_CA: /run/secrets/gateway_ca
+      GATEWAY_CONTROL_TLS_SERVER_NAME: app
+      GATEWAY_CONSOLE_TLS_CERT: /run/secrets/console_cert
+      GATEWAY_CONSOLE_TLS_KEY: /run/secrets/console_key
+      GATEWAY_CONSOLE_TLS_CA: /run/secrets/gateway_ca
+      GATEWAY_PROXY_URL: https://gateway:8080
+      MODEL_BASE_URL: "${MODEL_BASE_URL:?HTTPS model base URL is required}"
+      GUARD_MODEL_ROUTES_FILE: /run/secrets/gateway_model_routes
+      GATEWAY_MODEL_ROUTE_BOUNDARIES_FILE: /run/secrets/gateway_model_boundaries
+    secrets:
+      - gateway_signing_private
+      - gateway_signing_public
+      - gateway_workload_registry
+      - gateway_model_routes
+      - gateway_model_boundaries
+      - control_cert
+      - control_key
+      - console_cert
+      - console_key
+      - gateway_ca
+    healthcheck:
+      test: ["CMD", "node", "scripts/gateway-v2-health.mjs"]
+
+  gateway-request-worker:
+    environment:
+      GATEWAY_AUTH_PUBLIC_KEYS_FILE: /run/secrets/gateway_signing_public
+    secrets: [gateway_signing_public]
+
+  gateway-redis:
+    image: redis:7-alpine
+    user: redis
+    command: ["redis-server", "--aclfile", "/run/secrets/gateway_redis_acl", "--appendonly", "yes", "--appendfsync", "everysec", "--maxmemory", "256mb", "--maxmemory-policy", "noeviction"]
+    restart: unless-stopped
+    networks: [guardllm-network]
+    secrets: [gateway_redis_acl]
+    volumes: [gateway_redis_data:/data]
+    mem_limit: 512m
+    cpus: "1"
+    read_only: true
+    tmpfs: ["/tmp:size=16m,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+
+  gateway:
+    image: guardllm-gateway-v2:latest
+    build:
+      context: .
+      dockerfile: services/guard-gateway/Dockerfile
+    restart: unless-stopped
+    init: true
+    depends_on:
+      app: { condition: service_healthy }
+      gateway-redis: { condition: service_started }
+    environment:
+      SPRING_PROFILES_ACTIVE: gateway-v2
+      GATEWAY_NODE_ID: "${GATEWAY_NODE_ID:-gateway-01}"
+      GATEWAY_WORKLOAD_SECRET_FILE: /run/secrets/gateway_workload_secret
+      GATEWAY_AUTH_PUBLIC_KEYS_FILE: /run/secrets/gateway_signing_public
+      GUARD_BASE_URL: https://app:5000
+      GATEWAY_SERVER_TLS_CERT: /run/secrets/proxy_cert
+      GATEWAY_SERVER_TLS_KEY: /run/secrets/proxy_key
+      GATEWAY_SERVER_TLS_CA: /run/secrets/gateway_ca
+      GATEWAY_TRUST_CERTIFICATE: /run/secrets/gateway_ca
+      GATEWAY_CLIENT_CERTIFICATE: /run/secrets/workload_cert
+      GATEWAY_CLIENT_PRIVATE_KEY: /run/secrets/workload_key
+      GUARD_REDIS_URI: "${GATEWAY_REDIS_URI:?Authenticated gateway Redis URI is required}"
+      GUARD_MODEL_ROUTES_FILE: /run/secrets/gateway_model_routes
+      GATEWAY_MODEL_ROUTE_BOUNDARIES_FILE: /run/secrets/gateway_model_boundaries
+      MODEL_BASE_URL: "${MODEL_BASE_URL:?HTTPS model base URL is required}"
+      # Existing evaluate/gRPC compatibility dependencies; not used to authorize v2 chat.
+      GATEWAY_CONTEXT_HMAC_SECRET: "${GATEWAY_CONTEXT_HMAC_SECRET:?Legacy context HMAC is required}"
+      GUARD_APP_KEY: "${GUARD_APP_KEY:?Legacy guard service credential is required}"
+      GUARD_ACTIVE_BUNDLE_ID: "${GUARD_ACTIVE_BUNDLE_ID:?Legacy policy bundle is required}"
+      GUARD_GRPC_ENABLED: "false"
+      GUARD_DISTRIBUTED_CONCURRENCY_ENABLED: "true"
+      GUARD_DISTRIBUTED_CONCURRENCY_FAIL_CLOSED: "true"
+      GUARD_RATE_LIMIT_ENABLED: "true"
+      GUARD_RATE_LIMIT_FAIL_CLOSED: "true"
+    secrets:
+      - gateway_workload_secret
+      - gateway_signing_public
+      - proxy_cert
+      - proxy_key
+      - workload_cert
+      - workload_key
+      - gateway_ca
+      - gateway_model_routes
+      - gateway_model_boundaries
+    ports: ["127.0.0.1:${GATEWAY_PORT:-58083}:8080"]
+    networks: [guardllm-network]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8081/actuator/health/readiness"]
+      interval: 15s
+      timeout: 3s
+      retries: 4
+      start_period: 40s
+    read_only: true
+    tmpfs: ["/tmp:size=256m,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    stop_grace_period: 45s
+    cpus: "${GATEWAY_CPU_LIMIT:-4}"
+    mem_limit: "${GATEWAY_MEMORY_LIMIT:-4g}"
+    pids_limit: 512
+
+secrets:
+  gateway_signing_private: { file: "${GATEWAY_SIGNING_PRIVATE_FILE:?required}" }
+  gateway_signing_public: { file: "${GATEWAY_SIGNING_PUBLIC_FILE:?required}" }
+  gateway_workload_registry: { file: "${GATEWAY_WORKLOAD_REGISTRY_FILE:?required}" }
+  gateway_workload_secret: { file: "${GATEWAY_WORKLOAD_SECRET_FILE:?required}" }
+  gateway_ca: { file: "${GATEWAY_CA_FILE:?required}" }
+  control_cert: { file: "${GATEWAY_CONTROL_CERT_FILE:?required}" }
+  control_key: { file: "${GATEWAY_CONTROL_KEY_FILE:?required}" }
+  console_cert: { file: "${GATEWAY_CONSOLE_CERT_FILE:?required}" }
+  console_key: { file: "${GATEWAY_CONSOLE_KEY_FILE:?required}" }
+  proxy_cert: { file: "${GATEWAY_PROXY_CERT_FILE:?required}" }
+  proxy_key: { file: "${GATEWAY_PROXY_KEY_FILE:?required}" }
+  workload_cert: { file: "${GATEWAY_WORKLOAD_CERT_FILE:?required}" }
+  workload_key: { file: "${GATEWAY_WORKLOAD_KEY_FILE:?required}" }
+  gateway_model_routes: { file: "${GATEWAY_MODEL_ROUTES_FILE:?required}" }
+  gateway_model_boundaries: { file: "${GATEWAY_MODEL_BOUNDARIES_FILE:?required}" }
+  gateway_redis_acl: { file: "${GATEWAY_REDIS_ACL_FILE:?required}" }
+volumes:
+  gateway_redis_data:

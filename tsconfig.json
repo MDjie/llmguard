@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
     "target": "ES2017",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -19,8 +23,12 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"],
-      "@guardllm/contracts": ["./packages/contracts/generated/typescript/guard-v1.ts"]
+      "@/*": [
+        "./src/*"
+      ],
+      "@guardllm/contracts": [
+        "./packages/contracts/generated/typescript/guard-v1.ts"
+      ]
     }
   },
   "include": [
@@ -29,7 +37,14 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
-    "**/*.mts"
+    "**/*.mts",
+    ".next-upgrade-v2/types/**/*.ts",
+    ".next-upgrade-v2/dev/types/**/*.ts",
+    ".next-upgrade-build/types/**/*.ts",
+    ".next-upgrade-build/dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules", "dist"]
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
 }

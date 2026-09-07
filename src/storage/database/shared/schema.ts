@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, varchar, text, timestamp, boolean, integer, bigint, decimal, jsonb, index, uniqueIndex, serial, uuid, primaryKey, type AnyPgColumn } from "drizzle-orm/pg-core";
+import { pgTable, varchar, text, timestamp, boolean, integer, bigint, decimal, jsonb, index, uniqueIndex, serial, uuid, primaryKey, foreignKey, type AnyPgColumn } from "drizzle-orm/pg-core";
 
 // ============================================
 // 系统表 - 必须保留，禁止删除
@@ -32,10 +32,19 @@ export const applications = pgTable(
 		code: varchar("code", { length: 64 }).notNull(),
 		name: varchar("name", { length: 200 }).notNull(),
 		status: varchar("status", { length: 20 }).notNull().default("active"),
+
+        owner: varchar("owner", { length: 200 }),
+        department: varchar("department", { length: 200 }),
+        environment: varchar("environment", { length: 32 }).notNull().default("development"),
+        dataClass: varchar("data_class", { length: 32 }).notNull().default("internal"),
+        authVersion: integer("auth_version").notNull().default(1),
+        integrationState: varchar("integration_state", { length: 32 }).notNull().default("DRAFT"),
+        modelRoutes: jsonb("model_routes").$type<string[]>().notNull().default([]),
 		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 		updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 	},
 	(table) => [
+		uniqueIndex("applications_tenant_id_uq").on(table.tenantId, table.id),
 		uniqueIndex("applications_tenant_code_uq").on(table.tenantId, table.code),
 		index("applications_tenant_status_idx").on(table.tenantId, table.status),
 	]
@@ -1715,12 +1724,20 @@ export const applicationPolicyBindings = pgTable(
 		shadowBundleId: varchar("shadow_bundle_id", { length: 36 }).references(() => policyBundles.id, { onDelete: "restrict" }),
 		canaryBundleId: varchar("canary_bundle_id", { length: 36 }).references(() => policyBundles.id, { onDelete: "restrict" }),
 		previousBundleId: varchar("previous_bundle_id", { length: 36 }).references(() => policyBundles.id, { onDelete: "restrict" }),
+		activeSnapshotId: varchar("active_snapshot_id", { length: 128 }),
+		previousSnapshotId: varchar("previous_snapshot_id", { length: 128 }),
+		canarySnapshotId: varchar("canary_snapshot_id", { length: 128 }),
+		shadowSnapshotId: varchar("shadow_snapshot_id", { length: 128 }),
 		canaryPercent: integer("canary_percent").notNull().default(0),
 		generation: integer("generation").notNull().default(0),
 		updatedBy: varchar("updated_by", { length: 100 }).notNull(),
 		updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 	},
 	(table) => [
+		foreignKey({ name: "application_binding_active_snapshot_id_fk", columns: [table.tenantId, table.applicationId, table.activeSnapshotId], foreignColumns: [gatewayRuntimeSnapshots.tenantId, gatewayRuntimeSnapshots.applicationId, gatewayRuntimeSnapshots.id] }).onDelete("restrict"),
+		foreignKey({ name: "application_binding_previous_snapshot_id_fk", columns: [table.tenantId, table.applicationId, table.previousSnapshotId], foreignColumns: [gatewayRuntimeSnapshots.tenantId, gatewayRuntimeSnapshots.applicationId, gatewayRuntimeSnapshots.id] }).onDelete("restrict"),
+		foreignKey({ name: "application_binding_canary_snapshot_id_fk", columns: [table.tenantId, table.applicationId, table.canarySnapshotId], foreignColumns: [gatewayRuntimeSnapshots.tenantId, gatewayRuntimeSnapshots.applicationId, gatewayRuntimeSnapshots.id] }).onDelete("restrict"),
+		foreignKey({ name: "application_binding_shadow_snapshot_id_fk", columns: [table.tenantId, table.applicationId, table.shadowSnapshotId], foreignColumns: [gatewayRuntimeSnapshots.tenantId, gatewayRuntimeSnapshots.applicationId, gatewayRuntimeSnapshots.id] }).onDelete("restrict"),
 		uniqueIndex("application_policy_bindings_scope_uq").on(
 			table.tenantId,
 			table.applicationId,
@@ -1816,6 +1833,7 @@ export const guardJobs = pgTable(
 		contextArtifactId: varchar("context_artifact_id", { length: 36 }).references(() => artifacts.id, { onDelete: "restrict" }),
 		bundleId: varchar("bundle_id", { length: 36 }).notNull().references(() => policyBundles.id, { onDelete: "restrict" }),
 		jobType: varchar("job_type", { length: 32 }).notNull(),
+        executionBinding: jsonb("execution_binding").$type<Record<string, unknown>>(),
 		status: varchar("status", { length: 24 }).notNull().default("pending"),
 		stage: varchar("stage", { length: 64 }).notNull().default("queued"),
 		progress: integer("progress").notNull().default(0),
@@ -2059,9 +2077,16 @@ export const ragRetrievalAudits = pgTable(
 		acceptedCount: integer("accepted_count").notNull(),
 		rejected: jsonb("rejected").$type<Array<{ chunkId: string; code: string }>>().default([]),
 		tainted: boolean("tainted").notNull().default(false),
+        requestId: varchar("request_id", { length: 128 }),
+        bundleId: varchar("bundle_id", { length: 36 }),
+        retrievalProof: jsonb("retrieval_proof").$type<Record<string, unknown>>(),
 		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 	},
-	(table) => [index("rag_retrieval_audits_trace_idx").on(table.traceId)]
+	(table) => [
+        index("rag_retrieval_audits_trace_idx").on(table.traceId),
+        index("rag_retrieval_scope_request_idx").on(table.tenantId,table.applicationId,table.requestId),
+        foreignKey({ name: "rag_retrieval_scoped_bundle_fk", columns: [table.tenantId,table.applicationId,table.bundleId], foreignColumns: [policyBundles.tenantId,policyBundles.applicationId,policyBundles.id] }),
+    ]
 );
 
 export const toolRegistry = pgTable(
@@ -2144,6 +2169,14 @@ export const toolInvocations = pgTable(
 		status: varchar("status", { length: 32 }).notNull(),
 		permitExpiresAt: timestamp("permit_expires_at", { withTimezone: true }),
 		permitConsumedAt: timestamp("permit_consumed_at", { withTimezone: true }),
+        executorConfigurationHash: varchar("executor_configuration_hash", { length: 64 }),
+        executorId: varchar("executor_id", { length: 128 }),
+        compensatesInvocationId: varchar("compensates_invocation_id", { length: 36 }),
+        executionRequestDigest: varchar("execution_request_digest", { length: 64 }),
+        executionReceipt: jsonb("execution_receipt").$type<Record<string, unknown>>(),
+        executionReconciliations: jsonb("execution_reconciliations").$type<Record<string, unknown>[]>().notNull().default([]),
+        executionStartedAt: timestamp("execution_started_at", { withTimezone: true }),
+        executionDeadlineAt: timestamp("execution_deadline_at", { withTimezone: true }),
 		resultDecision: jsonb("result_decision").$type<Record<string, unknown>>(),
 		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 		completedAt: timestamp("completed_at", { withTimezone: true }),
@@ -2152,6 +2185,9 @@ export const toolInvocations = pgTable(
 		uniqueIndex("tool_invocations_scope_request_uq").on(table.tenantId, table.applicationId, table.requestId),
 		uniqueIndex("tool_invocations_scope_id_uq").on(table.tenantId, table.applicationId, table.id),
 		index("tool_invocations_scope_status_idx").on(table.tenantId, table.applicationId, table.status),
+        index("tool_invocations_execution_pending_idx").on(table.executionDeadlineAt).where(sql`${table.status} = 'executing'`),
+        foreignKey({ name: "tool_invocations_scoped_tool_fk", columns: [table.tenantId, table.applicationId, table.toolId], foreignColumns: [toolRegistry.tenantId, toolRegistry.applicationId, toolRegistry.id] }),
+        foreignKey({ name: "tool_invocations_scoped_bundle_fk", columns: [table.tenantId, table.applicationId, table.bundleId], foreignColumns: [policyBundles.tenantId, policyBundles.applicationId, policyBundles.id] }),
 	]
 );
 
@@ -2445,3 +2481,191 @@ export const guardQuotaCharges = pgTable(
 			.on(table.tenantId, table.applicationId, table.requestId),
 	]
 );
+
+export const gatewayRuntimeSnapshots = pgTable("gateway_runtime_snapshots", {
+  tenantId: varchar("tenant_id", { length: 36 }).notNull(),
+  applicationId: varchar("application_id", { length: 36 }).notNull(),
+  id: varchar("id", { length: 128 }).primaryKey(),
+  generation: integer("generation").notNull(),
+  bundleId: varchar("bundle_id", { length: 128 }).notNull(),
+  manifest: jsonb("manifest").$type<import("../../../../packages/contracts/generated/typescript/gateway-v2").RuntimeManifest>().notNull(),
+  digest: varchar("digest", { length: 64 }).notNull(),
+  signature: text("signature").notNull(),
+  keyId: varchar("key_id", { length: 128 }).notNull(),
+  state: varchar("state", { length: 32 }).notNull().default("PREPARED"),
+  validUntil: timestamp("valid_until", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  foreignKey({ columns: [table.tenantId, table.applicationId], foreignColumns: [applications.tenantId, applications.id] }).onDelete("restrict"),
+  foreignKey({ name: "gateway_snapshots_bundle_scope_fk", columns: [table.tenantId, table.applicationId, table.bundleId], foreignColumns: [policyBundles.tenantId, policyBundles.applicationId, policyBundles.id] }).onDelete("restrict"),
+  uniqueIndex("gateway_runtime_snapshots_generation_uq").on(table.tenantId, table.applicationId, table.generation),
+  uniqueIndex("gateway_runtime_snapshots_scope_id_uq").on(table.tenantId, table.applicationId, table.id),
+  index("gateway_runtime_snapshots_scope_time_idx").on(table.tenantId, table.applicationId, table.createdAt),
+]);
+
+export const gatewayRequests = pgTable("gateway_requests", {
+  tenantId: varchar("tenant_id", { length: 36 }).notNull(),
+  applicationId: varchar("application_id", { length: 36 }).notNull(),
+  id: varchar("id", { length: 128 }).primaryKey(),
+  idempotencyKey: varchar("idempotency_key", { length: 128 }).notNull(),
+  requestHmac: varchar("request_hmac", { length: 64 }).notNull(),
+  snapshotId: varchar("snapshot_id", { length: 128 }).notNull(),
+  shadowSnapshotId: varchar("shadow_snapshot_id", { length: 128 }),
+  subjectId: varchar("subject_id", { length: 128 }).notNull(),
+  sessionId: varchar("session_id", { length: 128 }),
+  state: varchar("state", { length: 40 }).notNull().default("AUTHORIZED"),
+  preparationState: varchar("preparation_state", { length: 16 }).notNull().default("READY"),
+  stepCount: integer("step_count").notNull().default(0),
+  lastEventSeq: integer("last_event_seq").notNull().default(0),
+  authContext: jsonb("auth_context").$type<import("../../../../packages/contracts/generated/typescript/gateway-v2").SignedAuthContext>().notNull(),
+  sessionSnapshot: jsonb("session_snapshot").$type<import("../../../lib/secrets/types").SecretEnvelope[]>(),
+  responseRef: varchar("response_ref", { length: 256 }),
+  sessionFinalized: boolean("session_finalized").notNull().default(false),
+  consoleAssertionHmac: varchar("console_assertion_hmac", { length: 64 }),
+  contentHoldUntil: timestamp("content_hold_until", { withTimezone: true }),
+  contentHoldReasonHmac: varchar("content_hold_reason_hmac", { length: 64 }),
+  retentionVersion: integer("retention_version").notNull().default(0),
+  contentPurgedAt: timestamp("content_purged_at", { withTimezone: true }),
+  deletionProofId: uuid("deletion_proof_id").references(() => dataDeletionProofs.proofId, { onDelete: "restrict" }),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  foreignKey({ columns: [table.tenantId, table.applicationId], foreignColumns: [applications.tenantId, applications.id] }).onDelete("restrict"),
+  foreignKey({ columns: [table.tenantId, table.applicationId, table.snapshotId], foreignColumns: [gatewayRuntimeSnapshots.tenantId, gatewayRuntimeSnapshots.applicationId, gatewayRuntimeSnapshots.id] }).onDelete("restrict"),
+  foreignKey({ columns: [table.tenantId, table.applicationId, table.shadowSnapshotId], foreignColumns: [gatewayRuntimeSnapshots.tenantId, gatewayRuntimeSnapshots.applicationId, gatewayRuntimeSnapshots.id] }).onDelete("restrict"),
+  uniqueIndex("gateway_requests_console_assertion_uq").on(table.tenantId, table.applicationId, table.consoleAssertionHmac),
+  uniqueIndex("gateway_requests_session_lease_uq").on(table.tenantId, table.applicationId, table.sessionId).where(sql`${table.sessionId} IS NOT NULL AND ${table.sessionFinalized} = false`),
+  uniqueIndex("gateway_requests_idempotency_uq").on(table.tenantId, table.applicationId, table.idempotencyKey),
+  uniqueIndex("gateway_requests_snapshot_ref_uq").on(table.tenantId, table.applicationId, table.id, table.snapshotId),
+  uniqueIndex("gateway_requests_scope_id_uq").on(table.tenantId, table.applicationId, table.id),
+  index("gateway_requests_scope_time_idx").on(table.tenantId, table.applicationId, table.createdAt),
+  index("gateway_requests_content_expiry_idx").on(table.expiresAt, table.tenantId, table.applicationId).where(sql`${table.contentPurgedAt} IS NULL AND ${table.sessionFinalized}`),
+]);
+
+export const gatewayAdmissionWindows = pgTable("gateway_admission_windows", {
+  tenantId: varchar("tenant_id", { length: 36 }).notNull(), applicationId: varchar("application_id", { length: 36 }).notNull(),
+  windowStart: timestamp("window_start", { withTimezone: true }).notNull(), admitted: integer("admitted").notNull(),
+}, table => [uniqueIndex("gateway_admission_windows_scope_uq").on(table.tenantId, table.applicationId, table.windowStart),
+  foreignKey({ columns: [table.tenantId, table.applicationId], foreignColumns: [applications.tenantId, applications.id] }).onDelete("restrict")]);
+
+export const gatewayRequestResources = pgTable("gateway_request_resources", {
+  tenantId: varchar("tenant_id", { length: 36 }).notNull(), applicationId: varchar("application_id", { length: 36 }).notNull(), requestId: varchar("request_id", { length: 128 }).primaryKey(),
+  admission: jsonb("admission").$type<Record<string, unknown>>().notNull(), admissionHmac: varchar("admission_hmac", { length: 64 }).notNull(),
+  state: varchar("state", { length: 16 }).notNull().default("RESERVED"), preparedInputChars: integer("prepared_input_chars"),
+  inspectedChars: integer("inspected_chars").notNull().default(0), inspectionSteps: integer("inspection_steps").notNull().default(0), preparedReferences: integer("prepared_references"),
+  settlement: jsonb("settlement").$type<Record<string, unknown>>(), settlementHmac: varchar("settlement_hmac", { length: 64 }),
+  settledAt: timestamp("settled_at", { withTimezone: true }), createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, table => [foreignKey({ columns: [table.tenantId, table.applicationId, table.requestId], foreignColumns: [gatewayRequests.tenantId, gatewayRequests.applicationId, gatewayRequests.id] }).onDelete("restrict"),
+  index("gateway_request_resources_scope_idx").on(table.tenantId, table.applicationId, table.createdAt)]);
+
+export const gatewaySteps = pgTable("gateway_steps", {
+  tenantId: varchar("tenant_id", { length: 36 }).notNull(),
+  applicationId: varchar("application_id", { length: 36 }).notNull(),
+  id: varchar("id", { length: 128 }).primaryKey(),
+  requestId: varchar("request_id", { length: 128 }).notNull(),
+  stage: varchar("stage", { length: 32 }).notNull(),
+  streamSeq: integer("stream_seq").notNull(),
+  attemptKind: varchar("attempt_kind", { length: 16 }).notNull(),
+  decisionId: varchar("decision_id", { length: 128 }),
+  inputHmac: varchar("input_hmac", { length: 64 }).notNull(),
+  outputHmac: varchar("output_hmac", { length: 64 }),
+  action: varchar("action", { length: 32 }),
+  coverage: varchar("coverage", { length: 16 }).notNull().default("UNKNOWN"),
+  status: varchar("status", { length: 16 }).notNull().default("RUNNING"),
+  latencyMs: integer("latency_ms"),
+  modelVersions: jsonb("model_versions").$type<string[]>().notNull().default([]),
+  decisionEnvelope: jsonb("decision_envelope").$type<import("../../../lib/secrets/types").SecretEnvelope[]>(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  foreignKey({ columns: [table.tenantId, table.applicationId], foreignColumns: [applications.tenantId, applications.id] }).onDelete("restrict"),
+  foreignKey({ columns: [table.tenantId, table.applicationId, table.requestId], foreignColumns: [gatewayRequests.tenantId, gatewayRequests.applicationId, gatewayRequests.id] }).onDelete("restrict"),
+  uniqueIndex("gateway_steps_step_uq").on(table.tenantId, table.applicationId, table.requestId, table.stage, table.streamSeq, table.attemptKind),
+  uniqueIndex("gateway_steps_request_ref_uq").on(table.tenantId, table.applicationId, table.requestId, table.id),
+  uniqueIndex("gateway_steps_scope_id_uq").on(table.tenantId, table.applicationId, table.id),
+  index("gateway_steps_scope_time_idx").on(table.tenantId, table.applicationId, table.createdAt),
+]);
+
+export const gatewayShadowEvaluations = pgTable("gateway_shadow_evaluations", {
+  id: uuid("id").primaryKey(), tenantId: varchar("tenant_id", { length: 36 }).notNull(), applicationId: varchar("application_id", { length: 36 }).notNull(),
+  requestId: varchar("request_id", { length: 128 }).notNull(), stepId: varchar("step_id", { length: 128 }).notNull(), snapshotId: varchar("snapshot_id", { length: 128 }).notNull(),
+  state: varchar("state", { length: 16 }).notNull().default("PENDING"), action: varchar("action", { length: 32 }), coverage: varchar("coverage", { length: 16 }), reasonCode: varchar("reason_code", { length: 128 }), latencyMs: integer("latency_ms"),
+  evidence: jsonb("evidence").$type<Record<string, unknown>>(), evidenceHmac: varchar("evidence_hmac", { length: 64 }), auditEventId: uuid("audit_event_id").references(() => securityAuditEvents.id),
+  claimedAt: timestamp("claimed_at", { withTimezone: true }), completedAt: timestamp("completed_at", { withTimezone: true }), createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, table => [foreignKey({ columns: [table.tenantId, table.applicationId, table.requestId, table.stepId], foreignColumns: [gatewaySteps.tenantId, gatewaySteps.applicationId, gatewaySteps.requestId, gatewaySteps.id] }),
+  foreignKey({ columns: [table.tenantId, table.applicationId, table.snapshotId], foreignColumns: [gatewayRuntimeSnapshots.tenantId, gatewayRuntimeSnapshots.applicationId, gatewayRuntimeSnapshots.id] }),
+  uniqueIndex("gateway_shadow_step_snapshot_uq").on(table.tenantId, table.applicationId, table.stepId, table.snapshotId), index("gateway_shadow_pending_idx").on(table.createdAt).where(sql`${table.state} IN ('PENDING','RUNNING')`)]);
+
+export const gatewayAuditBatches = pgTable("gateway_audit_batches", {
+  id: uuid("id").primaryKey(), tenantId: varchar("tenant_id", { length: 36 }).notNull(), applicationId: varchar("application_id", { length: 36 }).notNull(),
+  auditEventId: uuid("audit_event_id").notNull().references(() => securityAuditEvents.id, { onDelete: "restrict" }),
+  manifest: jsonb("manifest").$type<Record<string, unknown>>().notNull(), digest: varchar("digest", { length: 64 }).notNull(),
+  keyId: varchar("key_id", { length: 128 }).notNull(), signature: text("signature").notNull(), eventCount: integer("event_count").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, table => [
+  foreignKey({ columns: [table.tenantId, table.applicationId], foreignColumns: [applications.tenantId, applications.id] }).onDelete("restrict"),
+  uniqueIndex("gateway_audit_batches_scope_id_uq").on(table.tenantId, table.applicationId, table.id), uniqueIndex("gateway_audit_batches_audit_event_uq").on(table.auditEventId),
+]);
+
+export const gatewayExecutionEvents = pgTable("gateway_execution_events", {
+  tenantId: varchar("tenant_id", { length: 36 }).notNull(),
+  applicationId: varchar("application_id", { length: 36 }).notNull(),
+  id: varchar("id", { length: 128 }).primaryKey(),
+  requestId: varchar("request_id", { length: 128 }).notNull(),
+  stepId: varchar("step_id", { length: 128 }),
+  eventSeq: integer("event_seq").notNull(),
+  auditBatchId: uuid("audit_batch_id"),
+  kind: varchar("kind", { length: 40 }).notNull(),
+  rangeStart: integer("range_start"),
+  rangeEnd: integer("range_end"),
+  payloadHmac: varchar("payload_hmac", { length: 64 }),
+  snapshotId: varchar("snapshot_id", { length: 128 }).notNull(),
+  eventHmac: varchar("event_hmac", { length: 64 }).notNull(),
+  actualAction: varchar("actual_action", { length: 32 }),
+  reasonCode: varchar("reason_code", { length: 128 }),
+  decisionId: varchar("decision_id", { length: 128 }),
+  recheckDecisionId: varchar("recheck_decision_id", { length: 128 }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  foreignKey({ columns: [table.tenantId, table.applicationId], foreignColumns: [applications.tenantId, applications.id] }).onDelete("restrict"),
+  foreignKey({ columns: [table.tenantId, table.applicationId, table.snapshotId], foreignColumns: [gatewayRuntimeSnapshots.tenantId, gatewayRuntimeSnapshots.applicationId, gatewayRuntimeSnapshots.id] }).onDelete("restrict"),
+  foreignKey({ columns: [table.tenantId, table.applicationId, table.requestId], foreignColumns: [gatewayRequests.tenantId, gatewayRequests.applicationId, gatewayRequests.id] }).onDelete("restrict"),
+  foreignKey({ name: "gateway_events_request_snapshot_fk", columns: [table.tenantId, table.applicationId, table.requestId, table.snapshotId], foreignColumns: [gatewayRequests.tenantId, gatewayRequests.applicationId, gatewayRequests.id, gatewayRequests.snapshotId] }).onDelete("restrict"),
+  foreignKey({ name: "gateway_events_step_request_fk", columns: [table.tenantId, table.applicationId, table.requestId, table.stepId], foreignColumns: [gatewaySteps.tenantId, gatewaySteps.applicationId, gatewaySteps.requestId, gatewaySteps.id] }).onDelete("restrict"),
+  foreignKey({ name: "gateway_event_audit_batch_fk", columns: [table.tenantId, table.applicationId, table.auditBatchId], foreignColumns: [gatewayAuditBatches.tenantId, gatewayAuditBatches.applicationId, gatewayAuditBatches.id] }).onDelete("restrict"),
+  index("gateway_events_unanchored_idx").on(table.tenantId, table.applicationId, table.createdAt, table.id).where(sql`${table.auditBatchId} IS NULL`),
+  index("gateway_events_batch_idx").on(table.auditBatchId),
+  uniqueIndex("gateway_execution_events_event_uq").on(table.tenantId, table.applicationId, table.requestId, table.eventSeq),
+  index("gateway_execution_events_scope_time_idx").on(table.tenantId, table.applicationId, table.createdAt),
+]);
+
+export const gatewayNodeAcks = pgTable("gateway_node_acks", {
+  tenantId: varchar("tenant_id", { length: 36 }).notNull(),
+  applicationId: varchar("application_id", { length: 36 }).notNull(),
+  id: varchar("id", { length: 128 }).primaryKey(),
+  snapshotId: varchar("snapshot_id", { length: 128 }).notNull(),
+  nodeId: varchar("node_id", { length: 128 }).notNull(),
+  digest: varchar("digest", { length: 64 }).notNull(),
+  state: varchar("state", { length: 16 }).notNull(),
+  reasonCode: varchar("reason_code", { length: 128 }),
+  loadedAt: timestamp("loaded_at", { withTimezone: true }),
+  lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  foreignKey({ columns: [table.tenantId, table.applicationId], foreignColumns: [applications.tenantId, applications.id] }).onDelete("restrict"),
+  foreignKey({ columns: [table.tenantId, table.applicationId, table.snapshotId], foreignColumns: [gatewayRuntimeSnapshots.tenantId, gatewayRuntimeSnapshots.applicationId, gatewayRuntimeSnapshots.id] }).onDelete("restrict"),
+  uniqueIndex("gateway_node_acks_node_uq").on(table.tenantId, table.applicationId, table.snapshotId, table.nodeId),
+  index("gateway_node_acks_scope_time_idx").on(table.tenantId, table.applicationId, table.createdAt),
+]);
+
+export const gatewayRuntimePublications = pgTable("gateway_runtime_publications", {
+  id: uuid("id").primaryKey(), tenantId: varchar("tenant_id", { length: 36 }).notNull(), applicationId: varchar("application_id", { length: 36 }).notNull(),
+  bindingGeneration: integer("binding_generation").notNull(), manifest: jsonb("manifest").$type<Record<string, unknown>>().notNull(),
+  digest: varchar("digest", { length: 64 }).notNull(), keyId: varchar("key_id", { length: 128 }).notNull(), signature: text("signature").notNull(),
+  dispatchState: varchar("dispatch_state", { length: 16 }).notNull().default("PENDING"), auditEventId: uuid("audit_event_id").references(() => securityAuditEvents.id, { onDelete: "restrict" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(), announcedAt: timestamp("announced_at", { withTimezone: true }),
+}, table => [
+  foreignKey({ columns: [table.tenantId, table.applicationId], foreignColumns: [applications.tenantId, applications.id] }).onDelete("restrict"),
+  uniqueIndex("gateway_runtime_publications_scope_generation_uq").on(table.tenantId, table.applicationId, table.bindingGeneration),
+  uniqueIndex("gateway_runtime_publications_scope_id_uq").on(table.tenantId, table.applicationId, table.id),
+  index("gateway_runtime_publications_pending_idx").on(table.createdAt).where(sql`${table.dispatchState} = 'PENDING'`),
+]);

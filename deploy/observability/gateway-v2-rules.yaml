@@ -1,0 +1,27 @@
+groups:
+  - name: gateway-v2-runtime
+    rules:
+      - alert: GatewayPublicationBacklog
+        expr: guardllm_gateway_publication_oldest_seconds > 60
+        for: 2m
+        labels: { severity: warning }
+        annotations:
+          summary: Signed runtime publications are waiting for audit announcement
+      - alert: GatewayResourceReconciliationStalled
+        expr: guardllm_gateway_resource_unsettled_expired > 0 or guardllm_gateway_preparation_expired > 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: Expired gateway requests require durable reconciliation
+      - alert: GatewayShadowWorkerBacklog
+        expr: guardllm_gateway_shadow_oldest_seconds > 60
+        for: 2m
+        labels: { severity: warning }
+        annotations:
+          summary: Shadow comparisons are waiting and may expire without coverage
+      - alert: GatewayShadowCoverageUnknown
+        expr: guardllm_gateway_shadow_failed_24h > 0
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: Shadow detector failures require review before policy promotion

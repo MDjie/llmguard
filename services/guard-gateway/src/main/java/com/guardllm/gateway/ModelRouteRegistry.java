@@ -36,14 +36,17 @@ final class ModelRouteRegistry {
     }
 
     private final List<Route> routes;
+    private final JsonNode declaredRoutes;
+    private final String defaultBaseUrl;
 
+    @org.springframework.beans.factory.annotation.Autowired
     ModelRouteRegistry(
             ObjectMapper objectMapper,
             GuardGatewayProperties gateway,
             GatewayModelRoutingProperties routing) {
         this(
                 objectMapper,
-                routing.routesJson(),
+                configuredRoutes(routing.routesJson()),
                 gateway.modelBaseUrl(),
                 gateway.modelBearerToken(),
                 System::getenv);
@@ -55,6 +58,8 @@ final class ModelRouteRegistry {
             URI defaultBaseUrl,
             String defaultBearerToken,
             Function<String, String> environment) {
+        this.declaredRoutes = routesJson == null || routesJson.isBlank() ? objectMapper.nullNode() : objectMapper.readTree(routesJson);
+        this.defaultBaseUrl = defaultBaseUrl.toString();
         this.routes = routesJson == null || routesJson.isBlank()
                 ? List.of(new Route(
                         "default", validateBaseUrl(defaultBaseUrl), "*", "", 100,
@@ -63,14 +68,42 @@ final class ModelRouteRegistry {
                 : parseRoutes(objectMapper, routesJson, environment);
     }
 
+    private static String configuredRoutes(String configured) {
+        String value = GatewaySettings.read("GUARD_MODEL_ROUTES_JSON", "GUARD_MODEL_ROUTES_FILE");
+        return value == null || value.isBlank() ? configured : value;
+    }
+
+    JsonNode signedConfiguration(ObjectMapper mapper, JsonNode boundaries) {
+        ObjectNode configuration = mapper.createObjectNode().put("defaultBaseUrl", defaultBaseUrl).put("defaultBearerTokenRef", "MODEL_BEARER_TOKEN");
+        configuration.set("routes", declaredRoutes);
+        configuration.set("boundaries", boundaries);
+        return configuration;
+    }
+
+    JsonNode validateSnapshot(ObjectMapper mapper, JsonNode manifest) {
+        String configured = GatewaySettings.read("GATEWAY_MODEL_ROUTE_BOUNDARIES_JSON", "GATEWAY_MODEL_ROUTE_BOUNDARIES_FILE");
+        JsonNode boundaries = mapper.readTree(configured == null ? "{}" : configured);
+        validateSnapshot(mapper, manifest, boundaries);
+        return boundaries;
+    }
+
+    void validateSnapshot(ObjectMapper mapper, JsonNode manifest, JsonNode boundaries) {
+        JsonNode pinned = manifest.path("modelRouting");
+        String canonical = CanonicalJson.encode(signedConfiguration(mapper, boundaries));
+        if (!pinned.path("configurationJson").isString() || !canonical.equals(pinned.path("configurationJson").stringValue())
+                || !CanonicalJson.sha256(canonical).equals(pinned.path("configurationDigest").stringValue())) {
+            throw new GatewayFailure("MODEL_ROUTING_SNAPSHOT_MISMATCH", 503);
+        }
+    }
+
     Selection select(JsonNode original, String routeKey) {
         if (!original.isObject()) throw new IllegalArgumentException("Model request must be an object");
         String requestedModel = original.path("model").isString()
                 ? original.path("model").stringValue() : "";
-        List<Route> candidates = routes.stream()
-                .filter(route -> "*".equals(route.modelPattern())
-                        || route.modelPattern().equals(requestedModel))
-                .toList();
+        List<Route> exact = routes.stream().filter(route -> route.id().equals(requestedModel)).toList();
+        List<Route> candidates = exact.isEmpty() ? routes.stream()
+                .filter(route -> "*".equals(route.modelPattern()) || route.modelPattern().equals(requestedModel))
+                .toList() : exact;
         if (candidates.isEmpty()) {
             throw new IllegalArgumentException("No configured model route matches the requested model");
         }

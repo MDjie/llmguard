@@ -38,10 +38,16 @@ COPY --chown=node:node \
     scripts/content-marking-worker.ts \
     scripts/document-image-worker.ts \
     scripts/evaluation-worker.ts \
+    scripts/gateway-request-worker.ts \
+    scripts/gateway-shadow-worker.ts \
+    scripts/code-sentinel-worker.ts \
     scripts/rag-ingest-worker.ts \
     scripts/run-worker.mjs \
     scripts/security-scan-worker.ts \
     ./scripts/
+
+COPY --chown=node:node scripts/release/gateway-v2-migrate.mjs scripts/release/gateway-v2-identity-preflight.mjs ./scripts/release/
+COPY --chown=node:node drizzle ./drizzle
 
 USER node
 STOPSIGNAL SIGTERM
@@ -62,4 +68,5 @@ COPY --from=builder --chown=node:node /app/.next/static ./.next/static
 USER node
 EXPOSE 5000
 STOPSIGNAL SIGTERM
-CMD ["node", "server.js"]
+COPY --chown=node:node scripts/runtime-ingress.mjs scripts/gateway-v2-runtime-config.mjs scripts/gateway-v2-health.mjs ./scripts/
+CMD ["node", "scripts/runtime-ingress.mjs", "server.js"]

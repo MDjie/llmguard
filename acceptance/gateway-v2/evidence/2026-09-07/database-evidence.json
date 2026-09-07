@@ -1,0 +1,14 @@
+{
+  "status": "PASS",
+  "syntheticOnly": true,
+  "businessDatabaseModified": false,
+  "database": "guardllm_integration_gateway_v2",
+  "tables": [
+    "gateway_execution_events",
+    "gateway_node_acks",
+    "gateway_requests",
+    "gateway_runtime_snapshots",
+    "gateway_steps"
+  ],
+  "capturedAt": "2026-09-07T06:59:50.117Z"
+}

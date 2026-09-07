@@ -17,7 +17,10 @@
   "targetAcceptanceEnvironment": {
     "status": "BLOCKED_EXTERNAL",
     "ownerRole": "deployment-architect",
-    "approverRoles": ["customer-platform-owner", "independent-qa"],
+    "approverRoles": [
+      "customer-platform-owner",
+      "independent-qa"
+    ],
     "requiredFields": {
       "businessModel": null,
       "businessModelSha256": null,
@@ -43,10 +46,30 @@
     "blockingReason": "No customer-approved target model, tokenizer, hardware, platform or live endpoint manifest is present."
   },
   "sourceDigests": [
-    { "id": "pnpmLock", "path": "pnpm-lock.yaml", "sha256": "sha256:a4251a627f43267410388fc04dfe678b17b076be08cfd8af0de21862d7c8fd87" },
-    { "id": "gatewayPom", "path": "services/guard-gateway/pom.xml", "sha256": "sha256:24408994bd8d339d3578c59529c0430ed668a56d67a126deff80d905cda2028a" },
-    { "id": "aiComponentCatalog", "path": "security/ai-components.json", "sha256": "sha256:46702956133f1ada09d392242691ef4b042bb833c9e7e987e6e388dd547d5cfa" },
-    { "id": "datasetManifest", "path": "acceptance/datasets/manifest.json", "sha256": "sha256:83b19d483b68c0dd8cf01977a70ea1e087280e27fdebf0ed357ae3f4e02948ff" },
-    { "id": "performanceRequirements", "path": "acceptance/performance-requirements.json", "sha256": "sha256:316833c2b536bf1c1ef70946fc0ddedfdcd9f53373b319c7bb8399885ca406cd" }
+    {
+      "id": "pnpmLock",
+      "path": "pnpm-lock.yaml",
+      "sha256": "sha256:9b66d5a2542697b6d304b392bc8f3aa78e53b3dadda3b8d6584b2c4ab19e3278"
+    },
+    {
+      "id": "gatewayPom",
+      "path": "services/guard-gateway/pom.xml",
+      "sha256": "sha256:24408994bd8d339d3578c59529c0430ed668a56d67a126deff80d905cda2028a"
+    },
+    {
+      "id": "aiComponentCatalog",
+      "path": "security/ai-components.json",
+      "sha256": "sha256:46702956133f1ada09d392242691ef4b042bb833c9e7e987e6e388dd547d5cfa"
+    },
+    {
+      "id": "datasetManifest",
+      "path": "acceptance/datasets/manifest.json",
+      "sha256": "sha256:83b19d483b68c0dd8cf01977a70ea1e087280e27fdebf0ed357ae3f4e02948ff"
+    },
+    {
+      "id": "performanceRequirements",
+      "path": "acceptance/performance-requirements.json",
+      "sha256": "sha256:316833c2b536bf1c1ef70946fc0ddedfdcd9f53373b319c7bb8399885ca406cd"
+    }
   ]
 }

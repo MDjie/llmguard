@@ -360,6 +360,11 @@ func (client *Client) do(
 		strconv.FormatInt(identity.AbsoluteDeadlineEpochMs, 10))
 	request.Header.Set("X-Guard-Context-Version", contextVersion)
 	request.Header.Set("X-Guard-Context-Signature", signature)
+	request.Header.Set("X-Guard-Deadline", strconv.FormatInt(identity.AbsoluteDeadlineEpochMs, 10))
+	request.Header.Set("Idempotency-Key", identity.RequestID)
+	if client.guardAPIKey != "" {
+		request.Header.Set("X-Guard-Api-Key", client.guardAPIKey)
+	}
 	response, err := client.httpClient.Do(request)
 	if err != nil {
 		return nil, fmt.Errorf("guard gateway request failed: %w", err)

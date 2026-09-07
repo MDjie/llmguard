@@ -1,0 +1,42 @@
+# Supply immutable image digests and pre-provisioned secrets before installation.
+images:
+  app: ""
+  gateway: ""
+  worker: ""
+controlReplicas: 2
+proxyReplicas: 3
+provisionedProxyIdentities: 3
+controlRuntimeSecret: guard-v2-control-runtime
+proxyRuntimeSecret: guard-v2-proxy-runtime
+signingSecret: guard-v2-signing
+workloadRegistrySecret: guard-v2-workload-registry
+proxyIdentitiesSecret: guard-v2-proxy-identities
+publicKeysSecret: guard-v2-public-keys
+controlTlsSecret: guard-v2-control-tls
+consoleTlsSecret: guard-v2-console-tls
+modelRoutesSecret: guard-v2-model-routes
+modelCredentialsSecret: guard-v2-model-credentials
+keyId: production-ed25519-v1
+controlEnvironment: {}
+proxyEnvironment: {}
+resources:
+  control:
+    requests: { cpu: "1", memory: 2Gi }
+    limits: { cpu: "4", memory: 8Gi }
+  proxy:
+    requests: { cpu: "1", memory: 1Gi }
+    limits: { cpu: "4", memory: 4Gi }
+  worker:
+    requests: { cpu: 250m, memory: 512Mi }
+    limits: { cpu: "2", memory: 2Gi }
+# External model, database, Redis and object-store destinations must be enumerated.
+egress:
+  control: []
+  proxy: []
+  worker: []
+# Kubernetes NetworkPolicy peer selectors for ingress/LB and approved clients.
+ingressPeers: []
+
+# A separate read-only detector worker; explicitly enabled by the operator.
+shadow:
+  enabled: false

@@ -1,0 +1,87 @@
+{
+  "format": "guard-canonical-v2",
+  "valid": [
+    {
+      "name": "key-order-and-nesting",
+      "inputJson": "{\"b\":true,\"a\":[null,{\"z\":2,\"c\":1}]}",
+      "canonical": "{\"a\":[null,{\"c\":1,\"z\":2}],\"b\":true}",
+      "sha256": "3a79ac90cca8f89db5870a39a1118e183ec6f2063d91c951a4e1eaed8e5514a6"
+    },
+    {
+      "name": "plain-decimal-and-negative-zero",
+      "inputJson": "[-0,1e-7,1e21,1.2345]",
+      "canonical": "[0,0.0000001,1000000000000000000000,1.2345]",
+      "sha256": "4a92477277cfb51b597cb8eb80716da76a4cf34b01395fd4a9c6a9b4068ab62a"
+    },
+    {
+      "name": "binary64-integer-rounding",
+      "inputJson": "[9007199254740993,1000000000000000128]",
+      "canonical": "[9007199254740992,1000000000000000100]",
+      "sha256": "394cbca831c10541ba39a7d997927f68632546465cf602ed21d8ec862cb43391"
+    },
+    {
+      "name": "utf16-key-order",
+      "inputJson": "{\"\\ue000\":\"bmp\",\"\\ud800\\udc00\":\"supplementary\",\"a\":\"ASCII\"}",
+      "canonical": "{\"a\":\"ASCII\",\"𐀀\":\"supplementary\",\"\":\"bmp\"}",
+      "sha256": "8074c0e8907d26eee6826636f524cf268afc0ee244d07d3edd468e97894d87fd"
+    },
+    {
+      "name": "unicode-not-html-escaped",
+      "inputJson": "{\"text\":\"中😀<>&\\u2028\\u2029\"}",
+      "canonical": "{\"text\":\"中😀<>&  \"}",
+      "sha256": "2d98def7dca35cc4155aca70d18e7c425ed9f35d2ac8c9a5e432dc4cf2f5e2f7"
+    },
+    {
+      "name": "json-control-escapes",
+      "inputJson": "{\"s\":\"\\b\\f\\n\\r\\t\\u0001/\\\\\\\"\"}",
+      "canonical": "{\"s\":\"\\b\\f\\n\\r\\t\\u0001/\\\\\\\"\"}",
+      "sha256": "b1f7d3f7afc93d5ccf06abc9df44b61230e458d3caaa750a5a5d9b41156a7e12"
+    },
+    {
+      "name": "routing-boundary-collision-a",
+      "inputJson": "[\"tenant:a\",\"app\",\"会话\"]",
+      "canonical": "[\"tenant:a\",\"app\",\"会话\"]",
+      "sha256": "aa198f775381aaab4890772259b63769281455f93b005f2bd0c323211ba1b8eb"
+    },
+    {
+      "name": "routing-boundary-collision-b",
+      "inputJson": "[\"tenant\",\"a:app\",\"会话\"]",
+      "canonical": "[\"tenant\",\"a:app\",\"会话\"]",
+      "sha256": "cc49f4e09c5010f819b31ac24750a502ef0e4dab87f68a58448a63c696daf1d3"
+    }
+  ],
+  "routing": [
+    {
+      "tenantId": "tenant:a",
+      "applicationId": "app",
+      "businessKey": "会话",
+      "bucket": 47
+    },
+    {
+      "tenantId": "tenant",
+      "applicationId": "a:app",
+      "businessKey": "会话",
+      "bucket": 80
+    },
+    {
+      "tenantId": "tenant",
+      "applicationId": "app",
+      "businessKey": "request-0001",
+      "bucket": 48
+    }
+  ],
+  "invalid": [
+    {
+      "name": "unpaired-high",
+      "inputJson": "\"\\ud800\""
+    },
+    {
+      "name": "unpaired-low",
+      "inputJson": "\"\\udc00\""
+    },
+    {
+      "name": "non-finite",
+      "inputJson": "1e999"
+    }
+  ]
+}

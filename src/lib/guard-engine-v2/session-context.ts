@@ -116,7 +116,7 @@ export async function evaluateWithSessionContext(
   engine: GuardEngine,
   request: GuardRequest,
   scope: TenantScope,
-  options: {readonly readOnly?:boolean;readonly snapshot?:SecureMemorySnapshot} = {},
+  options: {readonly readOnly?:boolean;readonly snapshot?:SecureMemorySnapshot;readonly signal?:AbortSignal} = {},
 ): Promise<GuardDecision> {
   if (
     request.context.tenantId !== scope.tenantId ||
@@ -130,22 +130,22 @@ export async function evaluateWithSessionContext(
     const replay=await readSecureMemoryReplay(scope,request);
     if(replay)return replay;
   }
-  if (!sessionId) return engine.evaluate(request);
+  if (!sessionId) return engine.evaluate(request, options.signal);
   const unified=engine.contextEvaluationMode==='unified-v1';
-  const current = unified ? undefined : await engine.evaluate(request);
+  const current = unified ? undefined : await engine.evaluate(request, options.signal);
   for (let attempt = 0; attempt < 2; attempt += 1) {
     const snapshot = options.snapshot ?? await readSecureMemorySnapshot(scope, sessionId);
     const combined=snapshot.hasHistory?requestWithSecureMemory(request,snapshot):request;
     const contextualDecision = unified
       ? snapshot.hasHistory
         ? engine.evaluateContextual
-          ? await engine.evaluateContextual(combined,request)
-          : projectContextDecision(await engine.evaluate(combined),combined,request)
-        : await engine.evaluate(request)
+          ? await engine.evaluateContextual(combined,request,options.signal)
+          : projectContextDecision(await engine.evaluate(combined, options.signal),combined,request)
+        : await engine.evaluate(request, options.signal)
       : snapshot.hasHistory
       ? chooseSessionDecision(
           current!,
-          await engine.evaluate(requestWithSecureMemory(request, snapshot)),
+          await engine.evaluate(requestWithSecureMemory(request, snapshot), options.signal),
         )
       : current!;
     const riskAssessment = advanceSessionRiskState({

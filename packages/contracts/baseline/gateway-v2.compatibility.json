@@ -1,0 +1,984 @@
+{
+  "contractVersion": "2.0",
+  "definitions": {
+    "GatewayAction": {
+      "enum": [
+        "ALLOW",
+        "WARN",
+        "BLOCK",
+        "MASK",
+        "REWRITE",
+        "SAFE_RESPONSE",
+        "REQUIRE_REVIEW"
+      ],
+      "required": [],
+      "properties": {}
+    },
+    "GatewayStage": {
+      "enum": [
+        "INPUT",
+        "INPUT_RECHECK",
+        "OUTPUT_COMPLETE",
+        "OUTPUT_CHUNK",
+        "OUTPUT_RECHECK",
+        "TOOL_REQUEST",
+        "TOOL_RESULT",
+        "RAG_CONTEXT"
+      ],
+      "required": [],
+      "properties": {}
+    },
+    "GatewayCoverage": {
+      "enum": [
+        "COMPLETE",
+        "PARTIAL",
+        "UNKNOWN"
+      ],
+      "required": [],
+      "properties": {}
+    },
+    "GatewayStatus": {
+      "enum": [
+        "SUCCEEDED",
+        "FAILED",
+        "TIMED_OUT",
+        "CANCELLED"
+      ],
+      "required": [],
+      "properties": {}
+    },
+    "ExecutionKind": {
+      "enum": [
+        "UPSTREAM_SEND_INTENT",
+        "UPSTREAM_SEND_STARTED",
+        "RELEASE_INTENT",
+        "WRITE_ACCEPTED",
+        "TERMINATED",
+        "COMPLETED"
+      ],
+      "required": [],
+      "properties": {}
+    },
+    "SnapshotState": {
+      "enum": [
+        "PREPARED",
+        "LOADED",
+        "CANARY",
+        "ACTIVE",
+        "REVOKED"
+      ],
+      "required": [],
+      "properties": {}
+    },
+    "PolicyRef": {
+      "enum": null,
+      "required": [
+        "snapshotId",
+        "bundleId",
+        "generation",
+        "digest"
+      ],
+      "properties": {
+        "snapshotId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "bundleId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "generation": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "digest": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    },
+    "GatewayBudgets": {
+      "enum": null,
+      "required": [
+        "maxInputChars",
+        "maxOutputChars",
+        "maxSteps",
+        "maxEvents",
+        "maxStreamEvents",
+        "idleTimeoutMs",
+        "absoluteTimeoutMs"
+      ],
+      "properties": {
+        "maxInputChars": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1048576
+        },
+        "maxOutputChars": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1048576
+        },
+        "maxSteps": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4096
+        },
+        "maxEvents": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16384
+        },
+        "maxStreamEvents": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100000
+        },
+        "idleTimeoutMs": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 60000
+        },
+        "absoluteTimeoutMs": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 600000
+        }
+      }
+    },
+    "RuntimeManifest": {
+      "enum": null,
+      "required": [
+        "tenantId",
+        "applicationId",
+        "generation",
+        "bundleId",
+        "bundleDigest",
+        "modelRoutes",
+        "dataBoundary",
+        "streamMode",
+        "windowQualified",
+        "holdbackChars",
+        "budgets",
+        "validUntil",
+        "normalizationVersion"
+      ],
+      "properties": {
+        "tenantId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "applicationId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "generation": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "bundleId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "bundleDigest": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "modelRoutes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "maxItems": 64,
+          "minItems": 1
+        },
+        "dataBoundary": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "streamMode": {
+          "type": "string",
+          "enum": [
+            "FULL_BUFFER",
+            "WINDOW"
+          ]
+        },
+        "windowQualified": {
+          "type": "boolean"
+        },
+        "holdbackChars": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65536
+        },
+        "budgets": {
+          "$ref": "#/$defs/GatewayBudgets"
+        },
+        "validUntil": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "normalizationVersion": {
+          "const": "guard-canonical-v2",
+          "type": "string"
+        }
+      }
+    },
+    "RuntimeSnapshot": {
+      "enum": null,
+      "required": [
+        "id",
+        "manifest",
+        "digest",
+        "signature",
+        "keyId",
+        "state"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "manifest": {
+          "$ref": "#/$defs/RuntimeManifest"
+        },
+        "digest": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "signature": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "keyId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "state": {
+          "$ref": "#/$defs/SnapshotState"
+        }
+      }
+    },
+    "AuthContext": {
+      "enum": null,
+      "required": [
+        "contractVersion",
+        "authContextId",
+        "issuer",
+        "audience",
+        "keyId",
+        "issuedAt",
+        "expiresAt",
+        "tenantId",
+        "applicationId",
+        "subjectId",
+        "authVersion",
+        "businessRequestId",
+        "traceId",
+        "requestDigest",
+        "policy",
+        "allowedModelRoutes",
+        "permissions",
+        "dataBoundary",
+        "deadline"
+      ],
+      "properties": {
+        "contractVersion": {
+          "const": "2.0",
+          "type": "string"
+        },
+        "authContextId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "issuer": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "audience": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "keyId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "issuedAt": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "expiresAt": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "tenantId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "applicationId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "subjectId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "credentialId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "authVersion": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "businessRequestId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "traceId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "sessionId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "requestDigest": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "policy": {
+          "$ref": "#/$defs/PolicyRef"
+        },
+        "allowedModelRoutes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "maxItems": 64,
+          "minItems": 1
+        },
+        "permissions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "maxItems": 64,
+          "minItems": 0
+        },
+        "dataBoundary": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "deadline": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "subjectVersion": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      }
+    },
+    "SignedAuthContext": {
+      "enum": null,
+      "required": [
+        "context",
+        "signature"
+      ],
+      "properties": {
+        "context": {
+          "$ref": "#/$defs/AuthContext"
+        },
+        "signature": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        }
+      }
+    },
+    "ContentSegment": {
+      "enum": null,
+      "required": [
+        "segmentId",
+        "contentPath",
+        "role",
+        "text",
+        "sourceType",
+        "sourceDigest"
+      ],
+      "properties": {
+        "segmentId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "contentPath": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        "role": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32
+        },
+        "text": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 1048576
+        },
+        "sourceType": {
+          "type": "string",
+          "enum": [
+            "USER",
+            "MODEL",
+            "TOOL",
+            "RAG",
+            "FILE"
+          ]
+        },
+        "sourceDigest": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    },
+    "TransformPatch": {
+      "enum": null,
+      "required": [
+        "segmentId",
+        "contentPath",
+        "start",
+        "end",
+        "replacement",
+        "sourceDigest"
+      ],
+      "properties": {
+        "segmentId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "contentPath": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        "start": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1048576
+        },
+        "end": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1048576
+        },
+        "replacement": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 1048576
+        },
+        "sourceDigest": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    },
+    "GatewayRequest": {
+      "enum": null,
+      "required": [
+        "contractVersion",
+        "auth",
+        "businessRequestId",
+        "stepId",
+        "traceId",
+        "stage",
+        "streamSeq",
+        "attemptKind",
+        "snapshotId",
+        "deadline",
+        "segments"
+      ],
+      "properties": {
+        "contractVersion": {
+          "const": "2.0",
+          "type": "string"
+        },
+        "auth": {
+          "$ref": "#/$defs/SignedAuthContext"
+        },
+        "businessRequestId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "stepId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "traceId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "stage": {
+          "$ref": "#/$defs/GatewayStage"
+        },
+        "streamSeq": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "attemptKind": {
+          "type": "string",
+          "enum": [
+            "INITIAL",
+            "RECHECK"
+          ]
+        },
+        "snapshotId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "deadline": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "segments": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ContentSegment"
+          },
+          "maxItems": 256,
+          "minItems": 1
+        }
+      }
+    },
+    "GatewayDecision": {
+      "enum": null,
+      "required": [
+        "contractVersion",
+        "businessRequestId",
+        "stepId",
+        "decisionId",
+        "snapshotId",
+        "action",
+        "coverage",
+        "status",
+        "riskLevel",
+        "reasonCodes",
+        "modelVersions",
+        "transformPatches",
+        "latencyMs"
+      ],
+      "properties": {
+        "contractVersion": {
+          "const": "2.0",
+          "type": "string"
+        },
+        "businessRequestId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "stepId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "decisionId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "snapshotId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "action": {
+          "$ref": "#/$defs/GatewayAction"
+        },
+        "coverage": {
+          "$ref": "#/$defs/GatewayCoverage"
+        },
+        "status": {
+          "$ref": "#/$defs/GatewayStatus"
+        },
+        "riskLevel": {
+          "type": "string",
+          "enum": [
+            "NONE",
+            "LOW",
+            "MEDIUM",
+            "HIGH",
+            "CRITICAL"
+          ]
+        },
+        "reasonCodes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "maxItems": 256,
+          "minItems": 0
+        },
+        "modelVersions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "maxItems": 128,
+          "minItems": 0
+        },
+        "transformPatches": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/TransformPatch"
+          },
+          "maxItems": 4096,
+          "minItems": 0
+        },
+        "safeResponse": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 65536
+        },
+        "latencyMs": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 600000
+        }
+      }
+    },
+    "GatewayAuthorize": {
+      "enum": null,
+      "required": [
+        "contractVersion",
+        "businessRequestId",
+        "traceId",
+        "idempotencyKey",
+        "deadline",
+        "modelRoute",
+        "requestDigest",
+        "requestJson"
+      ],
+      "properties": {
+        "contractVersion": {
+          "const": "2.0",
+          "type": "string"
+        },
+        "businessRequestId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "traceId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "sessionId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "idempotencyKey": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "deadline": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "modelRoute": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "requestDigest": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "requestJson": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2097152
+        },
+        "userAssertion": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 8192
+        }
+      }
+    },
+    "GatewayAuthorization": {
+      "enum": null,
+      "required": [
+        "auth",
+        "snapshot",
+        "replayState"
+      ],
+      "properties": {
+        "auth": {
+          "$ref": "#/$defs/SignedAuthContext"
+        },
+        "snapshot": {
+          "$ref": "#/$defs/RuntimeSnapshot"
+        },
+        "replayState": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      }
+    },
+    "ExecutionEvent": {
+      "enum": null,
+      "required": [
+        "eventSeq",
+        "kind",
+        "snapshotId"
+      ],
+      "properties": {
+        "eventSeq": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "stepId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "decisionId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "recheckDecisionId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "kind": {
+          "$ref": "#/$defs/ExecutionKind"
+        },
+        "rangeStart": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1048576
+        },
+        "rangeEnd": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1048576
+        },
+        "payloadDigest": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "actualAction": {
+          "$ref": "#/$defs/GatewayAction"
+        },
+        "reasonCode": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "snapshotId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      }
+    },
+    "GatewayEvents": {
+      "enum": null,
+      "required": [
+        "contractVersion",
+        "auth",
+        "events"
+      ],
+      "properties": {
+        "contractVersion": {
+          "const": "2.0",
+          "type": "string"
+        },
+        "auth": {
+          "$ref": "#/$defs/SignedAuthContext"
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ExecutionEvent"
+          },
+          "maxItems": 128,
+          "minItems": 1
+        }
+      }
+    },
+    "GatewayNodeAck": {
+      "enum": null,
+      "required": [
+        "contractVersion",
+        "tenantId",
+        "applicationId",
+        "snapshotId",
+        "nodeId",
+        "digest",
+        "state"
+      ],
+      "properties": {
+        "contractVersion": {
+          "const": "2.0",
+          "type": "string"
+        },
+        "tenantId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "applicationId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "snapshotId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "nodeId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "digest": {
+          "type": "string",
+          "minLength": 64,
+          "maxLength": 64,
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "LOADED",
+            "FAILED"
+          ]
+        },
+        "reasonCode": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      }
+    },
+    "GatewayError": {
+      "enum": null,
+      "required": [
+        "contractVersion",
+        "code",
+        "requestId",
+        "traceId",
+        "retryable"
+      ],
+      "properties": {
+        "contractVersion": {
+          "const": "2.0",
+          "type": "string"
+        },
+        "code": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "requestId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "traceId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      }
+    }
+  },
+  "services": {
+    "GatewayEvaluationService": {
+      "Evaluate": {
+        "request": "GatewayRequest",
+        "response": "GatewayDecision",
+        "requestStream": false,
+        "responseStream": false
+      }
+    }
+  }
+}

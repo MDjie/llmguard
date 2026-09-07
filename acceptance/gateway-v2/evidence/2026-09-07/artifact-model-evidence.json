@@ -1,0 +1,60 @@
+{
+  "capturedAt": "2026-09-07T11:55:32.973Z",
+  "status": "PASS",
+  "modelInvocationProven": true,
+  "model": "synthetic TLS model",
+  "objectStore": "synthetic loopback receiver",
+  "realMultimodalQuality": false,
+  "results": [
+    {
+      "id": "IT-FILE-01",
+      "name": "verified owned text reaches the actual model with source proof",
+      "status": "PASS"
+    },
+    {
+      "id": "IT-FILE-02",
+      "name": "another owner is rejected before object read or model call",
+      "status": "PASS"
+    },
+    {
+      "id": "IT-FILE-03",
+      "name": "wrong requested digest is rejected before object read",
+      "status": "PASS"
+    },
+    {
+      "id": "IT-FILE-04",
+      "name": "changed object bytes fail integrity and never reach a model",
+      "status": "PASS"
+    },
+    {
+      "id": "IT-FILE-05",
+      "name": "indirect file injection is blocked by the common input guard",
+      "status": "PASS"
+    },
+    {
+      "id": "IT-FILE-06",
+      "name": "media explicitly requires asynchronous coverage instead of text-only approval",
+      "status": "PASS"
+    },
+    {
+      "id": "IT-FILE-07",
+      "name": "RAG and file references coexist without granting instruction authority",
+      "status": "PASS"
+    },
+    {
+      "id": "IT-FILE-08",
+      "name": "owner revocation while the model is running prevents output release",
+      "status": "PASS"
+    },
+    {
+      "id": "IT-FILE-09",
+      "name": "sequential idempotency replay rereads no object and calls no model",
+      "status": "PASS"
+    },
+    {
+      "id": "IT-FILE-10",
+      "name": "quarantined and expired references cannot be consumed",
+      "status": "PASS"
+    }
+  ]
+}

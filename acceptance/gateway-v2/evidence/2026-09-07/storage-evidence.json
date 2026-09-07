@@ -1,0 +1,48 @@
+{
+  "capturedAt": "2026-09-07T09:49:59.025Z",
+  "status": "PASS",
+  "isolatedDatabase": true,
+  "mutationTestsRolledBack": true,
+  "results": [
+    {
+      "name": "0048 applies twice without changing existing records",
+      "status": "PASS"
+    },
+    {
+      "name": "snapshot manifest is immutable",
+      "status": "PASS"
+    },
+    {
+      "name": "revoked snapshots cannot reactivate",
+      "status": "PASS"
+    },
+    {
+      "name": "request cannot reference a snapshot from another application",
+      "status": "PASS"
+    },
+    {
+      "name": "snapshot cannot reference another application policy bundle",
+      "status": "PASS"
+    },
+    {
+      "name": "execution event snapshot must match its business request",
+      "status": "PASS"
+    },
+    {
+      "name": "execution event step must belong to its business request",
+      "status": "PASS"
+    },
+    {
+      "name": "idempotency key cannot reserve a second business request",
+      "status": "PASS"
+    },
+    {
+      "name": "session lease permits only one unfinished business request",
+      "status": "PASS"
+    },
+    {
+      "name": "execution sequence cannot be acknowledged twice",
+      "status": "PASS"
+    }
+  ]
+}

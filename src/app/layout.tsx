@@ -8,8 +8,8 @@ export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: {
-    default: '大模型安全护栏检测平台',
-    template: '%s | 大模型安全护栏检测平台',
+    default: '国舜大模型安全网关平台',
+    template: '%s | 国舜大模型安全网关平台',
   },
   description:
     '企业级大模型安全护栏检测与治理平台，支持输入输出双向检测、风险识别、策略配置、发布门禁与审计追踪。',

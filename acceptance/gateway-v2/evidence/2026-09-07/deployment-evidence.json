@@ -1,0 +1,14 @@
+{
+  "capturedAt": "2026-09-07T10:30:46.828Z",
+  "status": "PASS",
+  "checks": [
+    "valid certificate/signing configuration",
+    "unsafe or ambiguous settings rejected",
+    "compose structure validated",
+    "private signing key isolated from proxy",
+    "proxy requires mTLS",
+    "management listener loopback only",
+    "Redis not published"
+  ],
+  "deploymentExecuted": false
+}

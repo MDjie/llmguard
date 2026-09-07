@@ -71,7 +71,8 @@ export async function processNextRagIngestJob() {
         state,
       }).onConflictDoUpdate({
         target: [ragSources.tenantId, ragSources.applicationId, ragSources.artifactId],
-        set: { state, trustLevel: metadata.trustLevel, classification: metadata.classification },
+        set: { state, trustLevel: metadata.trustLevel, classification: metadata.classification,
+          acl: { allowedPrincipals: metadata.allowedPrincipals, allowedRoles: metadata.allowedRoles } },
       }).returning();
       const chunkId = metadata.externalChunkId ?? artifact.id;
       const contentHash = ragContentHash(text);
@@ -94,7 +95,8 @@ export async function processNextRagIngestJob() {
         },
       }).onConflictDoUpdate({
         target: [ragChunks.tenantId, ragChunks.applicationId, ragChunks.externalChunkId],
-        set: { contentHash, provenanceSignature: signature, riskAction: decision.action, riskScore: score, state },
+        set: { sourceId:source.id, artifactId:artifact.id, contentHash, provenanceSignature: signature, riskAction: decision.action, riskScore: score, state,
+          metadata:{bundleId:bundle.id,sourceVersion:provenance.sourceVersion,validUntilEpochMs:provenance.validUntilEpochMs} },
       }).returning();
       await transaction.insert(dataLineageEdges).values([
         buildLineageEdge({

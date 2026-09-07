@@ -1,0 +1,217 @@
+{{- $name := printf "%s-v2" .Release.Name -}}
+{{- if lt (int .Values.controlReplicas) 2 }}{{ fail "At least two control replicas are required" }}{{ end -}}
+{{- if lt (int .Values.proxyReplicas) 2 }}{{ fail "At least two proxy identities are required" }}{{ end -}}
+{{- if gt (int .Values.proxyReplicas) (int .Values.provisionedProxyIdentities) }}{{ fail "Provision a unique certificate and workload secret for every proxy ordinal before scaling" }}{{ end -}}
+{{- range $kind, $image := .Values.images }}
+{{- if not (regexMatch "^[^ @]+@sha256:[a-f0-9]{64}$" $image) }}{{ fail (printf "images.%s must use an immutable digest" $kind) }}{{ end -}}
+{{- end }}
+apiVersion: v1
+kind: ServiceAccount
+metadata: { name: {{ $name }} }
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: Service
+metadata: { name: {{ $name }}-control }
+spec:
+  selector: { app.kubernetes.io/instance: {{ .Release.Name }}, guardllm.io/v2-role: control }
+  ports: [{ name: https, port: 5000, targetPort: 5000 }]
+---
+apiVersion: v1
+kind: Service
+metadata: { name: {{ $name }}-proxy }
+spec:
+  selector: { app.kubernetes.io/instance: {{ .Release.Name }}, guardllm.io/v2-role: proxy }
+  ports: [{ name: https, port: 8443, targetPort: 8443 }]
+---
+apiVersion: v1
+kind: Service
+metadata: { name: {{ $name }}-proxy-headless }
+spec:
+  clusterIP: None
+  selector: { app.kubernetes.io/instance: {{ .Release.Name }}, guardllm.io/v2-role: proxy }
+  ports: [{ name: https, port: 8443, targetPort: 8443 }]
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata: { name: {{ $name }}-proxy }
+spec:
+  serviceName: {{ $name }}-proxy-headless
+  replicas: {{ .Values.proxyReplicas }}
+  podManagementPolicy: OrderedReady
+  updateStrategy: { type: RollingUpdate }
+  selector:
+    matchLabels: { app.kubernetes.io/instance: {{ .Release.Name }}, guardllm.io/v2-role: proxy }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/instance: {{ .Release.Name }}, guardllm.io/v2-role: proxy }
+      annotations: { checksum/config: {{ toJson .Values.proxyEnvironment | sha256sum }} }
+    spec:
+      serviceAccountName: {{ $name }}
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 75
+      securityContext: { runAsNonRoot: true, runAsUser: 10001, runAsGroup: 10001, fsGroup: 10001, seccompProfile: { type: RuntimeDefault } }
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels: { app.kubernetes.io/instance: {{ .Release.Name }}, guardllm.io/v2-role: proxy }
+              topologyKey: kubernetes.io/hostname
+      containers:
+        - name: proxy
+          image: {{ .Values.images.gateway | quote }}
+          securityContext: { allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: { drop: [ALL] } }
+          envFrom: [{ secretRef: { name: {{ .Values.proxyRuntimeSecret }} } }]
+          env:
+            {{- range $key, $value := .Values.proxyEnvironment }}
+            - { name: {{ $key }}, value: {{ $value | quote }} }
+            {{- end }}
+            - { name: POD_NAME, valueFrom: { fieldRef: { fieldPath: metadata.name } } }
+            - { name: GATEWAY_NODE_ID, valueFrom: { fieldRef: { fieldPath: metadata.name } } }
+            - { name: SPRING_PROFILES_ACTIVE, value: gateway-v2 }
+            - { name: SERVER_PORT, value: "8443" }
+            - { name: GUARD_GRPC_ENABLED, value: "false" }
+            - { name: GATEWAY_MTLS_REQUIRED, value: "true" }
+            - { name: GATEWAY_WORKLOAD_SECRET_FILE, value: /run/guard/identity/workload.secret }
+            - { name: GATEWAY_AUTH_PUBLIC_KEYS_FILE, value: /run/guard/public/keys.json }
+            - { name: GATEWAY_SERVER_TLS_CERT, value: /run/guard/identity/tls.crt }
+            - { name: GATEWAY_SERVER_TLS_KEY, value: /run/guard/identity/tls.key }
+            - { name: GATEWAY_SERVER_TLS_CA, value: /run/guard/public/ca.crt }
+            - { name: GATEWAY_CLIENT_CERTIFICATE, value: /run/guard/identity/tls.crt }
+            - { name: GATEWAY_CLIENT_PRIVATE_KEY, value: /run/guard/identity/tls.key }
+            - { name: GATEWAY_TRUST_CERTIFICATE, value: /run/guard/public/ca.crt }
+            - { name: GUARD_BASE_URL, value: {{ printf "https://%s-control:5000" $name | quote }} }
+            - { name: GUARD_MODEL_ROUTES_FILE, value: /run/guard/routes/routes.json }
+            - { name: GATEWAY_MODEL_ROUTE_BOUNDARIES_FILE, value: /run/guard/routes/boundaries.json }
+          ports: [{ name: https, containerPort: 8443 }]
+          startupProbe:
+            exec: { command: [java, -cp, /app/probe, GatewayReadinessProbe, liveness] }
+            periodSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            exec: { command: [java, -cp, /app/probe, GatewayReadinessProbe, readiness] }
+            periodSeconds: 5
+            timeoutSeconds: 4
+          livenessProbe:
+            exec: { command: [java, -cp, /app/probe, GatewayReadinessProbe, liveness] }
+            periodSeconds: 15
+            timeoutSeconds: 4
+          resources: {{ toYaml .Values.resources.proxy | nindent 12 }}
+          volumeMounts:
+            # subPathExpr exposes only this ordinal's identity, never the full identity secret.
+            - { name: identities, mountPath: /run/guard/identity/tls.crt, subPathExpr: $(POD_NAME).crt, readOnly: true }
+            - { name: identities, mountPath: /run/guard/identity/tls.key, subPathExpr: $(POD_NAME).key, readOnly: true }
+            - { name: identities, mountPath: /run/guard/identity/workload.secret, subPathExpr: $(POD_NAME).secret, readOnly: true }
+            - { name: public, mountPath: /run/guard/public, readOnly: true }
+            - { name: routes, mountPath: /run/guard/routes, readOnly: true }
+            - { name: models, mountPath: /run/guard/models, readOnly: true }
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - { name: identities, secret: { secretName: {{ .Values.proxyIdentitiesSecret }}, defaultMode: 288 } }
+        - { name: public, secret: { secretName: {{ .Values.publicKeysSecret }}, defaultMode: 288 } }
+        - { name: routes, secret: { secretName: {{ .Values.modelRoutesSecret }}, defaultMode: 288 } }
+        - { name: models, secret: { secretName: {{ .Values.modelCredentialsSecret }}, defaultMode: 288 } }
+        - { name: tmp, emptyDir: { sizeLimit: 128Mi } }
+{{- $roles := list "control" "worker" }}
+{{- if .Values.shadow.enabled }}{{ $roles = append $roles "shadow" }}{{ end }}
+{{- range $role := $roles }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: {{ $name }}-{{ $role }} }
+spec:
+  replicas: {{ if eq $role "control" }}{{ $.Values.controlReplicas }}{{ else }}1{{ end }}
+  strategy: { type: RollingUpdate, rollingUpdate: { maxSurge: 1, maxUnavailable: 0 } }
+  selector:
+    matchLabels: { app.kubernetes.io/instance: {{ $.Release.Name }}, guardllm.io/v2-role: {{ $role }} }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/instance: {{ $.Release.Name }}, guardllm.io/v2-role: {{ $role }} }
+      annotations: { checksum/config: {{ toJson $.Values.controlEnvironment | sha256sum }} }
+    spec:
+      serviceAccountName: {{ $name }}
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 75
+      securityContext: { runAsNonRoot: true, runAsUser: 1000, runAsGroup: 1000, fsGroup: 1000, seccompProfile: { type: RuntimeDefault } }
+      {{- if eq $role "control" }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels: { app.kubernetes.io/instance: {{ $.Release.Name }}, guardllm.io/v2-role: control }
+              topologyKey: kubernetes.io/hostname
+      {{- end }}
+      containers:
+        - name: {{ $role }}
+          image: {{ if eq $role "control" }}{{ $.Values.images.app | quote }}{{ else }}{{ $.Values.images.worker | quote }}{{ end }}
+          {{- if ne $role "control" }}
+          command: [node, --import, tsx, {{ if eq $role "shadow" }}scripts/gateway-shadow-worker.ts{{ else }}scripts/run-worker.mjs, gateway-request{{ end }}]
+          {{- end }}
+          securityContext: { allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: { drop: [ALL] } }
+          envFrom: [{ secretRef: { name: {{ $.Values.controlRuntimeSecret }} } }]
+          env:
+            {{- range $key, $value := $.Values.controlEnvironment }}
+            - { name: {{ $key }}, value: {{ $value | quote }} }
+            {{- end }}
+            - { name: NODE_ENV, value: production }
+            - { name: GATEWAY_V2_ENABLED, value: "true" }
+            - { name: GATEWAY_SHADOW_EVALUATION_ENABLED, value: {{ $.Values.shadow.enabled | quote }} }
+            - { name: GATEWAY_MTLS_REQUIRED, value: "true" }
+            - { name: GATEWAY_AUTH_KEY_ID, value: {{ $.Values.keyId | quote }} }
+            - { name: GATEWAY_AUTH_SIGNING_PRIVATE_KEY_FILE, value: /run/guard/signing/private.pem }
+            - { name: GATEWAY_AUTH_PUBLIC_KEYS_FILE, value: /run/guard/public/keys.json }
+            - { name: GATEWAY_WORKLOAD_KEYS_FILE, value: /run/guard/workloads/keys.json }
+            - { name: GUARD_MODEL_ROUTES_FILE, value: /run/guard/routes/routes.json }
+            - { name: GATEWAY_MODEL_ROUTE_BOUNDARIES_FILE, value: /run/guard/routes/boundaries.json }
+            - { name: GATEWAY_PROXY_URL, value: {{ printf "https://%s-proxy:8443" $name | quote }} }
+            - { name: GATEWAY_CONTROL_TLS_SERVER_NAME, value: {{ printf "%s-control" $name | quote }} }
+            - { name: GATEWAY_CONTROL_TLS_CERT, value: /run/guard/control-tls/tls.crt }
+            - { name: GATEWAY_CONTROL_TLS_KEY, value: /run/guard/control-tls/tls.key }
+            - { name: GATEWAY_CONTROL_TLS_CA, value: /run/guard/public/ca.crt }
+            - { name: GATEWAY_CONSOLE_TLS_CERT, value: /run/guard/console-tls/tls.crt }
+            - { name: GATEWAY_CONSOLE_TLS_KEY, value: /run/guard/console-tls/tls.key }
+            - { name: GATEWAY_CONSOLE_TLS_CA, value: /run/guard/public/ca.crt }
+          {{- if eq $role "control" }}
+          ports: [{ name: https, containerPort: 5000 }]
+          startupProbe:
+            exec: { command: [node, scripts/gateway-v2-health.mjs] }
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            exec: { command: [node, scripts/gateway-v2-health.mjs] }
+            periodSeconds: 5
+            timeoutSeconds: 5
+          {{- end }}
+          resources: {{ toYaml (index $.Values.resources (ternary "worker" $role (eq $role "shadow"))) | nindent 12 }}
+          volumeMounts:
+            - { name: signing, mountPath: /run/guard/signing, readOnly: true }
+            - { name: workloads, mountPath: /run/guard/workloads, readOnly: true }
+            - { name: public, mountPath: /run/guard/public, readOnly: true }
+            - { name: routes, mountPath: /run/guard/routes, readOnly: true }
+            - { name: control-tls, mountPath: /run/guard/control-tls, readOnly: true }
+            - { name: console-tls, mountPath: /run/guard/console-tls, readOnly: true }
+            - { name: tmp, mountPath: /tmp }
+            - { name: next-cache, mountPath: /app/.next/cache }
+      volumes:
+        - { name: signing, secret: { secretName: {{ $.Values.signingSecret }}, defaultMode: 288 } }
+        - { name: workloads, secret: { secretName: {{ $.Values.workloadRegistrySecret }}, defaultMode: 288 } }
+        - { name: public, secret: { secretName: {{ $.Values.publicKeysSecret }}, defaultMode: 288 } }
+        - { name: routes, secret: { secretName: {{ $.Values.modelRoutesSecret }}, defaultMode: 288 } }
+        - { name: control-tls, secret: { secretName: {{ $.Values.controlTlsSecret }}, defaultMode: 288 } }
+        - { name: console-tls, secret: { secretName: {{ $.Values.consoleTlsSecret }}, defaultMode: 288 } }
+        - { name: tmp, emptyDir: { sizeLimit: 128Mi } }
+        - { name: next-cache, emptyDir: { sizeLimit: 512Mi } }
+{{- end }}
+{{- range $role := list "control" "proxy" }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata: { name: {{ $name }}-{{ $role }} }
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels: { app.kubernetes.io/instance: {{ $.Release.Name }}, guardllm.io/v2-role: {{ $role }} }
+{{- end }}

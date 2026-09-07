@@ -1,0 +1,34 @@
+{{- $roles := list "control" "proxy" "worker" }}
+{{- if .Values.shadow.enabled }}{{ $roles = append $roles "shadow" }}{{ end }}
+{{- range $role := $roles }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: {{ $.Release.Name }}-v2-{{ $role }} }
+spec:
+  podSelector:
+    matchLabels: { app.kubernetes.io/instance: {{ $.Release.Name }}, guardllm.io/v2-role: {{ $role }} }
+  policyTypes: [Ingress, Egress]
+  ingress:
+    {{- if has $role (list "control" "proxy") }}
+    - from:
+        - podSelector:
+            matchLabels: { app.kubernetes.io/instance: {{ $.Release.Name }} }
+        {{- with $.Values.ingressPeers }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      ports: [{ protocol: TCP, port: {{ if eq $role "proxy" }}8443{{ else }}5000{{ end }} }]
+    {{- else }} []
+    {{- end }}
+  egress:
+    - to:
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: kube-system } }
+          podSelector: { matchLabels: { k8s-app: kube-dns } }
+      ports: [{ protocol: UDP, port: 53 }, { protocol: TCP, port: 53 }]
+    - to:
+        - podSelector: { matchLabels: { app.kubernetes.io/instance: {{ $.Release.Name }} } }
+      ports: [{ protocol: TCP, port: 5000 }, { protocol: TCP, port: 8443 }]
+    {{- with index $.Values.egress (ternary "worker" $role (eq $role "shadow")) }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+---
+{{- end }}

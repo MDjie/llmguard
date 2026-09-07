@@ -28,7 +28,12 @@ final class ModelClient {
     }
 
     Mono<JsonNode> chat(JsonNode request, String routeKey) {
-        ModelRouteRegistry.Selection route = routes.select(request, routeKey);
+        return chatRoute(routes.select(request, routeKey));
+    }
+    Mono<JsonNode> chatAuthorized(JsonNode request, String routeKey, JsonNode auth, JsonNode manifest) {
+        return chatRoute(authorizedRoute(request, routeKey, auth, manifest));
+    }
+    private Mono<JsonNode> chatRoute(ModelRouteRegistry.Selection route) {
         WebClient.RequestBodySpec call = webClient.post().uri(route.chatUri())
                 .contentType(MediaType.APPLICATION_JSON);
         if (route.bearerToken() != null && !route.bearerToken().isBlank()) {
@@ -39,7 +44,12 @@ final class ModelClient {
     }
 
     Flux<ServerSentEvent<String>> chatStream(JsonNode request, String routeKey) {
-        ModelRouteRegistry.Selection route = routes.select(request, routeKey);
+        return streamRoute(routes.select(request, routeKey));
+    }
+    Flux<ServerSentEvent<String>> chatStreamAuthorized(JsonNode request, String routeKey, JsonNode auth, JsonNode manifest) {
+        return streamRoute(authorizedRoute(request, routeKey, auth, manifest));
+    }
+    private Flux<ServerSentEvent<String>> streamRoute(ModelRouteRegistry.Selection route) {
         WebClient.RequestBodySpec call = webClient.post().uri(route.chatUri())
                 .contentType(MediaType.APPLICATION_JSON)
                 .accept(MediaType.TEXT_EVENT_STREAM);
@@ -49,6 +59,20 @@ final class ModelClient {
         return call.bodyValue(route.request()).retrieve().bodyToFlux(
                         new ParameterizedTypeReference<ServerSentEvent<String>>() { })
                 .map(event -> normalizeEvent(route, event));
+    }
+
+    private ModelRouteRegistry.Selection authorizedRoute(JsonNode request, String routeKey, JsonNode auth, JsonNode manifest) {
+        boolean permitted = false;
+        for (JsonNode alias : auth.path("allowedModelRoutes")) if (alias.equals(request.path("model"))) permitted = true;
+        if (!permitted) throw new GatewayFailure("MODEL_ROUTE_NOT_AUTHORIZED", 403);
+        ModelRouteRegistry.Selection route = routes.select(request, routeKey);
+        JsonNode boundaries = routes.validateSnapshot(objectMapper, manifest);
+        boolean boundaryPermitted = false;
+        for (JsonNode boundary : boundaries.path(route.routeId())) if (boundary.equals(auth.path("dataBoundary"))) boundaryPermitted = true;
+        if (!boundaryPermitted) throw new GatewayFailure("MODEL_DATA_BOUNDARY_DENIED", 403);
+        StructuredContent content = new StructuredContent(objectMapper);
+        if (!content.segments(request, true, 131072).equals(content.segments(route.request(), true, 131072))) throw new GatewayFailure("MODEL_MAPPING_CHANGED_APPROVED_CONTENT", 403);
+        return route;
     }
 
     private ServerSentEvent<String> normalizeEvent(

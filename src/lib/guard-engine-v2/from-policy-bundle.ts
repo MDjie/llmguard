@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+import { BoundedCache } from '@/lib/resource-control/bounded-cache';
 import type { GuardAction } from '@guardllm/contracts';
 import type { RuntimePolicyBundle } from '@/lib/policy-bundle/runtime';
 import {
@@ -34,11 +36,12 @@ import { projectContextDecision } from './context-projection';
 
 export interface PolicyBundleEngineRuntimeOptions {
   readonly dlpTokenizationHmacKey?: string | Buffer;
+  readonly deferOutputRecheck?: boolean;
   readonly outputSecurityEventSink?: OutputControlSecurityEventSink;
 }
 
 /** Shared production recipe. No qualification bypass or request-controlled override. */
-export function preparePolicyBundleEngine(bundle:RuntimePolicyBundle) {
+function compilePolicyBundleEngine(bundle:RuntimePolicyBundle) {
   const warnThreshold = bundle.payload.decisionPolicyVersion !== 2 && bundle.payload.thresholds.length > 0
     ? Math.min(...bundle.payload.thresholds.map((item) => item.warn))
     : 0.5;
@@ -115,42 +118,61 @@ export function preparePolicyBundleEngine(bundle:RuntimePolicyBundle) {
       detectorDag,
     },detectors};
 }
+function immutableJson<T>(value:T):T {
+  if(value&&typeof value==='object'){for(const item of Object.values(value))immutableJson(item);Object.freeze(value);}
+  return value;
+}
+const preparedCache=new BoundedCache<string,ReturnType<typeof compilePolicyBundleEngine>&{bundle:RuntimePolicyBundle}>(16,128*1024*1024,300000);
+function bundleIdentity(bundle:RuntimePolicyBundle,serialized:string):string {
+  return JSON.stringify([bundle.tenantId??'',bundle.applicationId??'',bundle.id,bundle.generation,createHash('sha256').update(serialized).digest('hex')]);
+}
+/** Only immutable policy recipes are shared. Request fingerprints and execution state are never cached here. */
+export function preparePolicyBundleEngine(bundle:RuntimePolicyBundle) {
+  const serialized=JSON.stringify(bundle.payload),key=bundleIdentity(bundle,serialized);
+  const cached=preparedCache.get(key);if(cached)return cached;
+  const immutableBundle=Object.freeze({...bundle,payload:immutableJson(JSON.parse(serialized) as RuntimePolicyBundle['payload'])});
+  const compiled=compilePolicyBundleEngine(immutableBundle);
+  Object.freeze(compiled.detectors);immutableJson(compiled.policy);
+  const prepared=Object.freeze({...compiled,bundle:immutableBundle});
+  preparedCache.set(key,prepared,Math.max(65536,Buffer.byteLength(serialized)*48));
+  return prepared;
+}
+export function policyEngineCacheStats(){return {prepared:preparedCache.stats(),engines:engineCache.stats()};}
+
 function buildEngineForPolicyBundle(
   bundle: RuntimePolicyBundle,
   hmacKey: string,
   protectedContextFingerprints: GuardEngineDependencies['protectedContextFingerprints'],
   runtimeOptions: PolicyBundleEngineRuntimeOptions,
 ) {
-  const {policy,detectors}=preparePolicyBundleEngine(bundle);
+  const {policy,detectors,bundle:immutableBundle}=preparePolicyBundleEngine(bundle);
   const outputSecurityEventSink=runtimeOptions.outputSecurityEventSink??(process.env.NODE_ENV==='production'?recordOutputControlFailure:undefined);
   const baseEngine=createGuardEngine(policy,detectors,{hmacKey,protectedContextFingerprints});
   return {
     ...(baseEngine.contextEvaluationMode?{contextEvaluationMode:baseEngine.contextEvaluationMode}:{}),
-    async evaluateContextual(combined:Parameters<typeof baseEngine.evaluate>[0],current:Parameters<typeof baseEngine.evaluate>[0]){
-      const decision=projectContextDecision(await baseEngine.evaluate(combined),combined,current);
-      return applyOutputIntervention(current,decision,bundle,{
+    async evaluateContextual(combined:Parameters<typeof baseEngine.evaluate>[0],current:Parameters<typeof baseEngine.evaluate>[0],signal?:AbortSignal){
+      const decision=projectContextDecision(await baseEngine.evaluate(combined,signal),combined,current);
+      return applyOutputIntervention(current,decision,immutableBundle,{
+        deferRecheck: runtimeOptions.deferOutputRecheck,
         evidenceHmacKey:hmacKey,tokenizationHmacKey:runtimeOptions.dlpTokenizationHmacKey??process.env.DLP_TOKENIZATION_HMAC_KEY,
-        evaluateRecheck:baseEngine.evaluate,securityEventSink:outputSecurityEventSink,
+        evaluateRecheck:(recheck)=>baseEngine.evaluate(recheck,signal),securityEventSink:outputSecurityEventSink,
       });
     },
-    async evaluate(request: Parameters<typeof baseEngine.evaluate>[0]) {
-      const decision = await baseEngine.evaluate(request);
-      return applyOutputIntervention(request, decision, bundle, {
+    async evaluate(request: Parameters<typeof baseEngine.evaluate>[0],signal?:AbortSignal) {
+      const decision = await baseEngine.evaluate(request,signal);
+      return applyOutputIntervention(request, decision, immutableBundle, {
+        deferRecheck: runtimeOptions.deferOutputRecheck,
         evidenceHmacKey: hmacKey,
         tokenizationHmacKey: runtimeOptions.dlpTokenizationHmacKey ??
           process.env.DLP_TOKENIZATION_HMAC_KEY,
-        evaluateRecheck: baseEngine.evaluate,
+        evaluateRecheck: (recheck) => baseEngine.evaluate(recheck, signal),
         securityEventSink: outputSecurityEventSink,
       });
     },
   };
 }
 
-// 引擎构建（词法自动机 + DAG 校验）在上千条规则时要几十毫秒 CPU；
-// bundle 内容与 id 绑定（签名后不可变），按 id 复用可避免每请求重建。
-// 仅缓存“全部使用默认参数”的引擎（现有 15 个调用点均如此）。
-const ENGINE_CACHE_MAX_ENTRIES = 16;
-const engineCache = new Map<string, ReturnType<typeof buildEngineForPolicyBundle>>();
+const engineCache = new BoundedCache<string,ReturnType<typeof buildEngineForPolicyBundle>>(16,128*1024*1024,300000);
 
 export function createEngineForPolicyBundle(
   bundle: RuntimePolicyBundle,
@@ -160,23 +182,18 @@ export function createEngineForPolicyBundle(
 ): ReturnType<typeof buildEngineForPolicyBundle> {
   const cacheable = hmacKey === (process.env.CONTENT_HASH_KEY ?? '')
     && protectedContextFingerprints.length === 0
+    && runtimeOptions.deferOutputRecheck === undefined
     && runtimeOptions.dlpTokenizationHmacKey === undefined
     && runtimeOptions.outputSecurityEventSink === undefined;
   if (!cacheable) {
     return buildEngineForPolicyBundle(bundle, hmacKey, protectedContextFingerprints, runtimeOptions);
   }
-  const cached = engineCache.get(bundle.id);
-  if (cached) {
-    // LRU 触碰：Map 迭代序即插入序，删后重插使其回到最新位置
-    engineCache.delete(bundle.id);
-    engineCache.set(bundle.id, cached);
-    return cached;
-  }
+  const serialized=JSON.stringify(bundle.payload);
+  const secretIdentity=createHash('sha256').update(hmacKey).update('\0').update(process.env.DLP_TOKENIZATION_HMAC_KEY??'').digest('hex');
+  const key=bundleIdentity(bundle,serialized)+':'+secretIdentity+':'+process.env.NODE_ENV;
+  const cached = engineCache.get(key);
+  if (cached) return cached;
   const engine = buildEngineForPolicyBundle(bundle, hmacKey, protectedContextFingerprints, runtimeOptions);
-  engineCache.set(bundle.id, engine);
-  if (engineCache.size > ENGINE_CACHE_MAX_ENTRIES) {
-    const oldest = engineCache.keys().next().value;
-    if (oldest !== undefined) engineCache.delete(oldest);
-  }
+  engineCache.set(key,engine,Math.max(65536,Buffer.byteLength(serialized)*48));
   return engine;
 }

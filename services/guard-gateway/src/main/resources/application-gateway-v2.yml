@@ -1,0 +1,19 @@
+# Opt-in direct mTLS deployment profile. No plaintext public listener.
+server:
+  ssl:
+    enabled: true
+    certificate: ${GATEWAY_SERVER_TLS_CERT}
+    certificate-private-key: ${GATEWAY_SERVER_TLS_KEY}
+    trust-certificate: ${GATEWAY_SERVER_TLS_CA}
+    client-auth: need
+    enabled-protocols: TLSv1.3
+management:
+  server:
+    port: 8081
+    address: 127.0.0.1
+    ssl:
+      enabled: false
+guard:
+  gateway:
+    tls:
+      required: true

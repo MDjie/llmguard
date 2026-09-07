@@ -55,38 +55,38 @@
 }
 
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --radius: 0.375rem;
+  --background: #f5f7fc;
+  --foreground: #202d4a;
+  --card: #ffffff;
+  --card-foreground: #202d4a;
+  --popover: #ffffff;
+  --popover-foreground: #202d4a;
+  --primary: #0862ff;
+  --primary-foreground: #ffffff;
+  --secondary: #eef3ff;
+  --secondary-foreground: #315486;
+  --muted: #f3f6fc;
+  --muted-foreground: #73829e;
+  --accent: #edf3ff;
+  --accent-foreground: #0759e8;
+  --destructive: #ef4444;
+  --border: #e6edf7;
+  --input: #dfe7f4;
+  --ring: #448bff;
+  --chart-1: #0862ff;
+  --chart-2: #17b8ac;
+  --chart-3: #f5a623;
+  --chart-4: #9464ed;
+  --chart-5: #49c6ee;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #52617d;
+  --sidebar-primary: #0862ff;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #edf3ff;
+  --sidebar-accent-foreground: #0862ff;
+  --sidebar-border: #e6edf7;
+  --sidebar-ring: #448bff;
 }
 
 .dark {
@@ -270,4 +270,30 @@ body {
   border-bottom-color: rgba(156, 163, 175, 0.75) !important;
   opacity: 0.65;
   text-decoration: line-through;
+}
+
+/* Shared console treatment follows the product whitepaper's light blue UI. */
+@layer components {
+  .console-content > div > div > h1,
+  .console-content > div > div > div > h1 {
+    font-size: 22px;
+    line-height: 1.4;
+    font-weight: 600;
+    letter-spacing: -0.025em;
+  }
+  .console-content > div { min-width: 0; }
+  .console-content [data-slot="table-header"] { background: #f1f5fd; }
+  .console-content [data-slot="table-head"] { color: #425271; font-size: 12px; }
+  .console-content [data-slot="table-cell"] { font-size: 12px; }
+  .console-content [data-slot="badge"] { border-radius: 4px; font-weight: 500; }
+  .console-content [data-slot="tabs-list"] { background: #edf2fb; }
+  .console-content [data-slot="tabs-trigger"][data-state="active"] { color: #0862ff; }
+  .console-content input::placeholder { color: #94a2bb; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .console-shell *, .console-shell *::before, .console-shell *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

@@ -28,8 +28,8 @@
     "policy:keygen": "tsx scripts/generate-policy-signing-key.ts",
     "policy:bootstrap": "tsx scripts/bootstrap-policy-bundle.ts --allow-local-development",
     "build": "next build",
-    "contracts:check": "node packages/contracts/scripts/generate.mjs --check && node packages/contracts/scripts/check-compatibility.mjs && pnpm appliance:contracts:check",
-    "contracts:generate": "node packages/contracts/scripts/generate.mjs && pnpm appliance:contracts:generate",
+    "contracts:check": "node packages/contracts/scripts/generate.mjs --check && node packages/contracts/scripts/generate-gateway-v2.mjs --check && node packages/contracts/scripts/check-compatibility.mjs && node packages/contracts/scripts/check-gateway-v2-compatibility.mjs && pnpm appliance:contracts:check",
+    "contracts:generate": "node packages/contracts/scripts/generate.mjs && node packages/contracts/scripts/generate-gateway-v2.mjs && pnpm appliance:contracts:generate",
     "appliance:contracts:check": "node packages/contracts-appliance/scripts/generate.mjs --check && node packages/contracts-appliance/scripts/check-compatibility.mjs",
     "appliance:contracts:generate": "node packages/contracts-appliance/scripts/generate.mjs",
     "appliance:plan-check": "node scripts/acceptance/validate-appliance-plan.mjs",
@@ -88,7 +88,9 @@
     "security-hardening:matrix": "node scripts/acceptance/generate-security-hardening-matrix.mjs",
     "security-hardening:verify-deliverables": "node scripts/acceptance/verify-security-hardening-deliverables.mjs",
     "ts-check": "tsc -p tsconfig.json",
-    "validate": "pnpm contracts:check && pnpm plan:check && pnpm quality:full && pnpm test:unit --run"
+    "validate": "pnpm contracts:check && pnpm plan:check && pnpm quality:full && pnpm test:unit --run",
+    "gateway:reconcile": "tsx scripts/gateway-request-worker.ts",
+    "test:integration:gateway-v2": "node scripts/integration/run-gateway-v2-e2e.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -171,6 +173,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.3",
     "hono": "^4.13.5",
+    "js-yaml": "4.3.2",
     "shadcn": "3.7.0",
     "tailwindcss": "^4",
     "tsup": "^8.3.5",

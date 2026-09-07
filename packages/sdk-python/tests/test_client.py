@@ -88,6 +88,7 @@ class ClientTest(unittest.TestCase):
             application_id="app-1",
             credential_id="credential-1",
             context_hmac_secret=self.secret,
+            guard_api_key="test-application-key",
             opener=opener,
         )
         result = client.chat(
@@ -102,6 +103,9 @@ class ClientTest(unittest.TestCase):
         self.assertEqual(request.headers["X-guard-context-version"], "3")
         self.assertEqual(request.headers["X-principal-id"], "user-1")
         self.assertEqual(request.headers["X-credential-id"], "credential-1")
+        self.assertEqual(request.headers["X-guard-api-key"], "test-application-key")
+        self.assertEqual(request.headers["Idempotency-key"], "request-123")
+        self.assertIn("X-guard-deadline", request.headers)
         self.assertFalse(json.loads(request.data)["stream"])
 
 

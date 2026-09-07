@@ -1,8 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { PageHeader } from '@/components/console/page-header';
+import { MetricCard } from '@/components/console/metric-card';
+import { DetailPanel } from '@/components/console/detail-panel';
+import { EmptyState } from '@/components/console/empty-state';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,11 +16,10 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Search, Trash2, Eye, RefreshCw, AlertCircle, AlertTriangle, CheckCircle2, CalendarIcon, X, Filter, Shield, Bot, Zap, GitMerge, type LucideIcon } from 'lucide-react';
+import { Trash2, Eye, RefreshCw, AlertCircle, AlertTriangle, CheckCircle2, CalendarIcon, X, Filter, Shield, Bot, GitMerge, type LucideIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { dimensionLabel } from '@/lib/dimension-labels';
 import JudgeModelResultCard from '@/components/judge/JudgeModelResultCard';
 import { csrfHeaders } from '@/lib/auth/csrf-client';
 
@@ -115,11 +119,13 @@ export default function HistoryPage() {
     startDate: null as Date | null,
     endDate: null as Date | null,
   });
+  const [historyError, setHistoryError] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [detailSession, setDetailSession] = useState<Session | null>(null);
 
-  const fetchHistory = async (page = 1) => {
+  const fetchHistory = useCallback(async (page = 1) => {
     setLoading(true);
+    setHistoryError(null);
     try {
       const params = new URLSearchParams();
       params.append('page', page.toString());
@@ -143,20 +149,21 @@ export default function HistoryPage() {
       const res = await fetch(`/api/history?${params}`);
       const data = await res.json();
       
-      if (data.success && data.data) {
+      if (res.ok && data.success && data.data) {
         setSessions(data.data.sessions || []);
         setPagination(data.data.pagination || { page: 1, limit: pagination.limit, total: 0, totalPages: 0 });
-      }
+      } else { setHistoryError('检测记录加载失败，请刷新重试'); }
     } catch (error) {
       console.error('加载历史记录失败:', error);
+      setHistoryError('检测记录加载失败，请刷新重试');
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter, pagination.limit]);
 
   useEffect(() => {
-    fetchHistory(1);
-  }, [filter, pagination.limit]);
+    void fetchHistory(1);
+  }, [fetchHistory]);
 
   const clearFilters = () => {
     setFilter({
@@ -197,25 +204,19 @@ export default function HistoryPage() {
   };
 
   const getActionBadge = (action: string) => {
-    const styles: Record<string, { variant: 'destructive' | 'default' | 'secondary'; icon: LucideIcon; text: string }> = {
-      block: { variant: 'destructive', icon: AlertCircle, text: '拒绝' },
-      warn: { variant: 'default', icon: AlertTriangle, text: '警告' },
-      allow: { variant: 'secondary', icon: CheckCircle2, text: '放行' },
+    const styles: Record<string, { icon: LucideIcon; text: string; tone: string }> = {
+      block: { icon: AlertCircle, text: '拒绝', tone: 'border-red-100 bg-red-50 text-red-600' },
+      warn: { icon: AlertTriangle, text: '警告', tone: 'border-amber-100 bg-amber-50 text-amber-600' },
+      allow: { icon: CheckCircle2, text: '放行', tone: 'border-emerald-100 bg-emerald-50 text-emerald-600' },
+      mask: { icon: Eye, text: '脱敏', tone: 'border-blue-100 bg-blue-50 text-blue-600' },
+      rewrite: { icon: GitMerge, text: '改写', tone: 'border-violet-100 bg-violet-50 text-violet-600' },
+      safe_response: { icon: Bot, text: '安全代答', tone: 'border-blue-100 bg-blue-50 text-blue-600' },
+      require_review: { icon: AlertTriangle, text: '待审核', tone: 'border-amber-100 bg-amber-50 text-amber-600' },
     };
-    
-    const style = styles[action] || styles.allow;
+    const style = styles[action] ?? { icon: Shield, text: action || '未知动作', tone: 'border-slate-200 bg-slate-50 text-slate-600' };
     const Icon = style.icon;
-    
-    return (
-      <Badge variant={style.variant} className="flex items-center gap-1">
-        <Icon className="h-3 w-3" />
-        {style.text}
-      </Badge>
-    );
+    return <Badge variant="outline" className={cn('inline-flex items-center gap-1', style.tone)}><Icon className="size-3" />{style.text}</Badge>;
   };
-
-  // 统一使用共享维度标签（此前本页仅维护 5/16 项，缺失维度显示英文码）
-  const getDimensionName = dimensionLabel;
 
   const getSeverityBadge = (severity: string) => {
     const colors: Record<string, string> = {
@@ -267,15 +268,20 @@ export default function HistoryPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">历史记录</h1>
-        <p className="text-gray-600 mt-1">查看和管理所有检测记录</p>
+    <div className="space-y-4">
+      <PageHeader title="内容审计" description="查询输入输出检测记录、敏感信息处置及风险证据" />
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <MetricCard label="匹配审计记录" value={pagination.total} unit="条" hint="当前筛选条件" icon={Shield} />
+        <MetricCard label="当前页风险记录" value={sessions.filter((item) => item.hasRisk).length} unit="条" hint="当前列表记录" icon={AlertTriangle} tone="amber" />
+        <MetricCard label="当前页脱敏处置" value={sessions.filter((item) => item.action === 'mask').length} unit="条" hint="当前列表记录" icon={Eye} />
+        <MetricCard label="当前页拦截处置" value={sessions.filter((item) => item.action === 'block').length} unit="条" hint="当前列表记录" icon={AlertCircle} tone="red" />
       </div>
-
+      {historyError && <p role="alert" className="rounded border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{historyError}</p>}
+      <div className="grid items-start gap-3 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="min-w-0 space-y-3">
       {/* 筛选栏 */}
       <Card>
-        <CardContent className="pt-6">
+        <CardContent className="pt-0">
           <div className="space-y-4">
             {/* 主筛选行 */}
             <div className="flex gap-4 flex-wrap">
@@ -295,6 +301,8 @@ export default function HistoryPage() {
                   <SelectItem value="block">拒绝</SelectItem>
                   <SelectItem value="warn">警告</SelectItem>
                   <SelectItem value="allow">放行</SelectItem>
+                  <SelectItem value="mask">脱敏</SelectItem>
+                  <SelectItem value="rewrite">改写</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={filter.dimension} onValueChange={(value) => setFilter({ ...filter, dimension: value })}>
@@ -313,6 +321,7 @@ export default function HistoryPage() {
               <Button 
                 variant="outline" 
                 size="icon"
+                aria-label="时间筛选" aria-expanded={showFilters}
                 onClick={() => setShowFilters(!showFilters)}
                 className={cn(showFilters && "bg-accent")}
               >
@@ -389,57 +398,21 @@ export default function HistoryPage() {
       </Card>
 
       {/* 记录列表 */}
-      {loading ? (
-        <div className="flex items-center justify-center h-64">
-          <div className="text-gray-500">加载中...</div>
-        </div>
-      ) : sessions.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center h-64">
-            <div className="text-gray-500 mb-4">暂无检测记录</div>
-            <Button onClick={() => fetchHistory(1)}>刷新</Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-4">
-          {sessions.map((session) => (
-            <Card key={session.id}>
-              <CardContent className="pt-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      {getActionBadge(session.action)}
-                      <span className="text-xs text-gray-500">
-                        {new Date(session.createdAt).toLocaleString()}
-                      </span>
-                      {session.policyName && (
-                        <span className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
-                          {session.policyName}
-                        </span>
-                      )}
-                      {(session.providerName || session.modelUsed) && (
-                        <span className="text-xs text-gray-500">
-                          {[session.providerName, session.modelUsed].filter(Boolean).join(' / ')}
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-sm text-gray-900 font-medium">
-                      {/* 原文已按数据最小化策略不再保留（contentStored 标识是否曾存储） */}
-                      用户输入: {session.inputText ?? '（原文未保留）'}
-                    </div>
-                    {session.outputText && (
-                      <div className="text-sm text-gray-600 mt-1">
-                        模型输出: {session.outputText.substring(0, 100)}...
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="sm" onClick={() => setDetailSession(session)}>
-                      <Eye className="h-4 w-4 text-blue-500" />
-                    </Button>
+      <Card>
+        <CardHeader><CardTitle>内容审计记录</CardTitle></CardHeader>
+        <CardContent>
+          {loading ? <div className="py-16 text-center text-sm text-muted-foreground">加载中...</div> : sessions.length === 0 ? <EmptyState title={historyError ? '记录暂不可用' : '暂无检测记录'} description={historyError ? '请刷新重试' : '调整筛选条件或完成一次检测后查看'} /> : <Table>
+            <TableHeader><TableRow><TableHead>发生时间</TableHead><TableHead>内容摘要</TableHead><TableHead>命中策略</TableHead><TableHead>处置动作</TableHead><TableHead>最高风险分</TableHead><TableHead>操作</TableHead></TableRow></TableHeader>
+            <TableBody>{sessions.map((session) => <TableRow key={session.id} data-state={detailSession?.id === session.id ? 'selected' : undefined}>
+              <TableCell className="text-muted-foreground">{new Date(session.createdAt).toLocaleString('zh-CN', { hour12: false })}</TableCell>
+              <TableCell className="max-w-52"><p className="truncate">{session.inputText ?? '原文未保留'}</p><p className="mt-1 truncate text-[10px] text-muted-foreground">{[session.providerName, session.modelUsed].filter(Boolean).join(' / ') || '—'}</p></TableCell>
+              <TableCell className="max-w-36 truncate text-muted-foreground">{session.policyName || '—'}</TableCell>
+              <TableCell>{getActionBadge(session.action)}</TableCell>
+              <TableCell className="tabular-nums">{session.inputScore === null && session.outputScore === null ? '—' : Math.max(session.inputScore ?? 0, session.outputScore ?? 0)}</TableCell>
+              <TableCell><div className="flex items-center"><Button variant="link" size="sm" onClick={() => setDetailSession(session)}>详情</Button>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button variant="ghost" size="sm">
+                        <Button variant="ghost" size="icon-sm" aria-label="删除记录">
                           <Trash2 className="h-4 w-4 text-red-500" />
                         </Button>
                       </AlertDialogTrigger>
@@ -458,107 +431,9 @@ export default function HistoryPage() {
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
-                </div>
-              </div>
-
-              {/* 风险明细 */}
-                <div className="grid grid-cols-2 gap-4 mt-4">
-                  {session.inputScore !== null && (
-                    <div className="p-3 bg-gray-50 rounded">
-                      <div className="text-xs text-gray-600 mb-1">输入检测</div>
-                      <div className="flex items-center gap-2">
-                        {session.inputAction && getActionBadge(session.inputAction)}
-                        <span className="text-sm font-medium">风险分: {session.inputScore}</span>
-                      </div>
-                    </div>
-                  )}
-                  {session.outputScore !== null && (
-                    <div className="p-3 bg-gray-50 rounded">
-                      <div className="text-xs text-gray-600 mb-1">输出检测</div>
-                      <div className="flex items-center gap-2">
-                        {session.outputAction && getActionBadge(session.outputAction)}
-                        <span className="text-sm font-medium">风险分: {session.outputScore}</span>
-                      </div>
-                    </div>
-                  )}
-                  {session.latencyMs !== null && (
-                    <div className="p-3 bg-gray-50 rounded">
-                      <div className="text-xs text-gray-600 mb-1">延迟</div>
-                      <div className="text-sm font-medium">{session.latencyMs}ms</div>
-                    </div>
-                  )}
-                  {session.riskLevel && (
-                    <div className="p-3 bg-gray-50 rounded">
-                      <div className="text-xs text-gray-600 mb-1">风险等级</div>
-                      <div className="text-sm font-medium capitalize">{session.riskLevel}</div>
-                    </div>
-                  )}
-                </div>
-
-                {/* 风险维度 */}
-                {session.findings && session.findings.length > 0 && (
-                  <div className="mt-4">
-                    <div className="text-xs text-gray-600 mb-2">风险维度</div>
-                    <div className="flex flex-wrap gap-2">
-                      {session.findings.map((finding, idx) => (
-                        <div key={idx} className="px-3 py-1 bg-gray-100 rounded text-xs flex items-center gap-2">
-                          <span className="font-medium">{finding.dimensionName || finding.dimension}</span>
-                          <span className="text-gray-600">分数: {finding.score}</span>
-                          {getSeverityBadge(finding.severity)}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* 白名单命中信息 */}
-                {session.whitelistMatched && (
-                  <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                    <div className="flex items-center gap-2 text-sm font-medium text-blue-700 dark:text-blue-400 mb-2">
-                      <Shield className="h-4 w-4" />
-                      白名单命中
-                    </div>
-                    <div className="text-sm space-y-1">
-                      <div>
-                        <span className="text-gray-500">命中白名单：</span>
-                        <Badge variant="outline" className="ml-1">{session.whitelistMatched.name}</Badge>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">白名单类型：</span>
-                        <span className="ml-1">{session.whitelistMatched.policyScope === 'all' ? '全部策略' : '指定策略'}</span>
-                        <span className="mx-1">|</span>
-                        <span>{session.whitelistMatched.dimensionScope === 'all' ? '全部维度' : '指定维度'}</span>
-                      </div>
-                      {session.whitelistMatched.effect && (
-                        <div className="text-blue-600 dark:text-blue-400">
-                          {session.whitelistMatched.effect === 'skip_all_detection' 
-                            ? '命中全局白名单，已跳过所有风险检测' 
-                            : '命中维度白名单，已跳过指定维度检测'}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* 跳过的维度 */}
-                {session.skippedDimensions && session.skippedDimensions.length > 0 && (
-                  <div className="mt-4 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                    <div className="text-sm font-medium text-green-700 dark:text-green-400 mb-2">
-                      因白名单跳过的维度
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {session.skippedDimensions.map((skipped, idx) => (
-                        <div key={idx} className="text-sm bg-green-100 dark:bg-green-800 text-green-700 dark:text-green-300 px-2 py-1 rounded">
-                          {skipped.dimensionName}（因命中&quot;{skipped.whitelistName}&quot;）
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-
+              </div></TableCell>
+            </TableRow>)}</TableBody>
+          </Table>}
           {/* 分页 */}
           {pagination.total > 0 && (
             <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-6 pt-4 border-t">
@@ -612,7 +487,7 @@ export default function HistoryPage() {
                   </Button>
                   
                   {/* 页码 */}
-                  <div className="flex items-center gap-1 mx-2">
+                  <div className="hidden items-center gap-1 mx-2 sm:flex">
                     {generatePageNumbers(pagination.page, pagination.totalPages).map((pageNum, idx) => (
                       pageNum === '...' ? (
                         <span key={`ellipsis-${idx}`} className="px-2 text-gray-400">...</span>
@@ -655,20 +530,12 @@ export default function HistoryPage() {
               )}
             </div>
           )}
+        </CardContent>
+      </Card>
         </div>
-      )}
-
-      {/* 详情弹窗 */}
-      <AlertDialog open={!!detailSession} onOpenChange={(open) => !open && setDetailSession(null)}>
-        <AlertDialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              检测详情
-              {detailSession && getActionBadge(detailSession.action)}
-            </AlertDialogTitle>
-            <AlertDialogDescription className="sr-only">
-              查看检测记录的详细信息
-            </AlertDialogDescription>
+        <DetailPanel title="审计详情" open={Boolean(detailSession)} onClose={() => setDetailSession(null)}>
+          <div className="p-4">
+            {detailSession && <div className="mb-3">{getActionBadge(detailSession.action)}</div>}
             <div className="text-left text-muted-foreground text-sm">
               {detailSession && (
                 <div className="space-y-4 mt-2">
@@ -676,7 +543,7 @@ export default function HistoryPage() {
                   <div className="grid grid-cols-2 gap-3 text-sm">
                     <div>
                       <span className="text-gray-500">检测时间：</span>
-                      <span>{new Date(detailSession.createdAt).toLocaleString()}</span>
+                      <span>{new Date(detailSession.createdAt).toLocaleString('zh-CN', { hour12: false })}</span>
                     </div>
                     <div>
                       <span className="text-gray-500">策略名称：</span>
@@ -705,7 +572,7 @@ export default function HistoryPage() {
                     <div className="text-sm font-medium text-gray-700">用户输入</div>
                     <div className="p-3 bg-gray-50 rounded-lg text-sm whitespace-pre-wrap break-all max-h-40 overflow-y-auto">
                       {detailSession.inputText
-                        ?? (detailSession.contentStored ? '（原文未保留：已按数据最小化策略脱敏）' : '（无输入内容）')}
+                        ?? (detailSession.contentStored ? '（原文未保留：已按数据最小化策略脱敏）' : '（原文未保留）')}
                     </div>
                   </div>
 
@@ -844,12 +711,10 @@ export default function HistoryPage() {
                 </div>
               )}
             </div>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogAction onClick={() => setDetailSession(null)}>关闭</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+
+          </div>
+        </DetailPanel>
+      </div>
     </div>
   );
 }

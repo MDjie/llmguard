@@ -97,6 +97,9 @@ public final class GuardGatewayClient {
                 .header("Accept", stream ? "text/event-stream" : "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(requestJson, StandardCharsets.UTF_8));
         addContextHeaders(builder, context);
+        builder.header("X-Guard-Deadline", Long.toString(context.absoluteDeadlineEpochMs()))
+                .header("Idempotency-Key", context.requestId());
+        if (guardApiKey != null && !guardApiKey.isBlank()) builder.header("X-Guard-Api-Key", guardApiKey);
         return builder.build();
     }
 

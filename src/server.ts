@@ -1,4 +1,9 @@
-import { createServer } from 'http';
+import { createServer } from 'node:http';
+import { createServer as createTlsServer } from 'node:https';
+import { readFileSync } from 'node:fs';
+import { TLSSocket } from 'node:tls';
+import { createHmac, randomBytes } from 'node:crypto';
+import type { IncomingMessage, ServerResponse } from 'node:http';
 import next from 'next';
 
 // 仅在显式声明非生产时才使用 dev 模式。
@@ -17,31 +22,45 @@ const shutdownTimeoutMs = Math.max(
   Number(process.env.SHUTDOWN_TIMEOUT_MS ?? 20_000),
 );
 
+const ingressSecret = randomBytes(32).toString('hex');
+process.env.GATEWAY_INGRESS_SECRET = ingressSecret;
+
 // Create Next.js app
 // 在开发环境下禁用 Turbopack（Next.js 16 默认启用），因为 Turbopack 在某些情况下有路径解析问题
 const app = next({ dev, hostname, port, turbo: false });
 const handle = app.getRequestHandler();
 
 app.prepare().then(() => {
-  const server = createServer(async (req, res) => {
+  const listener = async (req: IncomingMessage, res: ServerResponse) => {
     try {
       // 客户端可任意伪造请求头，因此真实对端地址只能由本服务器在 TCP 层写入：
       // 无条件覆盖客户端传入的同名头，供 api-security 解析不可伪造的客户端 IP。
       req.headers['x-guardllm-remote'] = req.socket.remoteAddress ?? '';
+      const socket = req.socket;
+      req.headers['x-guard-tls-client-sha256'] = socket instanceof TLSSocket && socket.authorized ? (socket.getPeerCertificate().fingerprint256?.replaceAll(':', '').toLowerCase() ?? '') : '';
+      const stamp = String(Date.now());
+      req.headers['x-guard-ingress-time'] = stamp;
+      const material = [req.method, req.url, req.headers['x-guardllm-remote'], req.headers['x-guard-tls-client-sha256'], stamp, req.headers['x-guard-workload-signature'] ?? ''].join('\n');
+      req.headers['x-guard-ingress-proof'] = createHmac('sha256', ingressSecret).update(material).digest('hex');
       await handle(req, res);
     } catch (err) {
       console.error('Error occurred handling', req.url, err);
       res.statusCode = 500;
       res.end('Internal server error');
     }
-  });
+  };
+  const cert = process.env.GATEWAY_CONTROL_TLS_CERT;
+  const key = process.env.GATEWAY_CONTROL_TLS_KEY;
+  const ca = process.env.GATEWAY_CONTROL_TLS_CA;
+  if ([cert,key,ca].some(Boolean) && ![cert,key,ca].every(Boolean)) throw new Error('INCOMPLETE_CONTROL_TLS_CONFIGURATION');
+  const server = cert && key && ca ? createTlsServer({ cert: readFileSync(cert), key: readFileSync(key), ca: readFileSync(ca), requestCert: true, rejectUnauthorized: false, minVersion: 'TLSv1.3' }, listener) : createServer(listener);
   server.once('error', err => {
     console.error(err);
     process.exit(1);
   });
   server.listen(port, () => {
     console.log(
-      `> Server listening at http://${hostname}:${port} as ${
+      `> Server listening at ${cert ? 'https' : 'http'}://${hostname}:${port} as ${
         dev ? 'development' : 'production'
       }`,
     );

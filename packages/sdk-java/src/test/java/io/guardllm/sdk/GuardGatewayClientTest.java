@@ -28,6 +28,9 @@ class GuardGatewayClientTest {
         assertEquals("3", request.headers().firstValue("X-Guard-Context-Version").orElseThrow());
         assertEquals("user-1", request.headers().firstValue("X-Principal-Id").orElseThrow());
         assertEquals("credential-1", request.headers().firstValue("X-Credential-Id").orElseThrow());
+        assertEquals("guard-key", request.headers().firstValue("X-Guard-Api-Key").orElseThrow());
+        assertEquals("request-123", request.headers().firstValue("Idempotency-Key").orElseThrow());
+        assertEquals(Long.toString(context.absoluteDeadlineEpochMs()), request.headers().firstValue("X-Guard-Deadline").orElseThrow());
         assertEquals("session-1", request.headers().firstValue("X-Session-Id").orElseThrow());
         assertTrue(request.headers().firstValue("X-Guard-Context-Signature").orElseThrow()
                 .matches("[a-f0-9]{64}"));

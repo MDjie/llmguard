@@ -92,14 +92,15 @@ export async function submitGuardJob(input: {
       'Generated-content media marking only supports image, audio and video artifacts',
     );
   }
+  const executionBinding = jobType === 'code_scan' ? await (await import('@/lib/connectors/code-sentinel-config')).captureCodeScanBinding(input.scope, input.ownerId, input.artifactId) : undefined;
   const requestHash = createHash('sha256').update(canonicalJson({
+    ...(executionBinding ? { executionBinding } : {}),
     artifactId: input.artifactId,
     artifactHash: artifact.verifiedSha256,
-    contextArtifactId: input.contextArtifactId,
-    contextArtifactHash,
+    ...(input.contextArtifactId ? { contextArtifactId: input.contextArtifactId, contextArtifactHash } : {}),
     bundleId: input.bundleId,
     jobType,
-    callbackUrl: input.callback?.url,
+    ...(input.callback ? { callbackUrl: input.callback.url } : {}),
   })).digest('hex');
   const submission = await db.transaction(async (transaction) => {
     await transaction.execute(sql`select pg_advisory_xact_lock(hashtext(${`${input.scope.tenantId}:${input.scope.applicationId}:${input.idempotencyKey}`}))`);
@@ -120,6 +121,7 @@ export async function submitGuardJob(input: {
       contextArtifactId: input.contextArtifactId,
       bundleId: input.bundleId,
       jobType,
+      executionBinding,
       idempotencyKey: input.idempotencyKey,
       requestHash,
       maxAttempts: input.maxAttempts,

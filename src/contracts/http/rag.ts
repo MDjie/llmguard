@@ -30,3 +30,11 @@ export const guardRagFlowSchema = z.object({
   minimumTrustLevel: z.number().int().min(0).max(100).default(0),
   maximumCandidatesPerSource: z.number().int().min(1).max(100).default(20),
 }).strict();
+
+export const retrieveRagSchema = z.object({
+  requestId:z.string().min(8).max(128),traceId:z.string().min(16).max(128),bundleId:id.optional(),
+  sourceIds:z.array(z.string().uuid()).min(1).max(100),
+  query:z.string().min(1).max(32768),maximumCandidates:z.number().int().min(1).max(100).default(20),
+  minimumTrustLevel:z.number().int().min(0).max(100).default(0),
+  absoluteDeadlineEpochMs:z.number().int().positive(),
+}).strict();

@@ -26,7 +26,12 @@ describe('Java guard gateway structure', () => {
     expect(authenticator).toContain('X-Guard-Context-Signature');
     expect(authenticator).toContain('X-Absolute-Deadline-Epoch-Ms');
     expect(bulkhead).toContain('doFinally');
-    expect(websocket).toContain('streamingCommitGate.gate');
+    expect(websocket).toContain('service.handle(request, identity');
+    expect(websocket).not.toContain('modelClient.');
+    const service = readFileSync(root + '/src/main/java/com/guardllm/gateway/GuardedChatService.java', 'utf8');
+    expect(service).toContain('runtime.authorize(request, headers)');
+    expect(service).toContain('"RELEASE_INTENT"');
+    expect(service).toContain('"WRITE_ACCEPTED"');
     expect(quota).toContain("redis.call('INCRBY'");
     expect(shadow).not.toContain('text={');
     expect(readme).toContain('mutual TLS');

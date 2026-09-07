@@ -10,7 +10,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { PageHeader } from '@/components/console/page-header';
+import { MetricCard } from '@/components/console/metric-card';
+import { DetailPanel } from '@/components/console/detail-panel';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { csrfHeaders } from '@/lib/auth/csrf-client';
@@ -270,37 +272,19 @@ export default function IncidentsPage() {
 
   return (
     <div className="mx-auto w-full max-w-[1500px] space-y-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <ShieldAlert className="h-6 w-6 text-red-600" />
-            <h2 className="text-2xl font-semibold text-gray-900">安全事件</h2>
-          </div>
-          <p className="mt-1 text-sm text-gray-500">研判、分派并追踪高风险检测事件</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={() => void loadIncidents()} title="刷新">
-            <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
-          </Button>
-          <Button onClick={() => setCreateOpen(true)}><Plus className="h-4 w-4" />新建事件</Button>
-        </div>
-      </div>
-
+      <PageHeader title="风险事件" description="集中研判、分派与追踪大模型安全风险事件" actions={<>
+        <Button variant="outline" size="sm" disabled={loading} onClick={() => void loadIncidents()}><RefreshCw className={cn('size-3.5', loading && 'animate-spin')} />刷新</Button>
+        <Button size="sm" onClick={() => setCreateOpen(true)}><Plus className="size-4" />新建事件</Button>
+      </>} />
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {[
-          { label: '事件总数', value: total, tone: 'text-gray-900' },
-          { label: '当前页处理中', value: pageStats.active, tone: 'text-blue-700' },
-          { label: '当前页严重事件', value: pageStats.critical, tone: 'text-red-700' },
-          { label: '当前页 SLA 超时', value: pageStats.overdue, tone: 'text-amber-700' },
-        ].map((item) => (
-          <div key={item.label} className="rounded-md border border-gray-200 bg-white px-4 py-3">
-            <p className="text-xs text-gray-500">{item.label}</p>
-            <p className={cn('mt-1 text-2xl font-semibold', item.tone)}>{item.value}</p>
-          </div>
-        ))}
+        <MetricCard label="事件总数" value={total} unit="条" hint="当前筛选条件" icon={ShieldAlert} />
+        <MetricCard label="当前页处理中" value={pageStats.active} unit="条" hint="当前列表记录" icon={UserRound} />
+        <MetricCard label="当前页严重事件" value={pageStats.critical} unit="条" hint="CRITICAL 级别" icon={AlertTriangle} tone="red" />
+        <MetricCard label="当前页 SLA 超时" value={pageStats.overdue} unit="条" hint="超出处置时限" icon={Clock3} tone="amber" />
       </div>
-
-      <div className="flex flex-wrap items-center gap-3 border-y border-gray-200 bg-white px-3 py-3">
+      <div className="grid items-start gap-3 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="min-w-0 space-y-3">
+      <div className="flex flex-wrap items-center gap-3 rounded-md border border-border bg-white px-3 py-3">
         <Select value={status} onValueChange={(value) => { setStatus(value); setPage(1); }}>
           <SelectTrigger className="w-40"><SelectValue placeholder="全部状态" /></SelectTrigger>
           <SelectContent>
@@ -338,7 +322,7 @@ export default function IncidentsPage() {
             ) : items.length === 0 ? (
               <TableRow><TableCell colSpan={8} className="h-40 text-center text-gray-500">当前筛选条件下没有安全事件</TableCell></TableRow>
             ) : items.map((incident) => (
-              <TableRow key={incident.id} className="cursor-pointer" onClick={() => void loadDetail(incident.id)}>
+              <TableRow key={incident.id} data-state={selected?.id === incident.id ? 'selected' : undefined} className="cursor-pointer" onClick={() => void loadDetail(incident.id)}>
                 <TableCell className="font-mono text-xs text-gray-700">{incident.incidentNumber}</TableCell>
                 <TableCell>
                   <p className="max-w-xl truncate font-medium text-gray-900">{incident.title}</p>
@@ -349,7 +333,7 @@ export default function IncidentsPage() {
                 <TableCell className="text-sm text-gray-600">{incident.assigneeId ?? '未分派'}</TableCell>
                 <TableCell><span className={cn('flex items-center gap-1 text-xs', incident.slaBreached ? 'font-medium text-red-600' : 'text-gray-600')}><Clock3 className="h-3.5 w-3.5" />{slaText(incident)}</span></TableCell>
                 <TableCell className="text-xs text-gray-500">{formatDate(incident.createdAt)}</TableCell>
-                <TableCell><Button variant="ghost" size="icon" title="查看详情" onClick={(event) => { event.stopPropagation(); void loadDetail(incident.id); }}><Eye className="h-4 w-4" /></Button></TableCell>
+                <TableCell><Button variant="ghost" size="icon" aria-label="查看事件详情" title="查看详情" onClick={(event) => { event.stopPropagation(); void loadDetail(incident.id); }}><Eye className="h-4 w-4" /></Button></TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -362,22 +346,22 @@ export default function IncidentsPage() {
         <Button variant="outline" disabled={page >= totalPages || loading} onClick={() => setPage((value) => value + 1)}>下一页</Button>
       </div>
 
-      <Sheet open={Boolean(selected) || detailLoading} onOpenChange={(open) => { if (!open) setSelected(null); }}>
-        <SheetContent className="w-full overflow-y-auto p-0 sm:max-w-2xl">
+        </div>
+        <DetailPanel title="事件详情" open={Boolean(selected) || detailLoading} onClose={() => setSelected(null)}>
           {detailLoading && !selected ? (
             <div className="flex h-full items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
           ) : selected ? (
             <>
-              <SheetHeader className="border-b border-gray-200 px-6 py-5 text-left">
+              <div className="border-b border-border px-4 py-4">
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge variant="outline" className={severityClass[selected.severity]}>{selected.severity}</Badge>
                   <Badge variant="outline" className={statusClass[selected.status]}>{statusLabel[selected.status]}</Badge>
                   {selected.slaBreached && <Badge variant="destructive">SLA 超时</Badge>}
                 </div>
-                <SheetTitle className="text-xl">{selected.title}</SheetTitle>
-                <SheetDescription className="font-mono">{selected.incidentNumber}</SheetDescription>
-              </SheetHeader>
-              <div className="space-y-6 px-6 py-5">
+                <h2 className="mt-3 text-base font-semibold">{selected.title}</h2>
+                <p className="mt-2 break-all font-mono text-[11px] text-muted-foreground">{selected.incidentNumber}</p>
+              </div>
+              <div className="space-y-5 px-4 py-4">
                 <div className="grid grid-cols-2 gap-x-5 gap-y-3 text-sm">
                   <div><p className="text-xs text-gray-500">风险类型</p><p className="mt-1 break-words">{selected.riskType}</p></div>
                   <div><p className="text-xs text-gray-500">责任人</p><p className="mt-1">{selected.assigneeId ?? '未分派'}</p></div>
@@ -447,8 +431,8 @@ export default function IncidentsPage() {
               </div>
             </>
           ) : null}
-        </SheetContent>
-      </Sheet>
+        </DetailPanel>
+      </div>
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">

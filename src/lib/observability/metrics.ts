@@ -126,6 +126,16 @@ function increment(name: string, labels: Labels, amount = 1): void {
   counters.set(name, family);
 }
 
+/** Import absolute process-local counters from a bounded subsystem; do not add them on each scrape. */
+export function replaceCounter(name:string,samples:readonly {labels:Labels;value:number}[]):void {
+  const family=new Map<string,MetricSample>();
+  for(const item of samples.slice(0,MAX_SERIES_PER_FAMILY)){
+    const labels=normalizedLabels(item.labels);
+    family.set(labelKey(labels),{labels,value:Number.isFinite(item.value)?Math.max(0,item.value):0});
+  }
+  counters.set(name,family);
+}
+
 export function replaceGauge(name: string, samples: readonly { labels: Labels; value: number }[]): void {
   const family = new Map<string, MetricSample>();
   for (const item of samples.slice(0, MAX_SERIES_PER_FAMILY)) {

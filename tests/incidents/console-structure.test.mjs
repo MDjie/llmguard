@@ -25,7 +25,7 @@ describe('security incident operations console', () => {
 
   it('is reachable from the primary application navigation', () => {
     expect(navigation).toContain("href: '/incidents'");
-    expect(navigation).toContain("name: '安全事件'");
+    expect(navigation).toContain("name: '风险事件'");
   });
 
   it('atomically creates an event for blocked persisted detection sessions', () => {

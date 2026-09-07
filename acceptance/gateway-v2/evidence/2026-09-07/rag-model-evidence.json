@@ -1,0 +1,47 @@
+{
+  "schemaVersion": "1.0",
+  "createdAt": "2026-09-07T11:28:49.175Z",
+  "environment": "isolated real Java/Node/PostgreSQL with synthetic object receiver and model",
+  "evidenceClass": "ENGINEERING",
+  "modelInvocationProven": true,
+  "realSemanticQualityProven": false,
+  "passed": 7,
+  "failed": 0,
+  "results": [
+    {
+      "id": "IT-RAG-MODEL-01",
+      "name": "approved context reaches the actual model as untrusted user data and binds audit to business request",
+      "status": "PASS"
+    },
+    {
+      "id": "IT-RAG-MODEL-02",
+      "name": "denied ACL performs no object read or model call",
+      "status": "PASS"
+    },
+    {
+      "id": "IT-RAG-MODEL-03",
+      "name": "indirect injection is blocked before a model invocation",
+      "status": "PASS"
+    },
+    {
+      "id": "IT-RAG-MODEL-04",
+      "name": "changed object bytes cannot enter the model",
+      "status": "PASS"
+    },
+    {
+      "id": "IT-RAG-MODEL-05",
+      "name": "client cannot supply principal, clearance or trusted context flags",
+      "status": "PASS"
+    },
+    {
+      "id": "IT-RAG-MODEL-06",
+      "name": "ACL revocation during upstream execution prevents output release",
+      "status": "PASS"
+    },
+    {
+      "id": "IT-RAG-MODEL-07",
+      "name": "idempotent retry never repeats retrieval or model invocation",
+      "status": "PASS"
+    }
+  ]
+}

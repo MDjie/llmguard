@@ -4,7 +4,7 @@
 -- 链条版本同步升级为 2（新字段纳入哈希保护，v1 旧条目按原字段集校验）
 ALTER TABLE "security_audit_events"
     ADD COLUMN IF NOT EXISTS "query_string" varchar(1024),
-    ADD COLUMN IF NOT "client_ip" varchar(64),
-    ADD COLUMN IF NOT "user_agent" varchar(256);
+    ADD COLUMN IF NOT EXISTS "client_ip" varchar(64),
+    ADD COLUMN IF NOT EXISTS "user_agent" varchar(256);
 
 CREATE INDEX IF NOT EXISTS "security_audit_events_client_ip_idx" ON "security_audit_events" ("client_ip");

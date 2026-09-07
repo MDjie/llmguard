@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0",
-  "generatedAt": "2026-09-02T05:36:51.182Z",
+  "generatedAt": "2026-09-04T08:47:22.531Z",
   "source": "输出/大模型安全围栏产品详细需求分析报告_V1.0.md",
   "requirementCount": 101,
   "policy": "Implementation mapping is not acceptance. PASS requires immutable signed target-environment evidence. External dependencies are never inferred from orchestration code.",

@@ -1,7 +1,8 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  distDir: ['.next-upgrade-v2', '.next-upgrade-build'].includes(process.env.GUARD_NEXT_DIST_DIR ?? '')
+    ? process.env.GUARD_NEXT_DIST_DIR : '.next',
   allowedDevOrigins: ['*.dev.coze.site', '163.7.6.60', 'localhost'],
   // 生产构建使用 standalone 模式，优化部署大小和构建速度
   output: 'standalone',

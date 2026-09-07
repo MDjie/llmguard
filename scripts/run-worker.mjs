@@ -1,5 +1,7 @@
 const workerEntrypoints = Object.freeze({
   artifact: './artifact-verifier-worker.ts',
+  'code-sentinel': './code-sentinel-worker.ts',
+  'gateway-request': './gateway-request-worker.ts',
   'audit-chain': './audit-chain-worker.ts',
   'audit-export': './audit-export-worker.ts',
   'audit-timestamp': './audit-timestamp-worker.ts',

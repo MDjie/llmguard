@@ -37,11 +37,14 @@ export function resolveAuditChainConfiguration(
   return { key, keyId };
 }
 
+type AuditTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 export async function appendAuditEvent(event: ApiAuditRecord): Promise<void> {
+  await db.transaction(transaction => appendAuditEventInTransaction(transaction, event));
+}
+export async function appendAuditEventInTransaction(transaction: AuditTransaction, event: ApiAuditRecord): Promise<{ id: string; eventHash: string }> {
   const configuration = resolveAuditChainConfiguration();
   const exportTargets = resolveAuditExportTargets().filter((target) => targetAcceptsEvent(target, event));
   const partitionKey = auditPartitionKey(event.tenantId, event.applicationId);
-  await db.transaction(async (transaction) => {
     await transaction.execute(sql`select pg_advisory_xact_lock(hashtextextended(${partitionKey}, 0))`);
     const [previous] = await transaction
       .select({ sequence: securityAuditEvents.chainSequence, hash: securityAuditEvents.eventHash })
@@ -130,5 +133,5 @@ export async function appendAuditEvent(event: ApiAuditRecord): Promise<void> {
         payload: { ...payload },
       })));
     }
-  });
+  return { id, eventHash };
 }

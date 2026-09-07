@@ -1,7 +1,9 @@
+import { gatewayChatResponseSchema } from '@/contracts/http/gateway-chat';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { ApiProblem, withApiSecurity } from '@/lib/api-security';
-import { callProviderChat } from '@/lib/providers';
+import { callGatewayConsole } from '@/lib/gateway-runtime/console-client';
+import { GatewayError } from '@/lib/gateway-runtime/protocol';
 import { db } from '@/storage/database/shared/db';
 import { llmProviders } from '@/storage/database/shared/schema';
 import { requireTenantContext, scopePredicate, type TenantScope } from '@/lib/tenancy';
@@ -13,6 +15,7 @@ const messageSchema = z.object({
 const chatBodySchema = z
   .object({
     providerId: z.string().min(1).max(36).optional(),
+    sessionId: z.string().regex(/^[a-zA-Z0-9_-]{1,128}$/).optional(),
     messages: z.array(messageSchema).min(1).max(100).optional(),
     text: z.string().min(1).max(32_768).optional(),
   })
@@ -20,20 +23,6 @@ const chatBodySchema = z
   .refine((body) => Boolean(body.messages?.length || body.text), {
     message: 'messages or text is required',
   });
-const providerSummarySchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  displayName: z.string(),
-  model: z.string().nullable(),
-});
-const chatResponseSchema = z.object({
-  success: z.literal(true),
-  data: z.object({
-    provider: providerSummarySchema,
-    response: z.string(),
-    latencyMs: z.number().int().nonnegative(),
-  }),
-});
 const listResponseSchema = z.object({
   success: z.literal(true),
   data: z.array(
@@ -90,7 +79,7 @@ export const POST = withApiSecurity(
   {
     permission: 'guard:use',
     bodySchema: chatBodySchema,
-    responseSchema: chatResponseSchema,
+    responseSchema: gatewayChatResponseSchema,
     maxBodyBytes: 256 * 1_024,
     auditEvent: 'provider.chat',
     rateLimitPolicy: { id: 'provider-chat', windowMs: 60_000, maxRequests: 30, scope: 'principal' },
@@ -106,7 +95,10 @@ export const POST = withApiSecurity(
       });
     }
     const messages = body.messages ?? [{ role: 'user' as const, content: body.text ?? '' }];
-    const result = await callProviderChat(provider, messages, { signal: request.signal });
+    if (!principal) throw new ApiProblem({ status: 401, code: 'AUTHENTICATION_REQUIRED', title: '请先登录', detail: '登录后重试。' });
+    const result = await callGatewayConsole(principal, provider.id, messages, request.signal, body.sessionId, request.headers.get('idempotency-key') ?? undefined).catch((error: unknown) => {
+      throw new ApiProblem({ status: error instanceof GatewayError ? error.status : 503, code: error instanceof GatewayError ? error.code : 'GATEWAY_UNAVAILABLE', title: '安全网关未批准本次请求', detail: '请在执行记录中查看请求状态或检查网关接入配置。' });
+    });
     return Response.json({
       success: true as const,
       data: {
@@ -117,6 +109,7 @@ export const POST = withApiSecurity(
           model: provider.defaultModel,
         },
         response: result.content,
+        gateway: result.gateway,
         latencyMs: result.latencyMs,
       },
     });

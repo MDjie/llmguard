@@ -1,0 +1,6 @@
+apiVersion: v2
+name: guard-gateway-v2
+description: Guard gateway 2.0 with isolated control secrets and one identity per StatefulSet ordinal
+type: application
+version: 0.1.0
+appVersion: "2.0"

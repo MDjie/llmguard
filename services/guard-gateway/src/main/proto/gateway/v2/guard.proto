@@ -1,0 +1,279 @@
+// Generated from model/gateway-v2.schema.json. Do not edit.
+// Source SHA-256: 121c28d9326b01100816725fd291a43f2d45a2d698a2d3d2749ab8f83cddb810
+syntax = "proto3";
+
+package guardllm.contracts.v2;
+
+import "google/protobuf/struct.proto";
+
+option java_package = "io.guardllm.contracts.v2.proto";
+option java_multiple_files = true;
+
+enum GatewayAction {
+  GATEWAY_ACTION_UNSPECIFIED = 0;
+  GATEWAY_ACTION_ALLOW = 1;
+  GATEWAY_ACTION_WARN = 2;
+  GATEWAY_ACTION_BLOCK = 3;
+  GATEWAY_ACTION_MASK = 4;
+  GATEWAY_ACTION_REWRITE = 5;
+  GATEWAY_ACTION_SAFE_RESPONSE = 6;
+  GATEWAY_ACTION_REQUIRE_REVIEW = 7;
+}
+
+enum GatewayStage {
+  GATEWAY_STAGE_UNSPECIFIED = 0;
+  GATEWAY_STAGE_INPUT = 1;
+  GATEWAY_STAGE_INPUT_RECHECK = 2;
+  GATEWAY_STAGE_OUTPUT_COMPLETE = 3;
+  GATEWAY_STAGE_OUTPUT_CHUNK = 4;
+  GATEWAY_STAGE_OUTPUT_RECHECK = 5;
+  GATEWAY_STAGE_TOOL_REQUEST = 6;
+  GATEWAY_STAGE_TOOL_RESULT = 7;
+  GATEWAY_STAGE_RAG_CONTEXT = 8;
+}
+
+enum GatewayCoverage {
+  GATEWAY_COVERAGE_UNSPECIFIED = 0;
+  GATEWAY_COVERAGE_COMPLETE = 1;
+  GATEWAY_COVERAGE_PARTIAL = 2;
+  GATEWAY_COVERAGE_UNKNOWN = 3;
+}
+
+enum GatewayStatus {
+  GATEWAY_STATUS_UNSPECIFIED = 0;
+  GATEWAY_STATUS_SUCCEEDED = 1;
+  GATEWAY_STATUS_FAILED = 2;
+  GATEWAY_STATUS_TIMED_OUT = 3;
+  GATEWAY_STATUS_CANCELLED = 4;
+}
+
+enum ExecutionKind {
+  EXECUTION_KIND_UNSPECIFIED = 0;
+  EXECUTION_KIND_UPSTREAM_SEND_INTENT = 1;
+  EXECUTION_KIND_UPSTREAM_SEND_STARTED = 2;
+  EXECUTION_KIND_RELEASE_INTENT = 3;
+  EXECUTION_KIND_WRITE_ACCEPTED = 4;
+  EXECUTION_KIND_TERMINATED = 5;
+  EXECUTION_KIND_COMPLETED = 6;
+}
+
+enum SnapshotState {
+  SNAPSHOT_STATE_UNSPECIFIED = 0;
+  SNAPSHOT_STATE_PREPARED = 1;
+  SNAPSHOT_STATE_LOADED = 2;
+  SNAPSHOT_STATE_CANARY = 3;
+  SNAPSHOT_STATE_ACTIVE = 4;
+  SNAPSHOT_STATE_REVOKED = 5;
+}
+
+message PolicyRef {
+  string snapshot_id = 1;
+  string bundle_id = 2;
+  int64 generation = 3;
+  string digest = 4;
+}
+
+message GatewayBudgets {
+  int64 max_input_chars = 1;
+  int64 max_output_chars = 2;
+  int64 max_steps = 3;
+  int64 max_events = 4;
+  int64 max_stream_events = 5;
+  int64 idle_timeout_ms = 6;
+  int64 absolute_timeout_ms = 7;
+}
+
+message ModelRoutingRecord {
+  string configuration_json = 1;
+  string configuration_digest = 2;
+}
+
+message WindowPolicy {
+  string configuration_digest = 1;
+  string qualification_id = 2;
+  int64 qualification_expires_at = 3;
+  int64 context_chars = 4;
+  int64 chunk_chars = 5;
+  int64 holdback_chars = 6;
+}
+
+message RuntimeManifest {
+  string tenant_id = 1;
+  string application_id = 2;
+  int64 generation = 3;
+  string bundle_id = 4;
+  string bundle_digest = 5;
+  repeated string model_routes = 6;
+  string data_boundary = 7;
+  string stream_mode = 8;
+  bool window_qualified = 9;
+  int64 holdback_chars = 10;
+  GatewayBudgets budgets = 11;
+  int64 valid_until = 12;
+  string normalization_version = 13;
+  optional ModelRoutingRecord model_routing = 14;
+  optional WindowPolicy window_policy = 15;
+}
+
+message RuntimeSnapshot {
+  string id = 1;
+  RuntimeManifest manifest = 2;
+  string digest = 3;
+  string signature = 4;
+  string key_id = 5;
+  SnapshotState state = 6;
+}
+
+message AuthContext {
+  string contract_version = 1;
+  string auth_context_id = 2;
+  string issuer = 3;
+  string audience = 4;
+  string key_id = 5;
+  int64 issued_at = 6;
+  int64 expires_at = 7;
+  string tenant_id = 8;
+  string application_id = 9;
+  string subject_id = 10;
+  optional string credential_id = 11;
+  int64 auth_version = 12;
+  string business_request_id = 13;
+  string trace_id = 14;
+  optional string session_id = 15;
+  string request_digest = 16;
+  PolicyRef policy = 17;
+  repeated string allowed_model_routes = 18;
+  repeated string permissions = 19;
+  string data_boundary = 20;
+  int64 deadline = 21;
+  optional int64 subject_version = 22;
+  optional string prepared_request_digest = 23;
+  optional string input_segments_digest = 24;
+}
+
+message SignedAuthContext {
+  AuthContext context = 1;
+  string signature = 2;
+}
+
+message ContentSegment {
+  string segment_id = 1;
+  string content_path = 2;
+  string role = 3;
+  string text = 4;
+  string source_type = 5;
+  string source_digest = 6;
+}
+
+message TransformPatch {
+  string segment_id = 1;
+  string content_path = 2;
+  int64 start = 3;
+  int64 end = 4;
+  string replacement = 5;
+  string source_digest = 6;
+}
+
+message WindowInspection {
+  int64 context_start = 1;
+  int64 release_start = 2;
+  int64 release_end = 3;
+  bool final = 4;
+}
+
+message GatewayRequest {
+  string contract_version = 1;
+  SignedAuthContext auth = 2;
+  string business_request_id = 3;
+  string step_id = 4;
+  string trace_id = 5;
+  GatewayStage stage = 6;
+  int64 stream_seq = 7;
+  string attempt_kind = 8;
+  string snapshot_id = 9;
+  int64 deadline = 10;
+  repeated ContentSegment segments = 11;
+  optional WindowInspection window = 12;
+}
+
+message GatewayDecision {
+  string contract_version = 1;
+  string business_request_id = 2;
+  string step_id = 3;
+  string decision_id = 4;
+  string snapshot_id = 5;
+  GatewayAction action = 6;
+  GatewayCoverage coverage = 7;
+  GatewayStatus status = 8;
+  string risk_level = 9;
+  repeated string reason_codes = 10;
+  repeated string model_versions = 11;
+  repeated TransformPatch transform_patches = 12;
+  optional string safe_response = 13;
+  int64 latency_ms = 14;
+}
+
+message GatewayAuthorize {
+  string contract_version = 1;
+  string business_request_id = 2;
+  string trace_id = 3;
+  optional string session_id = 4;
+  string idempotency_key = 5;
+  int64 deadline = 6;
+  string model_route = 7;
+  string request_digest = 8;
+  string request_json = 9;
+  optional string user_assertion = 10;
+}
+
+message GatewayAuthorization {
+  SignedAuthContext auth = 1;
+  RuntimeSnapshot snapshot = 2;
+  string replay_state = 3;
+  optional string prepared_request_json = 4;
+  repeated ContentSegment input_segments = 5;
+}
+
+message ExecutionEvent {
+  int64 event_seq = 1;
+  optional string step_id = 2;
+  optional string decision_id = 3;
+  optional string recheck_decision_id = 4;
+  ExecutionKind kind = 5;
+  optional int64 range_start = 6;
+  optional int64 range_end = 7;
+  optional string payload_digest = 8;
+  optional GatewayAction actual_action = 9;
+  optional string reason_code = 10;
+  string snapshot_id = 11;
+}
+
+message GatewayEvents {
+  string contract_version = 1;
+  SignedAuthContext auth = 2;
+  repeated ExecutionEvent events = 3;
+  optional bool terminal_reconciliation = 4;
+}
+
+message GatewayNodeAck {
+  string contract_version = 1;
+  string tenant_id = 2;
+  string application_id = 3;
+  string snapshot_id = 4;
+  string node_id = 5;
+  string digest = 6;
+  string state = 7;
+  optional string reason_code = 8;
+}
+
+message GatewayError {
+  string contract_version = 1;
+  string code = 2;
+  string request_id = 3;
+  string trace_id = 4;
+  bool retryable = 5;
+}
+
+service GatewayEvaluationService {
+  rpc Evaluate(GatewayRequest) returns (GatewayDecision);
+}

@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import {
@@ -21,6 +22,7 @@ import {
   Loader2,
   User,
   ChevronDown,
+  Menu,
   LogOut,
   UserCog,
   MessageCircle,
@@ -28,6 +30,9 @@ import {
   BookOpenCheck,
   MessagesSquare,
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from '@/components/ui/sheet';
 import { UserProfileModal } from '@/components/login/user-profile-modal';
 import { csrfHeaders } from '@/lib/auth/csrf-client';
 import type { Permission } from '@/lib/api-security';
@@ -47,8 +52,9 @@ const navigationGroups: readonly {
   readonly items: readonly NavigationItem[];
 }[] = [
   {
-    title: '核心功能',
+    title: '安全运营',
     items: [
+      { name: '总览大屏', href: '/dashboard', icon: BarChart3, desc: '运行态势与风险总览', permission: 'history:read' },
       { name: '安全对话', href: '/', icon: MessageCircle, desc: '双引擎安全对话', permission: 'guard:use' },
       { name: '链路实验', href: '/simulate', icon: Zap, desc: '非生产检测流程', permission: 'guard:use', experimental: true },
       { name: '文档检测', href: '/document-scan', icon: FileText, desc: '文档安全扫描', permission: 'security:operate' },
@@ -57,9 +63,10 @@ const navigationGroups: readonly {
   {
     title: '配置管理',
     items: [
+      { name: '应用接入', href: '/applications', icon: Building2, desc: '应用、凭据与运行版本', permission: 'application:read' },
       { name: '检测维度', href: '/dimensions', icon: Layers, desc: '维度与规则配置', permission: 'policy:manage' },
       { name: '白名单规则', href: '/whitelist', icon: CheckCircle, desc: '安全内容放行', permission: 'policy:manage' },
-      { name: '策略配置', href: '/policies', icon: Settings, desc: '检测策略管理', permission: 'policy:manage' },
+      { name: '安全策略', href: '/policies', icon: Settings, desc: '检测策略管理', permission: 'policy:manage' },
       { name: '敏感词典', href: '/dictionaries', icon: BookOpenCheck, desc: '分层词典与版本治理', permission: 'policy:read' },
       { name: '响应模板', href: '/response-templates', icon: MessagesSquare, desc: '代答模板与复检治理', permission: 'policy:read' },
       { name: '策略发布', href: '/policy-releases', icon: GitCompare, desc: '审批、灰度与回滚', permission: 'policy:read' },
@@ -75,11 +82,12 @@ const navigationGroups: readonly {
     ]
   },
   {
-    title: '数据统计',
+    title: '事件与审计',
     items: [
-      { name: '检测看板', href: '/dashboard', icon: BarChart3, desc: '数据可视化', permission: 'history:read' },
-      { name: '安全事件', href: '/incidents', icon: Shield, desc: '研判与处置闭环', permission: 'security:operate' },
-      { name: '历史记录', href: '/history', icon: History, desc: '检测历史查询', permission: 'history:read' },
+
+      { name: '风险事件', href: '/incidents', icon: Shield, desc: '研判与处置闭环', permission: 'security:operate' },
+      { name: '请求执行', href: '/gateway-requests', icon: GitCompare, desc: '检测与实际执行链路', permission: 'history:read' },
+      { name: '内容审计', href: '/history', icon: History, desc: '检测历史查询', permission: 'history:read' },
       { name: 'Agent日志', href: '/agent-logs', icon: FileText, desc: '调用日志追踪', permission: 'audit:read' },
       { name: '导出报告', href: '/export', icon: Download, desc: '数据导出报告', permission: 'audit:export' },
     ]
@@ -125,9 +133,9 @@ export function AppLayout({
   const [user, setUser] = useState<UserInfo | null>(null);
   const [applications, setApplications] = useState<ApplicationInfo[]>([]);
   const [switchingApplication, setSwitchingApplication] = useState(false);
-  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
-  const userMenuRef = useRef<HTMLDivElement>(null);
+
   const visibleNavigationGroups = navigationGroups
     .map((group) => ({
       ...group,
@@ -217,18 +225,6 @@ export function AppLayout({
     return () => clearInterval(intervalId);
   }, [isAuthPage, authStatus]);
 
-  // 点击外部关闭用户菜单
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
-        setShowUserMenu(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
   // 退出登录
   const handleLogout = async () => {
     try {
@@ -297,184 +293,94 @@ export function AppLayout({
     );
   }
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* 顶部导航栏 */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div className="flex items-center justify-between h-16 px-6">
-          <div className="flex items-center gap-3">
-            <img src="/logo.png" alt="国舜" className="h-10 w-auto" />
-            <div>
-              <h1 className="text-lg font-bold text-gray-900">
-                大模型安全护栏检测平台
-              </h1>
-              <p className="text-xs text-gray-500">
-                多模型接入 · 全链路检测 · 智能防护
-              </p>
-            </div>
+  const navigation = (
+    <nav aria-label="主导航" className="space-y-4 px-2.5 py-4">
+      {visibleNavigationGroups.map((group) => (
+        <div key={group.title}>
+          <p className="px-3 pb-2 text-[10px] font-medium tracking-wider text-slate-400">{group.title}</p>
+          <div className="space-y-1">
+            {group.items.map((item) => {
+              const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href + '/'));
+              return (
+                <Link key={item.href} href={item.href} title={item.desc}
+                  aria-current={isActive ? 'page' : undefined}
+                  onClick={() => setMobileNavOpen(false)}
+                  className={cn('flex min-h-10 items-center gap-3 rounded-[5px] px-3 py-2 text-[13px] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                    isActive ? 'bg-primary font-medium text-white shadow-[0_2px_6px_#0057ff20]' : 'text-slate-600 hover:bg-blue-50 hover:text-primary')}>
+                  <item.icon className={cn('size-[17px] shrink-0', !isActive && 'text-slate-400')} strokeWidth={1.7} aria-hidden="true" />
+                  <span className="truncate">{item.name}</span>
+                </Link>
+              );
+            })}
           </div>
-          
-          <div className="flex items-center gap-3">
+        </div>
+      ))}
+    </nav>
+  );
+
+  return (
+    <div className="console-shell min-h-screen bg-background">
+      <a href="#main-content" className="sr-only z-[100] rounded bg-white p-3 focus:not-sr-only focus:fixed focus:left-4 focus:top-2">跳转到主内容</a>
+      <header className="fixed inset-x-0 top-0 z-40 flex h-14 items-center border-b border-border bg-white">
+        <Link href={user?.permissions.includes('history:read') ? '/dashboard' : '/'} aria-label="国舜控制台"
+          className="hidden h-full w-[188px] shrink-0 items-center justify-center border-r border-border md:flex">
+          <Image src="/logo.png" alt="国舜" width={144} height={36} unoptimized className="h-9 w-auto max-w-[144px] object-contain" />
+        </Link>
+        <div className="flex min-w-0 flex-1 items-center justify-between gap-2 px-3 md:px-5">
+          <div className="flex min-w-0 items-center gap-2">
+            <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
+              <SheetTrigger asChild><Button variant="ghost" size="icon" className="md:hidden" aria-label="打开导航"><Menu /></Button></SheetTrigger>
+              <SheetContent side="left" className="w-60 gap-0 overflow-y-auto p-0">
+                <SheetHeader className="border-b border-border px-5 py-4">
+                  <SheetTitle>国舜安全网关</SheetTitle><SheetDescription className="sr-only">选择功能页面</SheetDescription>
+                </SheetHeader>
+                {navigation}
+              </SheetContent>
+            </Sheet>
+            <span className="truncate text-sm font-semibold tracking-wide sm:text-[15px]">国舜大模型安全网关平台</span>
+          </div>
+          <div className="flex shrink-0 items-center gap-2 sm:gap-4">
             {applications.length > 0 && (
-              <label className="flex items-center gap-2 text-sm text-gray-600">
-                <Building2 className="h-4 w-4" />
-                <span className="sr-only">当前应用</span>
-                <select
-                  aria-label="当前应用"
-                  value={user?.applicationId ?? ''}
-                  disabled={switchingApplication}
+              <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Building2 className="hidden size-4 sm:block" aria-hidden="true" /><span className="sr-only">当前应用</span>
+                <select aria-label="当前应用" value={user?.applicationId ?? ''} disabled={switchingApplication}
                   onChange={(event) => void handleApplicationChange(event.target.value)}
-                  className="h-9 max-w-56 rounded-md border border-gray-200 bg-white px-2 text-sm text-gray-700"
-                >
-                  {applications.map((application) => (
-                    <option key={application.id} value={application.id}>
-                      {application.name}
-                    </option>
-                  ))}
+                  className="h-8 max-w-24 rounded border border-border bg-white px-2 text-xs text-foreground outline-none focus:ring-2 focus:ring-primary/30 sm:max-w-44">
+                  {applications.map((application) => <option key={application.id} value={application.id}>{application.name}</option>)}
                 </select>
               </label>
             )}
-
-          {/* 用户信息 */}
-          <div className="relative" ref={userMenuRef}>
-            <button
-              onClick={() => setShowUserMenu(!showUserMenu)}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              <div className="flex items-center justify-center w-8 h-8 bg-blue-100 rounded-full">
-                <User className="h-4 w-4 text-blue-600" />
-              </div>
-              <span className="text-sm font-medium text-gray-700">
-                {user?.nickname || user?.username || '用户'}
-              </span>
-              <ChevronDown className="h-4 w-4 text-gray-400" />
-            </button>
-
-            {/* 下拉菜单 */}
-            {showUserMenu && (
-              <div className="absolute right-0 top-full mt-2 w-48bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-50">
-                <button
-                  onClick={() => {
-                    setShowUserMenu(false);
-                    setShowProfileModal(true);
-                  }}
-                  className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                >
-                  <UserCog className="h-4 w-4" />
-                  信息修改
-                </button>
-                <div className="border-t border-gray-100 my-1"></div>
-                <button
-                  onClick={handleLogout}
-                  className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
-                >
-                  <LogOut className="h-4 w-4" />
-                  退出登录
-                </button>
-              </div>
-            )}
-          </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="gap-2 px-1.5" aria-label="用户菜单">
+                  <span className="flex size-7 items-center justify-center rounded-full bg-primary text-white"><User className="size-4" /></span>
+                  <span className="hidden max-w-28 truncate text-xs sm:inline">{user?.nickname || user?.username || '用户'}</span>
+                  <ChevronDown className="size-3 text-muted-foreground" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-44">
+                <DropdownMenuItem onSelect={() => setShowProfileModal(true)}><UserCog className="size-4" />信息修改</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={() => void handleLogout()} className="text-red-600"><LogOut className="size-4" />退出登录</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </header>
-
-      {/* 用户信息修改弹窗 */}
-      <UserProfileModal
-        open={showProfileModal}
-        onOpenChange={setShowProfileModal}
-        user={user}
-        onUserUpdate={(updatedUser) =>
-          setUser((current) => (current ? { ...current, ...updatedUser } : current))
-        }
-      />
-
-      <div className="flex">
-        {/* 侧边栏 */}
-        <aside className="w-60 bg-white border-r border-gray-200 min-h-[calc(100vh-64px)] sticky top-16 overflow-y-auto">
-          <nav className="p-3 space-y-4">
-            {visibleNavigationGroups.map((group) => (
-              <div key={group.title}>
-                {/* 分组标题 */}
-                <div className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-2">
-                  <div className="h-px flex-1 bg-gray-100"></div>
-                  <span>{group.title}</span>
-                  <div className="h-px flex-1 bg-gray-100"></div>
-                </div>
-                
-                {/* 分组菜单项 */}
-                <div className="space-y-0.5 mt-1">
-                  {group.items.map((item) => {
-                    const isActive = pathname === item.href;
-                    return (
-                      <Link
-                        key={item.name}
-                        href={item.href}
-                        className={cn(
-                          'group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200',
-                          isActive
-                            ? 'bg-gradient-to-r from-blue-50 to-blue-100/50 text-blue-700 shadow-sm'
-                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                        )}
-                      >
-                        <div className={cn(
-                          'flex items-center justify-center w-8 h-8 rounded-lg transition-colors',
-                          isActive 
-                            ? 'bg-blue-100 text-blue-600' 
-                            : 'bg-gray-50 text-gray-400 group-hover:bg-gray-100 group-hover:text-gray-500'
-                        )}>
-                          <item.icon className="h-4 w-4" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="truncate">{item.name}</div>
-                          <div className={cn(
-                            'text-xs truncate',
-                            isActive ? 'text-blue-500' : 'text-gray-400'
-                          )}>
-                            {item.desc}
-                          </div>
-                        </div>
-                      </Link>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-          </nav>
-          
-          {/* 底部信息 */}
-          <div className="p-4 border-t border-gray-100 mt-4">
-            <div className="flex items-center gap-2 text-xs text-gray-400">
-              <Database className="h-3 w-3" />
-              <span>数据库状态</span>
-              <span className="ml-auto flex items-center gap-1">
-                {dbStatus === 'checking' && (
-                  <>
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    <span>检查中</span>
-                  </>
-                )}
-                {dbStatus === 'connected' && (
-                  <>
-                    <span className="h-1.5 w-1.5 rounded-full bg-green-500"></span>
-                    <span className="text-green-600">已连接</span>
-                  </>
-                )}
-                {dbStatus === 'disconnected' && (
-                  <>
-                    <span className="h-1.5 w-1.5 rounded-full bg-amber-400"></span>
-                    <span className="text-amber-600">待连接</span>
-                  </>
-                )}
-              </span>
-            </div>
-          </div>
-        </aside>
-
-        {/* 主内容区 */}
-        <main className="flex-1 p-6 min-h-[calc(100vh-64px)]">
-          {children}
-        </main>
-      </div>
+      <aside className="fixed bottom-0 left-0 top-14 z-30 hidden w-[188px] flex-col border-r border-border bg-white md:flex">
+        <div className="min-h-0 flex-1 overflow-y-auto">{navigation}</div>
+        <div className="flex items-center gap-2 border-t border-border px-4 py-4 text-[11px] text-muted-foreground" aria-live="polite">
+          <Database className="size-3.5" aria-hidden="true" /><span>数据服务</span>
+          <span className="ml-auto flex items-center gap-1.5">
+            {dbStatus === 'checking' ? <><Loader2 className="size-3 animate-spin" />检查中</> : <><span className={cn('size-1.5 rounded-full', dbStatus === 'connected' ? 'bg-emerald-500' : 'bg-amber-500')} />{dbStatus === 'connected' ? '已连接' : '待连接'}</>}
+          </span>
+        </div>
+      </aside>
+      <main id="main-content" tabIndex={-1} className="console-content min-h-screen min-w-0 px-3 pb-6 pt-[76px] outline-none sm:px-5 md:ml-[188px]">
+        {children}
+      </main>
+      <UserProfileModal open={showProfileModal} onOpenChange={setShowProfileModal} user={user}
+        onUserUpdate={(updatedUser) => setUser((current) => (current ? { ...current, ...updatedUser } : current))} />
     </div>
   );
 }

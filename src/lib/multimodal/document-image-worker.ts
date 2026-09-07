@@ -180,6 +180,7 @@ export async function processNextDocumentImageJob() {
       })),
       derivatives: analysis.derivatives,
       analyzerVersion: analysis.analyzerVersion,
+      coverage: analysis.coverage,
     };
     await completeGuardJob(job, result as unknown as Record<string, unknown>);
     return { jobId: job.id, status: 'completed' };

@@ -1,0 +1,64 @@
+{
+  "version": "1.0",
+  "source": "升级需求 V1.0 §17.1 / §18",
+  "existingCommitments": "acceptance/performance-requirements.json",
+  "measurement": {
+    "rps": "completed successful business responses per wall-clock second; denials, infrastructure failures and unsent arrivals reported separately",
+    "gatewayAddedLatency": "per-request client latency minus matching controlled upstream processing duration; never subtract independently aggregated percentiles",
+    "scope": "authentication, routing, Java/Node communications, required input and output checks, durable execution acknowledgement",
+    "minimumDurationSeconds": 1800,
+    "rounds": 3,
+    "soakSeconds": 86400,
+    "maxFailureRate": 0.001,
+    "nodeFailureNewRequestRecoverySeconds": 30,
+    "existingRtoSeconds": 1800,
+    "warmupSeconds": 600
+  },
+  "profiles": {
+    "G0": {
+      "cpu": 16,
+      "memoryGiB": 32,
+      "gpu": null,
+      "inputBytes": 1024,
+      "outputBytes": 1024,
+      "concurrency": 128,
+      "rps": 2000,
+      "addedP95Ms": 15,
+      "addedP99Ms": 30,
+      "detectors": "none; authentication, routing and durable audit remain enabled"
+    },
+    "G1": {
+      "cpu": 16,
+      "memoryGiB": 32,
+      "gpu": null,
+      "inputBytes": 4096,
+      "outputBytes": 8192,
+      "concurrency": 128,
+      "rps": 500,
+      "addedP95Ms": 30,
+      "addedP99Ms": 80,
+      "detectors": "10000 dictionary entries and 100 regular expressions; all configured DLP checks on both directions"
+    },
+    "G2": {
+      "cpu": 16,
+      "memoryGiB": 64,
+      "gpu": "exact vendor/model/driver required; at least 48 GiB VRAM does not imply equivalent compute",
+      "inputBytes": 1024,
+      "outputBytes": 1024,
+      "concurrency": 32,
+      "rps": 50,
+      "addedP95Ms": 200,
+      "addedP99Ms": 400,
+      "detectors": "qualified frozen fast semantic models on both directions; model/revision/precision mandatory; existing same-scope P99 300ms commitment remains"
+    },
+    "SSE": {
+      "nodes": 2,
+      "cpuPerNode": 16,
+      "memoryGiBPerNode": 32,
+      "connections": 1000,
+      "eventsPerSecondPerConnection": 20,
+      "bytesPerEvent": 32,
+      "scope": "transport capacity; not a claim of 1000 fully semantically inspected streams"
+    }
+  }
+}

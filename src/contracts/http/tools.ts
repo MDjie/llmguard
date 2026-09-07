@@ -90,6 +90,7 @@ export const registerToolSchema = z.object({
 });
 
 export const authorizeToolSchema = z.object({
+  compensatesInvocationId: z.string().uuid().optional(),
   traceId: z.string().min(16).max(128),
   requestId: z.string().min(8).max(128),
   bundleId: id,
@@ -107,6 +108,11 @@ export const toolResultSchema = z.object({
   invocationId: id,
   permitToken: z.string().min(32).max(4_096),
   result: z.string().max(1_048_576),
+}).strict();
+
+export const executeToolSchema = z.object({
+  invocationId: id, permitToken: z.string().min(32).max(4096),
+  parameters: z.record(z.string().max(100), scalar),
 }).strict();
 
 export const toolApprovalSchema = z.object({

@@ -35,7 +35,8 @@ export function createGuardEngine(
 
   return {
     ...(policy.semanticDecisionMode==='coverage-v1'?{contextEvaluationMode:'unified-v1' as const}:{}),
-    async evaluate(request: GuardRequest) {
+    async evaluate(request: GuardRequest, signal?: AbortSignal) {
+      signal?.throwIfAborted();
       const startedAt = now();
       if ((request.content.text?.length ?? 0) > 1_048_576) {
         throw new Error('GRD_TEXT_CAPACITY_EXCEEDED');
@@ -51,7 +52,7 @@ export function createGuardEngine(
         request.content.text ?? '',
         dependencies.normalizationBudget,
       );
-      const deadlineSignal = AbortSignal.timeout(remaining);
+      const deadlineSignal = signal ? AbortSignal.any([signal, AbortSignal.timeout(remaining)]) : AbortSignal.timeout(remaining);
       const evidenceHmac = (content: string) =>
         createHmac('sha256', hmacKey).update(content, 'utf8').digest('hex');
       const execution = await executeDetectorDag({
