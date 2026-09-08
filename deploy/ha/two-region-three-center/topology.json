@@ -1,0 +1,11 @@
+{
+  "version": "1.0",
+  "centers": [
+    {"id":"center-a","region":"region-1","role":"active","context":"guardllm-center-a","overlay":"center-a.yaml"},
+    {"id":"center-b","region":"region-1","role":"active","context":"guardllm-center-b","overlay":"center-b.yaml"},
+    {"id":"center-c","region":"region-2","role":"standby","context":"guardllm-center-c","overlay":"center-c.yaml"}
+  ],
+  "database": {"singleWriter":true,"sameRegionReplication":"synchronous-required","crossRegionReplication":"asynchronous","fencingRequired":true},
+  "recoveryObjectives": {"sameRegionRpoSeconds":0,"sameRegionRtoSeconds":300,"drRpoSeconds":900,"drRtoSeconds":1800},
+  "acceptance": {"status":"requires-site-drill","scenarios":["pod-loss","node-loss","center-loss","network-partition","dr-promotion","device-failure","failback"]}
+}

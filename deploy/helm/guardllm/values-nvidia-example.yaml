@@ -1,0 +1,12 @@
+# Requires the NVIDIA device plugin, matching CUDA runtime image, and certified detector artifacts.
+workloads:
+  analyzer:
+    runtimeClassName: nvidia
+    nodeSelector:
+      kubernetes.io/arch: amd64
+      guardllm.io/accelerator: nvidia
+    tolerations:
+      - {key: guardllm.io/accelerator, operator: Equal, value: nvidia, effect: NoSchedule}
+    resources:
+      requests: {cpu: "2", memory: 4Gi, nvidia.com/gpu: "1"}
+      limits: {cpu: "8", memory: 16Gi, nvidia.com/gpu: "1"}

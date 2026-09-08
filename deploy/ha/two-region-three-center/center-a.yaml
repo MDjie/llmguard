@@ -1,0 +1,16 @@
+# Overlay the main chart. Supply environment-specific secrets and immutable image digests separately.
+deploymentTopology:
+  site: center-a
+  zoneWhenUnsatisfiable: DoNotSchedule
+  zoneMinDomains: 3
+config:
+  GUARDLLM_SITE_ID: center-a
+  OPERATIONS_PROMETHEUS_URL: http://prometheus.guard-observability.svc.cluster.local:9090/
+  OPERATIONS_MONITOR_ALLOWED_HOSTS: prometheus.guard-observability.svc.cluster.local
+workloads:
+  gateway:
+    replicas: 3
+  app:
+    replicas: 3
+  evaluation:
+    replicas: 2

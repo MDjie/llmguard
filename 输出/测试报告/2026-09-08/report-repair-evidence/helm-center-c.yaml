@@ -1,0 +1,736 @@
+---
+# Source: guardllm/templates/network-policies.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: guardllm-default-deny
+  namespace: guard-control
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+# Source: guardllm/templates/network-policies.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: guardllm-allow-dns
+  namespace: guard-control
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }
+---
+# Source: guardllm/templates/network-policies.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: guardllm-allow-managed-egress
+  namespace: guard-control
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              guardllm.io/managed: "true"
+---
+# Source: guardllm/templates/network-policies.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: guardllm-default-deny
+  namespace: guard-data-access
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+# Source: guardllm/templates/network-policies.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: guardllm-allow-dns
+  namespace: guard-data-access
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }
+---
+# Source: guardllm/templates/network-policies.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: guardllm-allow-managed-egress
+  namespace: guard-data-access
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              guardllm.io/managed: "true"
+---
+# Source: guardllm/templates/network-policies.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: guardllm-default-deny
+  namespace: guard-edge
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+# Source: guardllm/templates/network-policies.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: guardllm-allow-dns
+  namespace: guard-edge
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }
+---
+# Source: guardllm/templates/network-policies.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: guardllm-allow-managed-egress
+  namespace: guard-edge
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              guardllm.io/managed: "true"
+---
+# Source: guardllm/templates/network-policies.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: guardllm-default-deny
+  namespace: guard-inference
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+# Source: guardllm/templates/network-policies.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: guardllm-allow-dns
+  namespace: guard-inference
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }
+---
+# Source: guardllm/templates/network-policies.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: guardllm-allow-managed-egress
+  namespace: guard-inference
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              guardllm.io/managed: "true"
+---
+# Source: guardllm/templates/network-policies.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: guardllm-default-deny
+  namespace: guard-media
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+# Source: guardllm/templates/network-policies.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: guardllm-allow-dns
+  namespace: guard-media
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }
+---
+# Source: guardllm/templates/network-policies.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: guardllm-allow-managed-egress
+  namespace: guard-media
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              guardllm.io/managed: "true"
+---
+# Source: guardllm/templates/network-policies.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: guardllm-default-deny
+  namespace: guard-observability
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+# Source: guardllm/templates/network-policies.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: guardllm-allow-dns
+  namespace: guard-observability
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }
+---
+# Source: guardllm/templates/network-policies.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: guardllm-allow-managed-egress
+  namespace: guard-observability
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              guardllm.io/managed: "true"
+---
+# Source: guardllm/templates/network-policies.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: guardllm-default-deny
+  namespace: guard-online
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+# Source: guardllm/templates/network-policies.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: guardllm-allow-dns
+  namespace: guard-online
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }
+---
+# Source: guardllm/templates/network-policies.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: guardllm-allow-managed-egress
+  namespace: guard-online
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              guardllm.io/managed: "true"
+---
+# Source: guardllm/templates/network-policies.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: gateway-from-ingress
+  namespace: guard-edge
+spec:
+  podSelector:
+    matchLabels: { guardllm.io/component: gateway }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - { protocol: TCP, port: 8080 }
+        - { protocol: TCP, port: 9090 }
+---
+# Source: guardllm/templates/network-policies.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: analyzer-from-media-workers
+  namespace: guard-media
+spec:
+  podSelector:
+    matchLabels: { guardllm.io/component: analyzer }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - key: guardllm.io/component
+                operator: In
+                values: [multimodal, media, marking]
+      ports:
+        - { protocol: TCP, port: 8090 }
+---
+# Source: guardllm/templates/network-policies.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: app-from-gateway
+  namespace: guard-online
+spec:
+  podSelector:
+    matchLabels: { guardllm.io/component: app }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: { guardllm.io/plane: edge }
+          podSelector:
+            matchLabels: { guardllm.io/component: gateway }
+      ports:
+        - { protocol: TCP, port: 5000 }
+---
+# Source: guardllm/templates/network-policies.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: inference-only-from-gateway
+  namespace: guard-inference
+spec:
+  podSelector:
+    matchLabels: { guardllm.io/role: model-serving }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: { guardllm.io/plane: edge }
+          podSelector:
+            matchLabels: { guardllm.io/component: gateway }
+      ports:
+        - { protocol: TCP, port: 5000 }
+        - { protocol: TCP, port: 8000 }
+        - { protocol: TCP, port: 8080 }
+        - { protocol: TCP, port: 11434 }
+---
+# Source: guardllm/templates/availability.yaml
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: guardllm-guardllm-analyzer
+  namespace: guard-media
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: guardllm
+      guardllm.io/component: analyzer
+---
+# Source: guardllm/templates/workloads.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: guardllm-guardllm-analyzer
+  namespace: guard-media
+  labels:
+    app.kubernetes.io/name: guardllm
+    app.kubernetes.io/instance: guardllm
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: "guardllm-1.0.0"
+automountServiceAccountToken: false
+---
+# Source: guardllm/templates/workloads.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: guardllm-guardllm-analyzer-config
+  namespace: guard-media
+data:
+  ANALYZER_ASR_COMMAND: "/models/bin/asr"
+  ANALYZER_AUDIO_CLASSIFIER_COMMAND: "/models/bin/audio-classifier"
+  ANALYZER_CODE_READER_COMMAND: "/usr/bin/zbarimg"
+  ANALYZER_OBJECT_STORE_HOSTS: "minio.guard-data-access.svc.cluster.local"
+  ANALYZER_TTS_COMMAND: "/models/bin/tts"
+  ANALYZER_VISUAL_COMMAND: "/models/bin/visual-classifier"
+  GATEWAY_MTLS_REQUIRED: "false"
+  GUARDLLM_DEPLOYMENT_PROFILE: "production"
+  GUARDLLM_SITE_ID: "center-c"
+  GUARD_API_MAX_IN_FLIGHT: "200"
+  GUARD_APPLICATION_MAX_IN_FLIGHT: "100"
+  GUARD_CONCURRENCY_ENABLED: "true"
+  GUARD_CONCURRENCY_MAX_TRACKED_SCOPES: "10000"
+  GUARD_CREDENTIAL_MAX_IN_FLIGHT: "50"
+  GUARD_DISTRIBUTED_CONCURRENCY_ENABLED: "true"
+  GUARD_DISTRIBUTED_CONCURRENCY_FAIL_CLOSED: "true"
+  GUARD_DISTRIBUTED_CONCURRENCY_LEASE_TTL: "30s"
+  GUARD_GATEWAY_MODE: "enforce"
+  GUARD_MODEL_ROUTES_JSON: ""
+  GUARD_PRINCIPAL_MAX_IN_FLIGHT: "20"
+  GUARD_RATE_LIMIT_ENABLED: "true"
+  GUARD_RATE_LIMIT_ESTIMATED_TOKENS_PER_MINUTE: "2500000"
+  GUARD_RATE_LIMIT_FAIL_CLOSED: "true"
+  GUARD_RATE_LIMIT_MAX_TEXT_CHARS_PER_REQUEST: "1000000"
+  GUARD_RATE_LIMIT_REQUESTS_PER_MINUTE: "600"
+  GUARD_RATE_LIMIT_TEXT_CHARS_PER_MINUTE: "10000000"
+  GUARD_REDIS_URI: "rediss://redis.guard-data-access.svc.cluster.local:6380"
+  GUARD_TENANT_MAX_IN_FLIGHT: "200"
+  LOG_LEVEL: "info"
+  MULTIMODAL_BLOCK_THRESHOLD: "0.8"
+  MULTIMODAL_CROSS_MODAL_WINDOW_MS: "30000"
+  MULTIMODAL_FRAME_BATCH_SIZE: "4"
+  MULTIMODAL_FRAME_INTERVAL_MS: ""
+  MULTIMODAL_MAX_DECODED_BYTES: "2147483648"
+  MULTIMODAL_MAX_DECOMPRESSION_RATIO: "100"
+  MULTIMODAL_MAX_DURATION_MS: "3600000"
+  MULTIMODAL_MAX_FRAMES: "10000"
+  MULTIMODAL_MAX_PIXELS: "100000000"
+  MULTIMODAL_MIN_CONFIDENCE: "0.35"
+  MULTIMODAL_REVIEW_THRESHOLD: "0.65"
+  MULTIMODAL_SUMMARY_FRAMES: "24"
+  NODE_ENV: "production"
+  OPERATIONS_MONITOR_ALLOWED_HOSTS: "prometheus.guard-observability.svc.cluster.local"
+  OPERATIONS_PROMETHEUS_URL: "http://prometheus.guard-observability.svc.cluster.local:9090/"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector.guard-observability.svc:4318"
+  POLICY_LKG_MAX_AGE_MS: "300000"
+---
+# Source: guardllm/templates/workloads.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: guardllm-guardllm-analyzer
+  namespace: guard-media
+  labels:
+    app.kubernetes.io/name: guardllm
+    app.kubernetes.io/instance: guardllm
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: "guardllm-1.0.0"
+    guardllm.io/component: analyzer
+spec:
+  selector:
+    app.kubernetes.io/instance: guardllm
+    guardllm.io/component: analyzer
+  ports:
+    - name: http
+      port: 8090
+      targetPort: http
+---
+# Source: guardllm/templates/workloads.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: guardllm-guardllm-analyzer
+  namespace: guard-media
+  labels:
+    app.kubernetes.io/name: guardllm
+    app.kubernetes.io/instance: guardllm
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: "guardllm-1.0.0"
+    guardllm.io/component: analyzer
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  strategy:
+    rollingUpdate: { maxSurge: 1, maxUnavailable: 0 }
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: guardllm
+      guardllm.io/component: analyzer
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: guardllm
+        app.kubernetes.io/instance: guardllm
+        guardllm.io/component: analyzer
+        guardllm.io/site: "center-c"
+      annotations:
+        checksum/config: 41f472657f4354c6becf16adcb3aa1d9c7fc3cb7e6a4caf710ff18dcfa45bb1f
+    spec:
+      serviceAccountName: guardllm-guardllm-analyzer
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 45
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: { type: RuntimeDefault }
+      nodeSelector:
+        guardllm.io/accelerator: cpu
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule
+          minDomains: 3
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/instance: guardllm
+              guardllm.io/component: analyzer
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/instance: guardllm
+              guardllm.io/component: analyzer
+      containers:
+        - name: analyzer
+          image: "registry.example.invalid/guardllm/media-analyzer@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          imagePullPolicy: IfNotPresent
+          command: ["node"]
+          args: ["/app/server.mjs"]
+          envFrom:
+            - configMapRef:
+                name: guardllm-guardllm-analyzer-config
+            - secretRef:
+                name: guardllm-runtime-secrets
+          env:
+            - name: DLP_TOKENIZATION_HMAC_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: guardllm-runtime-secrets
+                  key: DLP_TOKENIZATION_HMAC_KEY
+            - name: POLICY_SIGNING_PUBLIC_KEY_FILE
+              value: "/var/run/secrets/guardllm/policy-verification/public.pem"
+            - name: POLICY_SIGNING_KEY_ID
+              value: "production-ed25519-v1"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }
+            readOnlyRootFilesystem: true
+          ports:
+            - name: http
+              containerPort: 8090
+          readinessProbe:
+            httpGet: { path: /health/ready, port: http }
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 6
+          livenessProbe:
+            httpGet: { path: /health/ready, port: http }
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          resources:
+            limits:
+              cpu: "8"
+              ephemeral-storage: 2Gi
+              memory: 16Gi
+            requests:
+              cpu: "4"
+              ephemeral-storage: 1Gi
+              memory: 8Gi
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: next-cache
+              mountPath: /app/.next/cache
+            - name: policy-verification
+              mountPath: /var/run/secrets/guardllm/policy-verification
+              readOnly: true
+            - name: analyzer-models
+              mountPath: /models
+              readOnly: true
+      volumes:
+        - name: tmp
+          emptyDir: { sizeLimit: 1Gi }
+        - name: next-cache
+          emptyDir: { sizeLimit: 512Mi }
+        - name: policy-verification
+          secret:
+            secretName: guardllm-policy-verification
+            defaultMode: 0444
+            items:
+              - key: public.pem
+                path: public.pem
+        - name: analyzer-models
+          persistentVolumeClaim:
+            claimName: guardllm-analyzer-models
+            readOnly: true
+---
+# Source: guardllm/templates/service-mesh.yaml
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: app-only-from-gateway
+  namespace: guard-online
+spec:
+  selector:
+    matchLabels: { guardllm.io/component: app }
+  rules:
+    - from:
+        - source:
+            principals:
+              - "cluster.local/ns/guard-edge/sa/guardllm-guardllm-gateway"
+---
+# Source: guardllm/templates/service-mesh.yaml
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: model-only-from-gateway
+  namespace: guard-inference
+spec:
+  selector:
+    matchLabels: { guardllm.io/role: model-serving }
+  rules:
+    - from:
+        - source:
+            principals:
+              - "cluster.local/ns/guard-edge/sa/guardllm-guardllm-gateway"
+---
+# Source: guardllm/templates/service-mesh.yaml
+apiVersion: security.istio.io/v1
+kind: PeerAuthentication
+metadata:
+  name: guardllm-strict-mtls
+  namespace: guard-control
+spec:
+  mtls:
+    mode: STRICT
+---
+# Source: guardllm/templates/service-mesh.yaml
+apiVersion: security.istio.io/v1
+kind: PeerAuthentication
+metadata:
+  name: guardllm-strict-mtls
+  namespace: guard-data-access
+spec:
+  mtls:
+    mode: STRICT
+---
+# Source: guardllm/templates/service-mesh.yaml
+apiVersion: security.istio.io/v1
+kind: PeerAuthentication
+metadata:
+  name: guardllm-strict-mtls
+  namespace: guard-edge
+spec:
+  mtls:
+    mode: STRICT
+---
+# Source: guardllm/templates/service-mesh.yaml
+apiVersion: security.istio.io/v1
+kind: PeerAuthentication
+metadata:
+  name: guardllm-strict-mtls
+  namespace: guard-inference
+spec:
+  mtls:
+    mode: STRICT
+---
+# Source: guardllm/templates/service-mesh.yaml
+apiVersion: security.istio.io/v1
+kind: PeerAuthentication
+metadata:
+  name: guardllm-strict-mtls
+  namespace: guard-media
+spec:
+  mtls:
+    mode: STRICT
+---
+# Source: guardllm/templates/service-mesh.yaml
+apiVersion: security.istio.io/v1
+kind: PeerAuthentication
+metadata:
+  name: guardllm-strict-mtls
+  namespace: guard-observability
+spec:
+  mtls:
+    mode: STRICT
+---
+# Source: guardllm/templates/service-mesh.yaml
+apiVersion: security.istio.io/v1
+kind: PeerAuthentication
+metadata:
+  name: guardllm-strict-mtls
+  namespace: guard-online
+spec:
+  mtls:
+    mode: STRICT

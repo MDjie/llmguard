@@ -1,0 +1,2954 @@
+---
+# Source: guardllm/templates/network-policies.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: guardllm-default-deny
+  namespace: guard-control
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+# Source: guardllm/templates/network-policies.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: guardllm-allow-dns
+  namespace: guard-control
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }
+---
+# Source: guardllm/templates/network-policies.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: guardllm-allow-managed-egress
+  namespace: guard-control
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              guardllm.io/managed: "true"
+---
+# Source: guardllm/templates/network-policies.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: guardllm-default-deny
+  namespace: guard-data-access
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+# Source: guardllm/templates/network-policies.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: guardllm-allow-dns
+  namespace: guard-data-access
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }
+---
+# Source: guardllm/templates/network-policies.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: guardllm-allow-managed-egress
+  namespace: guard-data-access
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              guardllm.io/managed: "true"
+---
+# Source: guardllm/templates/network-policies.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: guardllm-default-deny
+  namespace: guard-edge
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+# Source: guardllm/templates/network-policies.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: guardllm-allow-dns
+  namespace: guard-edge
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }
+---
+# Source: guardllm/templates/network-policies.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: guardllm-allow-managed-egress
+  namespace: guard-edge
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              guardllm.io/managed: "true"
+---
+# Source: guardllm/templates/network-policies.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: guardllm-default-deny
+  namespace: guard-inference
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+# Source: guardllm/templates/network-policies.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: guardllm-allow-dns
+  namespace: guard-inference
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }
+---
+# Source: guardllm/templates/network-policies.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: guardllm-allow-managed-egress
+  namespace: guard-inference
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              guardllm.io/managed: "true"
+---
+# Source: guardllm/templates/network-policies.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: guardllm-default-deny
+  namespace: guard-media
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+# Source: guardllm/templates/network-policies.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: guardllm-allow-dns
+  namespace: guard-media
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }
+---
+# Source: guardllm/templates/network-policies.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: guardllm-allow-managed-egress
+  namespace: guard-media
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              guardllm.io/managed: "true"
+---
+# Source: guardllm/templates/network-policies.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: guardllm-default-deny
+  namespace: guard-observability
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+# Source: guardllm/templates/network-policies.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: guardllm-allow-dns
+  namespace: guard-observability
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }
+---
+# Source: guardllm/templates/network-policies.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: guardllm-allow-managed-egress
+  namespace: guard-observability
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              guardllm.io/managed: "true"
+---
+# Source: guardllm/templates/network-policies.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: guardllm-default-deny
+  namespace: guard-online
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+# Source: guardllm/templates/network-policies.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: guardllm-allow-dns
+  namespace: guard-online
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }
+---
+# Source: guardllm/templates/network-policies.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: guardllm-allow-managed-egress
+  namespace: guard-online
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              guardllm.io/managed: "true"
+---
+# Source: guardllm/templates/network-policies.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: gateway-from-ingress
+  namespace: guard-edge
+spec:
+  podSelector:
+    matchLabels: { guardllm.io/component: gateway }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - { protocol: TCP, port: 8080 }
+        - { protocol: TCP, port: 9090 }
+---
+# Source: guardllm/templates/network-policies.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: analyzer-from-media-workers
+  namespace: guard-media
+spec:
+  podSelector:
+    matchLabels: { guardllm.io/component: analyzer }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - key: guardllm.io/component
+                operator: In
+                values: [multimodal, media, marking]
+      ports:
+        - { protocol: TCP, port: 8090 }
+---
+# Source: guardllm/templates/network-policies.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: app-from-gateway
+  namespace: guard-online
+spec:
+  podSelector:
+    matchLabels: { guardllm.io/component: app }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: { guardllm.io/plane: edge }
+          podSelector:
+            matchLabels: { guardllm.io/component: gateway }
+      ports:
+        - { protocol: TCP, port: 5000 }
+---
+# Source: guardllm/templates/network-policies.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: inference-only-from-gateway
+  namespace: guard-inference
+spec:
+  podSelector:
+    matchLabels: { guardllm.io/role: model-serving }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: { guardllm.io/plane: edge }
+          podSelector:
+            matchLabels: { guardllm.io/component: gateway }
+      ports:
+        - { protocol: TCP, port: 5000 }
+        - { protocol: TCP, port: 8000 }
+        - { protocol: TCP, port: 8080 }
+        - { protocol: TCP, port: 11434 }
+---
+# Source: guardllm/templates/availability.yaml
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: guardllm-guardllm-analyzer
+  namespace: guard-media
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: guardllm
+      guardllm.io/component: analyzer
+---
+# Source: guardllm/templates/availability.yaml
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: guardllm-guardllm-app
+  namespace: guard-online
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: guardllm
+      guardllm.io/component: app
+---
+# Source: guardllm/templates/availability.yaml
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: guardllm-guardllm-artifact
+  namespace: guard-media
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: guardllm
+      guardllm.io/component: artifact
+---
+# Source: guardllm/templates/availability.yaml
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: guardllm-guardllm-audit-export
+  namespace: guard-control
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: guardllm
+      guardllm.io/component: audit-export
+---
+# Source: guardllm/templates/availability.yaml
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: guardllm-guardllm-callback
+  namespace: guard-control
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: guardllm
+      guardllm.io/component: callback
+---
+# Source: guardllm/templates/availability.yaml
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: guardllm-guardllm-evaluation
+  namespace: guard-control
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: guardllm
+      guardllm.io/component: evaluation
+---
+# Source: guardllm/templates/availability.yaml
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: guardllm-guardllm-gateway
+  namespace: guard-edge
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: guardllm
+      guardllm.io/component: gateway
+---
+# Source: guardllm/templates/availability.yaml
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: guardllm-guardllm-marking
+  namespace: guard-media
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: guardllm
+      guardllm.io/component: marking
+---
+# Source: guardllm/templates/availability.yaml
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: guardllm-guardllm-media
+  namespace: guard-media
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: guardllm
+      guardllm.io/component: media
+---
+# Source: guardllm/templates/availability.yaml
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: guardllm-guardllm-multimodal
+  namespace: guard-media
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: guardllm
+      guardllm.io/component: multimodal
+---
+# Source: guardllm/templates/availability.yaml
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: guardllm-guardllm-rag
+  namespace: guard-online
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: guardllm
+      guardllm.io/component: rag
+---
+# Source: guardllm/templates/availability.yaml
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: guardllm-guardllm-security-scan
+  namespace: guard-control
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: guardllm
+      guardllm.io/component: security-scan
+---
+# Source: guardllm/templates/workloads.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: guardllm-guardllm-analyzer
+  namespace: guard-media
+  labels:
+    app.kubernetes.io/name: guardllm
+    app.kubernetes.io/instance: guardllm
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: "guardllm-1.0.0"
+automountServiceAccountToken: false
+---
+# Source: guardllm/templates/workloads.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: guardllm-guardllm-app
+  namespace: guard-online
+  labels:
+    app.kubernetes.io/name: guardllm
+    app.kubernetes.io/instance: guardllm
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: "guardllm-1.0.0"
+automountServiceAccountToken: false
+---
+# Source: guardllm/templates/workloads.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: guardllm-guardllm-artifact
+  namespace: guard-media
+  labels:
+    app.kubernetes.io/name: guardllm
+    app.kubernetes.io/instance: guardllm
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: "guardllm-1.0.0"
+automountServiceAccountToken: false
+---
+# Source: guardllm/templates/workloads.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: guardllm-guardllm-audit-export
+  namespace: guard-control
+  labels:
+    app.kubernetes.io/name: guardllm
+    app.kubernetes.io/instance: guardllm
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: "guardllm-1.0.0"
+automountServiceAccountToken: false
+---
+# Source: guardllm/templates/workloads.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: guardllm-guardllm-callback
+  namespace: guard-control
+  labels:
+    app.kubernetes.io/name: guardllm
+    app.kubernetes.io/instance: guardllm
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: "guardllm-1.0.0"
+automountServiceAccountToken: false
+---
+# Source: guardllm/templates/workloads.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: guardllm-guardllm-evaluation
+  namespace: guard-control
+  labels:
+    app.kubernetes.io/name: guardllm
+    app.kubernetes.io/instance: guardllm
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: "guardllm-1.0.0"
+automountServiceAccountToken: false
+---
+# Source: guardllm/templates/workloads.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: guardllm-guardllm-gateway
+  namespace: guard-edge
+  labels:
+    app.kubernetes.io/name: guardllm
+    app.kubernetes.io/instance: guardllm
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: "guardllm-1.0.0"
+automountServiceAccountToken: false
+---
+# Source: guardllm/templates/workloads.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: guardllm-guardllm-marking
+  namespace: guard-media
+  labels:
+    app.kubernetes.io/name: guardllm
+    app.kubernetes.io/instance: guardllm
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: "guardllm-1.0.0"
+automountServiceAccountToken: false
+---
+# Source: guardllm/templates/workloads.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: guardllm-guardllm-media
+  namespace: guard-media
+  labels:
+    app.kubernetes.io/name: guardllm
+    app.kubernetes.io/instance: guardllm
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: "guardllm-1.0.0"
+automountServiceAccountToken: false
+---
+# Source: guardllm/templates/workloads.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: guardllm-guardllm-multimodal
+  namespace: guard-media
+  labels:
+    app.kubernetes.io/name: guardllm
+    app.kubernetes.io/instance: guardllm
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: "guardllm-1.0.0"
+automountServiceAccountToken: false
+---
+# Source: guardllm/templates/workloads.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: guardllm-guardllm-rag
+  namespace: guard-online
+  labels:
+    app.kubernetes.io/name: guardllm
+    app.kubernetes.io/instance: guardllm
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: "guardllm-1.0.0"
+automountServiceAccountToken: false
+---
+# Source: guardllm/templates/workloads.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: guardllm-guardllm-security-scan
+  namespace: guard-control
+  labels:
+    app.kubernetes.io/name: guardllm
+    app.kubernetes.io/instance: guardllm
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: "guardllm-1.0.0"
+automountServiceAccountToken: false
+---
+# Source: guardllm/templates/workloads.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: guardllm-guardllm-analyzer-config
+  namespace: guard-media
+data:
+  ANALYZER_ASR_COMMAND: "/models/bin/mindie-asr"
+  ANALYZER_AUDIO_CLASSIFIER_COMMAND: "/models/bin/audio-classifier"
+  ANALYZER_CODE_READER_COMMAND: "/usr/bin/zbarimg"
+  ANALYZER_OBJECT_STORE_HOSTS: "minio.guard-data-access.svc.cluster.local"
+  ANALYZER_TTS_COMMAND: "/models/bin/tts"
+  ANALYZER_VISUAL_COMMAND: "/models/bin/mindie-visual-classifier"
+  GATEWAY_MTLS_REQUIRED: "false"
+  GUARDLLM_DEPLOYMENT_PROFILE: "production"
+  GUARDLLM_SITE_ID: "center-b"
+  GUARD_API_MAX_IN_FLIGHT: "200"
+  GUARD_APPLICATION_MAX_IN_FLIGHT: "100"
+  GUARD_CONCURRENCY_ENABLED: "true"
+  GUARD_CONCURRENCY_MAX_TRACKED_SCOPES: "10000"
+  GUARD_CREDENTIAL_MAX_IN_FLIGHT: "50"
+  GUARD_DISTRIBUTED_CONCURRENCY_ENABLED: "true"
+  GUARD_DISTRIBUTED_CONCURRENCY_FAIL_CLOSED: "true"
+  GUARD_DISTRIBUTED_CONCURRENCY_LEASE_TTL: "30s"
+  GUARD_GATEWAY_MODE: "enforce"
+  GUARD_MODEL_ROUTES_JSON: ""
+  GUARD_PRINCIPAL_MAX_IN_FLIGHT: "20"
+  GUARD_RATE_LIMIT_ENABLED: "true"
+  GUARD_RATE_LIMIT_ESTIMATED_TOKENS_PER_MINUTE: "2500000"
+  GUARD_RATE_LIMIT_FAIL_CLOSED: "true"
+  GUARD_RATE_LIMIT_MAX_TEXT_CHARS_PER_REQUEST: "1000000"
+  GUARD_RATE_LIMIT_REQUESTS_PER_MINUTE: "600"
+  GUARD_RATE_LIMIT_TEXT_CHARS_PER_MINUTE: "10000000"
+  GUARD_REDIS_URI: "rediss://redis.guard-data-access.svc.cluster.local:6380"
+  GUARD_TENANT_MAX_IN_FLIGHT: "200"
+  LOG_LEVEL: "info"
+  MULTIMODAL_BLOCK_THRESHOLD: "0.8"
+  MULTIMODAL_CROSS_MODAL_WINDOW_MS: "30000"
+  MULTIMODAL_FRAME_BATCH_SIZE: "4"
+  MULTIMODAL_FRAME_INTERVAL_MS: ""
+  MULTIMODAL_MAX_DECODED_BYTES: "2147483648"
+  MULTIMODAL_MAX_DECOMPRESSION_RATIO: "100"
+  MULTIMODAL_MAX_DURATION_MS: "3600000"
+  MULTIMODAL_MAX_FRAMES: "10000"
+  MULTIMODAL_MAX_PIXELS: "100000000"
+  MULTIMODAL_MIN_CONFIDENCE: "0.35"
+  MULTIMODAL_REVIEW_THRESHOLD: "0.65"
+  MULTIMODAL_SUMMARY_FRAMES: "24"
+  NODE_ENV: "production"
+  OPERATIONS_MONITOR_ALLOWED_HOSTS: "prometheus.guard-observability.svc.cluster.local"
+  OPERATIONS_PROMETHEUS_URL: "http://prometheus.guard-observability.svc.cluster.local:9090/"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector.guard-observability.svc:4318"
+  POLICY_LKG_MAX_AGE_MS: "300000"
+---
+# Source: guardllm/templates/workloads.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: guardllm-guardllm-app-config
+  namespace: guard-online
+data:
+  ANALYZER_ASR_COMMAND: "/models/bin/mindie-asr"
+  ANALYZER_AUDIO_CLASSIFIER_COMMAND: "/models/bin/audio-classifier"
+  ANALYZER_CODE_READER_COMMAND: "/usr/bin/zbarimg"
+  ANALYZER_OBJECT_STORE_HOSTS: "minio.guard-data-access.svc.cluster.local"
+  ANALYZER_TTS_COMMAND: "/models/bin/tts"
+  ANALYZER_VISUAL_COMMAND: "/models/bin/mindie-visual-classifier"
+  GATEWAY_MTLS_REQUIRED: "false"
+  GUARDLLM_DEPLOYMENT_PROFILE: "production"
+  GUARDLLM_SITE_ID: "center-b"
+  GUARD_API_MAX_IN_FLIGHT: "200"
+  GUARD_APPLICATION_MAX_IN_FLIGHT: "100"
+  GUARD_CONCURRENCY_ENABLED: "true"
+  GUARD_CONCURRENCY_MAX_TRACKED_SCOPES: "10000"
+  GUARD_CREDENTIAL_MAX_IN_FLIGHT: "50"
+  GUARD_DISTRIBUTED_CONCURRENCY_ENABLED: "true"
+  GUARD_DISTRIBUTED_CONCURRENCY_FAIL_CLOSED: "true"
+  GUARD_DISTRIBUTED_CONCURRENCY_LEASE_TTL: "30s"
+  GUARD_GATEWAY_MODE: "enforce"
+  GUARD_MODEL_ROUTES_JSON: ""
+  GUARD_PRINCIPAL_MAX_IN_FLIGHT: "20"
+  GUARD_RATE_LIMIT_ENABLED: "true"
+  GUARD_RATE_LIMIT_ESTIMATED_TOKENS_PER_MINUTE: "2500000"
+  GUARD_RATE_LIMIT_FAIL_CLOSED: "true"
+  GUARD_RATE_LIMIT_MAX_TEXT_CHARS_PER_REQUEST: "1000000"
+  GUARD_RATE_LIMIT_REQUESTS_PER_MINUTE: "600"
+  GUARD_RATE_LIMIT_TEXT_CHARS_PER_MINUTE: "10000000"
+  GUARD_REDIS_URI: "rediss://redis.guard-data-access.svc.cluster.local:6380"
+  GUARD_TENANT_MAX_IN_FLIGHT: "200"
+  LOG_LEVEL: "info"
+  MULTIMODAL_BLOCK_THRESHOLD: "0.8"
+  MULTIMODAL_CROSS_MODAL_WINDOW_MS: "30000"
+  MULTIMODAL_FRAME_BATCH_SIZE: "4"
+  MULTIMODAL_FRAME_INTERVAL_MS: ""
+  MULTIMODAL_MAX_DECODED_BYTES: "2147483648"
+  MULTIMODAL_MAX_DECOMPRESSION_RATIO: "100"
+  MULTIMODAL_MAX_DURATION_MS: "3600000"
+  MULTIMODAL_MAX_FRAMES: "10000"
+  MULTIMODAL_MAX_PIXELS: "100000000"
+  MULTIMODAL_MIN_CONFIDENCE: "0.35"
+  MULTIMODAL_REVIEW_THRESHOLD: "0.65"
+  MULTIMODAL_SUMMARY_FRAMES: "24"
+  NODE_ENV: "production"
+  OPERATIONS_MONITOR_ALLOWED_HOSTS: "prometheus.guard-observability.svc.cluster.local"
+  OPERATIONS_PROMETHEUS_URL: "http://prometheus.guard-observability.svc.cluster.local:9090/"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector.guard-observability.svc:4318"
+  POLICY_LKG_MAX_AGE_MS: "300000"
+---
+# Source: guardllm/templates/workloads.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: guardllm-guardllm-artifact-config
+  namespace: guard-media
+data:
+  ANALYZER_ASR_COMMAND: "/models/bin/mindie-asr"
+  ANALYZER_AUDIO_CLASSIFIER_COMMAND: "/models/bin/audio-classifier"
+  ANALYZER_CODE_READER_COMMAND: "/usr/bin/zbarimg"
+  ANALYZER_OBJECT_STORE_HOSTS: "minio.guard-data-access.svc.cluster.local"
+  ANALYZER_TTS_COMMAND: "/models/bin/tts"
+  ANALYZER_VISUAL_COMMAND: "/models/bin/mindie-visual-classifier"
+  GATEWAY_MTLS_REQUIRED: "false"
+  GUARDLLM_DEPLOYMENT_PROFILE: "production"
+  GUARDLLM_SITE_ID: "center-b"
+  GUARD_API_MAX_IN_FLIGHT: "200"
+  GUARD_APPLICATION_MAX_IN_FLIGHT: "100"
+  GUARD_CONCURRENCY_ENABLED: "true"
+  GUARD_CONCURRENCY_MAX_TRACKED_SCOPES: "10000"
+  GUARD_CREDENTIAL_MAX_IN_FLIGHT: "50"
+  GUARD_DISTRIBUTED_CONCURRENCY_ENABLED: "true"
+  GUARD_DISTRIBUTED_CONCURRENCY_FAIL_CLOSED: "true"
+  GUARD_DISTRIBUTED_CONCURRENCY_LEASE_TTL: "30s"
+  GUARD_GATEWAY_MODE: "enforce"
+  GUARD_MODEL_ROUTES_JSON: ""
+  GUARD_PRINCIPAL_MAX_IN_FLIGHT: "20"
+  GUARD_RATE_LIMIT_ENABLED: "true"
+  GUARD_RATE_LIMIT_ESTIMATED_TOKENS_PER_MINUTE: "2500000"
+  GUARD_RATE_LIMIT_FAIL_CLOSED: "true"
+  GUARD_RATE_LIMIT_MAX_TEXT_CHARS_PER_REQUEST: "1000000"
+  GUARD_RATE_LIMIT_REQUESTS_PER_MINUTE: "600"
+  GUARD_RATE_LIMIT_TEXT_CHARS_PER_MINUTE: "10000000"
+  GUARD_REDIS_URI: "rediss://redis.guard-data-access.svc.cluster.local:6380"
+  GUARD_TENANT_MAX_IN_FLIGHT: "200"
+  LOG_LEVEL: "info"
+  MULTIMODAL_BLOCK_THRESHOLD: "0.8"
+  MULTIMODAL_CROSS_MODAL_WINDOW_MS: "30000"
+  MULTIMODAL_FRAME_BATCH_SIZE: "4"
+  MULTIMODAL_FRAME_INTERVAL_MS: ""
+  MULTIMODAL_MAX_DECODED_BYTES: "2147483648"
+  MULTIMODAL_MAX_DECOMPRESSION_RATIO: "100"
+  MULTIMODAL_MAX_DURATION_MS: "3600000"
+  MULTIMODAL_MAX_FRAMES: "10000"
+  MULTIMODAL_MAX_PIXELS: "100000000"
+  MULTIMODAL_MIN_CONFIDENCE: "0.35"
+  MULTIMODAL_REVIEW_THRESHOLD: "0.65"
+  MULTIMODAL_SUMMARY_FRAMES: "24"
+  NODE_ENV: "production"
+  OPERATIONS_MONITOR_ALLOWED_HOSTS: "prometheus.guard-observability.svc.cluster.local"
+  OPERATIONS_PROMETHEUS_URL: "http://prometheus.guard-observability.svc.cluster.local:9090/"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector.guard-observability.svc:4318"
+  POLICY_LKG_MAX_AGE_MS: "300000"
+---
+# Source: guardllm/templates/workloads.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: guardllm-guardllm-audit-export-config
+  namespace: guard-control
+data:
+  ANALYZER_ASR_COMMAND: "/models/bin/mindie-asr"
+  ANALYZER_AUDIO_CLASSIFIER_COMMAND: "/models/bin/audio-classifier"
+  ANALYZER_CODE_READER_COMMAND: "/usr/bin/zbarimg"
+  ANALYZER_OBJECT_STORE_HOSTS: "minio.guard-data-access.svc.cluster.local"
+  ANALYZER_TTS_COMMAND: "/models/bin/tts"
+  ANALYZER_VISUAL_COMMAND: "/models/bin/mindie-visual-classifier"
+  GATEWAY_MTLS_REQUIRED: "false"
+  GUARDLLM_DEPLOYMENT_PROFILE: "production"
+  GUARDLLM_SITE_ID: "center-b"
+  GUARD_API_MAX_IN_FLIGHT: "200"
+  GUARD_APPLICATION_MAX_IN_FLIGHT: "100"
+  GUARD_CONCURRENCY_ENABLED: "true"
+  GUARD_CONCURRENCY_MAX_TRACKED_SCOPES: "10000"
+  GUARD_CREDENTIAL_MAX_IN_FLIGHT: "50"
+  GUARD_DISTRIBUTED_CONCURRENCY_ENABLED: "true"
+  GUARD_DISTRIBUTED_CONCURRENCY_FAIL_CLOSED: "true"
+  GUARD_DISTRIBUTED_CONCURRENCY_LEASE_TTL: "30s"
+  GUARD_GATEWAY_MODE: "enforce"
+  GUARD_MODEL_ROUTES_JSON: ""
+  GUARD_PRINCIPAL_MAX_IN_FLIGHT: "20"
+  GUARD_RATE_LIMIT_ENABLED: "true"
+  GUARD_RATE_LIMIT_ESTIMATED_TOKENS_PER_MINUTE: "2500000"
+  GUARD_RATE_LIMIT_FAIL_CLOSED: "true"
+  GUARD_RATE_LIMIT_MAX_TEXT_CHARS_PER_REQUEST: "1000000"
+  GUARD_RATE_LIMIT_REQUESTS_PER_MINUTE: "600"
+  GUARD_RATE_LIMIT_TEXT_CHARS_PER_MINUTE: "10000000"
+  GUARD_REDIS_URI: "rediss://redis.guard-data-access.svc.cluster.local:6380"
+  GUARD_TENANT_MAX_IN_FLIGHT: "200"
+  LOG_LEVEL: "info"
+  MULTIMODAL_BLOCK_THRESHOLD: "0.8"
+  MULTIMODAL_CROSS_MODAL_WINDOW_MS: "30000"
+  MULTIMODAL_FRAME_BATCH_SIZE: "4"
+  MULTIMODAL_FRAME_INTERVAL_MS: ""
+  MULTIMODAL_MAX_DECODED_BYTES: "2147483648"
+  MULTIMODAL_MAX_DECOMPRESSION_RATIO: "100"
+  MULTIMODAL_MAX_DURATION_MS: "3600000"
+  MULTIMODAL_MAX_FRAMES: "10000"
+  MULTIMODAL_MAX_PIXELS: "100000000"
+  MULTIMODAL_MIN_CONFIDENCE: "0.35"
+  MULTIMODAL_REVIEW_THRESHOLD: "0.65"
+  MULTIMODAL_SUMMARY_FRAMES: "24"
+  NODE_ENV: "production"
+  OPERATIONS_MONITOR_ALLOWED_HOSTS: "prometheus.guard-observability.svc.cluster.local"
+  OPERATIONS_PROMETHEUS_URL: "http://prometheus.guard-observability.svc.cluster.local:9090/"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector.guard-observability.svc:4318"
+  POLICY_LKG_MAX_AGE_MS: "300000"
+---
+# Source: guardllm/templates/workloads.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: guardllm-guardllm-callback-config
+  namespace: guard-control
+data:
+  ANALYZER_ASR_COMMAND: "/models/bin/mindie-asr"
+  ANALYZER_AUDIO_CLASSIFIER_COMMAND: "/models/bin/audio-classifier"
+  ANALYZER_CODE_READER_COMMAND: "/usr/bin/zbarimg"
+  ANALYZER_OBJECT_STORE_HOSTS: "minio.guard-data-access.svc.cluster.local"
+  ANALYZER_TTS_COMMAND: "/models/bin/tts"
+  ANALYZER_VISUAL_COMMAND: "/models/bin/mindie-visual-classifier"
+  GATEWAY_MTLS_REQUIRED: "false"
+  GUARDLLM_DEPLOYMENT_PROFILE: "production"
+  GUARDLLM_SITE_ID: "center-b"
+  GUARD_API_MAX_IN_FLIGHT: "200"
+  GUARD_APPLICATION_MAX_IN_FLIGHT: "100"
+  GUARD_CONCURRENCY_ENABLED: "true"
+  GUARD_CONCURRENCY_MAX_TRACKED_SCOPES: "10000"
+  GUARD_CREDENTIAL_MAX_IN_FLIGHT: "50"
+  GUARD_DISTRIBUTED_CONCURRENCY_ENABLED: "true"
+  GUARD_DISTRIBUTED_CONCURRENCY_FAIL_CLOSED: "true"
+  GUARD_DISTRIBUTED_CONCURRENCY_LEASE_TTL: "30s"
+  GUARD_GATEWAY_MODE: "enforce"
+  GUARD_MODEL_ROUTES_JSON: ""
+  GUARD_PRINCIPAL_MAX_IN_FLIGHT: "20"
+  GUARD_RATE_LIMIT_ENABLED: "true"
+  GUARD_RATE_LIMIT_ESTIMATED_TOKENS_PER_MINUTE: "2500000"
+  GUARD_RATE_LIMIT_FAIL_CLOSED: "true"
+  GUARD_RATE_LIMIT_MAX_TEXT_CHARS_PER_REQUEST: "1000000"
+  GUARD_RATE_LIMIT_REQUESTS_PER_MINUTE: "600"
+  GUARD_RATE_LIMIT_TEXT_CHARS_PER_MINUTE: "10000000"
+  GUARD_REDIS_URI: "rediss://redis.guard-data-access.svc.cluster.local:6380"
+  GUARD_TENANT_MAX_IN_FLIGHT: "200"
+  LOG_LEVEL: "info"
+  MULTIMODAL_BLOCK_THRESHOLD: "0.8"
+  MULTIMODAL_CROSS_MODAL_WINDOW_MS: "30000"
+  MULTIMODAL_FRAME_BATCH_SIZE: "4"
+  MULTIMODAL_FRAME_INTERVAL_MS: ""
+  MULTIMODAL_MAX_DECODED_BYTES: "2147483648"
+  MULTIMODAL_MAX_DECOMPRESSION_RATIO: "100"
+  MULTIMODAL_MAX_DURATION_MS: "3600000"
+  MULTIMODAL_MAX_FRAMES: "10000"
+  MULTIMODAL_MAX_PIXELS: "100000000"
+  MULTIMODAL_MIN_CONFIDENCE: "0.35"
+  MULTIMODAL_REVIEW_THRESHOLD: "0.65"
+  MULTIMODAL_SUMMARY_FRAMES: "24"
+  NODE_ENV: "production"
+  OPERATIONS_MONITOR_ALLOWED_HOSTS: "prometheus.guard-observability.svc.cluster.local"
+  OPERATIONS_PROMETHEUS_URL: "http://prometheus.guard-observability.svc.cluster.local:9090/"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector.guard-observability.svc:4318"
+  POLICY_LKG_MAX_AGE_MS: "300000"
+---
+# Source: guardllm/templates/workloads.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: guardllm-guardllm-evaluation-config
+  namespace: guard-control
+data:
+  ANALYZER_ASR_COMMAND: "/models/bin/mindie-asr"
+  ANALYZER_AUDIO_CLASSIFIER_COMMAND: "/models/bin/audio-classifier"
+  ANALYZER_CODE_READER_COMMAND: "/usr/bin/zbarimg"
+  ANALYZER_OBJECT_STORE_HOSTS: "minio.guard-data-access.svc.cluster.local"
+  ANALYZER_TTS_COMMAND: "/models/bin/tts"
+  ANALYZER_VISUAL_COMMAND: "/models/bin/mindie-visual-classifier"
+  GATEWAY_MTLS_REQUIRED: "false"
+  GUARDLLM_DEPLOYMENT_PROFILE: "production"
+  GUARDLLM_SITE_ID: "center-b"
+  GUARD_API_MAX_IN_FLIGHT: "200"
+  GUARD_APPLICATION_MAX_IN_FLIGHT: "100"
+  GUARD_CONCURRENCY_ENABLED: "true"
+  GUARD_CONCURRENCY_MAX_TRACKED_SCOPES: "10000"
+  GUARD_CREDENTIAL_MAX_IN_FLIGHT: "50"
+  GUARD_DISTRIBUTED_CONCURRENCY_ENABLED: "true"
+  GUARD_DISTRIBUTED_CONCURRENCY_FAIL_CLOSED: "true"
+  GUARD_DISTRIBUTED_CONCURRENCY_LEASE_TTL: "30s"
+  GUARD_GATEWAY_MODE: "enforce"
+  GUARD_MODEL_ROUTES_JSON: ""
+  GUARD_PRINCIPAL_MAX_IN_FLIGHT: "20"
+  GUARD_RATE_LIMIT_ENABLED: "true"
+  GUARD_RATE_LIMIT_ESTIMATED_TOKENS_PER_MINUTE: "2500000"
+  GUARD_RATE_LIMIT_FAIL_CLOSED: "true"
+  GUARD_RATE_LIMIT_MAX_TEXT_CHARS_PER_REQUEST: "1000000"
+  GUARD_RATE_LIMIT_REQUESTS_PER_MINUTE: "600"
+  GUARD_RATE_LIMIT_TEXT_CHARS_PER_MINUTE: "10000000"
+  GUARD_REDIS_URI: "rediss://redis.guard-data-access.svc.cluster.local:6380"
+  GUARD_TENANT_MAX_IN_FLIGHT: "200"
+  LOG_LEVEL: "info"
+  MULTIMODAL_BLOCK_THRESHOLD: "0.8"
+  MULTIMODAL_CROSS_MODAL_WINDOW_MS: "30000"
+  MULTIMODAL_FRAME_BATCH_SIZE: "4"
+  MULTIMODAL_FRAME_INTERVAL_MS: ""
+  MULTIMODAL_MAX_DECODED_BYTES: "2147483648"
+  MULTIMODAL_MAX_DECOMPRESSION_RATIO: "100"
+  MULTIMODAL_MAX_DURATION_MS: "3600000"
+  MULTIMODAL_MAX_FRAMES: "10000"
+  MULTIMODAL_MAX_PIXELS: "100000000"
+  MULTIMODAL_MIN_CONFIDENCE: "0.35"
+  MULTIMODAL_REVIEW_THRESHOLD: "0.65"
+  MULTIMODAL_SUMMARY_FRAMES: "24"
+  NODE_ENV: "production"
+  OPERATIONS_MONITOR_ALLOWED_HOSTS: "prometheus.guard-observability.svc.cluster.local"
+  OPERATIONS_PROMETHEUS_URL: "http://prometheus.guard-observability.svc.cluster.local:9090/"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector.guard-observability.svc:4318"
+  POLICY_LKG_MAX_AGE_MS: "300000"
+---
+# Source: guardllm/templates/workloads.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: guardllm-guardllm-gateway-config
+  namespace: guard-edge
+data:
+  ANALYZER_ASR_COMMAND: "/models/bin/mindie-asr"
+  ANALYZER_AUDIO_CLASSIFIER_COMMAND: "/models/bin/audio-classifier"
+  ANALYZER_CODE_READER_COMMAND: "/usr/bin/zbarimg"
+  ANALYZER_OBJECT_STORE_HOSTS: "minio.guard-data-access.svc.cluster.local"
+  ANALYZER_TTS_COMMAND: "/models/bin/tts"
+  ANALYZER_VISUAL_COMMAND: "/models/bin/mindie-visual-classifier"
+  GATEWAY_MTLS_REQUIRED: "false"
+  GUARDLLM_DEPLOYMENT_PROFILE: "production"
+  GUARDLLM_SITE_ID: "center-b"
+  GUARD_API_MAX_IN_FLIGHT: "200"
+  GUARD_APPLICATION_MAX_IN_FLIGHT: "100"
+  GUARD_CONCURRENCY_ENABLED: "true"
+  GUARD_CONCURRENCY_MAX_TRACKED_SCOPES: "10000"
+  GUARD_CREDENTIAL_MAX_IN_FLIGHT: "50"
+  GUARD_DISTRIBUTED_CONCURRENCY_ENABLED: "true"
+  GUARD_DISTRIBUTED_CONCURRENCY_FAIL_CLOSED: "true"
+  GUARD_DISTRIBUTED_CONCURRENCY_LEASE_TTL: "30s"
+  GUARD_GATEWAY_MODE: "enforce"
+  GUARD_MODEL_ROUTES_JSON: ""
+  GUARD_PRINCIPAL_MAX_IN_FLIGHT: "20"
+  GUARD_RATE_LIMIT_ENABLED: "true"
+  GUARD_RATE_LIMIT_ESTIMATED_TOKENS_PER_MINUTE: "2500000"
+  GUARD_RATE_LIMIT_FAIL_CLOSED: "true"
+  GUARD_RATE_LIMIT_MAX_TEXT_CHARS_PER_REQUEST: "1000000"
+  GUARD_RATE_LIMIT_REQUESTS_PER_MINUTE: "600"
+  GUARD_RATE_LIMIT_TEXT_CHARS_PER_MINUTE: "10000000"
+  GUARD_REDIS_URI: "rediss://redis.guard-data-access.svc.cluster.local:6380"
+  GUARD_TENANT_MAX_IN_FLIGHT: "200"
+  LOG_LEVEL: "info"
+  MULTIMODAL_BLOCK_THRESHOLD: "0.8"
+  MULTIMODAL_CROSS_MODAL_WINDOW_MS: "30000"
+  MULTIMODAL_FRAME_BATCH_SIZE: "4"
+  MULTIMODAL_FRAME_INTERVAL_MS: ""
+  MULTIMODAL_MAX_DECODED_BYTES: "2147483648"
+  MULTIMODAL_MAX_DECOMPRESSION_RATIO: "100"
+  MULTIMODAL_MAX_DURATION_MS: "3600000"
+  MULTIMODAL_MAX_FRAMES: "10000"
+  MULTIMODAL_MAX_PIXELS: "100000000"
+  MULTIMODAL_MIN_CONFIDENCE: "0.35"
+  MULTIMODAL_REVIEW_THRESHOLD: "0.65"
+  MULTIMODAL_SUMMARY_FRAMES: "24"
+  NODE_ENV: "production"
+  OPERATIONS_MONITOR_ALLOWED_HOSTS: "prometheus.guard-observability.svc.cluster.local"
+  OPERATIONS_PROMETHEUS_URL: "http://prometheus.guard-observability.svc.cluster.local:9090/"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector.guard-observability.svc:4318"
+  POLICY_LKG_MAX_AGE_MS: "300000"
+---
+# Source: guardllm/templates/workloads.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: guardllm-guardllm-marking-config
+  namespace: guard-media
+data:
+  ANALYZER_ASR_COMMAND: "/models/bin/mindie-asr"
+  ANALYZER_AUDIO_CLASSIFIER_COMMAND: "/models/bin/audio-classifier"
+  ANALYZER_CODE_READER_COMMAND: "/usr/bin/zbarimg"
+  ANALYZER_OBJECT_STORE_HOSTS: "minio.guard-data-access.svc.cluster.local"
+  ANALYZER_TTS_COMMAND: "/models/bin/tts"
+  ANALYZER_VISUAL_COMMAND: "/models/bin/mindie-visual-classifier"
+  GATEWAY_MTLS_REQUIRED: "false"
+  GUARDLLM_DEPLOYMENT_PROFILE: "production"
+  GUARDLLM_SITE_ID: "center-b"
+  GUARD_API_MAX_IN_FLIGHT: "200"
+  GUARD_APPLICATION_MAX_IN_FLIGHT: "100"
+  GUARD_CONCURRENCY_ENABLED: "true"
+  GUARD_CONCURRENCY_MAX_TRACKED_SCOPES: "10000"
+  GUARD_CREDENTIAL_MAX_IN_FLIGHT: "50"
+  GUARD_DISTRIBUTED_CONCURRENCY_ENABLED: "true"
+  GUARD_DISTRIBUTED_CONCURRENCY_FAIL_CLOSED: "true"
+  GUARD_DISTRIBUTED_CONCURRENCY_LEASE_TTL: "30s"
+  GUARD_GATEWAY_MODE: "enforce"
+  GUARD_MODEL_ROUTES_JSON: ""
+  GUARD_PRINCIPAL_MAX_IN_FLIGHT: "20"
+  GUARD_RATE_LIMIT_ENABLED: "true"
+  GUARD_RATE_LIMIT_ESTIMATED_TOKENS_PER_MINUTE: "2500000"
+  GUARD_RATE_LIMIT_FAIL_CLOSED: "true"
+  GUARD_RATE_LIMIT_MAX_TEXT_CHARS_PER_REQUEST: "1000000"
+  GUARD_RATE_LIMIT_REQUESTS_PER_MINUTE: "600"
+  GUARD_RATE_LIMIT_TEXT_CHARS_PER_MINUTE: "10000000"
+  GUARD_REDIS_URI: "rediss://redis.guard-data-access.svc.cluster.local:6380"
+  GUARD_TENANT_MAX_IN_FLIGHT: "200"
+  LOG_LEVEL: "info"
+  MULTIMODAL_BLOCK_THRESHOLD: "0.8"
+  MULTIMODAL_CROSS_MODAL_WINDOW_MS: "30000"
+  MULTIMODAL_FRAME_BATCH_SIZE: "4"
+  MULTIMODAL_FRAME_INTERVAL_MS: ""
+  MULTIMODAL_MAX_DECODED_BYTES: "2147483648"
+  MULTIMODAL_MAX_DECOMPRESSION_RATIO: "100"
+  MULTIMODAL_MAX_DURATION_MS: "3600000"
+  MULTIMODAL_MAX_FRAMES: "10000"
+  MULTIMODAL_MAX_PIXELS: "100000000"
+  MULTIMODAL_MIN_CONFIDENCE: "0.35"
+  MULTIMODAL_REVIEW_THRESHOLD: "0.65"
+  MULTIMODAL_SUMMARY_FRAMES: "24"
+  NODE_ENV: "production"
+  OPERATIONS_MONITOR_ALLOWED_HOSTS: "prometheus.guard-observability.svc.cluster.local"
+  OPERATIONS_PROMETHEUS_URL: "http://prometheus.guard-observability.svc.cluster.local:9090/"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector.guard-observability.svc:4318"
+  POLICY_LKG_MAX_AGE_MS: "300000"
+---
+# Source: guardllm/templates/workloads.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: guardllm-guardllm-media-config
+  namespace: guard-media
+data:
+  ANALYZER_ASR_COMMAND: "/models/bin/mindie-asr"
+  ANALYZER_AUDIO_CLASSIFIER_COMMAND: "/models/bin/audio-classifier"
+  ANALYZER_CODE_READER_COMMAND: "/usr/bin/zbarimg"
+  ANALYZER_OBJECT_STORE_HOSTS: "minio.guard-data-access.svc.cluster.local"
+  ANALYZER_TTS_COMMAND: "/models/bin/tts"
+  ANALYZER_VISUAL_COMMAND: "/models/bin/mindie-visual-classifier"
+  GATEWAY_MTLS_REQUIRED: "false"
+  GUARDLLM_DEPLOYMENT_PROFILE: "production"
+  GUARDLLM_SITE_ID: "center-b"
+  GUARD_API_MAX_IN_FLIGHT: "200"
+  GUARD_APPLICATION_MAX_IN_FLIGHT: "100"
+  GUARD_CONCURRENCY_ENABLED: "true"
+  GUARD_CONCURRENCY_MAX_TRACKED_SCOPES: "10000"
+  GUARD_CREDENTIAL_MAX_IN_FLIGHT: "50"
+  GUARD_DISTRIBUTED_CONCURRENCY_ENABLED: "true"
+  GUARD_DISTRIBUTED_CONCURRENCY_FAIL_CLOSED: "true"
+  GUARD_DISTRIBUTED_CONCURRENCY_LEASE_TTL: "30s"
+  GUARD_GATEWAY_MODE: "enforce"
+  GUARD_MODEL_ROUTES_JSON: ""
+  GUARD_PRINCIPAL_MAX_IN_FLIGHT: "20"
+  GUARD_RATE_LIMIT_ENABLED: "true"
+  GUARD_RATE_LIMIT_ESTIMATED_TOKENS_PER_MINUTE: "2500000"
+  GUARD_RATE_LIMIT_FAIL_CLOSED: "true"
+  GUARD_RATE_LIMIT_MAX_TEXT_CHARS_PER_REQUEST: "1000000"
+  GUARD_RATE_LIMIT_REQUESTS_PER_MINUTE: "600"
+  GUARD_RATE_LIMIT_TEXT_CHARS_PER_MINUTE: "10000000"
+  GUARD_REDIS_URI: "rediss://redis.guard-data-access.svc.cluster.local:6380"
+  GUARD_TENANT_MAX_IN_FLIGHT: "200"
+  LOG_LEVEL: "info"
+  MULTIMODAL_BLOCK_THRESHOLD: "0.8"
+  MULTIMODAL_CROSS_MODAL_WINDOW_MS: "30000"
+  MULTIMODAL_FRAME_BATCH_SIZE: "4"
+  MULTIMODAL_FRAME_INTERVAL_MS: ""
+  MULTIMODAL_MAX_DECODED_BYTES: "2147483648"
+  MULTIMODAL_MAX_DECOMPRESSION_RATIO: "100"
+  MULTIMODAL_MAX_DURATION_MS: "3600000"
+  MULTIMODAL_MAX_FRAMES: "10000"
+  MULTIMODAL_MAX_PIXELS: "100000000"
+  MULTIMODAL_MIN_CONFIDENCE: "0.35"
+  MULTIMODAL_REVIEW_THRESHOLD: "0.65"
+  MULTIMODAL_SUMMARY_FRAMES: "24"
+  NODE_ENV: "production"
+  OPERATIONS_MONITOR_ALLOWED_HOSTS: "prometheus.guard-observability.svc.cluster.local"
+  OPERATIONS_PROMETHEUS_URL: "http://prometheus.guard-observability.svc.cluster.local:9090/"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector.guard-observability.svc:4318"
+  POLICY_LKG_MAX_AGE_MS: "300000"
+---
+# Source: guardllm/templates/workloads.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: guardllm-guardllm-multimodal-config
+  namespace: guard-media
+data:
+  ANALYZER_ASR_COMMAND: "/models/bin/mindie-asr"
+  ANALYZER_AUDIO_CLASSIFIER_COMMAND: "/models/bin/audio-classifier"
+  ANALYZER_CODE_READER_COMMAND: "/usr/bin/zbarimg"
+  ANALYZER_OBJECT_STORE_HOSTS: "minio.guard-data-access.svc.cluster.local"
+  ANALYZER_TTS_COMMAND: "/models/bin/tts"
+  ANALYZER_VISUAL_COMMAND: "/models/bin/mindie-visual-classifier"
+  GATEWAY_MTLS_REQUIRED: "false"
+  GUARDLLM_DEPLOYMENT_PROFILE: "production"
+  GUARDLLM_SITE_ID: "center-b"
+  GUARD_API_MAX_IN_FLIGHT: "200"
+  GUARD_APPLICATION_MAX_IN_FLIGHT: "100"
+  GUARD_CONCURRENCY_ENABLED: "true"
+  GUARD_CONCURRENCY_MAX_TRACKED_SCOPES: "10000"
+  GUARD_CREDENTIAL_MAX_IN_FLIGHT: "50"
+  GUARD_DISTRIBUTED_CONCURRENCY_ENABLED: "true"
+  GUARD_DISTRIBUTED_CONCURRENCY_FAIL_CLOSED: "true"
+  GUARD_DISTRIBUTED_CONCURRENCY_LEASE_TTL: "30s"
+  GUARD_GATEWAY_MODE: "enforce"
+  GUARD_MODEL_ROUTES_JSON: ""
+  GUARD_PRINCIPAL_MAX_IN_FLIGHT: "20"
+  GUARD_RATE_LIMIT_ENABLED: "true"
+  GUARD_RATE_LIMIT_ESTIMATED_TOKENS_PER_MINUTE: "2500000"
+  GUARD_RATE_LIMIT_FAIL_CLOSED: "true"
+  GUARD_RATE_LIMIT_MAX_TEXT_CHARS_PER_REQUEST: "1000000"
+  GUARD_RATE_LIMIT_REQUESTS_PER_MINUTE: "600"
+  GUARD_RATE_LIMIT_TEXT_CHARS_PER_MINUTE: "10000000"
+  GUARD_REDIS_URI: "rediss://redis.guard-data-access.svc.cluster.local:6380"
+  GUARD_TENANT_MAX_IN_FLIGHT: "200"
+  LOG_LEVEL: "info"
+  MULTIMODAL_BLOCK_THRESHOLD: "0.8"
+  MULTIMODAL_CROSS_MODAL_WINDOW_MS: "30000"
+  MULTIMODAL_FRAME_BATCH_SIZE: "4"
+  MULTIMODAL_FRAME_INTERVAL_MS: ""
+  MULTIMODAL_MAX_DECODED_BYTES: "2147483648"
+  MULTIMODAL_MAX_DECOMPRESSION_RATIO: "100"
+  MULTIMODAL_MAX_DURATION_MS: "3600000"
+  MULTIMODAL_MAX_FRAMES: "10000"
+  MULTIMODAL_MAX_PIXELS: "100000000"
+  MULTIMODAL_MIN_CONFIDENCE: "0.35"
+  MULTIMODAL_REVIEW_THRESHOLD: "0.65"
+  MULTIMODAL_SUMMARY_FRAMES: "24"
+  NODE_ENV: "production"
+  OPERATIONS_MONITOR_ALLOWED_HOSTS: "prometheus.guard-observability.svc.cluster.local"
+  OPERATIONS_PROMETHEUS_URL: "http://prometheus.guard-observability.svc.cluster.local:9090/"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector.guard-observability.svc:4318"
+  POLICY_LKG_MAX_AGE_MS: "300000"
+---
+# Source: guardllm/templates/workloads.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: guardllm-guardllm-rag-config
+  namespace: guard-online
+data:
+  ANALYZER_ASR_COMMAND: "/models/bin/mindie-asr"
+  ANALYZER_AUDIO_CLASSIFIER_COMMAND: "/models/bin/audio-classifier"
+  ANALYZER_CODE_READER_COMMAND: "/usr/bin/zbarimg"
+  ANALYZER_OBJECT_STORE_HOSTS: "minio.guard-data-access.svc.cluster.local"
+  ANALYZER_TTS_COMMAND: "/models/bin/tts"
+  ANALYZER_VISUAL_COMMAND: "/models/bin/mindie-visual-classifier"
+  GATEWAY_MTLS_REQUIRED: "false"
+  GUARDLLM_DEPLOYMENT_PROFILE: "production"
+  GUARDLLM_SITE_ID: "center-b"
+  GUARD_API_MAX_IN_FLIGHT: "200"
+  GUARD_APPLICATION_MAX_IN_FLIGHT: "100"
+  GUARD_CONCURRENCY_ENABLED: "true"
+  GUARD_CONCURRENCY_MAX_TRACKED_SCOPES: "10000"
+  GUARD_CREDENTIAL_MAX_IN_FLIGHT: "50"
+  GUARD_DISTRIBUTED_CONCURRENCY_ENABLED: "true"
+  GUARD_DISTRIBUTED_CONCURRENCY_FAIL_CLOSED: "true"
+  GUARD_DISTRIBUTED_CONCURRENCY_LEASE_TTL: "30s"
+  GUARD_GATEWAY_MODE: "enforce"
+  GUARD_MODEL_ROUTES_JSON: ""
+  GUARD_PRINCIPAL_MAX_IN_FLIGHT: "20"
+  GUARD_RATE_LIMIT_ENABLED: "true"
+  GUARD_RATE_LIMIT_ESTIMATED_TOKENS_PER_MINUTE: "2500000"
+  GUARD_RATE_LIMIT_FAIL_CLOSED: "true"
+  GUARD_RATE_LIMIT_MAX_TEXT_CHARS_PER_REQUEST: "1000000"
+  GUARD_RATE_LIMIT_REQUESTS_PER_MINUTE: "600"
+  GUARD_RATE_LIMIT_TEXT_CHARS_PER_MINUTE: "10000000"
+  GUARD_REDIS_URI: "rediss://redis.guard-data-access.svc.cluster.local:6380"
+  GUARD_TENANT_MAX_IN_FLIGHT: "200"
+  LOG_LEVEL: "info"
+  MULTIMODAL_BLOCK_THRESHOLD: "0.8"
+  MULTIMODAL_CROSS_MODAL_WINDOW_MS: "30000"
+  MULTIMODAL_FRAME_BATCH_SIZE: "4"
+  MULTIMODAL_FRAME_INTERVAL_MS: ""
+  MULTIMODAL_MAX_DECODED_BYTES: "2147483648"
+  MULTIMODAL_MAX_DECOMPRESSION_RATIO: "100"
+  MULTIMODAL_MAX_DURATION_MS: "3600000"
+  MULTIMODAL_MAX_FRAMES: "10000"
+  MULTIMODAL_MAX_PIXELS: "100000000"
+  MULTIMODAL_MIN_CONFIDENCE: "0.35"
+  MULTIMODAL_REVIEW_THRESHOLD: "0.65"
+  MULTIMODAL_SUMMARY_FRAMES: "24"
+  NODE_ENV: "production"
+  OPERATIONS_MONITOR_ALLOWED_HOSTS: "prometheus.guard-observability.svc.cluster.local"
+  OPERATIONS_PROMETHEUS_URL: "http://prometheus.guard-observability.svc.cluster.local:9090/"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector.guard-observability.svc:4318"
+  POLICY_LKG_MAX_AGE_MS: "300000"
+---
+# Source: guardllm/templates/workloads.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: guardllm-guardllm-security-scan-config
+  namespace: guard-control
+data:
+  ANALYZER_ASR_COMMAND: "/models/bin/mindie-asr"
+  ANALYZER_AUDIO_CLASSIFIER_COMMAND: "/models/bin/audio-classifier"
+  ANALYZER_CODE_READER_COMMAND: "/usr/bin/zbarimg"
+  ANALYZER_OBJECT_STORE_HOSTS: "minio.guard-data-access.svc.cluster.local"
+  ANALYZER_TTS_COMMAND: "/models/bin/tts"
+  ANALYZER_VISUAL_COMMAND: "/models/bin/mindie-visual-classifier"
+  GATEWAY_MTLS_REQUIRED: "false"
+  GUARDLLM_DEPLOYMENT_PROFILE: "production"
+  GUARDLLM_SITE_ID: "center-b"
+  GUARD_API_MAX_IN_FLIGHT: "200"
+  GUARD_APPLICATION_MAX_IN_FLIGHT: "100"
+  GUARD_CONCURRENCY_ENABLED: "true"
+  GUARD_CONCURRENCY_MAX_TRACKED_SCOPES: "10000"
+  GUARD_CREDENTIAL_MAX_IN_FLIGHT: "50"
+  GUARD_DISTRIBUTED_CONCURRENCY_ENABLED: "true"
+  GUARD_DISTRIBUTED_CONCURRENCY_FAIL_CLOSED: "true"
+  GUARD_DISTRIBUTED_CONCURRENCY_LEASE_TTL: "30s"
+  GUARD_GATEWAY_MODE: "enforce"
+  GUARD_MODEL_ROUTES_JSON: ""
+  GUARD_PRINCIPAL_MAX_IN_FLIGHT: "20"
+  GUARD_RATE_LIMIT_ENABLED: "true"
+  GUARD_RATE_LIMIT_ESTIMATED_TOKENS_PER_MINUTE: "2500000"
+  GUARD_RATE_LIMIT_FAIL_CLOSED: "true"
+  GUARD_RATE_LIMIT_MAX_TEXT_CHARS_PER_REQUEST: "1000000"
+  GUARD_RATE_LIMIT_REQUESTS_PER_MINUTE: "600"
+  GUARD_RATE_LIMIT_TEXT_CHARS_PER_MINUTE: "10000000"
+  GUARD_REDIS_URI: "rediss://redis.guard-data-access.svc.cluster.local:6380"
+  GUARD_TENANT_MAX_IN_FLIGHT: "200"
+  LOG_LEVEL: "info"
+  MULTIMODAL_BLOCK_THRESHOLD: "0.8"
+  MULTIMODAL_CROSS_MODAL_WINDOW_MS: "30000"
+  MULTIMODAL_FRAME_BATCH_SIZE: "4"
+  MULTIMODAL_FRAME_INTERVAL_MS: ""
+  MULTIMODAL_MAX_DECODED_BYTES: "2147483648"
+  MULTIMODAL_MAX_DECOMPRESSION_RATIO: "100"
+  MULTIMODAL_MAX_DURATION_MS: "3600000"
+  MULTIMODAL_MAX_FRAMES: "10000"
+  MULTIMODAL_MAX_PIXELS: "100000000"
+  MULTIMODAL_MIN_CONFIDENCE: "0.35"
+  MULTIMODAL_REVIEW_THRESHOLD: "0.65"
+  MULTIMODAL_SUMMARY_FRAMES: "24"
+  NODE_ENV: "production"
+  OPERATIONS_MONITOR_ALLOWED_HOSTS: "prometheus.guard-observability.svc.cluster.local"
+  OPERATIONS_PROMETHEUS_URL: "http://prometheus.guard-observability.svc.cluster.local:9090/"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector.guard-observability.svc:4318"
+  POLICY_LKG_MAX_AGE_MS: "300000"
+---
+# Source: guardllm/templates/workloads.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: guardllm-guardllm-analyzer
+  namespace: guard-media
+  labels:
+    app.kubernetes.io/name: guardllm
+    app.kubernetes.io/instance: guardllm
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: "guardllm-1.0.0"
+    guardllm.io/component: analyzer
+spec:
+  selector:
+    app.kubernetes.io/instance: guardllm
+    guardllm.io/component: analyzer
+  ports:
+    - name: http
+      port: 8090
+      targetPort: http
+---
+# Source: guardllm/templates/workloads.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: guardllm-guardllm-app
+  namespace: guard-online
+  labels:
+    app.kubernetes.io/name: guardllm
+    app.kubernetes.io/instance: guardllm
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: "guardllm-1.0.0"
+    guardllm.io/component: app
+spec:
+  selector:
+    app.kubernetes.io/instance: guardllm
+    guardllm.io/component: app
+  ports:
+    - name: http
+      port: 5000
+      targetPort: http
+---
+# Source: guardllm/templates/workloads.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: guardllm-guardllm-gateway
+  namespace: guard-edge
+  labels:
+    app.kubernetes.io/name: guardllm
+    app.kubernetes.io/instance: guardllm
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: "guardllm-1.0.0"
+    guardllm.io/component: gateway
+spec:
+  selector:
+    app.kubernetes.io/instance: guardllm
+    guardllm.io/component: gateway
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+    - name: grpc
+      port: 9090
+      targetPort: grpc
+      appProtocol: grpc
+---
+# Source: guardllm/templates/workloads.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: guardllm-guardllm-analyzer
+  namespace: guard-media
+  labels:
+    app.kubernetes.io/name: guardllm
+    app.kubernetes.io/instance: guardllm
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: "guardllm-1.0.0"
+    guardllm.io/component: analyzer
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  strategy:
+    rollingUpdate: { maxSurge: 1, maxUnavailable: 0 }
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: guardllm
+      guardllm.io/component: analyzer
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: guardllm
+        app.kubernetes.io/instance: guardllm
+        guardllm.io/component: analyzer
+        guardllm.io/site: "center-b"
+      annotations:
+        checksum/config: 95808aa79363280ee78487c25c22321dca17ad313916dc4bb0e5d5847368ceed
+    spec:
+      serviceAccountName: guardllm-guardllm-analyzer
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 45
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: { type: RuntimeDefault }
+      runtimeClassName: "ascend"
+      nodeSelector:
+        guardllm.io/accelerator: ascend-910
+        kubernetes.io/arch: arm64
+      tolerations:
+        - effect: NoSchedule
+          key: guardllm.io/accelerator
+          operator: Equal
+          value: ascend-910
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule
+          minDomains: 3
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/instance: guardllm
+              guardllm.io/component: analyzer
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/instance: guardllm
+              guardllm.io/component: analyzer
+      containers:
+        - name: analyzer
+          image: "registry.example.invalid/guardllm/media-analyzer@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          imagePullPolicy: IfNotPresent
+          command: ["node"]
+          args: ["/app/server.mjs"]
+          envFrom:
+            - configMapRef:
+                name: guardllm-guardllm-analyzer-config
+            - secretRef:
+                name: guardllm-runtime-secrets
+          env:
+            - name: DLP_TOKENIZATION_HMAC_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: guardllm-runtime-secrets
+                  key: DLP_TOKENIZATION_HMAC_KEY
+            - name: POLICY_SIGNING_PUBLIC_KEY_FILE
+              value: "/var/run/secrets/guardllm/policy-verification/public.pem"
+            - name: POLICY_SIGNING_KEY_ID
+              value: "production-ed25519-v1"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }
+            readOnlyRootFilesystem: true
+          ports:
+            - name: http
+              containerPort: 8090
+          readinessProbe:
+            httpGet: { path: /health/ready, port: http }
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 6
+          livenessProbe:
+            httpGet: { path: /health/ready, port: http }
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          resources:
+            limits:
+              cpu: "8"
+              ephemeral-storage: 2Gi
+              huawei.com/Ascend910: "1"
+              memory: 16Gi
+            requests:
+              cpu: "2"
+              ephemeral-storage: 1Gi
+              huawei.com/Ascend910: "1"
+              memory: 4Gi
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: next-cache
+              mountPath: /app/.next/cache
+            - name: policy-verification
+              mountPath: /var/run/secrets/guardllm/policy-verification
+              readOnly: true
+            - name: analyzer-models
+              mountPath: /models
+              readOnly: true
+      volumes:
+        - name: tmp
+          emptyDir: { sizeLimit: 1Gi }
+        - name: next-cache
+          emptyDir: { sizeLimit: 512Mi }
+        - name: policy-verification
+          secret:
+            secretName: guardllm-policy-verification
+            defaultMode: 0444
+            items:
+              - key: public.pem
+                path: public.pem
+        - name: analyzer-models
+          persistentVolumeClaim:
+            claimName: guardllm-analyzer-models
+            readOnly: true
+---
+# Source: guardllm/templates/workloads.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: guardllm-guardllm-app
+  namespace: guard-online
+  labels:
+    app.kubernetes.io/name: guardllm
+    app.kubernetes.io/instance: guardllm
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: "guardllm-1.0.0"
+    guardllm.io/component: app
+spec:
+  replicas: 3
+  revisionHistoryLimit: 5
+  strategy:
+    rollingUpdate: { maxSurge: 1, maxUnavailable: 0 }
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: guardllm
+      guardllm.io/component: app
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: guardllm
+        app.kubernetes.io/instance: guardllm
+        guardllm.io/component: app
+        guardllm.io/site: "center-b"
+      annotations:
+        checksum/config: 95808aa79363280ee78487c25c22321dca17ad313916dc4bb0e5d5847368ceed
+    spec:
+      serviceAccountName: guardllm-guardllm-app
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 45
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: { type: RuntimeDefault }
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule
+          minDomains: 3
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/instance: guardllm
+              guardllm.io/component: app
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/instance: guardllm
+              guardllm.io/component: app
+      containers:
+        - name: app
+          image: "registry.example.invalid/guardllm/app@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: guardllm-guardllm-app-config
+            - secretRef:
+                name: guardllm-runtime-secrets
+          env:
+            - name: DLP_TOKENIZATION_HMAC_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: guardllm-runtime-secrets
+                  key: DLP_TOKENIZATION_HMAC_KEY
+            - name: POLICY_SIGNING_PUBLIC_KEY_FILE
+              value: "/var/run/secrets/guardllm/policy-verification/public.pem"
+            - name: POLICY_SIGNING_KEY_ID
+              value: "production-ed25519-v1"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }
+            readOnlyRootFilesystem: true
+          ports:
+            - name: http
+              containerPort: 5000
+          readinessProbe:
+            httpGet: { path: /api/health/policy, port: http }
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 6
+          livenessProbe:
+            httpGet: { path: /api/health/live, port: http }
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          resources:
+            limits:
+              cpu: "2"
+              memory: 2Gi
+            requests:
+              cpu: 500m
+              memory: 768Mi
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: next-cache
+              mountPath: /app/.next/cache
+            - name: policy-verification
+              mountPath: /var/run/secrets/guardllm/policy-verification
+              readOnly: true
+      volumes:
+        - name: tmp
+          emptyDir: { sizeLimit: 1Gi }
+        - name: next-cache
+          emptyDir: { sizeLimit: 512Mi }
+        - name: policy-verification
+          secret:
+            secretName: guardllm-policy-verification
+            defaultMode: 0444
+            items:
+              - key: public.pem
+                path: public.pem
+---
+# Source: guardllm/templates/workloads.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: guardllm-guardllm-artifact
+  namespace: guard-media
+  labels:
+    app.kubernetes.io/name: guardllm
+    app.kubernetes.io/instance: guardllm
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: "guardllm-1.0.0"
+    guardllm.io/component: artifact
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  strategy:
+    rollingUpdate: { maxSurge: 1, maxUnavailable: 0 }
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: guardllm
+      guardllm.io/component: artifact
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: guardllm
+        app.kubernetes.io/instance: guardllm
+        guardllm.io/component: artifact
+        guardllm.io/site: "center-b"
+      annotations:
+        checksum/config: 95808aa79363280ee78487c25c22321dca17ad313916dc4bb0e5d5847368ceed
+    spec:
+      serviceAccountName: guardllm-guardllm-artifact
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 45
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: { type: RuntimeDefault }
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule
+          minDomains: 3
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/instance: guardllm
+              guardllm.io/component: artifact
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/instance: guardllm
+              guardllm.io/component: artifact
+      containers:
+        - name: artifact
+          image: "registry.example.invalid/guardllm/worker@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          imagePullPolicy: IfNotPresent
+          command: ["node"]
+          args: ["--import","tsx","scripts/run-worker.mjs","artifact"]
+          envFrom:
+            - configMapRef:
+                name: guardllm-guardllm-artifact-config
+            - secretRef:
+                name: guardllm-runtime-secrets
+          env:
+            - name: DLP_TOKENIZATION_HMAC_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: guardllm-runtime-secrets
+                  key: DLP_TOKENIZATION_HMAC_KEY
+            - name: POLICY_SIGNING_PUBLIC_KEY_FILE
+              value: "/var/run/secrets/guardllm/policy-verification/public.pem"
+            - name: POLICY_SIGNING_KEY_ID
+              value: "production-ed25519-v1"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }
+            readOnlyRootFilesystem: true
+          resources:
+            limits:
+              cpu: "1"
+              memory: 1Gi
+            requests:
+              cpu: 250m
+              memory: 512Mi
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: next-cache
+              mountPath: /app/.next/cache
+            - name: policy-verification
+              mountPath: /var/run/secrets/guardllm/policy-verification
+              readOnly: true
+      volumes:
+        - name: tmp
+          emptyDir: { sizeLimit: 1Gi }
+        - name: next-cache
+          emptyDir: { sizeLimit: 512Mi }
+        - name: policy-verification
+          secret:
+            secretName: guardllm-policy-verification
+            defaultMode: 0444
+            items:
+              - key: public.pem
+                path: public.pem
+---
+# Source: guardllm/templates/workloads.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: guardllm-guardllm-audit-export
+  namespace: guard-control
+  labels:
+    app.kubernetes.io/name: guardllm
+    app.kubernetes.io/instance: guardllm
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: "guardllm-1.0.0"
+    guardllm.io/component: audit-export
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  strategy:
+    rollingUpdate: { maxSurge: 1, maxUnavailable: 0 }
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: guardllm
+      guardllm.io/component: audit-export
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: guardllm
+        app.kubernetes.io/instance: guardllm
+        guardllm.io/component: audit-export
+        guardllm.io/site: "center-b"
+      annotations:
+        checksum/config: 95808aa79363280ee78487c25c22321dca17ad313916dc4bb0e5d5847368ceed
+    spec:
+      serviceAccountName: guardllm-guardllm-audit-export
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 45
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: { type: RuntimeDefault }
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule
+          minDomains: 3
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/instance: guardllm
+              guardllm.io/component: audit-export
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/instance: guardllm
+              guardllm.io/component: audit-export
+      containers:
+        - name: audit-export
+          image: "registry.example.invalid/guardllm/worker@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          imagePullPolicy: IfNotPresent
+          command: ["node"]
+          args: ["--import","tsx","scripts/run-worker.mjs","audit-export"]
+          envFrom:
+            - configMapRef:
+                name: guardllm-guardllm-audit-export-config
+            - secretRef:
+                name: guardllm-runtime-secrets
+          env:
+            - name: DLP_TOKENIZATION_HMAC_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: guardllm-runtime-secrets
+                  key: DLP_TOKENIZATION_HMAC_KEY
+            - name: POLICY_SIGNING_PUBLIC_KEY_FILE
+              value: "/var/run/secrets/guardllm/policy-verification/public.pem"
+            - name: POLICY_SIGNING_KEY_ID
+              value: "production-ed25519-v1"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }
+            readOnlyRootFilesystem: true
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: next-cache
+              mountPath: /app/.next/cache
+            - name: policy-verification
+              mountPath: /var/run/secrets/guardllm/policy-verification
+              readOnly: true
+      volumes:
+        - name: tmp
+          emptyDir: { sizeLimit: 1Gi }
+        - name: next-cache
+          emptyDir: { sizeLimit: 512Mi }
+        - name: policy-verification
+          secret:
+            secretName: guardllm-policy-verification
+            defaultMode: 0444
+            items:
+              - key: public.pem
+                path: public.pem
+---
+# Source: guardllm/templates/workloads.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: guardllm-guardllm-callback
+  namespace: guard-control
+  labels:
+    app.kubernetes.io/name: guardllm
+    app.kubernetes.io/instance: guardllm
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: "guardllm-1.0.0"
+    guardllm.io/component: callback
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  strategy:
+    rollingUpdate: { maxSurge: 1, maxUnavailable: 0 }
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: guardllm
+      guardllm.io/component: callback
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: guardllm
+        app.kubernetes.io/instance: guardllm
+        guardllm.io/component: callback
+        guardllm.io/site: "center-b"
+      annotations:
+        checksum/config: 95808aa79363280ee78487c25c22321dca17ad313916dc4bb0e5d5847368ceed
+    spec:
+      serviceAccountName: guardllm-guardllm-callback
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 45
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: { type: RuntimeDefault }
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule
+          minDomains: 3
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/instance: guardllm
+              guardllm.io/component: callback
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/instance: guardllm
+              guardllm.io/component: callback
+      containers:
+        - name: callback
+          image: "registry.example.invalid/guardllm/worker@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          imagePullPolicy: IfNotPresent
+          command: ["node"]
+          args: ["--import","tsx","scripts/run-worker.mjs","callback"]
+          envFrom:
+            - configMapRef:
+                name: guardllm-guardllm-callback-config
+            - secretRef:
+                name: guardllm-runtime-secrets
+          env:
+            - name: DLP_TOKENIZATION_HMAC_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: guardllm-runtime-secrets
+                  key: DLP_TOKENIZATION_HMAC_KEY
+            - name: POLICY_SIGNING_PUBLIC_KEY_FILE
+              value: "/var/run/secrets/guardllm/policy-verification/public.pem"
+            - name: POLICY_SIGNING_KEY_ID
+              value: "production-ed25519-v1"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }
+            readOnlyRootFilesystem: true
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: next-cache
+              mountPath: /app/.next/cache
+            - name: policy-verification
+              mountPath: /var/run/secrets/guardllm/policy-verification
+              readOnly: true
+      volumes:
+        - name: tmp
+          emptyDir: { sizeLimit: 1Gi }
+        - name: next-cache
+          emptyDir: { sizeLimit: 512Mi }
+        - name: policy-verification
+          secret:
+            secretName: guardllm-policy-verification
+            defaultMode: 0444
+            items:
+              - key: public.pem
+                path: public.pem
+---
+# Source: guardllm/templates/workloads.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: guardllm-guardllm-evaluation
+  namespace: guard-control
+  labels:
+    app.kubernetes.io/name: guardllm
+    app.kubernetes.io/instance: guardllm
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: "guardllm-1.0.0"
+    guardllm.io/component: evaluation
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  strategy:
+    rollingUpdate: { maxSurge: 1, maxUnavailable: 0 }
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: guardllm
+      guardllm.io/component: evaluation
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: guardllm
+        app.kubernetes.io/instance: guardllm
+        guardllm.io/component: evaluation
+        guardllm.io/site: "center-b"
+      annotations:
+        checksum/config: 95808aa79363280ee78487c25c22321dca17ad313916dc4bb0e5d5847368ceed
+    spec:
+      serviceAccountName: guardllm-guardllm-evaluation
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 45
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: { type: RuntimeDefault }
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule
+          minDomains: 3
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/instance: guardllm
+              guardllm.io/component: evaluation
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/instance: guardllm
+              guardllm.io/component: evaluation
+      containers:
+        - name: evaluation
+          image: "registry.example.invalid/guardllm/worker@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          imagePullPolicy: IfNotPresent
+          command: ["node"]
+          args: ["--import","tsx","scripts/run-worker.mjs","evaluation"]
+          envFrom:
+            - configMapRef:
+                name: guardllm-guardllm-evaluation-config
+            - secretRef:
+                name: guardllm-runtime-secrets
+          env:
+            - name: DLP_TOKENIZATION_HMAC_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: guardllm-runtime-secrets
+                  key: DLP_TOKENIZATION_HMAC_KEY
+            - name: POLICY_SIGNING_PUBLIC_KEY_FILE
+              value: "/var/run/secrets/guardllm/policy-verification/public.pem"
+            - name: POLICY_SIGNING_KEY_ID
+              value: "production-ed25519-v1"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }
+            readOnlyRootFilesystem: true
+          resources:
+            limits:
+              cpu: "1"
+              memory: 1Gi
+            requests:
+              cpu: 250m
+              memory: 512Mi
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: next-cache
+              mountPath: /app/.next/cache
+            - name: policy-verification
+              mountPath: /var/run/secrets/guardllm/policy-verification
+              readOnly: true
+      volumes:
+        - name: tmp
+          emptyDir: { sizeLimit: 1Gi }
+        - name: next-cache
+          emptyDir: { sizeLimit: 512Mi }
+        - name: policy-verification
+          secret:
+            secretName: guardllm-policy-verification
+            defaultMode: 0444
+            items:
+              - key: public.pem
+                path: public.pem
+---
+# Source: guardllm/templates/workloads.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: guardllm-guardllm-gateway
+  namespace: guard-edge
+  labels:
+    app.kubernetes.io/name: guardllm
+    app.kubernetes.io/instance: guardllm
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: "guardllm-1.0.0"
+    guardllm.io/component: gateway
+spec:
+  replicas: 3
+  revisionHistoryLimit: 5
+  strategy:
+    rollingUpdate: { maxSurge: 1, maxUnavailable: 0 }
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: guardllm
+      guardllm.io/component: gateway
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: guardllm
+        app.kubernetes.io/instance: guardllm
+        guardllm.io/component: gateway
+        guardllm.io/site: "center-b"
+      annotations:
+        checksum/config: 95808aa79363280ee78487c25c22321dca17ad313916dc4bb0e5d5847368ceed
+    spec:
+      serviceAccountName: guardllm-guardllm-gateway
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 45
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: { type: RuntimeDefault }
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule
+          minDomains: 3
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/instance: guardllm
+              guardllm.io/component: gateway
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/instance: guardllm
+              guardllm.io/component: gateway
+      containers:
+        - name: gateway
+          image: "registry.example.invalid/guardllm/gateway@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: guardllm-guardllm-gateway-config
+            - secretRef:
+                name: guardllm-runtime-secrets
+          env:
+            - name: DLP_TOKENIZATION_HMAC_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: guardllm-runtime-secrets
+                  key: DLP_TOKENIZATION_HMAC_KEY
+            - name: POLICY_SIGNING_PUBLIC_KEY_FILE
+              value: "/var/run/secrets/guardllm/policy-verification/public.pem"
+            - name: POLICY_SIGNING_KEY_ID
+              value: "production-ed25519-v1"
+            - { name: GUARD_GRPC_ENABLED, value: "true" }
+            - { name: GUARD_GRPC_PORT, value: "9090" }
+            - { name: GUARD_GRPC_MTLS_REQUIRED, value: "true" }
+            - { name: GUARD_GRPC_TRUST_CERTIFICATE, value: "/var/run/secrets/guardllm/grpc/ca.crt" }
+            - { name: GUARD_GRPC_SERVER_CERTIFICATE, value: "/var/run/secrets/guardllm/grpc/tls.crt" }
+            - { name: GUARD_GRPC_SERVER_PRIVATE_KEY, value: "/var/run/secrets/guardllm/grpc/tls.key" }
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }
+            readOnlyRootFilesystem: true
+          ports:
+            - name: http
+              containerPort: 8080
+            - name: grpc
+              containerPort: 9090
+              protocol: TCP
+          readinessProbe:
+            httpGet: { path: /actuator/health/readiness, port: http }
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 6
+          livenessProbe:
+            httpGet: { path: /actuator/health/readiness, port: http }
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          resources:
+            limits:
+              cpu: "2"
+              memory: 2Gi
+            requests:
+              cpu: 500m
+              memory: 512Mi
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: next-cache
+              mountPath: /app/.next/cache
+            - name: policy-verification
+              mountPath: /var/run/secrets/guardllm/policy-verification
+              readOnly: true
+            - name: gateway-grpc-mtls
+              mountPath: /var/run/secrets/guardllm/grpc
+              readOnly: true
+      volumes:
+        - name: tmp
+          emptyDir: { sizeLimit: 1Gi }
+        - name: next-cache
+          emptyDir: { sizeLimit: 512Mi }
+        - name: policy-verification
+          secret:
+            secretName: guardllm-policy-verification
+            defaultMode: 0444
+            items:
+              - key: public.pem
+                path: public.pem
+        - name: gateway-grpc-mtls
+          secret:
+            secretName: guard-gateway-grpc-mtls
+            defaultMode: 0400
+---
+# Source: guardllm/templates/workloads.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: guardllm-guardllm-marking
+  namespace: guard-media
+  labels:
+    app.kubernetes.io/name: guardllm
+    app.kubernetes.io/instance: guardllm
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: "guardllm-1.0.0"
+    guardllm.io/component: marking
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  strategy:
+    rollingUpdate: { maxSurge: 1, maxUnavailable: 0 }
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: guardllm
+      guardllm.io/component: marking
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: guardllm
+        app.kubernetes.io/instance: guardllm
+        guardllm.io/component: marking
+        guardllm.io/site: "center-b"
+      annotations:
+        checksum/config: 95808aa79363280ee78487c25c22321dca17ad313916dc4bb0e5d5847368ceed
+    spec:
+      serviceAccountName: guardllm-guardllm-marking
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 45
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: { type: RuntimeDefault }
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule
+          minDomains: 3
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/instance: guardllm
+              guardllm.io/component: marking
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/instance: guardllm
+              guardllm.io/component: marking
+      containers:
+        - name: marking
+          image: "registry.example.invalid/guardllm/worker@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          imagePullPolicy: IfNotPresent
+          command: ["node"]
+          args: ["--import","tsx","scripts/run-worker.mjs","content-marking"]
+          envFrom:
+            - configMapRef:
+                name: guardllm-guardllm-marking-config
+            - secretRef:
+                name: guardllm-runtime-secrets
+          env:
+            - name: DLP_TOKENIZATION_HMAC_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: guardllm-runtime-secrets
+                  key: DLP_TOKENIZATION_HMAC_KEY
+            - name: POLICY_SIGNING_PUBLIC_KEY_FILE
+              value: "/var/run/secrets/guardllm/policy-verification/public.pem"
+            - name: POLICY_SIGNING_KEY_ID
+              value: "production-ed25519-v1"
+            - name: MEDIA_ANALYZER_BASE_URL
+              value: "http://guardllm-guardllm-analyzer.guard-media.svc.cluster.local:8090"
+            - name: MEDIA_ANALYZER_ALLOWED_PRIVATE_HOSTS
+              value: "guardllm-guardllm-analyzer.guard-media.svc.cluster.local"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }
+            readOnlyRootFilesystem: true
+          resources:
+            limits:
+              cpu: "1"
+              memory: 1Gi
+            requests:
+              cpu: 250m
+              memory: 512Mi
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: next-cache
+              mountPath: /app/.next/cache
+            - name: policy-verification
+              mountPath: /var/run/secrets/guardllm/policy-verification
+              readOnly: true
+      volumes:
+        - name: tmp
+          emptyDir: { sizeLimit: 1Gi }
+        - name: next-cache
+          emptyDir: { sizeLimit: 512Mi }
+        - name: policy-verification
+          secret:
+            secretName: guardllm-policy-verification
+            defaultMode: 0444
+            items:
+              - key: public.pem
+                path: public.pem
+---
+# Source: guardllm/templates/workloads.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: guardllm-guardllm-media
+  namespace: guard-media
+  labels:
+    app.kubernetes.io/name: guardllm
+    app.kubernetes.io/instance: guardllm
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: "guardllm-1.0.0"
+    guardllm.io/component: media
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  strategy:
+    rollingUpdate: { maxSurge: 1, maxUnavailable: 0 }
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: guardllm
+      guardllm.io/component: media
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: guardllm
+        app.kubernetes.io/instance: guardllm
+        guardllm.io/component: media
+        guardllm.io/site: "center-b"
+      annotations:
+        checksum/config: 95808aa79363280ee78487c25c22321dca17ad313916dc4bb0e5d5847368ceed
+    spec:
+      serviceAccountName: guardllm-guardllm-media
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 45
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: { type: RuntimeDefault }
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule
+          minDomains: 3
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/instance: guardllm
+              guardllm.io/component: media
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/instance: guardllm
+              guardllm.io/component: media
+      containers:
+        - name: media
+          image: "registry.example.invalid/guardllm/worker@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          imagePullPolicy: IfNotPresent
+          command: ["node"]
+          args: ["--import","tsx","scripts/run-worker.mjs","media"]
+          envFrom:
+            - configMapRef:
+                name: guardllm-guardllm-media-config
+            - secretRef:
+                name: guardllm-runtime-secrets
+          env:
+            - name: DLP_TOKENIZATION_HMAC_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: guardllm-runtime-secrets
+                  key: DLP_TOKENIZATION_HMAC_KEY
+            - name: POLICY_SIGNING_PUBLIC_KEY_FILE
+              value: "/var/run/secrets/guardllm/policy-verification/public.pem"
+            - name: POLICY_SIGNING_KEY_ID
+              value: "production-ed25519-v1"
+            - name: MEDIA_ANALYZER_BASE_URL
+              value: "http://guardllm-guardllm-analyzer.guard-media.svc.cluster.local:8090"
+            - name: MEDIA_ANALYZER_ALLOWED_PRIVATE_HOSTS
+              value: "guardllm-guardllm-analyzer.guard-media.svc.cluster.local"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }
+            readOnlyRootFilesystem: true
+          resources:
+            limits:
+              cpu: "4"
+              memory: 8Gi
+            requests:
+              cpu: "1"
+              memory: 2Gi
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: next-cache
+              mountPath: /app/.next/cache
+            - name: policy-verification
+              mountPath: /var/run/secrets/guardllm/policy-verification
+              readOnly: true
+      volumes:
+        - name: tmp
+          emptyDir: { sizeLimit: 1Gi }
+        - name: next-cache
+          emptyDir: { sizeLimit: 512Mi }
+        - name: policy-verification
+          secret:
+            secretName: guardllm-policy-verification
+            defaultMode: 0444
+            items:
+              - key: public.pem
+                path: public.pem
+---
+# Source: guardllm/templates/workloads.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: guardllm-guardllm-multimodal
+  namespace: guard-media
+  labels:
+    app.kubernetes.io/name: guardllm
+    app.kubernetes.io/instance: guardllm
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: "guardllm-1.0.0"
+    guardllm.io/component: multimodal
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  strategy:
+    rollingUpdate: { maxSurge: 1, maxUnavailable: 0 }
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: guardllm
+      guardllm.io/component: multimodal
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: guardllm
+        app.kubernetes.io/instance: guardllm
+        guardllm.io/component: multimodal
+        guardllm.io/site: "center-b"
+      annotations:
+        checksum/config: 95808aa79363280ee78487c25c22321dca17ad313916dc4bb0e5d5847368ceed
+    spec:
+      serviceAccountName: guardllm-guardllm-multimodal
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 45
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: { type: RuntimeDefault }
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule
+          minDomains: 3
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/instance: guardllm
+              guardllm.io/component: multimodal
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/instance: guardllm
+              guardllm.io/component: multimodal
+      containers:
+        - name: multimodal
+          image: "registry.example.invalid/guardllm/worker@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          imagePullPolicy: IfNotPresent
+          command: ["node"]
+          args: ["--import","tsx","scripts/run-worker.mjs","multimodal"]
+          envFrom:
+            - configMapRef:
+                name: guardllm-guardllm-multimodal-config
+            - secretRef:
+                name: guardllm-runtime-secrets
+          env:
+            - name: DLP_TOKENIZATION_HMAC_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: guardllm-runtime-secrets
+                  key: DLP_TOKENIZATION_HMAC_KEY
+            - name: POLICY_SIGNING_PUBLIC_KEY_FILE
+              value: "/var/run/secrets/guardllm/policy-verification/public.pem"
+            - name: POLICY_SIGNING_KEY_ID
+              value: "production-ed25519-v1"
+            - name: MULTIMODAL_ANALYZER_BASE_URL
+              value: "http://guardllm-guardllm-analyzer.guard-media.svc.cluster.local:8090"
+            - name: MULTIMODAL_ANALYZER_ALLOWED_PRIVATE_HOSTS
+              value: "guardllm-guardllm-analyzer.guard-media.svc.cluster.local"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }
+            readOnlyRootFilesystem: true
+          resources:
+            limits:
+              cpu: "2"
+              memory: 4Gi
+            requests:
+              cpu: 500m
+              memory: 1Gi
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: next-cache
+              mountPath: /app/.next/cache
+            - name: policy-verification
+              mountPath: /var/run/secrets/guardllm/policy-verification
+              readOnly: true
+      volumes:
+        - name: tmp
+          emptyDir: { sizeLimit: 1Gi }
+        - name: next-cache
+          emptyDir: { sizeLimit: 512Mi }
+        - name: policy-verification
+          secret:
+            secretName: guardllm-policy-verification
+            defaultMode: 0444
+            items:
+              - key: public.pem
+                path: public.pem
+---
+# Source: guardllm/templates/workloads.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: guardllm-guardllm-rag
+  namespace: guard-online
+  labels:
+    app.kubernetes.io/name: guardllm
+    app.kubernetes.io/instance: guardllm
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: "guardllm-1.0.0"
+    guardllm.io/component: rag
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  strategy:
+    rollingUpdate: { maxSurge: 1, maxUnavailable: 0 }
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: guardllm
+      guardllm.io/component: rag
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: guardllm
+        app.kubernetes.io/instance: guardllm
+        guardllm.io/component: rag
+        guardllm.io/site: "center-b"
+      annotations:
+        checksum/config: 95808aa79363280ee78487c25c22321dca17ad313916dc4bb0e5d5847368ceed
+    spec:
+      serviceAccountName: guardllm-guardllm-rag
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 45
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: { type: RuntimeDefault }
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule
+          minDomains: 3
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/instance: guardllm
+              guardllm.io/component: rag
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/instance: guardllm
+              guardllm.io/component: rag
+      containers:
+        - name: rag
+          image: "registry.example.invalid/guardllm/worker@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          imagePullPolicy: IfNotPresent
+          command: ["node"]
+          args: ["--import","tsx","scripts/run-worker.mjs","rag"]
+          envFrom:
+            - configMapRef:
+                name: guardllm-guardllm-rag-config
+            - secretRef:
+                name: guardllm-runtime-secrets
+          env:
+            - name: DLP_TOKENIZATION_HMAC_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: guardllm-runtime-secrets
+                  key: DLP_TOKENIZATION_HMAC_KEY
+            - name: POLICY_SIGNING_PUBLIC_KEY_FILE
+              value: "/var/run/secrets/guardllm/policy-verification/public.pem"
+            - name: POLICY_SIGNING_KEY_ID
+              value: "production-ed25519-v1"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }
+            readOnlyRootFilesystem: true
+          resources:
+            limits:
+              cpu: "1"
+              memory: 2Gi
+            requests:
+              cpu: 250m
+              memory: 512Mi
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: next-cache
+              mountPath: /app/.next/cache
+            - name: policy-verification
+              mountPath: /var/run/secrets/guardllm/policy-verification
+              readOnly: true
+      volumes:
+        - name: tmp
+          emptyDir: { sizeLimit: 1Gi }
+        - name: next-cache
+          emptyDir: { sizeLimit: 512Mi }
+        - name: policy-verification
+          secret:
+            secretName: guardllm-policy-verification
+            defaultMode: 0444
+            items:
+              - key: public.pem
+                path: public.pem
+---
+# Source: guardllm/templates/workloads.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: guardllm-guardllm-security-scan
+  namespace: guard-control
+  labels:
+    app.kubernetes.io/name: guardllm
+    app.kubernetes.io/instance: guardllm
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: "guardllm-1.0.0"
+    guardllm.io/component: security-scan
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  strategy:
+    rollingUpdate: { maxSurge: 1, maxUnavailable: 0 }
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: guardllm
+      guardllm.io/component: security-scan
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: guardllm
+        app.kubernetes.io/instance: guardllm
+        guardllm.io/component: security-scan
+        guardllm.io/site: "center-b"
+      annotations:
+        checksum/config: 95808aa79363280ee78487c25c22321dca17ad313916dc4bb0e5d5847368ceed
+    spec:
+      serviceAccountName: guardllm-guardllm-security-scan
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 45
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: { type: RuntimeDefault }
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule
+          minDomains: 3
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/instance: guardllm
+              guardllm.io/component: security-scan
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/instance: guardllm
+              guardllm.io/component: security-scan
+      containers:
+        - name: security-scan
+          image: "registry.example.invalid/guardllm/worker@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          imagePullPolicy: IfNotPresent
+          command: ["node"]
+          args: ["--import","tsx","scripts/run-worker.mjs","security-scan"]
+          envFrom:
+            - configMapRef:
+                name: guardllm-guardllm-security-scan-config
+            - secretRef:
+                name: guardllm-runtime-secrets
+          env:
+            - name: DLP_TOKENIZATION_HMAC_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: guardllm-runtime-secrets
+                  key: DLP_TOKENIZATION_HMAC_KEY
+            - name: POLICY_SIGNING_PUBLIC_KEY_FILE
+              value: "/var/run/secrets/guardllm/policy-verification/public.pem"
+            - name: POLICY_SIGNING_KEY_ID
+              value: "production-ed25519-v1"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }
+            readOnlyRootFilesystem: true
+          resources:
+            limits:
+              cpu: "1"
+              memory: 1Gi
+            requests:
+              cpu: 250m
+              memory: 512Mi
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: next-cache
+              mountPath: /app/.next/cache
+            - name: policy-verification
+              mountPath: /var/run/secrets/guardllm/policy-verification
+              readOnly: true
+      volumes:
+        - name: tmp
+          emptyDir: { sizeLimit: 1Gi }
+        - name: next-cache
+          emptyDir: { sizeLimit: 512Mi }
+        - name: policy-verification
+          secret:
+            secretName: guardllm-policy-verification
+            defaultMode: 0444
+            items:
+              - key: public.pem
+                path: public.pem
+---
+# Source: guardllm/templates/availability.yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: guardllm-guardllm-app
+  namespace: guard-online
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: guardllm-guardllm-app
+  minReplicas: 3
+  maxReplicas: 20
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+    scaleUp:
+      stabilizationWindowSeconds: 30
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 60
+---
+# Source: guardllm/templates/availability.yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: guardllm-guardllm-gateway
+  namespace: guard-edge
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: guardllm-guardllm-gateway
+  minReplicas: 3
+  maxReplicas: 20
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+    scaleUp:
+      stabilizationWindowSeconds: 30
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 60
+---
+# Source: guardllm/templates/service-mesh.yaml
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: app-only-from-gateway
+  namespace: guard-online
+spec:
+  selector:
+    matchLabels: { guardllm.io/component: app }
+  rules:
+    - from:
+        - source:
+            principals:
+              - "cluster.local/ns/guard-edge/sa/guardllm-guardllm-gateway"
+---
+# Source: guardllm/templates/service-mesh.yaml
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: model-only-from-gateway
+  namespace: guard-inference
+spec:
+  selector:
+    matchLabels: { guardllm.io/role: model-serving }
+  rules:
+    - from:
+        - source:
+            principals:
+              - "cluster.local/ns/guard-edge/sa/guardllm-guardllm-gateway"
+---
+# Source: guardllm/templates/service-mesh.yaml
+apiVersion: security.istio.io/v1
+kind: PeerAuthentication
+metadata:
+  name: guardllm-strict-mtls
+  namespace: guard-control
+spec:
+  mtls:
+    mode: STRICT
+---
+# Source: guardllm/templates/service-mesh.yaml
+apiVersion: security.istio.io/v1
+kind: PeerAuthentication
+metadata:
+  name: guardllm-strict-mtls
+  namespace: guard-data-access
+spec:
+  mtls:
+    mode: STRICT
+---
+# Source: guardllm/templates/service-mesh.yaml
+apiVersion: security.istio.io/v1
+kind: PeerAuthentication
+metadata:
+  name: guardllm-strict-mtls
+  namespace: guard-edge
+spec:
+  mtls:
+    mode: STRICT
+---
+# Source: guardllm/templates/service-mesh.yaml
+apiVersion: security.istio.io/v1
+kind: PeerAuthentication
+metadata:
+  name: guardllm-strict-mtls
+  namespace: guard-inference
+spec:
+  mtls:
+    mode: STRICT
+---
+# Source: guardllm/templates/service-mesh.yaml
+apiVersion: security.istio.io/v1
+kind: PeerAuthentication
+metadata:
+  name: guardllm-strict-mtls
+  namespace: guard-media
+spec:
+  mtls:
+    mode: STRICT
+---
+# Source: guardllm/templates/service-mesh.yaml
+apiVersion: security.istio.io/v1
+kind: PeerAuthentication
+metadata:
+  name: guardllm-strict-mtls
+  namespace: guard-observability
+spec:
+  mtls:
+    mode: STRICT
+---
+# Source: guardllm/templates/service-mesh.yaml
+apiVersion: security.istio.io/v1
+kind: PeerAuthentication
+metadata:
+  name: guardllm-strict-mtls
+  namespace: guard-online
+spec:
+  mtls:
+    mode: STRICT

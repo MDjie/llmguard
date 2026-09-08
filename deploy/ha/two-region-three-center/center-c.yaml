@@ -1,0 +1,23 @@
+# Warm standby. Keep traffic and side-effecting workers disabled until the single-writer promotion runbook completes.
+deploymentTopology:
+  site: center-c
+  zoneWhenUnsatisfiable: DoNotSchedule
+  zoneMinDomains: 3
+config:
+  GUARDLLM_SITE_ID: center-c
+  OPERATIONS_PROMETHEUS_URL: http://prometheus.guard-observability.svc.cluster.local:9090/
+  OPERATIONS_MONITOR_ALLOWED_HOSTS: prometheus.guard-observability.svc.cluster.local
+workloads:
+  gateway: {enabled: false}
+  app: {enabled: false}
+  evaluation: {enabled: false}
+  audit-timestamp: {enabled: false}
+  audit-export: {enabled: false}
+  security-scan: {enabled: false}
+  artifact: {enabled: false}
+  multimodal: {enabled: false}
+  media: {enabled: false}
+  marking: {enabled: false}
+  rag: {enabled: false}
+  callback: {enabled: false}
+  analyzer: {enabled: true, replicas: 2}

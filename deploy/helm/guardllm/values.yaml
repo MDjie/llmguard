@@ -293,3 +293,9 @@ serviceMonitor:
   bearerTokenSecret:
     name: guardllm-metrics-token
     key: token
+
+# Center identity and intra-center placement. Three-center overlays require 3 real failure domains.
+deploymentTopology:
+  site: standalone
+  zoneWhenUnsatisfiable: ScheduleAnyway
+  zoneMinDomains: 1

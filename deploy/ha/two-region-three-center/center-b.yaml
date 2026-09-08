@@ -1,0 +1,15 @@
+deploymentTopology:
+  site: center-b
+  zoneWhenUnsatisfiable: DoNotSchedule
+  zoneMinDomains: 3
+config:
+  GUARDLLM_SITE_ID: center-b
+  OPERATIONS_PROMETHEUS_URL: http://prometheus.guard-observability.svc.cluster.local:9090/
+  OPERATIONS_MONITOR_ALLOWED_HOSTS: prometheus.guard-observability.svc.cluster.local
+workloads:
+  gateway:
+    replicas: 3
+  app:
+    replicas: 3
+  evaluation:
+    replicas: 2

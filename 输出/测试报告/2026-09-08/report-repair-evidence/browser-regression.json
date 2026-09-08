@@ -1,0 +1,13 @@
+{
+  "status": "PASS",
+  "checks": [
+    "维度筛选、隐私回显和编辑保存",
+    "规则独立启停、共享编辑表单和维度测试",
+    "样本文件选择、预览与导入",
+    "巡检正常/异常与未配置状态展示",
+    "风险事件中文标题、问答和命中证据展示",
+    "只读角色无修改入口"
+  ],
+  "uncaughtBrowserErrors": [],
+  "backend": "mock API for browser interactions; persistence tested separately against local PostgreSQL"
+}

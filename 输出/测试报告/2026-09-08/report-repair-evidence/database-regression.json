@@ -1,0 +1,14 @@
+{
+  "executedAt": "2026-09-08T03:12:04.995Z",
+  "database": "local PostgreSQL",
+  "checks": [
+    "create, duplicate code and tenant-isolated ID/code lookup",
+    "dimension toggle preserves category, weight and priority",
+    "rule zero values, update type, code addressing and independent toggle",
+    "preview has no writes, invalid import is atomic, retries and concurrency deduplicate",
+    "rule and dimension deletion do not affect another tenant",
+    "runtime inspection uses local CPU, memory, filesystem and PostgreSQL"
+  ],
+  "status": "PASS",
+  "syntheticScopesCleaned": true
+}

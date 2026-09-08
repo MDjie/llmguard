@@ -45,6 +45,7 @@ spec:
         app.kubernetes.io/name: {{ include "guardllm.name" $root }}
         app.kubernetes.io/instance: {{ $root.Release.Name }}
         guardllm.io/component: {{ $name }}
+        guardllm.io/site: {{ $root.Values.deploymentTopology.site | quote }}
       annotations:
         checksum/config: {{ toJson $root.Values.config | sha256sum }}
     spec:
@@ -77,7 +78,10 @@ spec:
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: topology.kubernetes.io/zone
-          whenUnsatisfiable: ScheduleAnyway
+          whenUnsatisfiable: {{ $root.Values.deploymentTopology.zoneWhenUnsatisfiable }}
+          {{- if eq $root.Values.deploymentTopology.zoneWhenUnsatisfiable "DoNotSchedule" }}
+          minDomains: {{ $root.Values.deploymentTopology.zoneMinDomains }}
+          {{- end }}
           labelSelector:
             matchLabels:
               app.kubernetes.io/instance: {{ $root.Release.Name }}

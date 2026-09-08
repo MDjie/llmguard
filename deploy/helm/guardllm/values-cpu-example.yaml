@@ -1,0 +1,8 @@
+# CPU fallback is admitted only for detectors whose model/quality/performance gates passed on CPU.
+workloads:
+  analyzer:
+    nodeSelector:
+      guardllm.io/accelerator: cpu
+    resources:
+      requests: {cpu: "4", memory: 8Gi}
+      limits: {cpu: "8", memory: 16Gi}

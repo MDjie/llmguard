@@ -1,0 +1,145 @@
+$ eslint .
+
+E:\大模型安全\大模型护栏\scripts\integration\check-gateway-v11-native.ts
+  33:445  warning  '_source' is defined but never used  @typescript-eslint/no-unused-vars
+
+E:\大模型安全\大模型护栏\scripts\release\gateway-v2-offline.mjs
+  3:92  warning  'writeFileSync' is defined but never used  @typescript-eslint/no-unused-vars
+
+E:\大模型安全\大模型护栏\src\app\agent-logs\page.tsx
+   4:29  warning  'CardDescription' is defined but never used                                                                   @typescript-eslint/no-unused-vars
+   4:46  warning  'CardHeader' is defined but never used                                                                        @typescript-eslint/no-unused-vars
+   4:58  warning  'CardTitle' is defined but never used                                                                         @typescript-eslint/no-unused-vars
+  56:14  warning  'err' is defined but never used                                                                               @typescript-eslint/no-unused-vars
+  65:6   warning  React Hook useEffect has a missing dependency: 'fetchLogs'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\大模型安全\大模型护栏\src\app\api\document-scan\route.ts
+  33:20  warning  '_extractedText' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  34:19  warning  '_parsedChunks' is assigned a value but never used   @typescript-eslint/no-unused-vars
+  35:18  warning  '_previewHtml' is assigned a value but never used    @typescript-eslint/no-unused-vars
+  36:17  warning  '_plainLines' is assigned a value but never used     @typescript-eslint/no-unused-vars
+  37:17  warning  '_ocrResults' is assigned a value but never used     @typescript-eslint/no-unused-vars
+  38:19  warning  '_errorMessage' is assigned a value but never used   @typescript-eslint/no-unused-vars
+
+E:\大模型安全\大模型护栏\src\app\api\v1\guard\jobs\[id]\route.ts
+  1:24  warning  'inArray' is defined but never used  @typescript-eslint/no-unused-vars
+
+E:\大模型安全\大模型护栏\src\app\document-scan\[id]\page.tsx
+   10:3  warning  'Shield' is defined but never used                                                                                 @typescript-eslint/no-unused-vars
+   11:3  warning  'AlertTriangle' is defined but never used                                                                          @typescript-eslint/no-unused-vars
+   14:3  warning  'Eye' is defined but never used                                                                                    @typescript-eslint/no-unused-vars
+   22:3  warning  'Card' is defined but never used                                                                                   @typescript-eslint/no-unused-vars
+   23:3  warning  'CardContent' is defined but never used                                                                            @typescript-eslint/no-unused-vars
+  464:6  warning  React Hook useEffect has a missing dependency: 'loadTaskDetail'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  584:9  warning  'scrollToLine' is assigned a value but never used                                                                  @typescript-eslint/no-unused-vars
+  816:9  warning  'findingsByLine' is assigned a value but never used                                                                @typescript-eslint/no-unused-vars
+  830:9  warning  'highlightEvidence' is assigned a value but never used                                                             @typescript-eslint/no-unused-vars
+  885:9  warning  'hasFormattedPreview' is assigned a value but never used                                                           @typescript-eslint/no-unused-vars
+
+E:\大模型安全\大模型护栏\src\app\document-scan\page.tsx
+  717:19  warning  'StatusIcon' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+E:\大模型安全\大模型护栏\src\app\export\page.tsx
+  12:11  warning  'DetectionSession' is defined but never used                                                                   @typescript-eslint/no-unused-vars
+  55:6   warning  React Hook useEffect has a missing dependency: 'fetchStats'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\大模型安全\大模型护栏\src\app\login\page.tsx
+  123:13  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+E:\大模型安全\大模型护栏\src\app\model-eval\page.tsx
+  228:19  warning  'scoreInRange' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+E:\大模型安全\大模型护栏\src\app\policies\[id]\components\ABComparePanel.tsx
+  226:10  warning  'getSeverityColor' is defined but never used  @typescript-eslint/no-unused-vars
+
+E:\大模型安全\大模型护栏\src\app\policies\[id]\components\EscalationConfigPanel.tsx
+    9:10  warning  'Badge' is defined but never used                                                                                                   @typescript-eslint/no-unused-vars
+   23:3   warning  'Clock' is defined but never used                                                                                                   @typescript-eslint/no-unused-vars
+  100:6   warning  React Hook useEffect has missing dependencies: 'loadConfig' and 'loadPolicies'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+  118:14  warning  'error' is defined but never used                                                                                                   @typescript-eslint/no-unused-vars
+
+E:\大模型安全\大模型护栏\src\app\policies\[id]\page.tsx
+  139:22  warning  'setCategoryId' is assigned a value but never used                                                             @typescript-eslint/no-unused-vars
+  153:14  warning  'error' is defined but never used                                                                              @typescript-eslint/no-unused-vars
+  184:6   warning  React Hook useEffect has a missing dependency: 'loadPolicy'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  215:14  warning  'error' is defined but never used                                                                              @typescript-eslint/no-unused-vars
+  274:14  warning  'error' is defined but never used                                                                              @typescript-eslint/no-unused-vars
+  314:14  warning  'error' is defined but never used                                                                              @typescript-eslint/no-unused-vars
+  334:14  warning  'error' is defined but never used                                                                              @typescript-eslint/no-unused-vars
+  350:14  warning  'error' is defined but never used                                                                              @typescript-eslint/no-unused-vars
+
+E:\大模型安全\大模型护栏\src\app\simulate\page.tsx
+   17:3   warning  'Eye' is defined but never used                                                                                                                                                                                                                                     @typescript-eslint/no-unused-vars
+  462:56  warning  Do not use `window.location.href` to navigate to internal Next.js pages. Use `redirect()` in the render phase, or `useRouter().push()` in Client Components' event handlers instead. See: https://nextjs.org/docs/messages/no-location-assign-relative-destination  @next/next/no-location-assign-relative-destination
+
+E:\大模型安全\大模型护栏\src\app\whitelist\page.tsx
+  5:29  warning  'CardDescription' is defined but never used  @typescript-eslint/no-unused-vars
+
+E:\大模型安全\大模型护栏\src\components\error-boundary.tsx
+  42:5  warning  Do not use `window.location.href` to navigate to internal Next.js pages. Use `redirect()` in the render phase, or `useRouter().push()` in Client Components' event handlers instead. See: https://nextjs.org/docs/messages/no-location-assign-relative-destination  @next/next/no-location-assign-relative-destination
+
+E:\大模型安全\大模型护栏\src\components\judge\JudgeModelResultCard.tsx
+  10:3  warning  'XCircle' is defined but never used  @typescript-eslint/no-unused-vars
+
+E:\大模型安全\大模型护栏\src\components\policy\escalation-banner.tsx
+  35:6  warning  React Hook useEffect has a missing dependency: 'handleClose'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\大模型安全\大模型护栏\src\lib\conversation-archive\query.ts
+  11:53  warning  '_limit' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+E:\大模型安全\大模型护栏\src\lib\db.ts
+  317:11  warning  'orderFn' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+E:\大模型安全\大模型护栏\src\lib\gateway-routing\service.ts
+  1:10  warning  'and' is defined but never used  @typescript-eslint/no-unused-vars
+  1:15  warning  'eq' is defined but never used   @typescript-eslint/no-unused-vars
+
+E:\大模型安全\大模型护栏\src\lib\gateway-runtime\artifact-context.ts
+  76:345  warning  '_text' is defined but never used    @typescript-eslint/no-unused-vars
+  76:358  warning  '_source' is defined but never used  @typescript-eslint/no-unused-vars
+
+E:\大模型安全\大模型护栏\src\lib\llm\detectors\illegal-content.ts
+  173:5  warning  'evidence' is defined but never used  @typescript-eslint/no-unused-vars
+
+E:\大模型安全\大模型护栏\src\lib\llm\detectors\malicious-code.ts
+  167:5  warning  'evidence' is defined but never used  @typescript-eslint/no-unused-vars
+
+E:\大模型安全\大模型护栏\src\lib\llm\detectors\violence-hate.ts
+  142:5  warning  'evidence' is defined but never used  @typescript-eslint/no-unused-vars
+
+E:\大模型安全\大模型护栏\src\lib\llm\orchestrator.ts
+  105:17  warning  'dimension' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+E:\大模型安全\大模型护栏\src\lib\multimodal\document-image-worker.ts
+  192:38  warning  '_sensitiveText' is defined but never used  @typescript-eslint/no-unused-vars
+  196:42  warning  '_sensitiveText' is defined but never used  @typescript-eslint/no-unused-vars
+
+E:\大模型安全\大模型护栏\src\lib\multimodal\fusion.ts
+  69:19  warning  '_text' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+E:\大模型安全\大模型护栏\src\lib\policy-bundle\rollout.ts
+  52:12  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+E:\大模型安全\大模型护栏\src\lib\policy-governance\dictionaries.ts
+  43:12  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+E:\大模型安全\大模型护栏\src\storage\database\shared\relations.ts
+  1:10  warning  'relations' is defined but never used  @typescript-eslint/no-unused-vars
+
+E:\大模型安全\大模型护栏\tests\document\pdf-loader.test.ts
+  11:17  warning  '_options' is defined but never used  @typescript-eslint/no-unused-vars
+
+E:\大模型安全\大模型护栏\tests\multimodal\media-annotations.test.ts
+  6:13  warning  '_text' is assigned a value but never used    @typescript-eslint/no-unused-vars
+  6:26  warning  '_source' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+E:\大模型安全\大模型护栏\tests\performance\concurrent-sessions.js
+  18:1  warning  Unexpected default export of anonymous function  import/no-anonymous-default-export
+
+E:\大模型安全\大模型护栏\tests\performance\console-concurrency.js
+  19:1  warning  Unexpected default export of anonymous function  import/no-anonymous-default-export
+
+E:\大模型安全\大模型护栏\tests\performance\guard-fast-path.js
+  40:1  warning  Unexpected default export of anonymous function  import/no-anonymous-default-export
+
+✖ 70 problems (0 errors, 70 warnings)

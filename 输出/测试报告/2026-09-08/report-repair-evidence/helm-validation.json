@@ -1,0 +1,26 @@
+{
+  "status": "PASS",
+  "tool": "Helm 3.17.3",
+  "validation": "actual Helm render and parsed Kubernetes workload assertions",
+  "runtimeFailoverTested": false,
+  "checks": [
+    {
+      "site": "center-a",
+      "objects": 87,
+      "deployments": 12,
+      "status": "PASS"
+    },
+    {
+      "site": "center-b",
+      "objects": 87,
+      "deployments": 12,
+      "status": "PASS"
+    },
+    {
+      "site": "center-c",
+      "objects": 39,
+      "deployments": 1,
+      "status": "PASS"
+    }
+  ]
+}
