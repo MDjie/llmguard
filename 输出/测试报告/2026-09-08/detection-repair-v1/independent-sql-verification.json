@@ -1,0 +1,14 @@
+{
+  "status": "PASS",
+  "method": "Independent SQLite window/group anti-join over original and candidate raw JSONL",
+  "values": {
+    "scored": 29859,
+    "positive": 12917,
+    "negative": 16942,
+    "old_tp": 368,
+    "old_fp": 139,
+    "new_tp": 312,
+    "new_fp": 88
+  },
+  "sql": "with ranked as (\n select s.*,row_number() over(partition by dataset,role,hash order by ord) as rn,\n min(label) over(partition by dataset,role,hash) as min_label,\n max(label) over(partition by dataset,role,hash) as max_label from sample s\n), eligible as (\n select r.* from ranked r where rn=1 and blank=0 and oldfault=0 and newfault=0 and min_label=max_label\n and not exists(select 1 from training t where t.dataset=r.dataset and t.role=r.role and t.hash=r.hash)\n)\nselect count(*) as scored,sum(label) as positive,sum(1-label) as negative,\n sum(label*oldblock) as old_tp,sum((1-label)*oldblock) as old_fp,\n sum(label*newblock) as new_tp,sum((1-label)*newblock) as new_fp from eligible"
+}

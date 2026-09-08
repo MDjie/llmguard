@@ -1,0 +1,8 @@
+$ node packages/contracts/scripts/generate.mjs --check && node packages/contracts/scripts/generate-gateway-v2.mjs --check && node packages/contracts/scripts/check-compatibility.mjs && node packages/contracts/scripts/check-gateway-v2-compatibility.mjs && pnpm appliance:contracts:check
+Contract outputs are current (source 44b9580b162406dfe22418cf70f016c246763510e54d36c1ee3658f2b3a62cf9)
+Contract outputs are current (source 86662f37d842ad3909ba66deeea55d6fc0db3671a0aeb4f3c477fc70ae380f19)
+Guard v1 is backward compatible with its accepted baseline
+Gateway v2 matches its accepted compatibility baseline
+$ node packages/contracts-appliance/scripts/generate.mjs --check && node packages/contracts-appliance/scripts/check-compatibility.mjs
+Appliance contract outputs are current (source b10daf922dd2098768c989fea3284fa56fc6ebacadb8d35520c6fcec29f5a080)
+Appliance v1 is backward compatible with its accepted baseline

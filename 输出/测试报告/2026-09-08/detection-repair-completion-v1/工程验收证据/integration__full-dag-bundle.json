@@ -1,0 +1,206 @@
+{
+  "bundleId": "3836fa22-f20a-453e-be9c-b6a3ebb959cd",
+  "sourceBundleId": "8adf1bc0-508a-478d-af0c-10b53dcae007",
+  "payloadDigest": "accf5af8af536c0ddc870caa274722f31673ac5ef2f6d907589ea359b9efa7da",
+  "detectorDag": {
+    "version": "guard-default-dag-5",
+    "maximumCostUnits": 19,
+    "nodes": [
+      {
+        "id": "l1-source-relations",
+        "detectorId": "source-risk-relations",
+        "tier": "L1",
+        "dependsOn": [
+          "l0-policy-rules"
+        ],
+        "runCondition": "ALWAYS",
+        "timeoutMs": 1500,
+        "maxAttempts": 1,
+        "costUnits": 2,
+        "failurePolicy": "FAIL_CLOSED"
+      },
+      {
+        "id": "l0-prompt-attack",
+        "detectorId": "prompt-attack-baseline",
+        "tier": "L0",
+        "dependsOn": [],
+        "runCondition": "ALWAYS",
+        "timeoutMs": 1500,
+        "maxAttempts": 1,
+        "costUnits": 1,
+        "failurePolicy": "FAIL_CLOSED"
+      },
+      {
+        "id": "l0-protected-context-leak",
+        "detectorId": "protected-context-leak",
+        "tier": "L0",
+        "dependsOn": [],
+        "runCondition": "ALWAYS",
+        "timeoutMs": 1500,
+        "maxAttempts": 1,
+        "costUnits": 1,
+        "failurePolicy": "FAIL_CLOSED"
+      },
+      {
+        "id": "l0-structured-dlp",
+        "detectorId": "structured-dlp",
+        "tier": "L0",
+        "dependsOn": [],
+        "runCondition": "ALWAYS",
+        "timeoutMs": 1500,
+        "maxAttempts": 1,
+        "costUnits": 1,
+        "failurePolicy": "FAIL_CLOSED"
+      },
+      {
+        "id": "l0-resource-abuse",
+        "detectorId": "resource-abuse-baseline",
+        "tier": "L0",
+        "dependsOn": [],
+        "runCondition": "ALWAYS",
+        "timeoutMs": 1500,
+        "maxAttempts": 1,
+        "costUnits": 1,
+        "failurePolicy": "FAIL_CLOSED"
+      },
+      {
+        "id": "l0-insurance-compliance",
+        "detectorId": "insurance-compliance-baseline",
+        "tier": "L0",
+        "dependsOn": [],
+        "runCondition": "ALWAYS",
+        "timeoutMs": 1500,
+        "maxAttempts": 1,
+        "costUnits": 1,
+        "failurePolicy": "FAIL_CLOSED"
+      },
+      {
+        "id": "l0-content-safety-intent",
+        "detectorId": "content-safety-intent-baseline",
+        "tier": "L0",
+        "dependsOn": [],
+        "runCondition": "ALWAYS",
+        "timeoutMs": 1500,
+        "maxAttempts": 1,
+        "costUnits": 1,
+        "failurePolicy": "FAIL_CLOSED"
+      },
+      {
+        "id": "l0-output-political",
+        "detectorId": "output-political-compliance",
+        "tier": "L0",
+        "dependsOn": [],
+        "runCondition": "ALWAYS",
+        "timeoutMs": 1500,
+        "maxAttempts": 1,
+        "costUnits": 1,
+        "failurePolicy": "FAIL_CLOSED"
+      },
+      {
+        "id": "l0-output-sexual",
+        "detectorId": "output-sexual-safety",
+        "tier": "L0",
+        "dependsOn": [],
+        "runCondition": "ALWAYS",
+        "timeoutMs": 1500,
+        "maxAttempts": 1,
+        "costUnits": 1,
+        "failurePolicy": "FAIL_CLOSED"
+      },
+      {
+        "id": "l0-output-illegal-harmful",
+        "detectorId": "output-illegal-harmful",
+        "tier": "L0",
+        "dependsOn": [],
+        "runCondition": "ALWAYS",
+        "timeoutMs": 1500,
+        "maxAttempts": 1,
+        "costUnits": 1,
+        "failurePolicy": "FAIL_CLOSED"
+      },
+      {
+        "id": "l0-output-credential",
+        "detectorId": "output-credential-leak",
+        "tier": "L0",
+        "dependsOn": [],
+        "runCondition": "ALWAYS",
+        "timeoutMs": 1500,
+        "maxAttempts": 1,
+        "costUnits": 1,
+        "failurePolicy": "FAIL_CLOSED"
+      },
+      {
+        "id": "l0-output-privacy",
+        "detectorId": "output-privacy-dlp",
+        "tier": "L0",
+        "dependsOn": [],
+        "runCondition": "ALWAYS",
+        "timeoutMs": 1500,
+        "maxAttempts": 1,
+        "costUnits": 1,
+        "failurePolicy": "FAIL_CLOSED"
+      },
+      {
+        "id": "l0-output-internal-data",
+        "detectorId": "output-internal-data",
+        "tier": "L0",
+        "dependsOn": [],
+        "runCondition": "ALWAYS",
+        "timeoutMs": 1500,
+        "maxAttempts": 1,
+        "costUnits": 1,
+        "failurePolicy": "FAIL_CLOSED"
+      },
+      {
+        "id": "l0-output-insurance",
+        "detectorId": "output-insurance-compliance",
+        "tier": "L0",
+        "dependsOn": [],
+        "runCondition": "ALWAYS",
+        "timeoutMs": 1500,
+        "maxAttempts": 1,
+        "costUnits": 1,
+        "failurePolicy": "FAIL_CLOSED"
+      },
+      {
+        "id": "l0-policy-rules",
+        "detectorId": "rules",
+        "tier": "L0",
+        "dependsOn": [],
+        "runCondition": "ALWAYS",
+        "timeoutMs": 1500,
+        "maxAttempts": 1,
+        "costUnits": 1,
+        "failurePolicy": "FAIL_CLOSED"
+      },
+      {
+        "id": "l3-reasoning-attribution",
+        "detectorId": "reasoning-attack-baseline",
+        "tier": "L3",
+        "dependsOn": [
+          "l0-prompt-attack",
+          "l0-protected-context-leak",
+          "l0-structured-dlp",
+          "l0-resource-abuse",
+          "l0-insurance-compliance",
+          "l0-content-safety-intent",
+          "l0-output-political",
+          "l0-output-sexual",
+          "l0-output-illegal-harmful",
+          "l0-output-credential",
+          "l0-output-privacy",
+          "l0-output-internal-data",
+          "l0-output-insurance",
+          "l0-policy-rules"
+        ],
+        "runCondition": "WHEN_NO_BLOCKING_MATCH",
+        "timeoutMs": 2500,
+        "maxAttempts": 1,
+        "costUnits": 3,
+        "failurePolicy": "FAIL_CLOSED"
+      }
+    ]
+  },
+  "syntheticPolicy": true,
+  "productionEligible": false
+}

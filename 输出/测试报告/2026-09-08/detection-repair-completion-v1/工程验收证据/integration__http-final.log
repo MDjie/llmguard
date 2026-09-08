@@ -1,0 +1,31 @@
+{"timestamp":"2026-09-08T07:13:44.535Z","level":"info","event":"database.connecting","fields":{"host":"127.0.0.1","port":"55447","database":"guardllm_integration_gateway_v2"}}
+ISOLATED_PROFILE FULL_BUFFER
+IT-V2-01 PASS normal completion and durable execution chain
+IT-V2-02 PASS input MASK changes actual upstream content
+IT-V2-03 PASS input BLOCK never calls upstream
+IT-V2-04 PASS output MASK changes actual client content
+IT-V2-05 PASS output BLOCK leaks no model text
+IT-V2-06 PASS standard stream=true handles fragmented UTF-8 and one DONE
+IT-V2-07 PASS stream replacement contains no original sensitive delta
+IT-V2-08 PASS truncated upstream stream releases no buffered content
+IT-V2-09 PASS same idempotency key never invokes model twice
+IT-V2-10 PASS conflicting credentials are rejected before execution
+IT-V2-11 PASS session request serializes and commits each direction once
+IT-V2-13 PASS unchecked generation fields are rejected without model call
+IT-V2-14 PASS structured response format is included in input detection
+IT-V2-15 PASS input REWRITE uses approved template and preserves other messages
+IT-V2-16 PASS input SAFE_RESPONSE is rechecked without upstream invocation
+IT-V2-17 PASS output SAFE_RESPONSE replaces upstream bytes after recheck
+IT-V2-18 PASS output REWRITE has durable original and recheck decisions
+IT-V2-19 PASS REQUIRE_REVIEW persists an incident and releases no content
+IT-V2-20 PASS WARN permits inspected text and records the actual warning action
+IT-V2-21 PASS node load failure during upstream wait prevents release
+IT-V2-22 PASS client cancellation persists termination without output release
+IT-V2-23 PASS public proxy requires a trusted TLS client certificate
+IT-V2-24 PASS WebSocket releases approved frames with one durable completion
+IT-V2-25 PASS WebSocket blocked output closes without releasing model frames
+IT-V2-26 PASS WebSocket credential rejection causes no upstream call
+IT-V2-27 PASS real console BFF binds current user and returns only masked gateway output
+IT-V2-28 PASS console rejects body role injection and missing CSRF before model call
+IT-V2-29 PASS disabled console user cannot reuse a still-signed session
+IT-V2-12 PASS authorization revocation during upstream wait stops release

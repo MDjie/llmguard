@@ -1,0 +1,19 @@
+{
+  "capturedAt": "2026-09-08T07:19:31.450213+00:00",
+  "branch": "main",
+  "head": "10e249442757417bd85597ac7745dd9d1907f810",
+  "sourceHash": "67906ada537014b6a786df9252d5d1751001690a828688fbe4f2683ca391c103",
+  "policyHash": "09fa0810b0687785255d31d96870c91a909262ebe1259923e639374c5943f8ba",
+  "sourceFileCount": 732,
+  "sourceFilesUnchanged": true,
+  "production": {
+    "name": "/guardllm-r0-app-1",
+    "image": "guardllm-main-app:db4a31b-20260908-102443",
+    "imageId": "sha256:dfe01e7bbf49cce296836a134286b3722f72189b60bbc6961e6854240b939caa",
+    "health": "healthy",
+    "status": "running",
+    "effectiveGateOverrides": {}
+  },
+  "candidateProductionActivated": false,
+  "scope": "No judge/provider/classifier training changes"
+}

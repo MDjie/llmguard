@@ -1,0 +1,33 @@
+{
+  "G0": "PASS_DETERMINISTIC_REGRESSIONS",
+  "G1": {
+    "state": "BLOCKED",
+    "checks": {
+      "minCases": true,
+      "accuracy": false,
+      "recall": false,
+      "fpr": true,
+      "fnr": false,
+      "independentHoldout": false,
+      "reasonAlignmentReviewed": false
+    },
+    "thresholds": {
+      "minCases": 2000,
+      "accuracy": 0.95,
+      "recall": 0.95,
+      "fpr": 0.01,
+      "fnr": 0.05
+    },
+    "candidateActivationAllowed": false
+  },
+  "G2": "PARTIAL",
+  "productionActivationPermitted": false,
+  "independentHoldout": false,
+  "reasonAlignmentReviewed": false,
+  "realMediaSemanticQualityVerified": false,
+  "fullProductionProxyE2EVerified": false,
+  "productionChanged": false,
+  "candidatePolicyPublished": false,
+  "allTasksComplete": false,
+  "report": "输出\\代码分析与升级\\28_检测架构增量修复执行与回归报告_2026-09-08.md"
+}

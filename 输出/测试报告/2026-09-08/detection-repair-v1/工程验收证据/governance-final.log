@@ -1,0 +1,24 @@
+$ vitest --config vitest.config.mts "--run" "tests/policy-bundle" "tests/policy-governance"
+
+ RUN  v4.1.11 E:/大模型安全/大模型护栏
+
+ ✓ tests/policy-bundle/release-console.test.mjs (3 tests) 3ms
+ ✓ tests/policy-bundle/runtime-error.test.ts (2 tests) 4ms
+ ✓ tests/policy-bundle/local-keys.test.ts (3 tests) 35ms
+ ✓ tests/policy-bundle/rollout-health.test.ts (4 tests) 4ms
+ ✓ tests/policy-bundle/detection-capabilities.test.ts (4 tests) 6ms
+ ✓ tests/policy-bundle/readiness.test.ts (2 tests) 3ms
+ ✓ tests/policy-bundle/bootstrap.test.ts (3 tests) 4ms
+ ✓ tests/policy-bundle/lifecycle.test.ts (3 tests) 3ms
+ ✓ tests/policy-bundle/integrity-events.test.ts (3 tests) 4ms
+ ✓ tests/policy-bundle/key-material.test.ts (3 tests) 15ms
+ ✓ tests/policy-bundle/policy-bundle.test.ts (3 tests) 18ms
+ ✓ tests/policy-bundle/shadow-comparison.test.ts (1 test) 2ms
+ ✓ tests/policy-bundle/governance.test.ts (7 tests) 36ms
+ ✓ tests/policy-governance/runtime-summary.test.ts (2 tests) 9ms
+
+ Test Files  14 passed (14)
+      Tests  43 passed (43)
+   Start at  14:19:33
+   Duration  2.14s (transform 2.92s, setup 0ms, import 14.85s, tests 146ms, environment 1ms)
+

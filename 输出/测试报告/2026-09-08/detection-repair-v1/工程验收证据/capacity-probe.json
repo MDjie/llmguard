@@ -1,0 +1,62 @@
+[
+  {
+    "caseId": "ChineseSafe:test:13850:input",
+    "attempt": 1,
+    "status": "NORMALIZED",
+    "coverage": "PARTIAL",
+    "reasons": [
+      "NORMALIZATION_VIEW_LIMIT"
+    ],
+    "elapsedMs": 15.988699999999994,
+    "views": 24
+  },
+  {
+    "caseId": "ChineseSafe:test:13850:input",
+    "attempt": 2,
+    "status": "NORMALIZED",
+    "coverage": "PARTIAL",
+    "reasons": [
+      "NORMALIZATION_VIEW_LIMIT"
+    ],
+    "elapsedMs": 7.721000000000004,
+    "views": 24
+  },
+  {
+    "caseId": "ChineseSafe:test:13850:input",
+    "attempt": 3,
+    "status": "NORMALIZED",
+    "coverage": "PARTIAL",
+    "reasons": [
+      "NORMALIZATION_VIEW_LIMIT"
+    ],
+    "elapsedMs": 8.798599999999965,
+    "views": 24
+  },
+  {
+    "caseId": "ToxicChat:test:2178:output",
+    "attempt": 1,
+    "status": "NORMALIZED",
+    "coverage": "COMPLETE",
+    "reasons": [],
+    "elapsedMs": 20.796099999999967,
+    "views": 10
+  },
+  {
+    "caseId": "ToxicChat:test:2178:output",
+    "attempt": 2,
+    "status": "NORMALIZED",
+    "coverage": "COMPLETE",
+    "reasons": [],
+    "elapsedMs": 16.630199999999945,
+    "views": 10
+  },
+  {
+    "caseId": "ToxicChat:test:2178:output",
+    "attempt": 3,
+    "status": "NORMALIZED",
+    "coverage": "COMPLETE",
+    "reasons": [],
+    "elapsedMs": 14.865800000000036,
+    "views": 10
+  }
+]

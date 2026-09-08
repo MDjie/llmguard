@@ -1,0 +1,428 @@
+#0 building with "desktop-linux" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 2.88kB done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/node:24.20.0-alpine
+#2 DONE 0.1s
+
+#3 [internal] load .dockerignore
+#3 transferring context: 1.36kB done
+#3 DONE 0.0s
+
+#4 [dependencies 1/6] FROM docker.io/library/node:24.20.0-alpine@sha256:e67514e5d0f6c46656005e1b693b2ec9d52e80b641307de684d4a015ba7a4eaf
+#4 resolve docker.io/library/node:24.20.0-alpine@sha256:e67514e5d0f6c46656005e1b693b2ec9d52e80b641307de684d4a015ba7a4eaf 0.1s done
+#4 DONE 0.1s
+
+#5 [internal] load build context
+#5 transferring context: 22.57MB 0.9s done
+#5 DONE 1.0s
+
+#6 [dependencies 2/6] RUN corepack enable && corepack prepare pnpm@11.19.0 --activate
+#6 CACHED
+
+#7 [dependencies 3/6] WORKDIR /app
+#7 CACHED
+
+#8 [dependencies 4/6] COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+#8 DONE 0.2s
+
+#9 [dependencies 5/6] COPY scripts/enforce-pnpm.mjs ./scripts/enforce-pnpm.mjs
+#9 DONE 0.3s
+
+#10 [dependencies 6/6] RUN pnpm install --frozen-lockfile
+#10 1.357 ? Verifying lockfile against supply-chain policies (1148 entries)...
+#10 1.366 Lockfile is up to date, resolution step is skipped
+#10 1.484 Progress: resolved 1, reused 0, downloaded 0, added 0
+#10 2.039 Packages: +942
+#10 2.039 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#10 2.628 Progress: resolved 942, reused 0, downloaded 0, added 0
+#10 3.145 
+#10 3.145    ╭──────────────────────────────────────────────╮
+#10 3.145    │                                              │
+#10 3.145    │     Update available! 11.19.0 → 12.3.4.      │
+#10 3.145    │     Changelog: https://pnpm.io/v/12.3.4      │
+#10 3.145    │   To update, run: corepack use pnpm@12.3.4   │
+#10 3.145    │                                              │
+#10 3.145    ╰──────────────────────────────────────────────╯
+#10 3.145 
+#10 3.180 Packages are hard linked from the content-addressable store to the virtual store.
+#10 3.180   Content-addressable store is at: /root/.local/share/pnpm/store/v11
+#10 3.180   Virtual store is at:             node_modules/.pnpm
+#10 3.629 Progress: resolved 942, reused 0, downloaded 16, added 15
+#10 4.629 Progress: resolved 942, reused 0, downloaded 101, added 101
+#10 5.630 Progress: resolved 942, reused 0, downloaded 161, added 161
+#10 6.631 Progress: resolved 942, reused 0, downloaded 235, added 236
+#10 7.631 Progress: resolved 942, reused 0, downloaded 253, added 253
+#10 8.632 Progress: resolved 942, reused 0, downloaded 297, added 298
+#10 9.632 Progress: resolved 942, reused 0, downloaded 358, added 359
+#10 10.63 Progress: resolved 942, reused 0, downloaded 442, added 444
+#10 11.63 Progress: resolved 942, reused 0, downloaded 497, added 499
+#10 12.63 Progress: resolved 942, reused 0, downloaded 575, added 577
+#10 13.63 Progress: resolved 942, reused 0, downloaded 651, added 653
+#10 14.66 Progress: resolved 942, reused 0, downloaded 714, added 716
+#10 15.66 Progress: resolved 942, reused 0, downloaded 803, added 806
+#10 16.66 Progress: resolved 942, reused 0, downloaded 906, added 909
+#10 17.67 Progress: resolved 942, reused 0, downloaded 930, added 933
+#10 18.67 Progress: resolved 942, reused 0, downloaded 932, added 935
+#10 19.67 Progress: resolved 942, reused 0, downloaded 933, added 936
+#10 20.76 Progress: resolved 942, reused 0, downloaded 934, added 936
+#10 21.76 Progress: resolved 942, reused 0, downloaded 934, added 937
+#10 22.95 Progress: resolved 942, reused 0, downloaded 936, added 939
+#10 25.20 Progress: resolved 942, reused 0, downloaded 937, added 939
+#10 26.20 Progress: resolved 942, reused 0, downloaded 937, added 940
+#10 28.90 Progress: resolved 942, reused 0, downloaded 938, added 940
+#10 29.90 Progress: resolved 942, reused 0, downloaded 938, added 941
+#10 30.25 [WARN] Request took 12089ms: https://registry.npmjs.org/playwright-core
+#10 30.42 ✓ Lockfile passes supply-chain policies (1148 entries in 29s)
+#10 30.54 Progress: resolved 942, reused 0, downloaded 939, added 942, done
+#10 30.82 .../node_modules/unrs-resolver postinstall$ node postinstall.js
+#10 30.85 .../esbuild@0.27.3/node_modules/esbuild postinstall$ node install.js
+#10 30.87 .../esbuild@0.18.20/node_modules/esbuild postinstall$ node install.js
+#10 30.87 .../esbuild@0.25.12/node_modules/esbuild postinstall$ node install.js
+#10 30.91 .../node_modules/unrs-resolver postinstall: Done
+#10 30.91 .../bcrypt@6.0.0/node_modules/bcrypt install$ node-gyp-build
+#10 30.93 .../esbuild@0.27.3/node_modules/esbuild postinstall: Done
+#10 30.94 .../esbuild@0.18.20/node_modules/esbuild postinstall: Done
+#10 30.96 .../esbuild@0.25.12/node_modules/esbuild postinstall: Done
+#10 31.01 .../bcrypt@6.0.0/node_modules/bcrypt install: Done
+#10 31.17 
+#10 31.17 dependencies:
+#10 31.17 + @hookform/resolvers 5.2.2
+#10 31.17 + @napi-rs/canvas 0.1.80
+#10 31.17 + @next/env 16.3.3
+#10 31.17 + @radix-ui/react-accordion 1.2.12
+#10 31.17 + @radix-ui/react-alert-dialog 1.1.15
+#10 31.17 + @radix-ui/react-aspect-ratio 1.1.8
+#10 31.17 + @radix-ui/react-avatar 1.1.11
+#10 31.17 + @radix-ui/react-checkbox 1.3.3
+#10 31.17 + @radix-ui/react-collapsible 1.1.12
+#10 31.17 + @radix-ui/react-context-menu 2.2.16
+#10 31.17 + @radix-ui/react-dialog 1.1.15
+#10 31.17 + @radix-ui/react-dropdown-menu 2.1.16
+#10 31.17 + @radix-ui/react-hover-card 1.1.15
+#10 31.17 + @radix-ui/react-label 2.1.8
+#10 31.17 + @radix-ui/react-menubar 1.1.16
+#10 31.17 + @radix-ui/react-navigation-menu 1.2.14
+#10 31.17 + @radix-ui/react-popover 1.1.15
+#10 31.17 + @radix-ui/react-progress 1.1.8
+#10 31.17 + @radix-ui/react-radio-group 1.3.8
+#10 31.17 + @radix-ui/react-scroll-area 1.2.10
+#10 31.17 + @radix-ui/react-select 2.2.6
+#10 31.17 + @radix-ui/react-separator 1.1.8
+#10 31.17 + @radix-ui/react-slider 1.3.6
+#10 31.17 + @radix-ui/react-slot 1.2.4
+#10 31.17 + @radix-ui/react-switch 1.2.6
+#10 31.17 + @radix-ui/react-tabs 1.1.13
+#10 31.17 + @radix-ui/react-toggle 1.1.10
+#10 31.17 + @radix-ui/react-toggle-group 1.1.11
+#10 31.17 + @radix-ui/react-tooltip 1.2.8
+#10 31.17 + @types/jsonwebtoken 9.0.10
+#10 31.17 + bcrypt 6.0.0
+#10 31.17 + class-variance-authority 0.7.1
+#10 31.17 + clsx 2.1.1
+#10 31.17 + cmdk 1.1.1
+#10 31.17 + date-fns 4.1.0
+#10 31.17 + dotenv 17.2.3
+#10 31.17 + drizzle-orm 0.45.2
+#10 31.17 + drizzle-zod 0.8.3
+#10 31.17 + embla-carousel-react 8.6.0
+#10 31.17 + input-otp 1.4.2
+#10 31.17 + ipaddr.js 2.5.0
+#10 31.17 + jsonwebtoken 9.0.3
+#10 31.17 + kafkajs 2.2.4
+#10 31.17 + lucide-react 0.468.0
+#10 31.17 + mammoth 1.12.0
+#10 31.17 + next 16.3.3
+#10 31.17 + next-themes 0.4.6
+#10 31.17 + node-gyp-build 4.8.4
+#10 31.17 + pdf-parse 2.4.5
+#10 31.17 + pg 8.17.2
+#10 31.17 + postgres 3.4.9
+#10 31.17 + re2-wasm 1.0.2
+#10 31.17 + react 19.2.3
+#10 31.17 + react-day-picker 9.13.0
+#10 31.17 + react-dom 19.2.3
+#10 31.17 + react-hook-form 7.71.1
+#10 31.17 + react-resizable-panels 4.5.2
+#10 31.17 + recharts 2.15.4
+#10 31.17 + sanitize-html 2.17.7
+#10 31.17 + sonner 2.0.7
+#10 31.17 + tailwind-merge 2.6.0
+#10 31.17 + tw-animate-css 1.4.0
+#10 31.17 + vaul 1.1.2
+#10 31.17 + zod 4.3.6
+#10 31.17 
+#10 31.17 devDependencies:
+#10 31.17 + @babel/core 7.29.7
+#10 31.17 + @playwright/test 1.55.1
+#10 31.17 + @tailwindcss/postcss 4.1.18
+#10 31.17 + @types/bcrypt 6.0.0
+#10 31.17 + @types/node 20.19.30
+#10 31.17 + @types/pg 8.16.0
+#10 31.17 + @types/react 19.2.10
+#10 31.17 + @types/react-dom 19.2.3
+#10 31.17 + @types/sanitize-html 2.16.1
+#10 31.17 + @vitest/coverage-v8 4.1.11
+#10 31.17 + drizzle-kit 0.31.8
+#10 31.17 + eslint 9.39.2
+#10 31.17 + eslint-config-next 16.3.3
+#10 31.17 + hono 4.13.5
+#10 31.17 + js-yaml 4.3.2
+#10 31.17 + shadcn 3.7.0
+#10 31.17 + tailwindcss 4.1.18
+#10 31.17 + tsup 8.5.1
+#10 31.17 + tsx 4.21.0
+#10 31.17 + typescript 5.9.3
+#10 31.17 + vitest 4.1.11
+#10 31.17 + webpack 5.110.2
+#10 31.17 
+#10 31.27 . preinstall$ node ./scripts/enforce-pnpm.mjs
+#10 31.31 . preinstall: Done
+#10 31.50 Done in 30.9s using pnpm v11.19.0
+#10 DONE 32.8s
+
+#11 [builder 1/2] COPY . .
+#11 DONE 1.2s
+
+#12 [builder 2/2] RUN pnpm run build
+#12 0.883 $ next build
+#12 1.294 ▲ Next.js 16.3.3 (Turbopack)
+#12 1.337 ✓ Running next.config.ts took 42ms
+#12 1.348 
+#12 1.404   Creating an optimized production build ...
+#12 14.93 ✓ Compiled successfully in 13.3s
+#12 14.94   Running TypeScript ...
+#12 34.68   Finished TypeScript in 19.7s ...
+#12 34.68   Collecting page data using 31 workers ...
+#12 43.47   Generating static pages using 31 workers (0/89) ...
+#12 43.60   Generating static pages using 31 workers (22/89) 
+#12 43.68   Generating static pages using 31 workers (44/89) 
+#12 43.80   Generating static pages using 31 workers (66/89) 
+#12 43.96 ✓ Generating static pages using 31 workers (89/89) in 485ms
+#12 43.97   Finalizing page optimization ...
+#12 45.04 
+#12 45.04 Route (app)
+#12 45.04 ┌ ƒ /
+#12 45.04 ├ ƒ /_not-found
+#12 45.04 ├ ƒ /agent-logs
+#12 45.04 ├ ƒ /api/agent-logs
+#12 45.04 ├ ƒ /api/application-credentials
+#12 45.04 ├ ƒ /api/applications
+#12 45.04 ├ ƒ /api/archived-content/[id]/raw-access
+#12 45.04 ├ ƒ /api/archived-content/[id]/raw-access/consume
+#12 45.04 ├ ƒ /api/archived-content/[id]/raw-access/requests
+#12 45.04 ├ ƒ /api/audit/events
+#12 45.04 ├ ƒ /api/audit/reports
+#12 45.04 ├ ƒ /api/auth/change-password
+#12 45.04 ├ ƒ /api/auth/login
+#12 45.04 ├ ƒ /api/auth/logout
+#12 45.04 ├ ƒ /api/auth/me
+#12 45.04 ├ ƒ /api/auth/scope
+#12 45.04 ├ ƒ /api/chat
+#12 45.04 ├ ƒ /api/content-access-requests
+#12 45.04 ├ ƒ /api/content-access-requests/[id]/review
+#12 45.04 ├ ƒ /api/conversations
+#12 45.04 ├ ƒ /api/conversations/[id]/messages
+#12 45.04 ├ ƒ /api/data-catalog
+#12 45.04 ├ ƒ /api/data-catalog/[id]
+#12 45.04 ├ ƒ /api/detect
+#12 45.04 ├ ƒ /api/detection-sessions
+#12 45.04 ├ ƒ /api/dimensions
+#12 45.04 ├ ƒ /api/dimensions/[id]
+#12 45.04 ├ ƒ /api/dimensions/[id]/rules
+#12 45.04 ├ ƒ /api/dimensions/[id]/rules/[ruleId]
+#12 45.04 ├ ƒ /api/dimensions/[id]/test
+#12 45.04 ├ ƒ /api/document-scan
+#12 45.04 ├ ƒ /api/document-scan/[id]
+#12 45.04 ├ ƒ /api/document-scan/[id]/findings/[findingId]
+#12 45.04 ├ ƒ /api/document-scan/[id]/rescan
+#12 45.04 ├ ƒ /api/document-scan/[id]/retry
+#12 45.04 ├ ƒ /api/escalation-summary
+#12 45.04 ├ ƒ /api/evaluation-runs
+#12 45.04 ├ ƒ /api/evaluation-runs/[id]
+#12 45.04 ├ ƒ /api/export
+#12 45.04 ├ ƒ /api/export/approvals
+#12 45.04 ├ ƒ /api/export/stats
+#12 45.04 ├ ƒ /api/gateway-routing
+#12 45.04 ├ ƒ /api/gateway/audit-batches
+#12 45.04 ├ ƒ /api/gateway/content-retention
+#12 45.04 ├ ƒ /api/gateway/onboarding
+#12 45.04 ├ ƒ /api/gateway/publications
+#12 45.04 ├ ƒ /api/gateway/requests
+#12 45.04 ├ ƒ /api/gateway/runtime
+#12 45.04 ├ ƒ /api/health
+#12 45.04 ├ ƒ /api/health/db
+#12 45.04 ├ ƒ /api/health/live
+#12 45.04 ├ ƒ /api/health/policy
+#12 45.04 ├ ƒ /api/history
+#12 45.04 ├ ƒ /api/incidents
+#12 45.04 ├ ƒ /api/incidents/[id]
+#12 45.04 ├ ƒ /api/incidents/[id]/conversation
+#12 45.04 ├ ƒ /api/incidents/[id]/raw-access
+#12 45.04 ├ ƒ /api/incidents/[id]/raw-access/consume
+#12 45.04 ├ ƒ /api/incidents/[id]/raw-access/requests
+#12 45.04 ├ ƒ /api/internal/gateway/archive
+#12 45.04 ├ ƒ /api/internal/gateway/archive/complete
+#12 45.04 ├ ƒ /api/internal/gateway/authorize
+#12 45.04 ├ ƒ /api/internal/gateway/evaluate
+#12 45.04 ├ ƒ /api/internal/gateway/events
+#12 45.04 ├ ƒ /api/internal/gateway/runtime
+#12 45.04 ├ ƒ /api/internal/gateway/runtime/ack
+#12 45.04 ├ ƒ /api/judge/helpers
+#12 45.04 ├ ƒ /api/media-evidence/[id]/hold
+#12 45.04 ├ ƒ /api/media-evidence/[id]/raw-access
+#12 45.04 ├ ƒ /api/media-evidence/[id]/raw-access/consume
+#12 45.04 ├ ƒ /api/media-evidence/[id]/raw-access/requests
+#12 45.04 ├ ƒ /api/metrics
+#12 45.04 ├ ƒ /api/ocr-models
+#12 45.04 ├ ƒ /api/operations/inspection
+#12 45.04 ├ ƒ /api/policies
+#12 45.04 ├ ƒ /api/policies/[id]
+#12 45.04 ├ ƒ /api/policies/[id]/clone
+#12 45.04 ├ ƒ /api/policies/[id]/escalation
+#12 45.04 ├ ƒ /api/policies/[id]/judge-config
+#12 45.04 ├ ƒ /api/policies/[id]/judge-evaluations
+#12 45.04 ├ ƒ /api/policies/[id]/keyword-categories
+#12 45.04 ├ ƒ /api/policies/[id]/keywords
+#12 45.04 ├ ƒ /api/policies/[id]/keywords/batch
+#12 45.04 ├ ƒ /api/policies/[id]/keywords/export
+#12 45.04 ├ ƒ /api/policies/[id]/set-default
+#12 45.04 ├ ƒ /api/policies/[id]/toggle
+#12 45.04 ├ ƒ /api/policies/[id]/versions
+#12 45.04 ├ ƒ /api/policies/compare
+#12 45.04 ├ ƒ /api/policy-bundles
+#12 45.04 ├ ƒ /api/policy-bundles/health-check
+#12 45.04 ├ ƒ /api/policy-governance/dictionaries
+#12 45.04 ├ ƒ /api/policy-governance/dictionaries/[id]/activate
+#12 45.04 ├ ƒ /api/policy-governance/dictionaries/[id]/approve
+#12 45.04 ├ ƒ /api/policy-governance/dictionaries/[id]/publish
+#12 45.04 ├ ƒ /api/policy-governance/dictionaries/[id]/rollback
+#12 45.04 ├ ƒ /api/policy-governance/dictionaries/[id]/test
+#12 45.04 ├ ƒ /api/policy-governance/dictionaries/[id]/validate
+#12 45.04 ├ ƒ /api/policy-governance/release-sets
+#12 45.04 ├ ƒ /api/policy-governance/release-sets/[id]/activate
+#12 45.04 ├ ƒ /api/policy-governance/release-sets/[id]/approve
+#12 45.04 ├ ƒ /api/policy-governance/release-sets/[id]/canary
+#12 45.04 ├ ƒ /api/policy-governance/release-sets/[id]/rollback
+#12 45.04 ├ ƒ /api/policy-governance/release-sets/[id]/shadow
+#12 45.04 ├ ƒ /api/policy-governance/shadow-compare
+#12 45.04 ├ ƒ /api/policy-governance/templates
+#12 45.04 ├ ƒ /api/policy-governance/templates/[id]/approve
+#12 45.04 ├ ƒ /api/policy-governance/templates/[id]/preview
+#12 45.04 ├ ƒ /api/policy-governance/templates/[id]/rollback
+#12 45.04 ├ ƒ /api/policy-runtime
+#12 45.04 ├ ƒ /api/policy-state
+#12 45.04 ├ ƒ /api/providers
+#12 45.04 ├ ƒ /api/providers/meta
+#12 45.04 ├ ƒ /api/providers/test
+#12 45.04 ├ ƒ /api/security-alerts
+#12 45.04 ├ ƒ /api/security-alerts/[id]
+#12 45.04 ├ ƒ /api/security-alerts/[id]/feedback
+#12 45.04 ├ ƒ /api/security-alerts/[id]/feedback/candidate
+#12 45.04 ├ ƒ /api/security-alerts/[id]/feedback/review
+#12 45.04 ├ ƒ /api/security-alerts/[id]/incident
+#12 45.04 ├ ƒ /api/security-alerts/[id]/media-evidence
+#12 45.04 ├ ƒ /api/security-scan-assets
+#12 45.04 ├ ƒ /api/security-scan-findings/[id]/reviews
+#12 45.04 ├ ƒ /api/security-scans
+#12 45.04 ├ ƒ /api/security-scans/[id]
+#12 45.04 ├ ƒ /api/simulate
+#12 45.04 ├ ƒ /api/stats
+#12 45.04 ├ ƒ /api/tenants
+#12 45.04 ├ ƒ /api/test-cases
+#12 45.04 ├ ƒ /api/test-cases/[id]
+#12 45.04 ├ ƒ /api/test-cases/import
+#12 45.04 ├ ƒ /api/test-cases/run
+#12 45.04 ├ ƒ /api/tool-registry
+#12 45.04 ├ ƒ /api/users
+#12 45.04 ├ ƒ /api/users/[id]
+#12 45.04 ├ ƒ /api/v1/content-marks/media/[contentId]
+#12 45.04 ├ ƒ /api/v1/content-marks/text
+#12 45.04 ├ ƒ /api/v1/content-marks/verify
+#12 45.04 ├ ƒ /api/v1/guard/artifacts/[id]
+#12 45.04 ├ ƒ /api/v1/guard/artifacts/[id]/complete
+#12 45.04 ├ ƒ /api/v1/guard/artifacts/[id]/parts/[partNumber]
+#12 45.04 ├ ƒ /api/v1/guard/artifacts/[id]/retry
+#12 45.04 ├ ƒ /api/v1/guard/artifacts/uploads
+#12 45.04 ├ ƒ /api/v1/guard/evaluate
+#12 45.04 ├ ƒ /api/v1/guard/evaluate-shadow
+#12 45.04 ├ ƒ /api/v1/guard/jobs
+#12 45.04 ├ ƒ /api/v1/guard/jobs/[id]
+#12 45.04 ├ ƒ /api/v1/guard/rag/evaluate
+#12 45.04 ├ ƒ /api/v1/guard/rag/retrieve
+#12 45.04 ├ ƒ /api/v1/guard/tools/approvals
+#12 45.04 ├ ƒ /api/v1/guard/tools/authorize
+#12 45.04 ├ ƒ /api/v1/guard/tools/execute
+#12 45.04 ├ ƒ /api/v1/guard/tools/reconcile
+#12 45.04 ├ ƒ /api/v1/guard/tools/result
+#12 45.04 ├ ƒ /api/whitelist
+#12 45.04 ├ ƒ /api/whitelist-rules
+#12 45.04 ├ ƒ /api/whitelist-rules/test
+#12 45.04 ├ ƒ /api/whitelist/[id]
+#12 45.04 ├ ƒ /applications
+#12 45.04 ├ ƒ /change-password
+#12 45.04 ├ ƒ /conversations
+#12 45.04 ├ ƒ /dashboard
+#12 45.04 ├ ƒ /dictionaries
+#12 45.04 ├ ƒ /dimensions
+#12 45.04 ├ ƒ /dimensions/[id]
+#12 45.04 ├ ƒ /document-scan
+#12 45.04 ├ ƒ /document-scan/[id]
+#12 45.04 ├ ƒ /evaluation-runs
+#12 45.04 ├ ƒ /export
+#12 45.04 ├ ƒ /gateway-requests
+#12 45.04 ├ ƒ /history
+#12 45.04 ├ ƒ /incidents
+#12 45.04 ├ ƒ /login
+#12 45.04 ├ ƒ /model-eval
+#12 45.04 ├ ƒ /operations
+#12 45.04 ├ ƒ /policies
+#12 45.04 ├ ƒ /policies/[id]
+#12 45.04 ├ ƒ /policy-releases
+#12 45.04 ├ ƒ /providers
+#12 45.04 ├ ƒ /response-templates
+#12 45.04 ├ ○ /robots.txt
+#12 45.04 ├ ƒ /security-alerts
+#12 45.04 ├ ƒ /simulate
+#12 45.04 ├ ƒ /test-cases
+#12 45.04 └ ƒ /whitelist
+#12 45.04 
+#12 45.04 
+#12 45.04 ƒ Proxy (Middleware)
+#12 45.04 
+#12 45.04 ○  (Static)   prerendered as static content
+#12 45.04 ƒ  (Dynamic)  server-rendered on demand
+#12 45.04 
+#12 DONE 45.3s
+
+#13 [runner 2/6] WORKDIR /app
+#13 CACHED
+
+#14 [runner 3/6] COPY --from=builder --chown=node:node /app/public ./public
+#14 DONE 0.1s
+
+#15 [runner 4/6] COPY --from=builder --chown=node:node /app/.next/standalone ./
+#15 DONE 0.8s
+
+#16 [runner 5/6] COPY --from=builder --chown=node:node /app/.next/static ./.next/static
+#16 DONE 0.2s
+
+#17 [runner 6/6] COPY --chown=node:node scripts/runtime-ingress.mjs scripts/gateway-v2-runtime-config.mjs scripts/gateway-v2-health.mjs ./scripts/
+#17 DONE 0.1s
+
+#18 exporting to image
+#18 exporting layers
+#18 exporting layers 3.3s done
+#18 exporting manifest sha256:e002ce1d746f7c3c505a7481f7182b7ff011702521d4a58589a76d65aeb8dd8b 0.0s done
+#18 exporting config sha256:2c55dfc67cdb5c6fd88aa11b323afe3f30894ab3352d9b58e23d3d28d32619a1 0.0s done
+#18 exporting attestation manifest sha256:cacc86efd1052b2c9ab16ec411f3df94622d644c7b38c42add83433ca31e69ff
+#18 exporting attestation manifest sha256:cacc86efd1052b2c9ab16ec411f3df94622d644c7b38c42add83433ca31e69ff 0.0s done
+#18 exporting manifest list sha256:a54a4449b96384c4405459dfb523b6111469c8b81a3d3ade2837203e4e9e0e46
+#18 exporting manifest list sha256:a54a4449b96384c4405459dfb523b6111469c8b81a3d3ade2837203e4e9e0e46 0.2s done
+#18 naming to docker.io/library/guardllm-main-app:detection-repair-20260908
+#18 naming to docker.io/library/guardllm-main-app:detection-repair-20260908 done
+#18 unpacking to docker.io/library/guardllm-main-app:detection-repair-20260908
+#18 unpacking to docker.io/library/guardllm-main-app:detection-repair-20260908 1.1s done
+#18 DONE 4.8s

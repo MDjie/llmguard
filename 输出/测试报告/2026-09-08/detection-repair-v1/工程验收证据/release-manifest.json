@@ -1,0 +1,341 @@
+{
+  "mainHead": "10e249442757417bd85597ac7745dd9d1907f810",
+  "branch": "main",
+  "replayCodeHash": "afc7fb12a34bfdd1064da9f2482821ea19f4363b31dc1936c653463eadd88388",
+  "candidatePayloadHash": "0747984ca66163c9bcf798936fec6a67f73f1159d88db87443d97b90c0cf5d3c",
+  "images": {
+    "app": {
+      "tag": "guardllm-main-app:detection-repair-20260908",
+      "imageId": "sha256:a54a4449b96384c4405459dfb523b6111469c8b81a3d3ade2837203e4e9e0e46",
+      "created": "2026-09-08T05:52:06.481644752Z",
+      "labels": {
+        "guardllm.repair-code-sha": "afc7fb12a34bfdd1064da9f2482821ea19f4363b31dc1936c653463eadd88388"
+      }
+    },
+    "worker": {
+      "tag": "guardllm-main-worker:detection-repair-20260908",
+      "imageId": "sha256:9649844cc7f4f48d0bc0e87e7b66d1ae73fc1b0bb133b9c5ae0a67b2d5f099cf",
+      "created": "2026-09-08T05:56:28.932669034Z",
+      "labels": {
+        "guardllm.repair-code-sha": "afc7fb12a34bfdd1064da9f2482821ea19f4363b31dc1936c653463eadd88388"
+      }
+    }
+  },
+  "runningProduction": [
+    {
+      "Names": "guardllm-r0-gateway-request-worker-1",
+      "Image": "guardllm-main-worker:db4a31b-20260908-102443",
+      "State": "running",
+      "Status": "Up 4 hours"
+    },
+    {
+      "Names": "guardllm-r0-callback-worker-1",
+      "Image": "guardllm-main-worker:db4a31b-20260908-102443",
+      "State": "running",
+      "Status": "Up 4 hours"
+    },
+    {
+      "Names": "guardllm-r0-media-worker-1",
+      "Image": "guardllm-main-worker:db4a31b-20260908-102443",
+      "State": "running",
+      "Status": "Up 4 hours"
+    },
+    {
+      "Names": "guardllm-r0-native-multimodal-worker-1",
+      "Image": "guardllm-main-worker:db4a31b-20260908-102443",
+      "State": "running",
+      "Status": "Up 4 hours"
+    },
+    {
+      "Names": "guardllm-r0-multimodal-worker-1",
+      "Image": "guardllm-main-worker:db4a31b-20260908-102443",
+      "State": "running",
+      "Status": "Up 4 hours"
+    },
+    {
+      "Names": "guardllm-r0-artifact-worker-1",
+      "Image": "guardllm-main-worker:db4a31b-20260908-102443",
+      "State": "running",
+      "Status": "Up 4 hours"
+    },
+    {
+      "Names": "guardllm-r0-security-scan-worker-1",
+      "Image": "guardllm-main-worker:db4a31b-20260908-102443",
+      "State": "running",
+      "Status": "Up 4 hours"
+    },
+    {
+      "Names": "guardllm-r0-audit-export-worker-1",
+      "Image": "guardllm-main-worker:db4a31b-20260908-102443",
+      "State": "running",
+      "Status": "Up 4 hours"
+    },
+    {
+      "Names": "guardllm-r0-audit-chain-worker-1",
+      "Image": "guardllm-main-worker:db4a31b-20260908-102443",
+      "State": "running",
+      "Status": "Up 4 hours"
+    },
+    {
+      "Names": "guardllm-r0-content-marking-worker-1",
+      "Image": "guardllm-main-worker:db4a31b-20260908-102443",
+      "State": "running",
+      "Status": "Up 4 hours"
+    },
+    {
+      "Names": "guardllm-r0-archive-worker-1",
+      "Image": "guardllm-main-worker:db4a31b-20260908-102443",
+      "State": "running",
+      "Status": "Up 4 hours"
+    },
+    {
+      "Names": "guardllm-r0-evaluation-worker-1",
+      "Image": "guardllm-main-worker:db4a31b-20260908-102443",
+      "State": "running",
+      "Status": "Up 4 hours"
+    },
+    {
+      "Names": "guardllm-r0-rag-worker-1",
+      "Image": "guardllm-main-worker:db4a31b-20260908-102443",
+      "State": "running",
+      "Status": "Up 4 hours"
+    },
+    {
+      "Names": "guardllm-r0-audit-timestamp-worker-1",
+      "Image": "guardllm-main-worker:db4a31b-20260908-102443",
+      "State": "running",
+      "Status": "Up 4 hours"
+    },
+    {
+      "Names": "guardllm-r0-app-1",
+      "Image": "guardllm-main-app:db4a31b-20260908-102443",
+      "State": "running",
+      "Status": "Up 4 hours (healthy)"
+    },
+    {
+      "Names": "guardllm-r0-media-analyzer-1",
+      "Image": "guardllm-main-analyzer:cbc88d1-20260908",
+      "State": "running",
+      "Status": "Up 5 hours (healthy)"
+    },
+    {
+      "Names": "guardllm-r0-postgres-1",
+      "Image": "postgres:16.10-alpine",
+      "State": "running",
+      "Status": "Up 3 days (healthy)"
+    }
+  ],
+  "candidateRules": 126,
+  "candidateDag": {
+    "maximumCostUnits": 19,
+    "nodes": [
+      {
+        "costUnits": 2,
+        "dependsOn": [
+          "l0-policy-rules"
+        ],
+        "detectorId": "source-risk-relations",
+        "failurePolicy": "FAIL_CLOSED",
+        "id": "l1-source-relations",
+        "maxAttempts": 1,
+        "runCondition": "ALWAYS",
+        "tier": "L1",
+        "timeoutMs": 1500
+      },
+      {
+        "costUnits": 1,
+        "dependsOn": [],
+        "detectorId": "prompt-attack-baseline",
+        "failurePolicy": "FAIL_CLOSED",
+        "id": "l0-prompt-attack",
+        "maxAttempts": 1,
+        "runCondition": "ALWAYS",
+        "tier": "L0",
+        "timeoutMs": 1500
+      },
+      {
+        "costUnits": 1,
+        "dependsOn": [],
+        "detectorId": "protected-context-leak",
+        "failurePolicy": "FAIL_CLOSED",
+        "id": "l0-protected-context-leak",
+        "maxAttempts": 1,
+        "runCondition": "ALWAYS",
+        "tier": "L0",
+        "timeoutMs": 1500
+      },
+      {
+        "costUnits": 1,
+        "dependsOn": [],
+        "detectorId": "structured-dlp",
+        "failurePolicy": "FAIL_CLOSED",
+        "id": "l0-structured-dlp",
+        "maxAttempts": 1,
+        "runCondition": "ALWAYS",
+        "tier": "L0",
+        "timeoutMs": 1500
+      },
+      {
+        "costUnits": 1,
+        "dependsOn": [],
+        "detectorId": "resource-abuse-baseline",
+        "failurePolicy": "FAIL_CLOSED",
+        "id": "l0-resource-abuse",
+        "maxAttempts": 1,
+        "runCondition": "ALWAYS",
+        "tier": "L0",
+        "timeoutMs": 1500
+      },
+      {
+        "costUnits": 1,
+        "dependsOn": [],
+        "detectorId": "insurance-compliance-baseline",
+        "failurePolicy": "FAIL_CLOSED",
+        "id": "l0-insurance-compliance",
+        "maxAttempts": 1,
+        "runCondition": "ALWAYS",
+        "tier": "L0",
+        "timeoutMs": 1500
+      },
+      {
+        "costUnits": 1,
+        "dependsOn": [],
+        "detectorId": "content-safety-intent-baseline",
+        "failurePolicy": "FAIL_CLOSED",
+        "id": "l0-content-safety-intent",
+        "maxAttempts": 1,
+        "runCondition": "ALWAYS",
+        "tier": "L0",
+        "timeoutMs": 1500
+      },
+      {
+        "costUnits": 1,
+        "dependsOn": [],
+        "detectorId": "output-political-compliance",
+        "failurePolicy": "FAIL_CLOSED",
+        "id": "l0-output-political",
+        "maxAttempts": 1,
+        "runCondition": "ALWAYS",
+        "tier": "L0",
+        "timeoutMs": 1500
+      },
+      {
+        "costUnits": 1,
+        "dependsOn": [],
+        "detectorId": "output-sexual-safety",
+        "failurePolicy": "FAIL_CLOSED",
+        "id": "l0-output-sexual",
+        "maxAttempts": 1,
+        "runCondition": "ALWAYS",
+        "tier": "L0",
+        "timeoutMs": 1500
+      },
+      {
+        "costUnits": 1,
+        "dependsOn": [],
+        "detectorId": "output-illegal-harmful",
+        "failurePolicy": "FAIL_CLOSED",
+        "id": "l0-output-illegal-harmful",
+        "maxAttempts": 1,
+        "runCondition": "ALWAYS",
+        "tier": "L0",
+        "timeoutMs": 1500
+      },
+      {
+        "costUnits": 1,
+        "dependsOn": [],
+        "detectorId": "output-credential-leak",
+        "failurePolicy": "FAIL_CLOSED",
+        "id": "l0-output-credential",
+        "maxAttempts": 1,
+        "runCondition": "ALWAYS",
+        "tier": "L0",
+        "timeoutMs": 1500
+      },
+      {
+        "costUnits": 1,
+        "dependsOn": [],
+        "detectorId": "output-privacy-dlp",
+        "failurePolicy": "FAIL_CLOSED",
+        "id": "l0-output-privacy",
+        "maxAttempts": 1,
+        "runCondition": "ALWAYS",
+        "tier": "L0",
+        "timeoutMs": 1500
+      },
+      {
+        "costUnits": 1,
+        "dependsOn": [],
+        "detectorId": "output-internal-data",
+        "failurePolicy": "FAIL_CLOSED",
+        "id": "l0-output-internal-data",
+        "maxAttempts": 1,
+        "runCondition": "ALWAYS",
+        "tier": "L0",
+        "timeoutMs": 1500
+      },
+      {
+        "costUnits": 1,
+        "dependsOn": [],
+        "detectorId": "output-insurance-compliance",
+        "failurePolicy": "FAIL_CLOSED",
+        "id": "l0-output-insurance",
+        "maxAttempts": 1,
+        "runCondition": "ALWAYS",
+        "tier": "L0",
+        "timeoutMs": 1500
+      },
+      {
+        "costUnits": 1,
+        "dependsOn": [],
+        "detectorId": "rules",
+        "failurePolicy": "FAIL_CLOSED",
+        "id": "l0-policy-rules",
+        "maxAttempts": 1,
+        "runCondition": "ALWAYS",
+        "tier": "L0",
+        "timeoutMs": 1500
+      },
+      {
+        "costUnits": 3,
+        "dependsOn": [
+          "l0-prompt-attack",
+          "l0-protected-context-leak",
+          "l0-structured-dlp",
+          "l0-resource-abuse",
+          "l0-insurance-compliance",
+          "l0-content-safety-intent",
+          "l0-output-political",
+          "l0-output-sexual",
+          "l0-output-illegal-harmful",
+          "l0-output-credential",
+          "l0-output-privacy",
+          "l0-output-internal-data",
+          "l0-output-insurance",
+          "l0-policy-rules"
+        ],
+        "detectorId": "reasoning-attack-baseline",
+        "failurePolicy": "FAIL_CLOSED",
+        "id": "l3-reasoning-attribution",
+        "maxAttempts": 1,
+        "runCondition": "WHEN_NO_BLOCKING_MATCH",
+        "tier": "L3",
+        "timeoutMs": 2500
+      }
+    ],
+    "version": "guard-default-dag-5"
+  },
+  "workspaceDriftAfterReplayFreeze": [
+    {
+      "path": "src/lib/policy-governance/runtime.ts",
+      "frozenHash": "266ea6acedc648c7e2d7d38bcf334084b1860f1c286f6e54aa467ad093ea19a9",
+      "currentHash": "53d4862f65e58d2216d7228f582718141e20e9a2e3c46e86295c722ddf86a830"
+    }
+  ],
+  "productionChanged": false,
+  "candidatePolicyPublished": false,
+  "rollbackImagesRetained": true,
+  "imageBuildIsFullCleanCommit": false,
+  "imageBuildIncludesUncommittedWorkspaceChanges": true,
+  "driftAssessment": "Only runtime-summary UI readiness handling changed after frozen replay; preserve this concurrent change. It is not included in frozen app image."
+}

@@ -1,0 +1,575 @@
+{
+  "variant": "candidate",
+  "basePolicyHash": "5e29f2c85c10b0d23a8d0e140c93cb89595685b306a7c6edc497a1029ab3634b",
+  "candidatePolicyHash": "09fa0810b0687785255d31d96870c91a909262ebe1259923e639374c5943f8ba",
+  "publicationState": "UNPUBLISHED",
+  "audit": [
+    {
+      "ruleId": "66fcb24d-d59d-4ae4-b955-eb44d514b64b",
+      "pattern": "限时优惠",
+      "riskType": "ad_detection",
+      "disposition": "SIGNAL_ONLY",
+      "rationale": "主题或营销词不是已确认的违规行为或事实"
+    },
+    {
+      "ruleId": "a6b2c1d3-e4f5-6a7b-8c9d-0e1f2a3b4c5d",
+      "pattern": "加微信",
+      "riskType": "ad_detection",
+      "disposition": "SIGNAL_ONLY",
+      "rationale": "主题或营销词不是已确认的违规行为或事实"
+    },
+    {
+      "ruleId": "b7c3d2e4-f5a6-7b8c-9d0e-1f2a3b4c5d6e",
+      "pattern": "点击购买",
+      "riskType": "ad_detection",
+      "disposition": "SIGNAL_ONLY",
+      "rationale": "主题或营销词不是已确认的违规行为或事实"
+    },
+    {
+      "ruleId": "2c774d78-2a11-4e97-a5e4-196121313ffe",
+      "pattern": "色情",
+      "riskType": "adult_content",
+      "disposition": "LOCAL_CONTEXT",
+      "rationale": "保留风险域，增加局部语境约束"
+    },
+    {
+      "ruleId": "32ad99d1-1335-43f8-aea5-fd7aa8ca91f3",
+      "pattern": "裸聊",
+      "riskType": "adult_content",
+      "disposition": "LOCAL_CONTEXT",
+      "rationale": "保留风险域，增加局部语境约束"
+    },
+    {
+      "ruleId": "7a368eaf-9ac0-4392-919b-fabb7c6a445f",
+      "pattern": "约炮",
+      "riskType": "adult_content",
+      "disposition": "LOCAL_CONTEXT",
+      "rationale": "保留风险域，增加局部语境约束"
+    },
+    {
+      "ruleId": "5499855b-7cac-446d-87e0-4956bc5e3fc7",
+      "pattern": "内部资料",
+      "riskType": "business_sensitive",
+      "disposition": "LOCAL_CONTEXT",
+      "rationale": "保留风险域，增加局部语境约束"
+    },
+    {
+      "ruleId": "57b2be14-fc0d-43a6-97a7-a3df2bf58c0b",
+      "pattern": "商业机密",
+      "riskType": "business_sensitive",
+      "disposition": "LOCAL_CONTEXT",
+      "rationale": "保留风险域，增加局部语境约束"
+    },
+    {
+      "ruleId": "b07a5e2b-3ae0-417c-857c-a83205ffe5f5",
+      "pattern": "机密文件",
+      "riskType": "business_sensitive",
+      "disposition": "LOCAL_CONTEXT",
+      "rationale": "保留风险域，增加局部语境约束"
+    },
+    {
+      "ruleId": "ae4026e3-e513-490a-9391-93f8931cb4cd",
+      "pattern": "侵权",
+      "riskType": "copyright_risk",
+      "disposition": "SIGNAL_ONLY",
+      "rationale": "主题或营销词不是已确认的违规行为或事实"
+    },
+    {
+      "ruleId": "ea56d8dd-0aaa-4511-9546-3434b0f4e329",
+      "pattern": "盗版",
+      "riskType": "copyright_risk",
+      "disposition": "SIGNAL_ONLY",
+      "rationale": "主题或营销词不是已确认的违规行为或事实"
+    },
+    {
+      "ruleId": "179c3205-8ec3-4851-9889-7d77e200cae2",
+      "pattern": "sk-[A-Za-z0-9_-]{20,}",
+      "riskType": "credential_secret_leak",
+      "disposition": "LOCAL_CONTEXT",
+      "rationale": "保留风险域，增加局部语境约束"
+    },
+    {
+      "ruleId": "38b1b25c-2b57-4e0f-8878-47f339f9791f",
+      "pattern": "api_key",
+      "riskType": "credential_secret_leak",
+      "disposition": "SIGNAL_ONLY",
+      "rationale": "语法、字段名或目标词本身不足以确认攻击；保留召回供行为关系检测"
+    },
+    {
+      "ruleId": "63e492c5-158b-46a0-a9d8-7eb81e3b280b",
+      "pattern": "secret_key",
+      "riskType": "credential_secret_leak",
+      "disposition": "SIGNAL_ONLY",
+      "rationale": "语法、字段名或目标词本身不足以确认攻击；保留召回供行为关系检测"
+    },
+    {
+      "ruleId": "e708bfb8-70f1-4563-88ab-e17b37a6e045",
+      "pattern": "access_token",
+      "riskType": "credential_secret_leak",
+      "disposition": "SIGNAL_ONLY",
+      "rationale": "语法、字段名或目标词本身不足以确认攻击；保留召回供行为关系检测"
+    },
+    {
+      "ruleId": "1cb98b4b-4352-497f-bacc-f653ef975a02",
+      "pattern": "恭喜中奖",
+      "riskType": "fraud_scam",
+      "disposition": "LOCAL_CONTEXT",
+      "rationale": "保留风险域，增加局部语境约束"
+    },
+    {
+      "ruleId": "6cae7426-1f35-4b1a-89a2-1bfd5ee8ecd2",
+      "pattern": "钓鱼链接",
+      "riskType": "fraud_scam",
+      "disposition": "LOCAL_CONTEXT",
+      "rationale": "保留风险域，增加局部语境约束"
+    },
+    {
+      "ruleId": "9a93e073-1f96-4d78-95d7-763d846582b3",
+      "pattern": "内幕消息",
+      "riskType": "fraud_scam",
+      "disposition": "LOCAL_CONTEXT",
+      "rationale": "保留风险域，增加局部语境约束"
+    },
+    {
+      "ruleId": "a745d009-26ee-4770-b309-1a6649b87b31",
+      "pattern": "冒充客服",
+      "riskType": "fraud_scam",
+      "disposition": "LOCAL_CONTEXT",
+      "rationale": "保留风险域，增加局部语境约束"
+    },
+    {
+      "ruleId": "a761d512-5083-4c90-ae52-fd276adcfdd1",
+      "pattern": "稳赚不赔",
+      "riskType": "fraud_scam",
+      "disposition": "LOCAL_CONTEXT",
+      "rationale": "保留风险域，增加局部语境约束"
+    },
+    {
+      "ruleId": "1f88d3a6-614c-40d5-b6e2-a34cea335224",
+      "pattern": "洗钱",
+      "riskType": "illegal_content",
+      "disposition": "LOCAL_CONTEXT",
+      "rationale": "保留风险域，增加局部语境约束"
+    },
+    {
+      "ruleId": "550e8400-e29b-41d4-a716-446655440501",
+      "pattern": "毒品",
+      "riskType": "illegal_content",
+      "disposition": "LOCAL_CONTEXT",
+      "rationale": "保留风险域，增加局部语境约束"
+    },
+    {
+      "ruleId": "550e8400-e29b-41d4-a716-446655440502",
+      "pattern": "诈骗",
+      "riskType": "illegal_content",
+      "disposition": "LOCAL_CONTEXT",
+      "rationale": "保留风险域，增加局部语境约束"
+    },
+    {
+      "ruleId": "6215b42d-c220-452e-9ec5-bc31667b6355",
+      "pattern": "买卖账号",
+      "riskType": "illegal_content",
+      "disposition": "LOCAL_CONTEXT",
+      "rationale": "保留风险域，增加局部语境约束"
+    },
+    {
+      "ruleId": "670bdf5a-0957-4a0e-9128-264f73b3c661",
+      "pattern": "诈骗",
+      "riskType": "illegal_content",
+      "disposition": "LOCAL_CONTEXT",
+      "rationale": "保留风险域，增加局部语境约束"
+    },
+    {
+      "ruleId": "993df25f-c721-4aea-b9ec-e172abbf003e",
+      "pattern": "黑产",
+      "riskType": "illegal_content",
+      "disposition": "LOCAL_CONTEXT",
+      "rationale": "保留风险域，增加局部语境约束"
+    },
+    {
+      "ruleId": "f36cbd94-fc9e-4aa3-a0cc-8dc29df7b68f",
+      "pattern": "绕过实名",
+      "riskType": "illegal_content",
+      "disposition": "LOCAL_CONTEXT",
+      "rationale": "保留风险域，增加局部语境约束"
+    },
+    {
+      "ruleId": "137254a4-794d-4f51-85b4-3a6e9194e1f8",
+      "pattern": "控制他人电脑",
+      "riskType": "malicious_code",
+      "disposition": "LOCAL_CONTEXT",
+      "rationale": "保留风险域，增加局部语境约束"
+    },
+    {
+      "ruleId": "18313cfe-08cf-494e-a4ad-3750a58a11d1",
+      "pattern": "木马",
+      "riskType": "malicious_code",
+      "disposition": "LOCAL_CONTEXT",
+      "rationale": "保留风险域，增加局部语境约束"
+    },
+    {
+      "ruleId": "550e8400-e29b-41d4-a716-446655440301",
+      "pattern": "SELECT * FROM",
+      "riskType": "malicious_code",
+      "disposition": "SIGNAL_ONLY",
+      "rationale": "语法、字段名或目标词本身不足以确认攻击；保留召回供行为关系检测"
+    },
+    {
+      "ruleId": "550e8400-e29b-41d4-a716-446655440302",
+      "pattern": "<script>",
+      "riskType": "malicious_code",
+      "disposition": "SIGNAL_ONLY",
+      "rationale": "语法、字段名或目标词本身不足以确认攻击；保留召回供行为关系检测"
+    },
+    {
+      "ruleId": "550e8400-e29b-41d4-a716-446655440303",
+      "pattern": "远程控制",
+      "riskType": "malicious_code",
+      "disposition": "SIGNAL_ONLY",
+      "rationale": "语法、字段名或目标词本身不足以确认攻击；保留召回供行为关系检测"
+    },
+    {
+      "ruleId": "550e8400-e29b-41d4-a716-446655440304",
+      "pattern": "木马",
+      "riskType": "malicious_code",
+      "disposition": "DEDUPLICATE",
+      "rationale": "同风险域与模式重复；保留首次定义"
+    },
+    {
+      "ruleId": "724addd7-101b-4a43-a2ee-a6998ba2fb7b",
+      "pattern": "入侵",
+      "riskType": "malicious_code",
+      "disposition": "LOCAL_CONTEXT",
+      "rationale": "保留风险域，增加局部语境约束"
+    },
+    {
+      "ruleId": "77ad7478-4bcf-40de-b259-bb36782445f4",
+      "pattern": "获取文件",
+      "riskType": "malicious_code",
+      "disposition": "SIGNAL_ONLY",
+      "rationale": "语法、字段名或目标词本身不足以确认攻击；保留召回供行为关系检测"
+    },
+    {
+      "ruleId": "a7518ee9-d64a-468f-b2ac-5c46b8858e05",
+      "pattern": "后门",
+      "riskType": "malicious_code",
+      "disposition": "LOCAL_CONTEXT",
+      "rationale": "保留风险域，增加局部语境约束"
+    },
+    {
+      "ruleId": "badb1cea-4393-45aa-8d87-75298b14118b",
+      "pattern": "免杀",
+      "riskType": "malicious_code",
+      "disposition": "LOCAL_CONTEXT",
+      "rationale": "保留风险域，增加局部语境约束"
+    },
+    {
+      "ruleId": "cf998c94-3aef-4d2f-b790-d0abe0eeb491",
+      "pattern": "窃取密码",
+      "riskType": "malicious_code",
+      "disposition": "LOCAL_CONTEXT",
+      "rationale": "保留风险域，增加局部语境约束"
+    },
+    {
+      "ruleId": "dd6d53fc-bb83-47c2-b07f-097392094442",
+      "pattern": "反弹shell",
+      "riskType": "malicious_code",
+      "disposition": "LOCAL_CONTEXT",
+      "rationale": "保留风险域，增加局部语境约束"
+    },
+    {
+      "ruleId": "10a8599f-b257-4efc-9b95-114e8d2bd2fe",
+      "pattern": "虚假新闻",
+      "riskType": "misinformation",
+      "disposition": "SIGNAL_ONLY",
+      "rationale": "主题或营销词不是已确认的违规行为或事实"
+    },
+    {
+      "ruleId": "85c523a2-5c55-4d4d-b07b-060b27ec99dc",
+      "pattern": "谣言",
+      "riskType": "misinformation",
+      "disposition": "SIGNAL_ONLY",
+      "rationale": "主题或营销词不是已确认的违规行为或事实"
+    },
+    {
+      "ruleId": "01ec8db4-504c-4183-ac22-3fbe65497c4d",
+      "pattern": "内部信息",
+      "riskType": "output_leak",
+      "disposition": "LOCAL_CONTEXT",
+      "rationale": "保留风险域，增加局部语境约束"
+    },
+    {
+      "ruleId": "9daab45f-f10f-4cc7-9649-fa7071c205d7",
+      "pattern": "系统指令",
+      "riskType": "output_leak",
+      "disposition": "LOCAL_CONTEXT",
+      "rationale": "保留风险域，增加局部语境约束"
+    },
+    {
+      "ruleId": "2f8afb55-6609-4968-a9b7-ea8ac2cfb415",
+      "pattern": "1[3-9]\\d{9}",
+      "riskType": "pii_leak",
+      "disposition": "TYPED_DLP_REPLACEMENT",
+      "rationale": "迁移到结构化实体检测和校验；数字与邮箱词法模式不能自行生成脱敏实体"
+    },
+    {
+      "ruleId": "550e8400-e29b-41d4-a716-446655440204",
+      "pattern": "[\\w.-]+@[\\w.-]+\\.\\w+",
+      "riskType": "pii_leak",
+      "disposition": "TYPED_DLP_REPLACEMENT",
+      "rationale": "迁移到结构化实体检测和校验；数字与邮箱词法模式不能自行生成脱敏实体"
+    },
+    {
+      "ruleId": "550e8400-e29b-41d4-a716-446655440205",
+      "pattern": "(sk-|api[_-]?key|Bearer\\s+)[a-zA-Z0-9_-]{20,}",
+      "riskType": "pii_leak",
+      "disposition": "TYPED_DLP_REPLACEMENT",
+      "rationale": "迁移到结构化实体检测和校验；数字与邮箱词法模式不能自行生成脱敏实体"
+    },
+    {
+      "ruleId": "91a2d38e-fd89-42f6-bf45-3c5ff259782e",
+      "pattern": "\\d{17}[\\dXx]",
+      "riskType": "pii_leak",
+      "disposition": "TYPED_DLP_REPLACEMENT",
+      "rationale": "迁移到结构化实体检测和校验；数字与邮箱词法模式不能自行生成脱敏实体"
+    },
+    {
+      "ruleId": "a404ffac-705b-488c-a413-9e66319ae3ff",
+      "pattern": "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}",
+      "riskType": "pii_leak",
+      "disposition": "TYPED_DLP_REPLACEMENT",
+      "rationale": "迁移到结构化实体检测和校验；数字与邮箱词法模式不能自行生成脱敏实体"
+    },
+    {
+      "ruleId": "a4a826dd-7e19-4223-a7aa-d4ae9cec6168",
+      "pattern": "\\d{16,19}",
+      "riskType": "pii_leak",
+      "disposition": "TYPED_DLP_REPLACEMENT",
+      "rationale": "迁移到结构化实体检测和校验；数字与邮箱词法模式不能自行生成脱敏实体"
+    },
+    {
+      "ruleId": "0e806fa7-077c-4785-971f-d3dda64ecf02",
+      "pattern": "系统提示词",
+      "riskType": "prompt_injection",
+      "disposition": "SIGNAL_ONLY",
+      "rationale": "语法、字段名或目标词本身不足以确认攻击；保留召回供行为关系检测"
+    },
+    {
+      "ruleId": "2d5ae48d-fdb5-4fa9-9eef-7533a88d8d40",
+      "pattern": "忽略所有规则",
+      "riskType": "prompt_injection",
+      "disposition": "LOCAL_CONTEXT",
+      "rationale": "保留风险域，增加局部语境约束"
+    },
+    {
+      "ruleId": "3621dff1-a563-468a-b4ae-43160bfabde4",
+      "pattern": "扮演",
+      "riskType": "prompt_injection",
+      "disposition": "SIGNAL_ONLY",
+      "rationale": "语法、字段名或目标词本身不足以确认攻击；保留召回供行为关系检测"
+    },
+    {
+      "ruleId": "4fbf40bf-e8d3-4834-90d5-d1af7b07b9e0",
+      "pattern": "忽略之前的指令",
+      "riskType": "prompt_injection",
+      "disposition": "LOCAL_CONTEXT",
+      "rationale": "保留风险域，增加局部语境约束"
+    },
+    {
+      "ruleId": "550e8400-e29b-41d4-a716-446655440101",
+      "pattern": "忽略之前",
+      "riskType": "prompt_injection",
+      "disposition": "LOCAL_CONTEXT",
+      "rationale": "保留风险域，增加局部语境约束"
+    },
+    {
+      "ruleId": "550e8400-e29b-41d4-a716-446655440102",
+      "pattern": "系统提示词",
+      "riskType": "prompt_injection",
+      "disposition": "DEDUPLICATE",
+      "rationale": "同风险域与模式重复；保留首次定义"
+    },
+    {
+      "ruleId": "550e8400-e29b-41d4-a716-446655440103",
+      "pattern": "你现在是",
+      "riskType": "prompt_injection",
+      "disposition": "SIGNAL_ONLY",
+      "rationale": "语法、字段名或目标词本身不足以确认攻击；保留召回供行为关系检测"
+    },
+    {
+      "ruleId": "550e8400-e29b-41d4-a716-446655440104",
+      "pattern": "DAN模式",
+      "riskType": "prompt_injection",
+      "disposition": "LOCAL_CONTEXT",
+      "rationale": "保留风险域，增加局部语境约束"
+    },
+    {
+      "ruleId": "550e8400-e29b-41d4-a716-446655440105",
+      "pattern": "忽略所有规则",
+      "riskType": "prompt_injection",
+      "disposition": "LOCAL_CONTEXT",
+      "rationale": "保留风险域，增加局部语境约束"
+    },
+    {
+      "ruleId": "6daae776-8053-4f79-bfca-71df89c87fe1",
+      "pattern": "DAN",
+      "riskType": "prompt_injection",
+      "disposition": "BOUNDARY_AND_ROLE_RELATION",
+      "rationale": "完整 Unicode 词元并与角色越权请求同分句；普通人名与子串不确认风险"
+    },
+    {
+      "ruleId": "92283b6f-5c42-4674-90b4-e4d91da35660",
+      "pattern": "越狱",
+      "riskType": "prompt_injection",
+      "disposition": "LOCAL_CONTEXT",
+      "rationale": "保留风险域，增加局部语境约束"
+    },
+    {
+      "ruleId": "9411f354-90e5-48f9-ae66-0aa2fccac8ff",
+      "pattern": "绕过限制",
+      "riskType": "prompt_injection",
+      "disposition": "LOCAL_CONTEXT",
+      "rationale": "保留风险域，增加局部语境约束"
+    },
+    {
+      "ruleId": "97f13468-15fc-4767-abd8-6266ceb3b35f",
+      "pattern": "system prompt",
+      "riskType": "prompt_injection",
+      "disposition": "SIGNAL_ONLY",
+      "rationale": "语法、字段名或目标词本身不足以确认攻击；保留召回供行为关系检测"
+    },
+    {
+      "ruleId": "9c28e929-664c-477f-b858-6a5129be1c90",
+      "pattern": "忽略",
+      "riskType": "prompt_injection",
+      "disposition": "SIGNAL_ONLY",
+      "rationale": "语法、字段名或目标词本身不足以确认攻击；保留召回供行为关系检测"
+    },
+    {
+      "ruleId": "9e2eb5e7-c22a-4a95-93c9-ae94f84c85f3",
+      "pattern": "开发者模式",
+      "riskType": "prompt_injection",
+      "disposition": "LOCAL_CONTEXT",
+      "rationale": "保留风险域，增加局部语境约束"
+    },
+    {
+      "ruleId": "a0b95748-6c4f-4190-b6e0-a3883200fa10",
+      "pattern": "忽略之前",
+      "riskType": "prompt_injection",
+      "disposition": "LOCAL_CONTEXT",
+      "rationale": "保留风险域，增加局部语境约束"
+    },
+    {
+      "ruleId": "ac9c1c01-3b0c-4990-aca7-f907e3be9f33",
+      "pattern": "(输出|泄露|告诉我).*系统提示词",
+      "riskType": "prompt_injection",
+      "disposition": "LOCAL_CONTEXT",
+      "rationale": "保留风险域，增加局部语境约束"
+    },
+    {
+      "ruleId": "f93194bd-8c7e-40d6-a06e-7739c90d374d",
+      "pattern": "无限制模式",
+      "riskType": "prompt_injection",
+      "disposition": "LOCAL_CONTEXT",
+      "rationale": "保留风险域，增加局部语境约束"
+    },
+    {
+      "ruleId": "5e16d1c5-e5d3-4aba-aacc-79a96ac5d756",
+      "pattern": "自杀",
+      "riskType": "self_harm",
+      "disposition": "LOCAL_CONTEXT",
+      "rationale": "保留风险域，增加局部语境约束"
+    },
+    {
+      "ruleId": "69f9ead1-3703-4fb8-88e3-b90528c779d9",
+      "pattern": "割腕",
+      "riskType": "self_harm",
+      "disposition": "LOCAL_CONTEXT",
+      "rationale": "保留风险域，增加局部语境约束"
+    },
+    {
+      "ruleId": "9d42c300-db73-4b2d-bc36-664c2a66aed1",
+      "pattern": "不想活了",
+      "riskType": "self_harm",
+      "disposition": "LOCAL_CONTEXT",
+      "rationale": "保留风险域，增加局部语境约束"
+    },
+    {
+      "ruleId": "dbbdb35d-91b4-4aa6-9c23-cda71c438d1a",
+      "pattern": "结束生命",
+      "riskType": "self_harm",
+      "disposition": "LOCAL_CONTEXT",
+      "rationale": "保留风险域，增加局部语境约束"
+    },
+    {
+      "ruleId": "0faefc79-ea3b-4809-a346-39d2eef8c4a2",
+      "pattern": "水军",
+      "riskType": "sensitive_compliance",
+      "disposition": "LOCAL_CONTEXT",
+      "rationale": "保留风险域，增加局部语境约束"
+    },
+    {
+      "ruleId": "3cd8f55a-11db-4d80-abba-a0771a1fd1f6",
+      "pattern": "绕过监管",
+      "riskType": "sensitive_compliance",
+      "disposition": "LOCAL_CONTEXT",
+      "rationale": "保留风险域，增加局部语境约束"
+    },
+    {
+      "ruleId": "875e1ef7-64d6-49cb-bafe-0fbe2483b0b6",
+      "pattern": "控评",
+      "riskType": "sensitive_compliance",
+      "disposition": "LOCAL_CONTEXT",
+      "rationale": "保留风险域，增加局部语境约束"
+    },
+    {
+      "ruleId": "4b8874df-ee45-42ee-a6de-f08500ecf8ae",
+      "pattern": "刷屏",
+      "riskType": "spam_detection",
+      "disposition": "SIGNAL_ONLY",
+      "rationale": "主题或营销词不是已确认的违规行为或事实"
+    },
+    {
+      "ruleId": "7f057d88-ff31-4425-8615-40909fe9eba3",
+      "pattern": "(.)\\1{8,}",
+      "riskType": "spam_detection",
+      "disposition": "SIGNAL_ONLY",
+      "rationale": "主题或营销词不是已确认的违规行为或事实"
+    },
+    {
+      "ruleId": "ecc3a096-4ae8-4644-9b64-785c3666fa18",
+      "pattern": "顶顶顶",
+      "riskType": "spam_detection",
+      "disposition": "SIGNAL_ONLY",
+      "rationale": "主题或营销词不是已确认的违规行为或事实"
+    },
+    {
+      "ruleId": "244956fe-0f94-4564-9e1d-51239661a31e",
+      "pattern": "暴力威胁",
+      "riskType": "violence_hate",
+      "disposition": "LOCAL_CONTEXT",
+      "rationale": "保留风险域，增加局部语境约束"
+    },
+    {
+      "ruleId": "550e8400-e29b-41d4-a716-446655440401",
+      "pattern": "杀死",
+      "riskType": "violence_hate",
+      "disposition": "LOCAL_CONTEXT",
+      "rationale": "保留风险域，增加局部语境约束"
+    },
+    {
+      "ruleId": "9a93c464-9813-4922-b31b-77f14555e76d",
+      "pattern": "仇恨",
+      "riskType": "violence_hate",
+      "disposition": "LOCAL_CONTEXT",
+      "rationale": "保留风险域，增加局部语境约束"
+    },
+    {
+      "ruleId": "f44f21ec-1bdb-4a95-90c0-02eab07df10f",
+      "pattern": "杀人",
+      "riskType": "violence_hate",
+      "disposition": "LOCAL_CONTEXT",
+      "rationale": "保留风险域，增加局部语境约束"
+    }
+  ]
+}

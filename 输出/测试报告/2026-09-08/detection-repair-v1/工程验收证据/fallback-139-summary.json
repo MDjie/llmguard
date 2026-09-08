@@ -1,0 +1,33 @@
+{
+  "batch": "fallback",
+  "totalCases": 139,
+  "evaluatedThisRun": 139,
+  "resumed": 0,
+  "errors": 0,
+  "degraded": 0,
+  "referenceMismatches": 0,
+  "modelReported": 0,
+  "outputControlEvents": 1,
+  "actions": {
+    "ALLOW": 19,
+    "MASK": 113,
+    "WARN": 5,
+    "BLOCK": 2
+  },
+  "inputHash": "a90098e8c53602b120082e52c89e00800418074987bc09bc7826c529ef6bd76d",
+  "policyHash": "0747984ca66163c9bcf798936fec6a67f73f1159d88db87443d97b90c0cf5d3c",
+  "codeHash": "afc7fb12a34bfdd1064da9f2482821ea19f4363b31dc1936c653463eadd88388",
+  "elapsedSeconds": 1.678,
+  "completedAt": "2026-09-08T05:49:42.572Z",
+  "executionMode": "LOCAL_WORKSPACE_FULL_ENGINE_OFFLINE",
+  "variant": "candidate",
+  "baselineVerifiedAt": "2026-09-08T02:47:30.147Z",
+  "baselinePolicyHash": "5e29f2c85c10b0d23a8d0e140c93cb89595685b306a7c6edc497a1029ab3634b",
+  "publicationState": "UNPUBLISHED_CANDIDATE",
+  "httpAuthenticationAndRateLimitTested": false,
+  "network": {
+    "mode": "SOCKET_AND_FETCH_DENY",
+    "attemptedConnections": 0,
+    "externalModelCalls": 0
+  }
+}

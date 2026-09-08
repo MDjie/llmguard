@@ -1,0 +1,16 @@
+{
+  "status": "PASS_WITH_QUALITY_BLOCK",
+  "caseIdentityOrderTextLabelHashesVerified": true,
+  "resultRows": 360380,
+  "groupsSamePairedDenominator": true,
+  "sourceScripts": [
+    "E:\\大模型安全\\大模型护栏\\scripts\\qa\\analyze_detection_repair.py"
+  ],
+  "externalModelCalls": 0,
+  "independentHoldoutQualified": false,
+  "artifacts": {
+    "paired-analysis.json": "76a135502df60eecc8e5d8e8ff3a3faf3b2e16bd73d4cc24d9cd23e6325a98d5",
+    "changed-cases.jsonl": "f3058c466e6130911e09f4cff00dc5231ebb75f1b71f63155bcd5667b4a94ec5",
+    "candidate-failures.jsonl": "429f697325901407358268365451599b9531e9948186ecf13c646baf2b9be53a"
+  }
+}

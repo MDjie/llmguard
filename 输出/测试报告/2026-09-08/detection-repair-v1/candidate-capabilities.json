@@ -1,0 +1,28 @@
+{
+  "runtimeCompatible": true,
+  "capabilityVersion": "guard-detection-capabilities-1",
+  "declaredProfile": "TEXT_BASELINE",
+  "enabledDetectorIds": [
+    "content-safety-intent-baseline",
+    "insurance-compliance-baseline",
+    "output-credential-leak",
+    "output-illegal-harmful",
+    "output-insurance-compliance",
+    "output-internal-data",
+    "output-political-compliance",
+    "output-privacy-dlp",
+    "output-sexual-safety",
+    "prompt-attack-baseline",
+    "protected-context-leak",
+    "reasoning-attack-baseline",
+    "resource-abuse-baseline",
+    "rules",
+    "source-risk-relations",
+    "structured-dlp"
+  ],
+  "missingDetectorIds": [],
+  "reasons": [],
+  "qualityQualified": null,
+  "qualityStatus": "NOT_ASSESSED_BY_CAPABILITY_CHECK",
+  "mediaRuntimeVerified": false
+}

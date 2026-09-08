@@ -1,0 +1,149 @@
+{
+  "date": "2026-09-08",
+  "codeHash": "67906ada537014b6a786df9252d5d1751001690a828688fbe4f2683ca391c103",
+  "policyHash": "09fa0810b0687785255d31d96870c91a909262ebe1259923e639374c5943f8ba",
+  "fixes": [
+    {
+      "id": "F01",
+      "tasks": "D06",
+      "gap": "覆盖不足仍放行",
+      "resolution": "归一化 PARTIAL 强制保留拦截约束，缺失覆盖不记成功检出。",
+      "path": "src/lib/guard-engine-v2/engine.ts"
+    },
+    {
+      "id": "F02",
+      "tasks": "D06",
+      "gap": "预算耗尽丢失中间结果",
+      "resolution": "有限预算停止时保留原始和已完成视图，记录 exhaustedBudgets；直接调用仍可选择抛出受控错误。",
+      "path": "src/lib/guard-engine-v2/normalization.ts"
+    },
+    {
+      "id": "F03",
+      "tasks": "D12",
+      "gap": "追踪回调异常丢弃判定",
+      "resolution": "回调故障记录安全告警，不改变已经算出的执行决定。",
+      "path": "src/lib/guard-engine-v2/engine.ts"
+    },
+    {
+      "id": "F04",
+      "tasks": "D05/D09/D11",
+      "gap": "多模态文本来源被压平",
+      "resolution": "OCR、二维码、音轨、字幕、视频帧和用户输入按独立来源封装；哈希、UTF-16 范围、信任和指令权限随视图传递。",
+      "path": "src/lib/multimodal/source-content.ts"
+    },
+    {
+      "id": "F05",
+      "tasks": "D11",
+      "gap": "合并结果遗漏分支降级",
+      "resolution": "图文与时间线汇总传播每个实际检测分支的降级原因，并保留单路拦截。",
+      "path": "src/lib/media/timeline-fusion.ts"
+    },
+    {
+      "id": "F06",
+      "tasks": "D11",
+      "gap": "提取置信度未传到执行层",
+      "resolution": "传递 OCR/ASR/二维码已有置信度；低于配置下限、非有限值或越界值视为必要分析失败。",
+      "path": "src/lib/multimodal/fusion.ts"
+    },
+    {
+      "id": "F07",
+      "tasks": "D03",
+      "gap": "网关输入脱敏仍使用旧筛选",
+      "resolution": "统一使用注册的结构化实体生产者、证据角色、实体类别和合法范围，禁止候选或自称 DLP 的探测器生成变换。",
+      "path": "src/lib/gateway-runtime/input-mask.ts"
+    },
+    {
+      "id": "F08",
+      "tasks": "D01/D03",
+      "gap": "输入改写可能采用候选证据",
+      "resolution": "输入 REWRITE/SAFE_RESPONSE 模板选择只接受确认的风险观察。",
+      "path": "src/lib/gateway-runtime/input-action.ts"
+    },
+    {
+      "id": "F09",
+      "tasks": "D04/D05",
+      "gap": "关系原子忽略否定和后续有效出现",
+      "resolution": "跳过被否定的原子，同时继续寻找同分句内后续有效行为。",
+      "path": "src/lib/guard-engine-v2/rule-constraints.ts"
+    },
+    {
+      "id": "F10",
+      "tasks": "D05",
+      "gap": "近似匹配先耗尽证据容量",
+      "resolution": "容量限制只计入通过边界、关系和局部语境的命中，后续有效位置仍可命中。",
+      "path": "src/lib/guard-engine-v2/lexical-matcher.ts"
+    },
+    {
+      "id": "F11",
+      "tasks": "D04",
+      "gap": "语境名词构成宽泛豁免",
+      "resolution": "研究、医疗、法律等须结合描述或防御任务；英文语境词使用词元边界，避免 law 等子串造成豁免。",
+      "path": "src/lib/guard-engine-v2/intent-context.ts"
+    },
+    {
+      "id": "F12",
+      "tasks": "D04/D08",
+      "gap": "具体样本暴露的规则误报",
+      "resolution": "科学重复测量不再判成刷屏；验证码诈骗须有冒充/窃取等行为；输出暴力规则补词元边界，避免 injured/plank 等误命中。",
+      "path": "src/lib/guard-engine-v2/builtin-detectors.ts"
+    },
+    {
+      "id": "F13",
+      "tasks": "D08",
+      "gap": "规则迁移去重丢失行为差异",
+      "resolution": "除身份/版本字段外比较全部行为字段，保留不同方向、作用域、强制性或阈值的规则。候选现有 129 条规则。",
+      "path": "scripts/content-safety/lib/repair-candidate.ts"
+    },
+    {
+      "id": "F14",
+      "tasks": "D09",
+      "gap": "关系检测只看原文",
+      "resolution": "解码视图补做来源内关系检查；跨来源关系仍由原始来源证明，派生兄弟视图不能互相借用行为和目标。",
+      "path": "src/lib/guard-engine-v2/relation-detector.ts"
+    },
+    {
+      "id": "F15",
+      "tasks": "D12",
+      "gap": "漏斗仅在离线结果中可见",
+      "resolution": "最终判定漏斗写入现有告警记录 coverage；原文释放资格同时检查动作、降级、failMode 与证据完整性。",
+      "path": "src/lib/security-alerts/record.ts"
+    },
+    {
+      "id": "F16",
+      "tasks": "D13",
+      "gap": "晋级时没有复核当前有效门槛",
+      "resolution": "shadow/canary/activate 重新读取绑定测评并执行当前门槛；旧通过状态不能绕过新要求。",
+      "path": "src/lib/policy-bundle/service.ts"
+    },
+    {
+      "id": "F17",
+      "tasks": "D10",
+      "gap": "历史序号与当前多来源序号碰撞",
+      "resolution": "合并视图使用请求内唯一序号；原历史序号仍绑定在来源标识中，修复合法多消息会话被重复序号校验拒绝。",
+      "path": "src/lib/guard-engine-v2/session-context.ts"
+    }
+  ],
+  "G0": "PASS",
+  "G1": "FAILED",
+  "G2": "TRANSPORT_AND_EXTRACTED_MEDIA_PASS_NATIVE_SEMANTIC_QUALITY_PENDING",
+  "allTasksComplete": false,
+  "productionActivationAllowed": false,
+  "remaining": [
+    {
+      "id": "D08",
+      "needed": "Independent rule review and risk/reason alignment; candidate remains DRAFT_ONLY."
+    },
+    {
+      "id": "D11",
+      "needed": "Independent real ASR and native vision/video semantic evaluation and adversarial mixed-media corpus."
+    },
+    {
+      "id": "D14",
+      "needed": "Meet current quality gate on independent held-out data; target-hardware performance and soak still unqualified."
+    },
+    {
+      "id": "D15",
+      "needed": "Production canary and code/policy rollback acceptance after G1/G2 pass."
+    }
+  ]
+}

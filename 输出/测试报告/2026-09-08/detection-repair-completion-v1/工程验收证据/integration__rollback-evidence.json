@@ -1,0 +1,12 @@
+{
+  "status": "PASS",
+  "oldBundleId": "8adf1bc0-508a-478d-af0c-10b53dcae007",
+  "retiredTestBundleId": "3836fa22-f20a-453e-be9c-b6a3ebb959cd",
+  "signatureVerified": true,
+  "actions": [
+    "ALLOW",
+    "BLOCK"
+  ],
+  "productionAffected": false,
+  "codeRollbackTested": false
+}

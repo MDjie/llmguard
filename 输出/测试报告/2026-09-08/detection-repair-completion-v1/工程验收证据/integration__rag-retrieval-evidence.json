@@ -1,0 +1,54 @@
+{
+  "capturedAt": "2026-09-08T07:09:00.392Z",
+  "status": "PASS",
+  "isolatedDatabase": true,
+  "objectStore": "synthetic bounded HTTP object receiver",
+  "realBusinessKnowledgeBaseCertification": false,
+  "modelInvocationProven": false,
+  "results": [
+    {
+      "name": "approved scoped source is read and receives a verifiable content proof",
+      "status": "PASS"
+    },
+    {
+      "name": "principal ACL denial happens before any object-store read",
+      "status": "PASS"
+    },
+    {
+      "name": "role ACL denial happens before any object-store read",
+      "status": "PASS"
+    },
+    {
+      "name": "classification denial happens before any object-store read",
+      "status": "PASS"
+    },
+    {
+      "name": "cross-application source is excluded before retrieval",
+      "status": "PASS"
+    },
+    {
+      "name": "expired object and source are not read",
+      "status": "PASS"
+    },
+    {
+      "name": "indirect injection is rejected before approved context is returned",
+      "status": "PASS"
+    },
+    {
+      "name": "object bytes changed after verification are rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "incomplete part manifest cannot be treated as empty safe content",
+      "status": "PASS"
+    },
+    {
+      "name": "ACL revoked during object read invalidates the final proof",
+      "status": "PASS"
+    },
+    {
+      "name": "stale provenance signature cannot authorize modified ACL metadata",
+      "status": "PASS"
+    }
+  ]
+}

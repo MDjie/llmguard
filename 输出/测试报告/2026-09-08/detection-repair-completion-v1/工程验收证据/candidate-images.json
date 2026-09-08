@@ -1,0 +1,12 @@
+{
+  "app": {
+    "tag": "guardllm-main-app:detection-completion-20260908",
+    "imageId": "sha256:e19e122e90dce2a7774387e32909cd96910676b558bb5c13ace8fb847cad78c7",
+    "sourceHash": "67906ada537014b6a786df9252d5d1751001690a828688fbe4f2683ca391c103"
+  },
+  "worker": {
+    "tag": "guardllm-main-worker:detection-completion-20260908",
+    "imageId": "sha256:71d047c400c61378c32313d2641a0e3e7ec561f493b9de9406c790cdb5250092",
+    "sourceHash": "67906ada537014b6a786df9252d5d1751001690a828688fbe4f2683ca391c103"
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "kind": "architecture-isolated-function-probes",
+  "scope": "Exact AST-extracted current source functions; no DB, gateway, model or production request. Synthetic fixtures only.",
+  "head": "8cfcc9441a879346c0abe2159679a976aadab5f9",
+  "sources": [
+    {
+      "path": "src/lib/guard-engine-v2/action-constraints.ts",
+      "sha256": "4d99c01d49007f82b3f198ab3c321bf69e4caffb623d582ee4ccfd88f9d441b0",
+      "extractedSymbols": "all non-import declarations"
+    },
+    {
+      "path": "src/lib/guard-engine-v2/session-context.ts",
+      "sha256": "17f01e89957d4301fcb3dc34b1aaf988015c0a89e83f6b6f7b19839a0994ad0f",
+      "extractedSymbols": [
+        "ACTION_RANK",
+        "sessionObservation",
+        "chooseSessionDecision"
+      ]
+    },
+    {
+      "path": "src/lib/secure-memory/session-risk-state.ts",
+      "sha256": "bf296d8c9293dcc194c129b615e3ec438d2485275ea5bc009b5c837a1a0847f6",
+      "extractedSymbols": [
+        "ACTION_RANK",
+        "applySessionRiskControl"
+      ]
+    },
+    {
+      "path": "src/lib/guard-engine-v2/dag.ts",
+      "sha256": "2a7036930d55e2ab9415f7f18b83d2dd0089836f8908a782f7da526c7530c17f",
+      "extractedSymbols": [
+        "shouldRun"
+      ]
+    },
+    {
+      "path": "src/lib/guard-engine-v2/normalization.ts",
+      "sha256": "0338ec1d387c70e4481c94199efa2c714bed99b5b54394544dc253b179db79d0",
+      "extractedSymbols": "all non-import declarations"
+    }
+  ],
+  "probes": [
+    {
+      "id": "ARCH-SESSION-MERGE",
+      "sharedConstraint": "REQUIRE_REVIEW",
+      "actual": "SAFE_RESPONSE",
+      "defectReproduced": true
+    },
+    {
+      "id": "ARCH-SESSION-CONTROL",
+      "sharedConstraint": "REQUIRE_REVIEW",
+      "actual": "SAFE_RESPONSE",
+      "defectReproduced": true
+    },
+    {
+      "id": "ARCH-DAG-CANDIDATE-SKIP",
+      "parentRole": "CANDIDATE",
+      "parentScore": 0.94,
+      "blockThreshold": 0.8,
+      "actualShouldRun": false,
+      "defectReproduced": true
+    },
+    {
+      "id": "ARCH-NORMALIZATION-LIMIT",
+      "configuredMaxViews": 1,
+      "actualViewCount": 1,
+      "returnedFields": [
+        "algorithmVersion",
+        "views",
+        "totalOutputBytes",
+        "elapsedMs"
+      ],
+      "partialFieldPresent": false,
+      "defectReproduced": true
+    }
+  ]
+}

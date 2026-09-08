@@ -1,0 +1,12 @@
+{
+  "status": "PASS",
+  "checkedLocalLinks": 48,
+  "tasks": 16,
+  "dependencyGraphAcyclic": true,
+  "implementationPathsExist": true,
+  "baselineTaskCount": 360380,
+  "markdownFencesBalanced": true,
+  "newProductionTestsRun": false,
+  "reason": "Design-only delivery; isolated source function probes were executed separately.",
+  "errors": []
+}

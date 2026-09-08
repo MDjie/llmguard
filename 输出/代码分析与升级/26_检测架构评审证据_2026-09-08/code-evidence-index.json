@@ -1,0 +1,295 @@
+{
+  "reviewedHead": "8cfcc9441a879346c0abe2159679a976aadab5f9",
+  "sources": [
+    {
+      "path": "docs/upgrade/incremental-optimization-main.md",
+      "sha256": "0ab8912356a28a18b9b1ffb5ad9ef3ec472555cf2d25769622b96dc923d7c6e7",
+      "lines": 245
+    },
+    {
+      "path": "package.json",
+      "sha256": "4f5f7ee41e72a43bc52bef75ec3e477ee09bac2e321787087b1fcc060e751a51",
+      "lines": 201
+    },
+    {
+      "path": "scripts/content-safety/audit-runtime.ts",
+      "sha256": "32da3439a989e19a277c2c68b915c40c478783c65910b56d894f3014b564e2ee",
+      "lines": 51
+    },
+    {
+      "path": "scripts/content-safety/benchmark-policy.ts",
+      "sha256": "bdd688b0628afbf28b7a467af71ade76f0b3381ef0fe79abc3002c74f5cbe6b8",
+      "lines": 45
+    },
+    {
+      "path": "scripts/content-safety/prepare-financial-library.ts",
+      "sha256": "d769d67f1a0255f76a987c2247dc4fa1e7e7876392c34d1808024fb8b807eb37",
+      "lines": 7
+    },
+    {
+      "path": "src/contracts/http/multimodal-analysis.ts",
+      "sha256": "730db53915fa23f94cfd3ff972a7c03c1f9a133284ddb7deb761bb4f7fe45fc7",
+      "lines": 46
+    },
+    {
+      "path": "src/contracts/http/policy-governance.ts",
+      "sha256": "6bd1d840c049146c082e0df4884c9dd664d523aaa8e0dbeaf38fb95a796a0f80",
+      "lines": 133
+    },
+    {
+      "path": "src/lib/content-safety/prompt-injection-catalog.ts",
+      "sha256": "1ca593ef9649359351765f453f051c67383f0225fcaa07299583913f6d189d15",
+      "lines": 42
+    },
+    {
+      "path": "src/lib/context-trust/derived-envelope.ts",
+      "sha256": "344ffda01b553c31ae5e7de054b8c01f7468978a1e38e2f67f63c63c521a2382",
+      "lines": 72
+    },
+    {
+      "path": "src/lib/context-trust/envelope.ts",
+      "sha256": "0409ecac4a7fc499c8741e427f0b73b9e225bfaa0a93e8dc197c804e7897e566",
+      "lines": 215
+    },
+    {
+      "path": "src/lib/detection/safe-regex.ts",
+      "sha256": "c3c34777ae662bcf9f43e92c8f2ac79e0a40d4e1990486333e08a96a04d236f3",
+      "lines": 186
+    },
+    {
+      "path": "src/lib/dlp/entity-fusion.ts",
+      "sha256": "0c2b397a9f2a026b4ac098943e73aa8f165455f724b6c08a26981d857a534ee5",
+      "lines": 172
+    },
+    {
+      "path": "src/lib/dlp/transformation.ts",
+      "sha256": "c74ec2a24255aa55db4717427e7dd52f280020eaff8800775a2fe5f25d932e79",
+      "lines": 330
+    },
+    {
+      "path": "src/lib/gateway-runtime/publication.ts",
+      "sha256": "251b038a1d0ec663a7a949900a8c2601efa0b3ca97c21cea88f66c419f7cc051",
+      "lines": 133
+    },
+    {
+      "path": "src/lib/gateway-runtime/recheck.ts",
+      "sha256": "f062bbc6c14c9d10c265476a929337a239f31bef710c2e26e1c00732daa6cdc9",
+      "lines": 30
+    },
+    {
+      "path": "src/lib/guard-engine-v2/action-constraints.ts",
+      "sha256": "4d99c01d49007f82b3f198ab3c321bf69e4caffb623d582ee4ccfd88f9d441b0",
+      "lines": 43
+    },
+    {
+      "path": "src/lib/guard-engine-v2/aggregate.ts",
+      "sha256": "ace831fa2ec41a4d84f65dc6227565738d855a30b681af59da2205a3a8895699",
+      "lines": 170
+    },
+    {
+      "path": "src/lib/guard-engine-v2/builtin-detectors.ts",
+      "sha256": "9cca1026420c26389aa59c2a13f493379751e3a6dab97d657f0012479c314e99",
+      "lines": 624
+    },
+    {
+      "path": "src/lib/guard-engine-v2/context-projection.ts",
+      "sha256": "281bc319c8105da26cf34af29aaf38b98f243cbbb8c7741b72280cf9ccac56b0",
+      "lines": 15
+    },
+    {
+      "path": "src/lib/guard-engine-v2/dag.ts",
+      "sha256": "2a7036930d55e2ab9415f7f18b83d2dd0089836f8908a782f7da526c7530c17f",
+      "lines": 361
+    },
+    {
+      "path": "src/lib/guard-engine-v2/default-dag.ts",
+      "sha256": "2c5a695dc2fb8451686b6efddd0b44477291e99cbe90e38f2e8b2e226aee5933",
+      "lines": 224
+    },
+    {
+      "path": "src/lib/guard-engine-v2/engine.ts",
+      "sha256": "021af35ee0bf480e6fabff74e88b7c5543aeaa47bca1f51de474ab5e04b7ba25",
+      "lines": 112
+    },
+    {
+      "path": "src/lib/guard-engine-v2/evidence.ts",
+      "sha256": "e40e0f2105d1c6e366d5c91e7e2d227ea31e3f7ec2fc4183cbef35dc5cb9eabc",
+      "lines": 25
+    },
+    {
+      "path": "src/lib/guard-engine-v2/from-policy-bundle.ts",
+      "sha256": "61855b8e87542c3bf0268a9edbe87b60059cfdecc8c83eec675be6e98b3d3ac0",
+      "lines": 199
+    },
+    {
+      "path": "src/lib/guard-engine-v2/intent-context.ts",
+      "sha256": "f31426671c74391d49aab686ea51b2ed78069ec35ff1af4fc78a38ef46b7caf8",
+      "lines": 127
+    },
+    {
+      "path": "src/lib/guard-engine-v2/lexical-matcher.ts",
+      "sha256": "0f17b2dc45d0a3c2a5459b61b2d5f918e4bbc66d05055440f17f12e408f117d7",
+      "lines": 287
+    },
+    {
+      "path": "src/lib/guard-engine-v2/normalization.ts",
+      "sha256": "0338ec1d387c70e4481c94199efa2c714bed99b5b54394544dc253b179db79d0",
+      "lines": 628
+    },
+    {
+      "path": "src/lib/guard-engine-v2/observation-role.ts",
+      "sha256": "7488db750568db5129e5c6a92c0200461b6742a0c06690cb7f2c09b7c0371cd4",
+      "lines": 6
+    },
+    {
+      "path": "src/lib/guard-engine-v2/prompt-injection-signatures.ts",
+      "sha256": "d2c051b63cd8fb685d9e91a299ee3e9f114d513371dbbd3ab6c38e1196bc0c14",
+      "lines": 67
+    },
+    {
+      "path": "src/lib/guard-engine-v2/protected-context.ts",
+      "sha256": "29d1d812a8e73892961ded782d17938d20a87759887c39da48b80d32ab842a73",
+      "lines": 189
+    },
+    {
+      "path": "src/lib/guard-engine-v2/reasoning-attack-detector.ts",
+      "sha256": "bd3c530e6a5377814b2e260eb9660571375c917b79ec80e1ad8b805adf8a02c0",
+      "lines": 225
+    },
+    {
+      "path": "src/lib/guard-engine-v2/risk-registry.ts",
+      "sha256": "626ade28c6b7a3d2bd604f15920c8e79848e6c599e03d1aef6491062e6558f64",
+      "lines": 11
+    },
+    {
+      "path": "src/lib/guard-engine-v2/rule-detector.ts",
+      "sha256": "6f3418f032a915c7b05382c80079986ef08a1d537f891dd73d135d08f674892b",
+      "lines": 290
+    },
+    {
+      "path": "src/lib/guard-engine-v2/session-context.ts",
+      "sha256": "17f01e89957d4301fcb3dc34b1aaf988015c0a89e83f6b6f7b19839a0994ad0f",
+      "lines": 180
+    },
+    {
+      "path": "src/lib/guard-engine-v2/types.ts",
+      "sha256": "4e354b09bb2c9a012791854230c689db3bdca96bc100e14fab8fd9850ed59ee8",
+      "lines": 239
+    },
+    {
+      "path": "src/lib/media/timeline-fusion.ts",
+      "sha256": "c2ab75cd6a931d6464716b38eb852e4aae9f7900cc26a1141885f17b102b30e6",
+      "lines": 334
+    },
+    {
+      "path": "src/lib/media/timeline-windows.ts",
+      "sha256": "23596f61f47c958566ca515a27f3ab79de879e4811dec61001b7c987ff7ad6e9",
+      "lines": 45
+    },
+    {
+      "path": "src/lib/multimodal/coverage.ts",
+      "sha256": "f5943dbdc20704746a75131aeb4a23c5bdba2a3c49e1f747e4955774de355f57",
+      "lines": 58
+    },
+    {
+      "path": "src/lib/multimodal/fusion.ts",
+      "sha256": "9534a020162569bf126adbd459ff32c4fb4713eedb8692ac70b4fdd229238f38",
+      "lines": 299
+    },
+    {
+      "path": "src/lib/observability/metrics.ts",
+      "sha256": "a21db48379ba27bf3b01643b908f4d496ff7c31f891d84effeb706670f7fc742",
+      "lines": 448
+    },
+    {
+      "path": "src/lib/output-control/detectors.ts",
+      "sha256": "68133c45b538a394ab987938f1b7ea4cda5cad77105243cc3931bc373563ecd2",
+      "lines": 578
+    },
+    {
+      "path": "src/lib/output-control/intervention.ts",
+      "sha256": "8a00e3cff7a967d3e4ad8e6e093dc32653b96e31f390fcf20d2d5a7992bd243d",
+      "lines": 350
+    },
+    {
+      "path": "src/lib/policy-bundle/compiler.ts",
+      "sha256": "8789a201eeada360b25f5daa76df2b1c668f60fc01d8b1bdc4f93de97acdca9e",
+      "lines": 270
+    },
+    {
+      "path": "src/lib/policy-bundle/governance.ts",
+      "sha256": "686e88a32c42405b136e2e4f4cb663e034eb93c2bc9fadb70d27246a29884fbb",
+      "lines": 607
+    },
+    {
+      "path": "src/lib/policy-bundle/lifecycle.ts",
+      "sha256": "28696e616228614782565924327acc0e2289e3b0a77ba4c4f3366a3ec08169ea",
+      "lines": 127
+    },
+    {
+      "path": "src/lib/policy-bundle/readiness.ts",
+      "sha256": "5e5bc9d8a23f961e1fbcfdfb29ba56d4760995f7e92f8698f57be1b76d20797d",
+      "lines": 174
+    },
+    {
+      "path": "src/lib/policy-bundle/rollout.ts",
+      "sha256": "2d8b39d24955b70f47599d7ab8fd300ae1d1d257e7ec82708fc980ac33df8d5d",
+      "lines": 140
+    },
+    {
+      "path": "src/lib/policy-bundle/runtime.ts",
+      "sha256": "3b5282bbfdf6c758c13511999d643a980abb8b394645a8edf707edb0ef7407a1",
+      "lines": 497
+    },
+    {
+      "path": "src/lib/policy-bundle/service.ts",
+      "sha256": "fc538299209a172182557f704a251384dc5fdc007b4848bcc5b87954989241be",
+      "lines": 297
+    },
+    {
+      "path": "src/lib/policy-governance/lexicon-conversion.ts",
+      "sha256": "94a52fbdff5aa474429165ec15e378a642c25a5f326f672cb43aa6c0033b625b",
+      "lines": 134
+    },
+    {
+      "path": "src/lib/policy-governance/release-set-service.ts",
+      "sha256": "9fa38cdb26184aa633974edcaa82a66198a635ae088c436891651ce0b9638934",
+      "lines": 138
+    },
+    {
+      "path": "src/lib/secure-memory/session-risk-state.ts",
+      "sha256": "bf296d8c9293dcc194c129b615e3ec438d2485275ea5bc009b5c837a1a0847f6",
+      "lines": 349
+    },
+    {
+      "path": "src/lib/secure-memory/types.ts",
+      "sha256": "0a83713e7b8088882cedb584049639adbf76c9dcf352dc32431d2f36c7f02344",
+      "lines": 56
+    },
+    {
+      "path": "src/lib/security-alerts/record.ts",
+      "sha256": "77626360bd60fa9335bb374d4f958414d2b2e5f3fca3f372ef04de289d716316",
+      "lines": 116
+    },
+    {
+      "path": "src/lib/security-alerts/service.ts",
+      "sha256": "09734794055daff1d5838f3b20a17bf17ea3675b595474ef092e974f9bba2844",
+      "lines": 121
+    },
+    {
+      "path": "src/lib/tools/action-firewall.ts",
+      "sha256": "66b61165fdec5a20df835db08f26605a4fb7e9ebf6b52b6ca3c10be14d218d59",
+      "lines": 142
+    },
+    {
+      "path": "src/lib/tools/authority.ts",
+      "sha256": "3c2bf7f6e05f0ed735d9b956d1607d67114b5abefb3491d003ebf41641500757",
+      "lines": 45
+    },
+    {
+      "path": "tests/guardrail/output-control.test.ts",
+      "sha256": "fe2247ef8fbfe5a8d7b80f9b441c1361c8392c0bba9ca5e4fe2fa03399c813bf",
+      "lines": 194
+    }
+  ]
+}

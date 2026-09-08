@@ -1,0 +1,7 @@
+{
+  "blocked": 2,
+  "expected": 2,
+  "mode": "SOCKET_AND_FETCH_DENY",
+  "attemptedConnections": 2,
+  "externalModelCalls": 0
+}

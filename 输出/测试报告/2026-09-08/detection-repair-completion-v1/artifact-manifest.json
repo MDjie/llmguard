@@ -1,0 +1,45 @@
+{
+  "sourceHash": "67906ada537014b6a786df9252d5d1751001690a828688fbe4f2683ca391c103",
+  "policyHash": "09fa0810b0687785255d31d96870c91a909262ebe1259923e639374c5943f8ba",
+  "images": {
+    "app": {
+      "tag": "guardllm-main-app:detection-completion-20260908",
+      "imageId": "sha256:e19e122e90dce2a7774387e32909cd96910676b558bb5c13ace8fb847cad78c7",
+      "sourceHash": "67906ada537014b6a786df9252d5d1751001690a828688fbe4f2683ca391c103"
+    },
+    "worker": {
+      "tag": "guardllm-main-worker:detection-completion-20260908",
+      "imageId": "sha256:71d047c400c61378c32313d2641a0e3e7ec561f493b9de9406c790cdb5250092",
+      "sourceHash": "67906ada537014b6a786df9252d5d1751001690a828688fbe4f2683ca391c103"
+    }
+  },
+  "files": {
+    "工程验收证据/app-smoke.json": "c37ebfb5ea98a78a6120b45b29887f82b70bb80e01e9a1c653b35b70c80bef4a",
+    "工程验收证据/candidate-final__batch-fallback-summary.json": "a5c3e1a99044c5cb552774ca6e7aae573b5ccb3671a32176df520dfac748c581",
+    "工程验收证据/candidate-images.json": "ae3c32b908320c80e56114ed4db5c4434e6442b70b121850dedcd3d13ccd0a13",
+    "工程验收证据/contracts.log": "994c59aef33d12147dc40fee6cdac6bec0e217e3be65bad1d8f2e8445be6405b",
+    "工程验收证据/docker-app-build.log": "94cb19516d6872c62a1a103438730629452c5914774e6660aac709c91186dd07",
+    "工程验收证据/docker-worker-build.log": "47ab3633870716aef920b178c4cd280e84cd8f7bad0b8c8c7ad853ee96c37bc0",
+    "工程验收证据/extracted-media__verification.json": "89c7cd670ff6893ee30241ba750073809709bc3e55beedda8ff508a05521d110",
+    "工程验收证据/integration__e2e-evidence.json": "51aa0dfce25e26fcbcd63e2131358f7a0ab92c844db708aae07c0accdc158781",
+    "工程验收证据/integration__full-dag-bundle.json": "a70bb103f9f086346a597c5d03d5170d9894c64ebc3fd7de8de5d8bbb15c6303",
+    "工程验收证据/integration__http-e2e.log": "c71e96ee27b14a11a721367d7a2f21baf260050e5984346969b079258d3eaece",
+    "工程验收证据/integration__http-final.log": "2bc9ea0d40a0603a349f0bd8840c1eaafb45a0788773ab971298243a642fc99f",
+    "工程验收证据/integration__rag-retrieval-evidence.json": "cf50a484c75af8bf5bf59a62f809ee2f31ef2b462ab586b11df55bf22f360d0b",
+    "工程验收证据/integration__rollback-evidence.json": "4ecfd573e35bd097c25bdb1ca1153c92e089de976c870a61b8d0301ad9ba532e",
+    "工程验收证据/integration__tool-execution-evidence.json": "034d3c4b47fa2b97ac4130c5dd35f703da3a45c9e3964c3ae160d325bfc6db53",
+    "工程验收证据/integration__window-evidence.json": "9901e321dd77a9c8206b877dbd456ad21a39c1fb45d8be58b1ca091f66031e11",
+    "工程验收证据/lint-final.log": "f177ae44048c2a9bb23cee32dfb0ef74bc19242cef0522b3acc3def5f6b7c5a1",
+    "工程验收证据/media-transforms__verification.json": "f143549ef1df8dcfe8ada563cbafbf06d96cac8da8920585e52a3457777dca98",
+    "工程验收证据/release-effects.json": "c516749360cb6f9d173ca3a6f56be3ee6a5403e42353c08cf43b9bdace77cefd",
+    "工程验收证据/runtime-snapshot.json": "9f2077633811ba8978152be7b8df9e6d2529bad146405ab55c88edf19bcdffb0",
+    "工程验收证据/type-delivery.log": "f876ec7553e281fa587d8701697920d525b114d9d39b68dbbc592bcfec6b09ce",
+    "工程验收证据/unit-final.log": "8c5f3c67b1ce4bb3160c6ad74c3a32be68b1b7e46fbfb76d75852b6e12e780bc",
+    "工程验收证据/worker-receiver__release-effects.json": "c516749360cb6f9d173ca3a6f56be3ee6a5403e42353c08cf43b9bdace77cefd"
+  },
+  "auxiliaryScripts": {
+    "scripts/qa/analyze_detection_repair.py": "19e167729c2a5610d8427e5484ef8cece540505891fb3f5f4b6b1e37e99ac6b4",
+    "scripts/integration/check-extracted-media-detection.ts": "d589c950623f8b4514c9680e93a93ff30d7d059be86eee2f50dace9c5174ccfd",
+    "scripts/integration/check-detection-release-effects.ts": "86e0a289607a9e8f349cfe93eb528409b7fdfbd12939941946cd8e0b0754bb07"
+  }
+}

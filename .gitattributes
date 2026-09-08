@@ -12,3 +12,10 @@
 
 # This lockfile is byte-hashed by the integrated acceptance manifest.
 /pnpm-lock.yaml text eol=lf
+
+# Preserve byte-hashed detection acceptance snapshots across checkouts.
+/输出/代码分析与升级/2[6-9]_* -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+/输出/代码分析与升级/26_检测架构评审证据_2026-09-08/** -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+/输出/测试报告/2026-09-08/detection-repair-*/** -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+# Raw tool logs retain their original whitespace for checksum verification.
+/输出/测试报告/2026-09-08/detection-repair-*/工程验收证据/*.log -whitespace

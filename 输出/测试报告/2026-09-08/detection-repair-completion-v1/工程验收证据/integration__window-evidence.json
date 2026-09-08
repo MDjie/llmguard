@@ -1,0 +1,52 @@
+{
+  "schemaVersion": "1.0",
+  "runId": "88a66b44-906d-4552-b87a-3cc442e0af48",
+  "createdAt": "2026-09-08T07:06:55.554Z",
+  "environment": "isolated-local-Java-Node-PostgreSQL-mTLS-synthetic-upstream",
+  "evidenceClass": "ENGINEERING",
+  "productionQualityProven": false,
+  "passed": 8,
+  "failed": 0,
+  "results": [
+    {
+      "id": "IT-WINDOW-01",
+      "name": "real incremental release before upstream completion, contiguous durable writes and one session commit",
+      "status": "PASS"
+    },
+    {
+      "id": "IT-WINDOW-02",
+      "name": "partial termination WINDOW_BLOCK",
+      "status": "PASS"
+    },
+    {
+      "id": "IT-WINDOW-03",
+      "name": "partial termination WINDOW_MASK",
+      "status": "PASS"
+    },
+    {
+      "id": "IT-WINDOW-04",
+      "name": "partial termination WINDOW_TRUNCATED",
+      "status": "PASS"
+    },
+    {
+      "id": "IT-WINDOW-05",
+      "name": "partial termination WINDOW_TOOL",
+      "status": "PASS"
+    },
+    {
+      "id": "IT-WINDOW-06",
+      "name": "operator qualification revocation stops in-flight release",
+      "status": "PASS"
+    },
+    {
+      "id": "IT-WINDOW-08",
+      "name": "step replay, changed content, stale range, premature completion and privilege widening are rejected",
+      "status": "PASS"
+    },
+    {
+      "id": "IT-WINDOW-07",
+      "name": "client disconnect preserves partial write evidence and releases request lease",
+      "status": "PASS"
+    }
+  ]
+}

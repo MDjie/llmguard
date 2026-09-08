@@ -1,0 +1,302 @@
+$ vitest --config vitest.config.mts "--run"
+
+ RUN  v4.1.11 E:/大模型安全/大模型护栏
+
+ ✓ tests/acceptance/evidence.test.mjs (4 tests) 57ms
+ ✓ tests/acceptance/gateway-offline-bundle.test.mjs (5 tests) 69ms
+ ✓ tests/document/converter.test.ts (2 tests) 628ms
+     ✓ runs without a shell, reads bounded UTF-8 output and cleans the workspace  623ms
+ ✓ tests/evaluation/gateway-quality.test.ts (6 tests) 168ms
+ ✓ tests/guard-engine-v2/repair-candidate.test.ts (57 tests) 176ms
+ ✓ tests/acceptance/gateway-latency-join.test.mjs (4 tests) 935ms
+     ✓ rejects missing or physically impossible upstream measurements  362ms
+ ✓ tests/guardrail-automation/engineering-dataset.test.ts (3 tests) 48ms
+ ✓ tests/detection/safe-regex.test.ts (5 tests) 54ms
+ ✓ tests/evaluation/optimization-report.test.ts (4 tests) 77ms
+ ✓ tests/judge/provider-matrix.test.ts (16 tests) 99ms
+ ✓ tests/detection/judge.test.ts (8 tests) 150ms
+ ✓ tests/evaluation/dataset-workbench.test.ts (6 tests) 77ms
+ ✓ tests/guard-engine-v2/configurable-judge.test.ts (15 tests) 91ms
+ ✓ tests/evaluation/isolated-policy.test.ts (4 tests) 234ms
+ ✓ tests/media-analyzer/native-joint.test.ts (4 tests) 623ms
+     ✓ cleans up originals on malformed or substituted command output  345ms
+ ✓ tests/security/egress.test.ts (26 tests) 62ms
+ ✓ tests/guard-engine-v2/content-safety-intent.test.ts (24 tests) 84ms
+ ✓ tests/guard-engine-v2/legacy-output-policy-dag.test.ts (1 test) 87ms
+ ✓ tests/guard-engine-v2/lexical-context.test.ts (35 tests) 100ms
+ ✓ tests/guard-engine-v2/attack-taxonomy.test.ts (13 tests) 119ms
+ ✓ tests/guard-engine-v2/coverage-limits.test.ts (3 tests) 117ms
+ ✓ tests/guard-engine-v2/engine.test.ts (12 tests) 154ms
+ ✓ tests/guard-engine-v2/text-defense-evaluation.test.ts (4 tests) 203ms
+ ✓ tests/guard-engine-v2/builtin-detectors.test.ts (12 tests) 224ms
+ ✓ tests/contracts/generation-eol.test.mjs (3 tests) 2876ms
+     ✓ packages/contracts guard-v1.schema.json generates identical bytes from LF and CRLF sources  704ms
+     ✓ packages/contracts gateway-v2.schema.json generates identical bytes from LF and CRLF sources  920ms
+     ✓ packages/contracts-appliance appliance-v1.schema.json generates identical bytes from LF and CRLF sources  1250ms
+ ✓ tests/guardrail/output-control.test.ts (12 tests) 284ms
+ ✓ tests/multimodal/action-contract.test.ts (14 tests) 289ms
+ ✓ tests/guardrail/output-control-matrix.test.ts (48 tests) 400ms
+ ✓ tests/content-safety/release-set.test.ts (6 tests) 2422ms
+     ✓ round-trips the transport artifact and rejects missing/reordered/mutated shards  415ms
+     ✓ packs 10,000 synthetic terms into 20 stable shards without activation  1996ms
+ ✓ tests/content-safety/financial-library.test.ts (4 tests) 65ms
+ ✓ tests/report-repair/samples-evidence.test.ts (6 tests) 150ms
+ ✓ tests/media-analyzer/media-marking.test.ts (3 tests) 55ms
+ ✓ tests/guard-engine-v2/dag.test.ts (7 tests) 63ms
+ ✓ tests/content-safety/reviewed-conversion.test.ts (4 tests) 53ms
+ ✓ tests/gateway-runtime/settings.test.ts (2 tests) 43ms
+ ✓ tests/tokenization/coverage.test.ts (3 tests) 53ms
+ ✓ tests/report-repair/dimensions.test.ts (5 tests) 62ms
+ ✓ tests/llm/risk-detectors.test.ts (16 tests) 59ms
+ ✓ tests/policy-bundle/local-keys.test.ts (3 tests) 36ms
+ ✓ tests/guardrail-automation/whitelist-scope.test.ts (11 tests) 43ms
+ ✓ tests/acceptance/v11-readiness.test.mjs (3 tests) 315ms
+ ✓ tests/api-security/route-inventory.test.mjs (3 tests) 2816ms
+     ✓ requires every exported HTTP method to use the shared security boundary  2713ms
+ ✓ tests/conversation-archive/object-store.test.ts (3 tests) 42ms
+ ✓ tests/sdk/typescript-sdk.test.ts (4 tests) 38ms
+ ✓ tests/media-analyzer/core.test.ts (8 tests) 23ms
+ ✓ tests/guard-engine-v2/action-constraints.test.ts (51 tests) 32ms
+ ✓ tests/guard-engine-v2/policy-recipe-cache.test.ts (3 tests) 53ms
+ ✓ tests/judge/private-provider-security.test.ts (19 tests) 45ms
+ ✓ tests/security-alerts/record.test.ts (6 tests) 52ms
+ ✓ tests/multimodal/joint-evidence-judge.test.ts (7 tests) 47ms
+ ✓ tests/acceptance/appliance-plan.test.mjs (4 tests) 68ms
+ ✓ tests/guard-engine-v2/protected-context.test.ts (5 tests) 46ms
+ ✓ tests/evaluation/isolated-judge.test.ts (3 tests) 39ms
+ ✓ tests/audit/trusted-timestamp.test.ts (2 tests) 38ms
+ ✓ tests/multimodal/output-recheck.test.ts (7 tests) 27ms
+ ✓ tests/stream-gate/sse-gate.test.ts (13 tests) 93ms
+ ✓ tests/auth/auth-core.test.ts (10 tests) 1437ms
+     ✓ stores new passwords as bcrypt cost 12 and verifies them  531ms
+     ✓ UPG-IAM-001 rejects reuse of salted historical password hashes  879ms
+ ✓ tests/gateway-runtime/security.test.ts (3 tests) 35ms
+ ✓ tests/content-safety/lexicon-pipeline.test.ts (5 tests) 215ms
+ ✓ tests/guard-engine-v2/prompt-injection-bilingual.test.ts (207 tests) 1337ms
+     ✓ has 24 engineering families, balanced phrases and RE2-compatible bounded patterns  732ms
+ ✓ tests/guard-engine-v2/cache-key.test.ts (14 tests) 35ms
+ ✓ tests/appliance/bundle-rollout.test.ts (6 tests) 23ms
+ ✓ tests/detection/decision.test.ts (5 tests) 6ms
+stdout | tests/detection/dynamic-engine-behavior.test.ts > dynamic detection engine behavior > loads a policy, finds every occurrence, and returns the strictest action
+[检测引擎] 缓存已清除: 全部
+
+stdout | tests/detection/dynamic-engine-behavior.test.ts > dynamic detection engine behavior > does not match numeric identifiers inside a longer digit sequence
+[检测引擎] 缓存已清除: 全部
+
+stdout | tests/detection/dynamic-engine-behavior.test.ts > dynamic detection engine behavior > suppresses only an approved target-rule occurrence and never mandatory deny
+[检测引擎] 缓存已清除: 全部
+
+stdout | tests/detection/dynamic-engine-behavior.test.ts > dynamic detection engine behavior > suppresses only an approved target-rule occurrence and never mandatory deny
+[检测引擎] 缓存已清除: 全部
+
+stdout | tests/detection/dynamic-engine-behavior.test.ts > dynamic detection engine behavior > does not let a target exception suppress an uncovered occurrence
+[检测引擎] 缓存已清除: 全部
+
+stdout | tests/detection/dynamic-engine-behavior.test.ts > dynamic detection engine behavior > caches loaded policy configuration until explicitly cleared
+[检测引擎] 缓存已清除: 全部
+
+stdout | tests/detection/dynamic-engine-behavior.test.ts > dynamic detection engine behavior > caches loaded policy configuration until explicitly cleared
+[检测引擎] 缓存已清除: policy-dynamic
+
+stdout | tests/detection/dynamic-engine-behavior.test.ts > dynamic detection engine behavior > fails closed when a configured regular expression is unsafe
+[检测引擎] 缓存已清除: 全部
+
+ ✓ tests/security/provider-connection.test.ts (35 tests) 26ms
+ ✓ tests/detection/dynamic-engine-behavior.test.ts (6 tests) 24ms
+ ✓ tests/observability/metrics.test.ts (3 tests) 17ms
+ ✓ tests/guard-engine-v2/semantic-classifier.test.ts (4 tests) 21ms
+ ✓ tests/content-safety/lexicon-conversion.test.ts (5 tests) 21ms
+ ✓ tests/secure-memory/session-risk-state.test.ts (7 tests) 21ms
+ ✓ tests/observability/security-hardening-metrics.test.ts (2 tests) 18ms
+ ✓ tests/gateway-runtime/model-routing.test.ts (7 tests) 18ms
+ ✓ tests/observability/bounded-output-metrics.test.ts (1 test) 12ms
+ ✓ tests/acceptance/integrated-plan.test.mjs (2 tests) 118ms
+ ✓ tests/object-store/s3-presign.test.ts (1 test) 20ms
+ ✓ tests/auth/users-route.test.ts (1 test) 18ms
+ ✓ tests/api-security/body-limit.test.ts (5 tests) 48ms
+ ✓ tests/api-security/with-api-security.test.ts (14 tests) 69ms
+ ✓ tests/data-protection/lineage.test.ts (4 tests) 22ms
+ ✓ tests/policy-bundle/policy-bundle.test.ts (3 tests) 29ms
+ ✓ tests/policy-bundle/key-material.test.ts (3 tests) 29ms
+ ✓ tests/policy-bundle/governance.test.ts (7 tests) 54ms
+ ✓ tests/report-repair/routes.test.ts (4 tests) 52ms
+ ✓ tests/operations/policy-governance-validation.test.ts (4 tests) 28ms
+ ✓ tests/api-security/route-boundaries.test.ts (2 tests) 37ms
+ ✓ tests/resource-control/admission.test.ts (4 tests) 40ms
+ ✓ tests/guard-engine-v2/risk-relations.test.ts (6 tests) 21ms
+ ✓ tests/multimodal/native-gate.test.ts (8 tests) 21ms
+ ✓ tests/security/provider-routes.test.ts (4 tests) 46ms
+ ✓ tests/observability/output-control-metrics.test.ts (1 test) 18ms
+ ✓ tests/gateway-runtime/native-execution.test.ts (4 tests) 23ms
+ ✓ tests/security-scanning/scanner.test.ts (4 tests) 60ms
+ ✓ tests/resource-control/resilience.test.ts (6 tests) 29ms
+ ✓ tests/contracts/policy-threshold-roundtrip.test.ts (15 tests) 26ms
+ ✓ tests/detection/deterministic-repetition-pattern.test.ts (2 tests) 19ms
+ ✓ tests/detection/detect-route.test.ts (1 test) 41ms
+ ✓ tests/detection/auxiliary-routes.test.ts (1 test) 36ms
+ ✓ tests/api/policy-readiness-route.test.ts (2 tests) 48ms
+ ✓ tests/contracts/guard-http-contract.test.ts (3 tests) 15ms
+ ✓ tests/media/timeline-fusion.test.ts (9 tests) 209ms
+ ✓ tests/gateway-runtime/window-policy.test.ts (2 tests) 13ms
+ ✓ tests/appliance/capability-bundle.test.ts (6 tests) 16ms
+ ✓ tests/document/parser-highlighter.test.ts (9 tests) 16ms
+ ✓ tests/rag/flow.test.ts (4 tests) 177ms
+ ✓ tests/guard-engine-v2/production-path.test.ts (4 tests) 27ms
+ ✓ tests/multimodal/fusion.test.ts (9 tests) 202ms
+ ✓ tests/contracts/guard-contracts.test.mjs (7 tests) 16ms
+ ✓ tests/api/public-routes.test.ts (5 tests) 46ms
+ ✓ tests/report-repair/deployment.test.mjs (2 tests) 55ms
+ ✓ tests/contracts/appliance-contracts.test.mjs (5 tests) 15ms
+ ✓ tests/guard-engine-v2/semantic-coverage-v1.test.ts (5 tests) 17ms
+ ✓ tests/appliance/protocol-framing.test.ts (10 tests) 14ms
+ ✓ tests/appliance/inspection-fabric.test.ts (6 tests) 40ms
+ ✓ tests/evaluation/candidate-assistance.test.ts (3 tests) 22ms
+ ✓ tests/observability/gateway-runtime-metrics.test.ts (2 tests) 22ms
+ ✓ tests/multimodal/coverage-ledger.test.ts (3 tests) 14ms
+ ✓ tests/evaluation/optimization-quality.test.ts (6 tests) 16ms
+ ✓ tests/appliance/evidence-wal.test.ts (5 tests) 14ms
+ ✓ tests/appliance/virtual-lab.test.ts (5 tests) 31ms
+ ✓ tests/dlp/transformation.test.ts (5 tests) 14ms
+ ✓ tests/rag/semantic-groundedness.test.ts (4 tests) 20ms
+ ✓ tests/appliance/evidence-file-store.test.ts (4 tests) 368ms
+ ✓ tests/guard-engine-v2/conditional-refiner.test.ts (3 tests) 21ms
+ ✓ tests/deployment/production-assets.test.mjs (11 tests) 152ms
+ ✓ tests/tools/contracts.test.ts (4 tests) 14ms
+ ✓ tests/multimodal/coverage.test.ts (3 tests) 14ms
+ ✓ tests/tenancy/runtime.test.ts (1 test) 14ms
+ ✓ tests/media-analyzer/media-transform.test.ts (4 tests) 14ms
+ ✓ tests/api-security/policy-governance-routes.test.mjs (3 tests) 40ms
+ ✓ tests/multimodal/evidence-location.test.ts (2 tests) 13ms
+ ✓ tests/media-analyzer/model-adapters.test.ts (3 tests) 13ms
+ ✓ tests/acceptance/runtime-resilience.test.ts (4 tests) 15ms
+ ✓ tests/multimodal/media-evidence-views.test.ts (4 tests) 13ms
+ ✓ tests/gateway-runtime/window-proof.test.ts (4 tests) 11ms
+ ✓ tests/multimodal/media-annotations.test.ts (3 tests) 10ms
+ ✓ tests/guard-engine-v2/normalization-security.test.ts (26 tests) 7790ms
+     ✓ handles inputs beyond the engine spread-argument limit without RangeError  4209ms
+     ✓ keeps provenance valid and ordering deterministic across generated Unicode fuzz cases  3529ms
+ ✓ tests/secure-memory/request-receipt.test.ts (10 tests) 9ms
+ ✓ tests/gateway-runtime/completion-fields.test.ts (8 tests) 11ms
+ ✓ tests/observability/gateway-cache-metrics.test.ts (1 test) 16ms
+ ✓ tests/guardrail/rewrite-engine.test.ts (7 tests) 9ms
+ ✓ tests/guardrail-automation/keyword-batch-parser.test.ts (9 tests) 13ms
+ ✓ tests/api-security/content-access-contracts.test.ts (3 tests) 12ms
+ ✓ tests/resource-control/resource-control.test.ts (5 tests) 13ms
+ ✓ tests/acceptance/gateway-sse-meter.test.mjs (4 tests) 11ms
+ ✓ tests/context-trust/external-event.test.ts (3 tests) 24ms
+ ✓ tests/gateway-runtime/protocol.test.ts (3 tests) 10ms
+ ✓ tests/acceptance/gateway-performance.test.mjs (6 tests) 11ms
+ ✓ tests/appliance/fast-path-reference.test.ts (7 tests) 12ms
+ ✓ tests/operations/security-events.test.ts (5 tests) 10ms
+ ✓ tests/guard-engine-v2/architecture-invariants.test.ts (54 tests) 25ms
+ ✓ tests/api-security/release-set-routes.test.mjs (4 tests) 57ms
+ ✓ tests/evaluation/dataset-integrity.test.ts (1 test) 33ms
+ ✓ tests/media/timeline-windows.test.ts (3 tests) 10ms
+ ✓ tests/gateway-runtime/legacy-projection.test.ts (1 test) 8ms
+ ✓ tests/media-analyzer/resilience.test.ts (3 tests) 9ms
+ ✓ tests/appliance/ha-controller.test.ts (5 tests) 6ms
+ ✓ tests/appliance/system-update.test.ts (5 tests) 13ms
+stderr | tests/tenancy/credentials.test.ts > application credential pepper > uses the dedicated CREDENTIAL_PEPPER when configured
+[tenancy] CREDENTIAL_PEPPER 未配置，凭证哈希回落使用 CONTENT_HASH_KEY；建议配置独立的 CREDENTIAL_PEPPER（注意：迁移后已签发凭证将失效，需重新签发）
+
+ ✓ tests/tenancy/credentials.test.ts (4 tests) 9ms
+ ✓ tests/document/pdf-loader.test.ts (2 tests) 2849ms
+     ✓ uses the pdf-parse v2 API on demand and always releases the parser  2843ms
+ ✓ tests/acceptance/coverage-audit.test.mjs (4 tests) 8ms
+ ✓ tests/tools/execution.test.ts (4 tests) 22ms
+ ✓ tests/guardrail/pii-masker.test.ts (3 tests) 10ms
+ ✓ tests/audit/export.test.ts (6 tests) 11ms
+ ✓ tests/dlp/entity-fusion.test.ts (3 tests) 7ms
+ ✓ tests/security/database-tls.test.ts (11 tests) 9ms
+ ✓ tests/gateway-runtime/cross-language-golden.test.ts (12 tests) 10ms
+ ✓ tests/multimodal/authorized-highlight.test.ts (4 tests) 8ms
+ ✓ tests/security/provider-registry.test.ts (5 tests) 9ms
+ ✓ tests/gateway-runtime/native-content.test.ts (3 tests) 9ms
+ ✓ tests/policy-bundle/detection-capabilities.test.ts (4 tests) 9ms
+ ✓ tests/audit/reporting.test.ts (2 tests) 13ms
+ ✓ tests/appliance/guard-runtime-adapter.test.ts (5 tests) 29ms
+ ✓ tests/audit/chain.test.ts (5 tests) 10ms
+ ✓ tests/supply-chain/artifact-manifest.test.ts (3 tests) 13ms
+ ✓ tests/operations/governance-console.test.mjs (3 tests) 8ms
+ ✓ tests/security-alerts/projection-errors.test.ts (3 tests) 9ms
+ ✓ tests/appliance/pal-v2.test.ts (6 tests) 11ms
+ ✓ tests/deployment/policy-operations-governance.test.mjs (3 tests) 36ms
+ ✓ tests/gateway-runtime/console-cursor.test.ts (2 tests) 13ms
+ ✓ tests/guard-engine-v2/session-context.test.ts (4 tests) 9ms
+ ✓ tests/gateway-runtime/execution-proof.test.ts (2 tests) 8ms
+ ✓ tests/api-security/postgres-rate-limit.test.ts (4 tests) 8ms
+ ✓ tests/incidents/state-machine.test.ts (4 tests) 9ms
+ ✓ tests/performance/requirements.test.mjs (4 tests) 8ms
+ ✓ tests/deployment/policy-schema-compatibility.test.mjs (1 test) 20ms
+ ✓ tests/evaluation/metrics.test.ts (2 tests) 5ms
+ ✓ tests/dlp/entity-contract.test.ts (3 tests) 6ms
+ ✓ tests/document/upload-security.test.ts (2 tests) 8ms
+ ✓ tests/appliance/artifact-isolation.test.ts (5 tests) 13ms
+ ✓ tests/guardrail-automation/keyword-batch-api.test.ts (2 tests) 6ms
+ ✓ tests/security-alerts/candidate-text.test.ts (3 tests) 7ms
+ ✓ tests/media-analyzer/code-reader.test.ts (2 tests) 10ms
+ ✓ tests/policy-bundle/bootstrap.test.ts (3 tests) 8ms
+ ✓ tests/deployment/document-runtime-dependencies.test.mjs (2 tests) 16ms
+ ✓ tests/policy-bundle/rollout-health.test.ts (4 tests) 6ms
+ ✓ tests/release/evidence-binding.test.ts (2 tests) 8ms
+ ✓ tests/stream-gate/token-boundary.test.ts (2 tests) 9ms
+ ✓ tests/baseline/quality-baseline.test.mjs (3 tests) 5ms
+ ✓ tests/gateway-runtime/window-risk.test.ts (1 test) 6ms
+ ✓ tests/secure-memory/ledger.test.ts (3 tests) 10ms
+ ✓ tests/gateway-runtime/recheck.test.ts (2 tests) 7ms
+ ✓ tests/conversation-archive/integrity.test.ts (4 tests) 6ms
+ ✓ tests/conversation-archive/native-output.test.ts (3 tests) 7ms
+ ✓ tests/content-marking/media-pipeline.test.ts (1 test) 6ms
+ ✓ tests/product-feature-proxy.test.ts (9 tests) 26ms
+ ✓ tests/api-security/request-context.test.ts (9 tests) 6ms
+ ✓ tests/guardrail/template-runtime.test.ts (4 tests) 9ms
+ ✓ tests/baseline/java-gateway-structure.test.mjs (2 tests) 96ms
+ ✓ tests/media/sampling-plan.test.ts (2 tests) 6ms
+ ✓ tests/gateway-runtime/bounded-cache.test.ts (2 tests) 7ms
+ ✓ tests/observability/logger.test.ts (2 tests) 7ms
+ ✓ tests/media-analyzer/subtitles.test.ts (2 tests) 6ms
+ ✓ tests/gateway-runtime/onboarding-state.test.ts (2 tests) 5ms
+ ✓ tests/gateway-routing/state-machine.test.ts (3 tests) 8ms
+ ✓ tests/auth/cookies.test.ts (4 tests) 5ms
+ ✓ tests/deployment/output-control-deployment.test.mjs (3 tests) 15ms
+ ✓ tests/platform-adapters/inference.test.ts (2 tests) 6ms
+ ✓ tests/policy-bundle/release-console.test.mjs (3 tests) 6ms
+ ✓ tests/policy-bundle/integrity-events.test.ts (3 tests) 9ms
+ ✓ tests/incidents/console-structure.test.mjs (4 tests) 6ms
+ ✓ tests/security/provider-types.test.ts (4 tests) 8ms
+ ✓ tests/security/secrets.test.ts (2 tests) 7ms
+ ✓ tests/appliance/pal-hal.test.ts (3 tests) 10ms
+ ✓ tests/policy-bundle/runtime-error.test.ts (2 tests) 6ms
+ ✓ tests/deployment/toolchain-fallback.test.mjs (2 tests) 19ms
+ ✓ tests/product-features.test.ts (3 tests) 5ms
+ ✓ tests/context-trust/envelope.test.ts (5 tests) 13ms
+ ✓ tests/guard-engine-v2/v2-compat.test.ts (2 tests) 9ms
+ ✓ tests/data-protection/retention.test.ts (2 tests) 6ms
+ ✓ tests/context-trust/derived-envelope.test.ts (2 tests) 7ms
+ ✓ tests/detection/no-policy.test.ts (1 test) 7ms
+ ✓ tests/gateway-runtime/processing-context.test.ts (2 tests) 14ms
+ ✓ tests/tools/action-firewall.test.ts (4 tests) 12ms
+ ✓ tests/tools/policy.test.ts (3 tests) 17ms
+ ✓ tests/content-marking/mark.test.ts (4 tests) 13ms
+ ✓ tests/artifacts/magic.test.ts (8 tests) 6ms
+ ✓ tests/policy-bundle/readiness.test.ts (2 tests) 6ms
+ ✓ tests/data-protection/db-compatibility.test.ts (2 tests) 5ms
+ ✓ tests/operations/content-access-projection.test.ts (2 tests) 7ms
+ ✓ tests/evaluation/classification-metrics.test.ts (2 tests) 6ms
+ ✓ tests/artifacts/security-gate.test.ts (2 tests) 5ms
+ ✓ tests/policy-bundle/lifecycle.test.ts (3 tests) 4ms
+ ✓ tests/policy-bundle/shadow-comparison.test.ts (1 test) 3ms
+ ✓ tests/data-catalog/policy.test.ts (3 tests) 3ms
+ ✓ tests/data-protection/export-approval.test.ts (2 tests) 3ms
+ ✓ tests/detection/v2-compatibility-map.test.ts (2 tests) 4ms
+ ✓ tests/guard-jobs/callback.test.ts (1 test) 5ms
+ ✓ tests/rag/groundedness.test.ts (3 tests) 5ms
+ ✓ tests/multimodal/detection-policy.test.ts (2 tests) 3ms
+ ✓ tests/guard-jobs/cancellation-contract.test.ts (1 test) 2ms
+ ✓ tests/multimodal/view-plan.test.ts (1 test) 3ms
+
+ Test Files  250 passed (250)
+      Tests  1633 passed (1633)
+   Start at  13:48:54
+   Duration  16.82s (transform 59.34s, setup 0ms, import 337.78s, tests 33.21s, environment 34ms)
+

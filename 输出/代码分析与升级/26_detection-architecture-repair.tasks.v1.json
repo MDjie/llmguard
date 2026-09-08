@@ -1,0 +1,875 @@
+{
+  "schemaVersion": "1.0",
+  "kind": "detection-architecture-repair-plan",
+  "date": "2026-09-08",
+  "plan": "26_大模型护栏检测架构深度评审与可执行修复方案_V1.0_2026-09-08.md",
+  "branch": "main",
+  "reviewedHead": "8cfcc9441a879346c0abe2159679a976aadab5f9",
+  "baseline": {
+    "testedCommit": "db4a31b0037d4c1a1646cd32421bac1434a957da",
+    "tasks": 360380,
+    "batchSizes": [
+      55053,
+      64268,
+      241059
+    ],
+    "policyGeneration": 3,
+    "policyDag": "guard-default-dag-2",
+    "rules": 81,
+    "counterfactualRecords": 12815,
+    "productionEffectNotRerunForCurrentHead": true
+  },
+  "scope": {
+    "focus": [
+      "detection architecture",
+      "detection methods",
+      "pipeline",
+      "engine consistency",
+      "risk evidence",
+      "actual enforcement"
+    ],
+    "exclude": [
+      "judge-model changes",
+      "provider changes",
+      "new neural classifier training",
+      "rebuilding archive/alert platform"
+    ],
+    "productionMutationAuthorizedByThisDocument": false,
+    "preserveExistingWorkspaceChanges": true,
+    "packageManager": "pnpm",
+    "defaultExecution": "sequential; no automatic agent delegation"
+  },
+  "gates": {
+    "G0": "All deterministic defect and safety-invariant regressions pass",
+    "G1": "Existing effective/approved quality gate plus per-domain and reason-alignment evidence; independent holdout required",
+    "G2": "Required transport, release, tool and modality effects actually verified",
+    "sourceDefaultReleaseGateOnly": {
+      "minCases": 2000,
+      "minAccuracyPercent": 95,
+      "minRecallPercent": 95,
+      "maxFprPercent": 1,
+      "maxFnrPercent": 5
+    },
+    "readEffectiveEnvironmentAtExecution": true,
+    "neverLowerGateToPublish": true,
+    "insufficientQualityOutcome": "Keep candidate unpublished and report explicit gaps; do not synthesize approval evidence"
+  },
+  "tasks": [
+    {
+      "id": "D00",
+      "title": "固定基线和威胁/数据矩阵",
+      "priority": "P0",
+      "dependsOnEngineering": [],
+      "estimatedEngineerDays": {
+        "min": 1,
+        "max": 2
+      },
+      "existingImplementationPaths": [
+        "docs/upgrade/incremental-optimization-main.md",
+        "scripts/content-safety/audit-runtime.ts"
+      ],
+      "newFiles": "Only add the minimal helpers/contracts/tests required by the design; determine names during implementation.",
+      "implementationSteps": [
+        "冻结代码、运行镜像、签名载荷、门槛、数据及标签摘要",
+        "明确风险域/来源/方向/模态/实际效果映射；保留未标注和错误标签状态"
+      ],
+      "acceptance": [
+        "旧回放与原结果匹配",
+        "代码能力和生效包分别列明",
+        "记录当前未提交差异，不覆盖既有修改"
+      ],
+      "existingTestsToExtend": [],
+      "engineeringStatus": "PASS",
+      "qualityStatus": "G0_VALIDATED_ONLY",
+      "deploymentStatus": "NOT_DEPLOYED",
+      "evidence": [
+        "输出/测试报告/2026-09-08/detection-repair-v1/paired-analysis.json",
+        "输出/测试报告/2026-09-08/detection-repair-v1/工程验收证据",
+        "输出/代码分析与升级/28_检测架构增量修复执行与回归报告_2026-09-08.md",
+        "输出/代码分析与升级/29_检测架构逐项复核与补修验收报告_2026-09-08.md",
+        "输出/测试报告/2026-09-08/detection-repair-completion-v1/repair-audit.json"
+      ],
+      "executionNotes": "代码、镜像、签名载荷、45 文件的数据清单及威胁矩阵已冻结；记录并保留其他工作区修改。",
+      "completionAudit": {
+        "date": "2026-09-08",
+        "engineeringConclusion": "工程通过",
+        "remainingAcceptance": "基线、工作区、策略、代码与数据身份可追溯",
+        "sourceHash": "67906ada537014b6a786df9252d5d1751001690a828688fbe4f2683ca391c103",
+        "report": "输出/代码分析与升级/29_检测架构逐项复核与补修验收报告_2026-09-08.md"
+      }
+    },
+    {
+      "id": "D01",
+      "title": "统一证据角色与跨轮动作约束",
+      "priority": "P0",
+      "dependsOnEngineering": [
+        "D00"
+      ],
+      "estimatedEngineerDays": {
+        "min": 2,
+        "max": 3
+      },
+      "existingImplementationPaths": [
+        "src/lib/guard-engine-v2/aggregate.ts",
+        "src/lib/guard-engine-v2/observation-role.ts",
+        "src/lib/guard-engine-v2/action-constraints.ts",
+        "src/lib/guard-engine-v2/session-context.ts",
+        "src/lib/secure-memory/session-risk-state.ts"
+      ],
+      "newFiles": "Only add the minimal helpers/contracts/tests required by the design; determine names during implementation.",
+      "implementationSteps": [
+        "全路径复用动作约束，当前/历史证据合并而非只选择一项",
+        "定义 v1/v2 显式角色兼容表；不批量启用 v2"
+      ],
+      "acceptance": [
+        "A01/A02 不再清除审核",
+        "所有动作对顺序不影响约束",
+        "历史内容不得作为当前变换/释放对象"
+      ],
+      "existingTestsToExtend": [
+        "tests/guard-engine-v2/session-context.test.ts"
+      ],
+      "engineeringStatus": "PASS",
+      "qualityStatus": "G0_VALIDATED_ONLY",
+      "deploymentStatus": "NOT_DEPLOYED",
+      "evidence": [
+        "输出/测试报告/2026-09-08/detection-repair-v1/paired-analysis.json",
+        "输出/测试报告/2026-09-08/detection-repair-v1/工程验收证据",
+        "输出/代码分析与升级/28_检测架构增量修复执行与回归报告_2026-09-08.md",
+        "输出/代码分析与升级/29_检测架构逐项复核与补修验收报告_2026-09-08.md",
+        "输出/测试报告/2026-09-08/detection-repair-completion-v1/repair-audit.json"
+      ],
+      "executionNotes": "候选/确认/硬拒绝角色统一；当前与历史合并证据和动作约束，历史变换文本与历史坐标不释放。",
+      "completionAudit": {
+        "date": "2026-09-08",
+        "engineeringConclusion": "工程通过",
+        "remainingAcceptance": "角色、跨轮动作约束已回归",
+        "sourceHash": "67906ada537014b6a786df9252d5d1751001690a828688fbe4f2683ca391c103",
+        "report": "输出/代码分析与升级/29_检测架构逐项复核与补修验收报告_2026-09-08.md"
+      }
+    },
+    {
+      "id": "D02",
+      "title": "派生输出封装与复检绑定",
+      "priority": "P0",
+      "dependsOnEngineering": [
+        "D00"
+      ],
+      "estimatedEngineerDays": {
+        "min": 1,
+        "max": 2
+      },
+      "existingImplementationPaths": [
+        "src/lib/output-control/intervention.ts",
+        "src/lib/context-trust/derived-envelope.ts",
+        "src/lib/gateway-runtime/recheck.ts"
+      ],
+      "newFiles": "Only add the minimal helpers/contracts/tests required by the design; determine names during implementation.",
+      "implementationSteps": [
+        "派生内容重建摘要、范围、多父来源与最保守权限",
+        "保持策略、截止时间和实际释放对象一致"
+      ],
+      "acceptance": [
+        "等长和变长输出复检成功",
+        "不再出现旧封装 hash/bounds 故障",
+        "跨范围、过期及篡改内容仍拒绝"
+      ],
+      "existingTestsToExtend": [
+        "tests/context-trust/derived-envelope.test.ts",
+        "tests/guardrail/output-control.test.ts"
+      ],
+      "engineeringStatus": "PASS",
+      "qualityStatus": "G0_VALIDATED_ONLY",
+      "deploymentStatus": "NOT_DEPLOYED",
+      "evidence": [
+        "输出/测试报告/2026-09-08/detection-repair-v1/paired-analysis.json",
+        "输出/测试报告/2026-09-08/detection-repair-v1/工程验收证据",
+        "输出/代码分析与升级/28_检测架构增量修复执行与回归报告_2026-09-08.md",
+        "输出/代码分析与升级/29_检测架构逐项复核与补修验收报告_2026-09-08.md",
+        "输出/测试报告/2026-09-08/detection-repair-completion-v1/repair-audit.json"
+      ],
+      "executionNotes": "输出变换后建立新来源摘要与父谱系；复检不携带失效的原工具来源引用，原动作授权仍校验。",
+      "completionAudit": {
+        "date": "2026-09-08",
+        "engineeringConclusion": "工程通过",
+        "remainingAcceptance": "派生封装及复检绑定回归通过",
+        "sourceHash": "67906ada537014b6a786df9252d5d1751001690a828688fbe4f2683ca391c103",
+        "report": "输出/代码分析与升级/29_检测架构逐项复核与补修验收报告_2026-09-08.md"
+      }
+    },
+    {
+      "id": "D03",
+      "title": "输出实体与变换闭环",
+      "priority": "P0",
+      "dependsOnEngineering": [
+        "D02"
+      ],
+      "estimatedEngineerDays": {
+        "min": 2,
+        "max": 4
+      },
+      "existingImplementationPaths": [
+        "src/lib/output-control/detectors.ts",
+        "src/lib/output-control/intervention.ts",
+        "src/lib/dlp/entity-fusion.ts",
+        "src/lib/dlp/transformation.ts",
+        "src/lib/guard-engine-v2/builtin-detectors.ts"
+      ],
+      "newFiles": "Only add the minimal helpers/contracts/tests required by the design; determine names during implementation.",
+      "implementationSteps": [
+        "类型实体与格式校验统一",
+        "审计旧数字规则和掩码跳过路径，逐条裁决139个旧故障",
+        "首版保持一次变换加一次复检"
+      ],
+      "acceptance": [
+        "真实实体正确变换且原文未写出",
+        "重复变换幂等",
+        "残留风险与故障分开；不强制全部转ALLOW"
+      ],
+      "existingTestsToExtend": [
+        "tests/guardrail/output-control-matrix.test.ts"
+      ],
+      "engineeringStatus": "PASS",
+      "qualityStatus": "G0_VALIDATED_ONLY",
+      "deploymentStatus": "NOT_DEPLOYED",
+      "evidence": [
+        "输出/测试报告/2026-09-08/detection-repair-v1/paired-analysis.json",
+        "输出/测试报告/2026-09-08/detection-repair-v1/工程验收证据",
+        "输出/代码分析与升级/28_检测架构增量修复执行与回归报告_2026-09-08.md",
+        "输出/代码分析与升级/29_检测架构逐项复核与补修验收报告_2026-09-08.md",
+        "输出/测试报告/2026-09-08/detection-repair-completion-v1/repair-audit.json"
+      ],
+      "executionNotes": "引入有注册生产者的类型化 DLP 实体、范围校验及故障分类；139 条旧故障候选回放为零故障。",
+      "completionAudit": {
+        "date": "2026-09-08",
+        "engineeringConclusion": "工程通过",
+        "remainingAcceptance": "输入/输出变换与真实接收效果通过",
+        "sourceHash": "67906ada537014b6a786df9252d5d1751001690a828688fbe4f2683ca391c103",
+        "report": "输出/代码分析与升级/29_检测架构逐项复核与补修验收报告_2026-09-08.md"
+      }
+    },
+    {
+      "id": "D04",
+      "title": "局部语境与引用/否定解析",
+      "priority": "P1",
+      "dependsOnEngineering": [
+        "D00"
+      ],
+      "estimatedEngineerDays": {
+        "min": 2,
+        "max": 4
+      },
+      "existingImplementationPaths": [
+        "src/lib/guard-engine-v2/intent-context.ts",
+        "src/lib/guard-engine-v2/prompt-injection-signatures.ts",
+        "src/lib/guard-engine-v2/rule-detector.ts"
+      ],
+      "newFiles": "Only add the minimal helpers/contracts/tests required by the design; determine names during implementation.",
+      "implementationSteps": [
+        "配对引用、分句与来源边界解析",
+        "危险行为与研究/新闻包装分离，记录被抑制occurrence"
+      ],
+      "acceptance": [
+        "研究包装危险请求仍识别",
+        "预防解释和局部否定不误杀",
+        "两个引用之间的关键词不误判引用"
+      ],
+      "existingTestsToExtend": [
+        "tests/guard-engine-v2/lexical-context.test.ts"
+      ],
+      "engineeringStatus": "PASS",
+      "qualityStatus": "G0_VALIDATED_ONLY",
+      "deploymentStatus": "NOT_DEPLOYED",
+      "evidence": [
+        "输出/测试报告/2026-09-08/detection-repair-v1/paired-analysis.json",
+        "输出/测试报告/2026-09-08/detection-repair-v1/工程验收证据",
+        "输出/代码分析与升级/28_检测架构增量修复执行与回归报告_2026-09-08.md",
+        "输出/代码分析与升级/29_检测架构逐项复核与补修验收报告_2026-09-08.md",
+        "输出/测试报告/2026-09-08/detection-repair-completion-v1/repair-audit.json"
+      ],
+      "executionNotes": "按每次命中及来源局部解释引号、否定、预防、研究和执行意图；不再用整段安全词统一豁免。",
+      "completionAudit": {
+        "date": "2026-09-08",
+        "engineeringConclusion": "工程通过；质量未认证",
+        "remainingAcceptance": "局部语境修复通过工程回归；复杂语义仍受 G1 约束",
+        "sourceHash": "67906ada537014b6a786df9252d5d1751001690a828688fbe4f2683ca391c103",
+        "report": "输出/代码分析与升级/29_检测架构逐项复核与补修验收报告_2026-09-08.md"
+      }
+    },
+    {
+      "id": "D05",
+      "title": "规则边界与有界组合表达",
+      "priority": "P1",
+      "dependsOnEngineering": [
+        "D04"
+      ],
+      "estimatedEngineerDays": {
+        "min": 3,
+        "max": 5
+      },
+      "existingImplementationPaths": [
+        "src/lib/guard-engine-v2/types.ts",
+        "src/lib/guard-engine-v2/lexical-matcher.ts",
+        "src/lib/guard-engine-v2/rule-detector.ts",
+        "src/lib/policy-bundle/compiler.ts",
+        "src/lib/policy-bundle/runtime.ts",
+        "src/lib/policy-governance/lexicon-conversion.ts",
+        "src/contracts/http/policy-governance.ts"
+      ],
+      "newFiles": "Only add the minimal helpers/contracts/tests required by the design; determine names during implementation.",
+      "implementationSteps": [
+        "可选边界和关系约束贯通规则治理与运行校验",
+        "复用RE2和Unicode边界，旧字段缺省兼容",
+        "持久化需求确定后使用当时下一迁移号"
+      ],
+      "acceptance": [
+        "DAN 碰撞消除且真实意图组合仍检出",
+        "中文contains不回退",
+        "未经升级的引擎不能接不支持载荷"
+      ],
+      "existingTestsToExtend": [],
+      "engineeringStatus": "PASS",
+      "qualityStatus": "G0_VALIDATED_ONLY",
+      "deploymentStatus": "NOT_DEPLOYED",
+      "evidence": [
+        "输出/测试报告/2026-09-08/detection-repair-v1/paired-analysis.json",
+        "输出/测试报告/2026-09-08/detection-repair-v1/工程验收证据",
+        "输出/代码分析与升级/28_检测架构增量修复执行与回归报告_2026-09-08.md",
+        "输出/代码分析与升级/29_检测架构逐项复核与补修验收报告_2026-09-08.md",
+        "输出/测试报告/2026-09-08/detection-repair-completion-v1/repair-audit.json"
+      ],
+      "executionNotes": "Unicode 词边界、受限复合规则、规范化方式校验与治理导入贯通；规则命中数量在上下文筛选后限额。",
+      "completionAudit": {
+        "date": "2026-09-08",
+        "engineeringConclusion": "工程通过",
+        "remainingAcceptance": "边界、关系、容量和作用域行为已回归",
+        "sourceHash": "67906ada537014b6a786df9252d5d1751001690a828688fbe4f2683ca391c103",
+        "report": "输出/代码分析与升级/29_检测架构逐项复核与补修验收报告_2026-09-08.md"
+      }
+    },
+    {
+      "id": "D06",
+      "title": "规范化覆盖与来源映射",
+      "priority": "P0",
+      "dependsOnEngineering": [
+        "D00"
+      ],
+      "estimatedEngineerDays": {
+        "min": 2,
+        "max": 3
+      },
+      "existingImplementationPaths": [
+        "src/lib/guard-engine-v2/normalization.ts",
+        "src/lib/guard-engine-v2/engine.ts",
+        "src/lib/guard-engine-v2/evidence.ts"
+      ],
+      "newFiles": "Only add the minimal helpers/contracts/tests required by the design; determine names during implementation.",
+      "implementationSteps": [
+        "完整返回规范化覆盖、停止原因与预算",
+        "按来源分段和预算优先级建立视图，原文总是扫描"
+      ],
+      "acceptance": [
+        "A04 截断可观测",
+        "UTF-16/组合字符/编码范围正确",
+        "超预算不声明完整且不无界重试"
+      ],
+      "existingTestsToExtend": [],
+      "engineeringStatus": "PASS",
+      "qualityStatus": "G0_VALIDATED_ONLY",
+      "deploymentStatus": "NOT_DEPLOYED",
+      "evidence": [
+        "输出/测试报告/2026-09-08/detection-repair-v1/paired-analysis.json",
+        "输出/测试报告/2026-09-08/detection-repair-v1/工程验收证据",
+        "输出/代码分析与升级/28_检测架构增量修复执行与回归报告_2026-09-08.md",
+        "输出/代码分析与升级/29_检测架构逐项复核与补修验收报告_2026-09-08.md",
+        "输出/测试报告/2026-09-08/detection-repair-completion-v1/repair-audit.json"
+      ],
+      "executionNotes": "按来源分段规范化并显式返回覆盖与停止原因；保留跨片段原文中的签名硬拒绝；预算不放宽。",
+      "completionAudit": {
+        "date": "2026-09-08",
+        "engineeringConclusion": "工程通过",
+        "remainingAcceptance": "两条不完整覆盖均 fail-closed；预算故障不记 TP",
+        "sourceHash": "67906ada537014b6a786df9252d5d1751001690a828688fbe4f2683ca391c103",
+        "report": "输出/代码分析与升级/29_检测架构逐项复核与补修验收报告_2026-09-08.md"
+      }
+    },
+    {
+      "id": "D07",
+      "title": "DAG必要控制与终止语义",
+      "priority": "P0",
+      "dependsOnEngineering": [
+        "D01",
+        "D06"
+      ],
+      "estimatedEngineerDays": {
+        "min": 2,
+        "max": 3
+      },
+      "existingImplementationPaths": [
+        "src/lib/guard-engine-v2/dag.ts",
+        "src/lib/guard-engine-v2/default-dag.ts",
+        "src/lib/guard-engine-v2/aggregate.ts",
+        "src/lib/guard-engine-v2/types.ts",
+        "src/lib/guard-engine-v2/from-policy-bundle.ts"
+      ],
+      "newFiles": "Only add the minimal helpers/contracts/tests required by the design; determine names during implementation.",
+      "implementationSteps": [
+        "抽取共享单证据约束解析",
+        "显式风险域/方向/必要控制/跳过语义及预算保障"
+      ],
+      "acceptance": [
+        "A03 候选不造成终止短路",
+        "MASK高分不跳过必要出口检测",
+        "真正终止的跳过有原因和覆盖说明"
+      ],
+      "existingTestsToExtend": [],
+      "engineeringStatus": "PASS",
+      "qualityStatus": "G0_VALIDATED_ONLY",
+      "deploymentStatus": "NOT_DEPLOYED",
+      "evidence": [
+        "输出/测试报告/2026-09-08/detection-repair-v1/paired-analysis.json",
+        "输出/测试报告/2026-09-08/detection-repair-v1/工程验收证据",
+        "输出/代码分析与升级/28_检测架构增量修复执行与回归报告_2026-09-08.md",
+        "输出/代码分析与升级/29_检测架构逐项复核与补修验收报告_2026-09-08.md",
+        "输出/测试报告/2026-09-08/detection-repair-completion-v1/repair-audit.json"
+      ],
+      "executionNotes": "必要检测控制不可条件跳过，预留预算，终止判定与最终动作一致，变换类命中不等同最终 BLOCK。",
+      "completionAudit": {
+        "date": "2026-09-08",
+        "engineeringConclusion": "工程通过",
+        "remainingAcceptance": "必要控制、动作约束和终止行为已验证",
+        "sourceHash": "67906ada537014b6a786df9252d5d1751001690a828688fbe4f2683ca391c103",
+        "report": "输出/代码分析与升级/29_检测架构逐项复核与补修验收报告_2026-09-08.md"
+      }
+    },
+    {
+      "id": "D08",
+      "title": "分域中英与金融规则包",
+      "priority": "P1",
+      "dependsOnEngineering": [
+        "D04",
+        "D05"
+      ],
+      "estimatedEngineerDays": {
+        "min": 4,
+        "max": 7
+      },
+      "existingImplementationPaths": [
+        "src/lib/content-safety/prompt-injection-catalog.ts",
+        "src/lib/guard-engine-v2/risk-registry.ts",
+        "src/lib/guard-engine-v2/builtin-detectors.ts",
+        "scripts/content-safety/prepare-financial-library.ts",
+        "data/content-safety"
+      ],
+      "newFiles": "Only add the minimal helpers/contracts/tests required by the design; determine names during implementation.",
+      "implementationSteps": [
+        "审核81条规则及候选库有效性",
+        "每规则建立正例/近邻负例/语境/编码/方向和范围",
+        "开发资料和独立质量留出分离"
+      ],
+      "acceptance": [
+        "来源、审核、版本齐全",
+        "逐风险族与原因对齐指标真实",
+        "未达门禁不激活"
+      ],
+      "existingTestsToExtend": [],
+      "engineeringStatus": "OFFLINE_PASS",
+      "qualityStatus": "INDEPENDENT_QUALITY_NOT_ACCEPTED",
+      "deploymentStatus": "NOT_DEPLOYED",
+      "evidence": [
+        "输出/测试报告/2026-09-08/detection-repair-v1/paired-analysis.json",
+        "输出/测试报告/2026-09-08/detection-repair-v1/工程验收证据",
+        "输出/代码分析与升级/28_检测架构增量修复执行与回归报告_2026-09-08.md",
+        "输出/代码分析与升级/29_检测架构逐项复核与补修验收报告_2026-09-08.md",
+        "输出/测试报告/2026-09-08/detection-repair-completion-v1/repair-audit.json"
+      ],
+      "executionNotes": "完成 81 条旧规则的自动审计迁移和 56 条候选规则；正反例通过，独立金融专业审阅和开放域质量未通过。",
+      "completionAudit": {
+        "date": "2026-09-08",
+        "engineeringConclusion": "未完成质量验收",
+        "remainingAcceptance": "56 条新词条及迁移规则仍需独立审核、风险域/理由对齐和质量达标",
+        "sourceHash": "67906ada537014b6a786df9252d5d1751001690a828688fbe4f2683ca391c103",
+        "report": "输出/代码分析与升级/29_检测架构逐项复核与补修验收报告_2026-09-08.md"
+      }
+    },
+    {
+      "id": "D09",
+      "title": "来源感知有限关系检测",
+      "priority": "P1",
+      "dependsOnEngineering": [
+        "D01",
+        "D05",
+        "D07"
+      ],
+      "estimatedEngineerDays": {
+        "min": 3,
+        "max": 5
+      },
+      "existingImplementationPaths": [
+        "src/lib/guard-engine-v2/prompt-injection-signatures.ts",
+        "src/lib/context-trust",
+        "src/lib/rag",
+        "src/lib/tools/action-firewall.ts",
+        "src/lib/tools/authority.ts"
+      ],
+      "newFiles": "Only add the minimal helpers/contracts/tests required by the design; determine names during implementation.",
+      "implementationSteps": [
+        "拟新增有限关系计算模块，复用来源/授权/风险标签",
+        "以行为、目标与证据关系确认注入；不建通用图平台"
+      ],
+      "acceptance": [
+        "无关片段不组合成攻击",
+        "明确越界关系能追溯",
+        "漏掉文本关键词也不能越权调用工具"
+      ],
+      "existingTestsToExtend": [],
+      "engineeringStatus": "PASS",
+      "qualityStatus": "G0_VALIDATED_ONLY",
+      "deploymentStatus": "NOT_DEPLOYED",
+      "evidence": [
+        "输出/测试报告/2026-09-08/detection-repair-v1/paired-analysis.json",
+        "输出/测试报告/2026-09-08/detection-repair-v1/工程验收证据",
+        "输出/代码分析与升级/28_检测架构增量修复执行与回归报告_2026-09-08.md",
+        "输出/代码分析与升级/29_检测架构逐项复核与补修验收报告_2026-09-08.md",
+        "输出/测试报告/2026-09-08/detection-repair-completion-v1/repair-audit.json"
+      ],
+      "executionNotes": "来源—行为—受保护目标的有界关系检测接入执行图；明确指代可追溯，工具权限与副作用仍独立强制校验。",
+      "completionAudit": {
+        "date": "2026-09-08",
+        "engineeringConclusion": "工程通过；质量未认证",
+        "remainingAcceptance": "来源内/跨来源/解码关系与真实工具权限检查通过",
+        "sourceHash": "67906ada537014b6a786df9252d5d1751001690a828688fbe4f2683ca391c103",
+        "report": "输出/代码分析与升级/29_检测架构逐项复核与补修验收报告_2026-09-08.md"
+      }
+    },
+    {
+      "id": "D10",
+      "title": "跨轮关系与状态误锁控制",
+      "priority": "P1",
+      "dependsOnEngineering": [
+        "D01",
+        "D09"
+      ],
+      "estimatedEngineerDays": {
+        "min": 2,
+        "max": 4
+      },
+      "existingImplementationPaths": [
+        "src/lib/secure-memory/session-risk-state.ts",
+        "src/lib/secure-memory/types.ts",
+        "src/lib/guard-engine-v2/session-context.ts",
+        "src/lib/guard-engine-v2/context-projection.ts"
+      ],
+      "newFiles": "Only add the minimal helpers/contracts/tests required by the design; determine names during implementation.",
+      "implementationSteps": [
+        "意图节点关联目标/操作/来源",
+        "区分故障处置和恶意行为，复用衰减与幂等"
+      ],
+      "acceptance": [
+        "同目标递进攻击与普通跨主题讨论区分",
+        "故障不变成恶意历史",
+        "并发重放和隔离不退化"
+      ],
+      "existingTestsToExtend": [],
+      "engineeringStatus": "PASS",
+      "qualityStatus": "G0_VALIDATED_ONLY",
+      "deploymentStatus": "NOT_DEPLOYED",
+      "evidence": [
+        "输出/测试报告/2026-09-08/detection-repair-v1/paired-analysis.json",
+        "输出/测试报告/2026-09-08/detection-repair-v1/工程验收证据",
+        "输出/代码分析与升级/28_检测架构增量修复执行与回归报告_2026-09-08.md",
+        "输出/代码分析与升级/29_检测架构逐项复核与补修验收报告_2026-09-08.md",
+        "输出/测试报告/2026-09-08/detection-repair-completion-v1/repair-audit.json"
+      ],
+      "executionNotes": "会话跨轮链路绑定租户/应用/会话及目标；故障与攻击行为分账；无关阶段词和超时不累积成恶意锁定。",
+      "completionAudit": {
+        "date": "2026-09-08",
+        "engineeringConclusion": "工程通过",
+        "remainingAcceptance": "同目标状态、故障隔离、并发与历史序号回归通过",
+        "sourceHash": "67906ada537014b6a786df9252d5d1751001690a828688fbe4f2683ca391c103",
+        "report": "输出/代码分析与升级/29_检测架构逐项复核与补修验收报告_2026-09-08.md"
+      }
+    },
+    {
+      "id": "D11",
+      "title": "多模态混合关系与覆盖",
+      "priority": "P2",
+      "dependsOnEngineering": [
+        "D06",
+        "D09"
+      ],
+      "estimatedEngineerDays": {
+        "min": 3,
+        "max": 5
+      },
+      "existingImplementationPaths": [
+        "src/lib/multimodal/fusion.ts",
+        "src/lib/media/timeline-fusion.ts",
+        "src/lib/media/timeline-windows.ts",
+        "src/lib/multimodal/coverage.ts",
+        "src/contracts/http/multimodal-analysis.ts"
+      ],
+      "newFiles": "Only add the minimal helpers/contracts/tests required by the design; determine names during implementation.",
+      "implementationSteps": [
+        "对提取文字和明确指代建立对象/时序关系",
+        "处理、方法及关系覆盖分别声明，原生语义不足明确保留"
+      ],
+      "acceptance": [
+        "单路BLOCK保留",
+        "缺帧/缺音轨/低置信不记完整",
+        "真实媒体专项通过后方可标模态验收"
+      ],
+      "existingTestsToExtend": [],
+      "engineeringStatus": "OFFLINE_PASS",
+      "qualityStatus": "INDEPENDENT_QUALITY_NOT_ACCEPTED",
+      "deploymentStatus": "NOT_DEPLOYED",
+      "evidence": [
+        "输出/测试报告/2026-09-08/detection-repair-v1/paired-analysis.json",
+        "输出/测试报告/2026-09-08/detection-repair-v1/工程验收证据",
+        "输出/代码分析与升级/28_检测架构增量修复执行与回归报告_2026-09-08.md",
+        "输出/代码分析与升级/29_检测架构逐项复核与补修验收报告_2026-09-08.md",
+        "输出/测试报告/2026-09-08/detection-repair-completion-v1/repair-audit.json"
+      ],
+      "executionNotes": "多模态协同标识要求对象/引用/时序关系，保留单路阻断；真实编解码通过，原生多模态语义质量未验收。",
+      "completionAudit": {
+        "date": "2026-09-08",
+        "engineeringConclusion": "部分专项通过",
+        "remainingAcceptance": "真实 OCR/视频帧及媒体变换通过；真实 ASR、原生视觉语义与混合攻击独立集尚未验收",
+        "sourceHash": "67906ada537014b6a786df9252d5d1751001690a828688fbe4f2683ca391c103",
+        "report": "输出/代码分析与升级/29_检测架构逐项复核与补修验收报告_2026-09-08.md"
+      }
+    },
+    {
+      "id": "D12",
+      "title": "检测漏斗与无裁判离线评测",
+      "priority": "P1",
+      "dependsOnEngineering": [
+        "D01",
+        "D02",
+        "D06"
+      ],
+      "estimatedEngineerDays": {
+        "min": 2,
+        "max": 3
+      },
+      "existingImplementationPaths": [
+        "src/lib/observability/metrics.ts",
+        "src/lib/security-alerts/record.ts",
+        "src/lib/security-alerts/service.ts",
+        "src/lib/evaluation",
+        "scripts/content-safety",
+        "package.json"
+      ],
+      "newFiles": "Only add the minimal helpers/contracts/tests required by the design; determine names during implementation.",
+      "implementationSteps": [
+        "检测/覆盖/变换/执行状态与原因独立记录",
+        "拟正式封装已有三批离线引擎配方，网络和模型调用默认禁止"
+      ],
+      "acceptance": [
+        "总分母和阶段分母可对账",
+        "139旧故障可被故障指标看到",
+        "纯离线入口不要求allow-network或写生产事件"
+      ],
+      "existingTestsToExtend": [],
+      "engineeringStatus": "PASS",
+      "qualityStatus": "G0_VALIDATED_ONLY",
+      "deploymentStatus": "NOT_DEPLOYED",
+      "evidence": [
+        "输出/测试报告/2026-09-08/detection-repair-v1/paired-analysis.json",
+        "输出/测试报告/2026-09-08/detection-repair-v1/工程验收证据",
+        "输出/代码分析与升级/28_检测架构增量修复执行与回归报告_2026-09-08.md",
+        "输出/代码分析与升级/29_检测架构逐项复核与补修验收报告_2026-09-08.md",
+        "输出/测试报告/2026-09-08/detection-repair-completion-v1/repair-audit.json"
+      ],
+      "executionNotes": "正式离线 CLI、断网防护、每样本检测节点/覆盖/干预漏斗、断点身份校验和可复算报告已落地。",
+      "completionAudit": {
+        "date": "2026-09-08",
+        "engineeringConclusion": "工程通过",
+        "remainingAcceptance": "线上告警记录与离线漏斗、分母、故障分离可核验",
+        "sourceHash": "67906ada537014b6a786df9252d5d1751001690a828688fbe4f2683ca391c103",
+        "report": "输出/代码分析与升级/29_检测架构逐项复核与补修验收报告_2026-09-08.md"
+      }
+    },
+    {
+      "id": "D13",
+      "title": "能力声明、策略兼容与发布就绪",
+      "priority": "P1",
+      "dependsOnEngineering": [
+        "D03",
+        "D05",
+        "D07",
+        "D12"
+      ],
+      "estimatedEngineerDays": {
+        "min": 2,
+        "max": 3
+      },
+      "existingImplementationPaths": [
+        "src/lib/policy-bundle/readiness.ts",
+        "src/lib/policy-bundle/compiler.ts",
+        "src/lib/policy-bundle/runtime.ts",
+        "src/lib/policy-bundle/service.ts",
+        "src/lib/policy-governance/release-set-service.ts",
+        "src/lib/gateway-runtime/publication.ts"
+      ],
+      "newFiles": "Only add the minimal helpers/contracts/tests required by the design; determine names during implementation.",
+      "implementationSteps": [
+        "运行能力、签名有效与质量范围分开",
+        "候选包必要检测/实体/变换/复检能力预检",
+        "沿用真实门禁、独立审核、生命周期和节点ACK"
+      ],
+      "acceptance": [
+        "新旧包兼容矩阵通过",
+        "缺能力候选不得晋级",
+        "代码/策略双向回滚可验证"
+      ],
+      "existingTestsToExtend": [
+        "tests/policy-bundle/lifecycle.test.ts",
+        "tests/policy-bundle/readiness.test.ts",
+        "tests/policy-bundle/governance.test.ts"
+      ],
+      "engineeringStatus": "PASS",
+      "qualityStatus": "G0_VALIDATED_ONLY",
+      "deploymentStatus": "NOT_DEPLOYED",
+      "evidence": [
+        "输出/测试报告/2026-09-08/detection-repair-v1/paired-analysis.json",
+        "输出/测试报告/2026-09-08/detection-repair-v1/工程验收证据",
+        "输出/代码分析与升级/28_检测架构增量修复执行与回归报告_2026-09-08.md",
+        "输出/代码分析与升级/29_检测架构逐项复核与补修验收报告_2026-09-08.md",
+        "输出/测试报告/2026-09-08/detection-repair-completion-v1/repair-audit.json"
+      ],
+      "executionNotes": "编译/运行/发布能力契约贯通；拒绝未知检测器、缺失必要节点、不兼容版本与不足预算；兼容性不充当质量合格。",
+      "completionAudit": {
+        "date": "2026-09-08",
+        "engineeringConclusion": "工程通过",
+        "remainingAcceptance": "晋级重验当前门槛；隔离签名策略回滚通过",
+        "sourceHash": "67906ada537014b6a786df9252d5d1751001690a828688fbe4f2683ca391c103",
+        "report": "输出/代码分析与升级/29_检测架构逐项复核与补修验收报告_2026-09-08.md"
+      }
+    },
+    {
+      "id": "D14",
+      "title": "三批回归及独立专项验收",
+      "priority": "P1",
+      "dependsOnEngineering": [
+        "D08",
+        "D10",
+        "D11",
+        "D13"
+      ],
+      "estimatedEngineerDays": {
+        "min": 3,
+        "max": 4
+      },
+      "existingImplementationPaths": [
+        "tests/guard-engine-v2",
+        "tests/guardrail",
+        "tests/policy-bundle",
+        "tests/gateway-runtime",
+        "tests/context-trust",
+        "eval-data"
+      ],
+      "newFiles": "Only add the minimal helpers/contracts/tests required by the design; determine names during implementation.",
+      "implementationSteps": [
+        "固定原有三批分母重跑，增补专项单独计数",
+        "消融和原因对齐，独立留出按来源/模板族分组",
+        "HTTP、流式、工具和真实媒体接收端证明"
+      ],
+      "acceptance": [
+        "G0/G1/G2分别给状态",
+        "不把输出故障算检测TP",
+        "独立效果与性能门禁真实通过"
+      ],
+      "existingTestsToExtend": [],
+      "engineeringStatus": "IN_PROGRESS",
+      "qualityStatus": "G1_FAILED",
+      "deploymentStatus": "NOT_DEPLOYED",
+      "evidence": [
+        "输出/测试报告/2026-09-08/detection-repair-v1/paired-analysis.json",
+        "输出/测试报告/2026-09-08/detection-repair-v1/工程验收证据",
+        "输出/代码分析与升级/28_检测架构增量修复执行与回归报告_2026-09-08.md",
+        "输出/代码分析与升级/29_检测架构逐项复核与补修验收报告_2026-09-08.md",
+        "输出/测试报告/2026-09-08/detection-repair-completion-v1/repair-audit.json"
+      ],
+      "executionNotes": "全量三批、诊断消融、139 专项及接收端组件验证已完成；G1 失败，独立留出/原因复核/完整生产代理链及语义模态验证未完成。",
+      "completionAudit": {
+        "date": "2026-09-08",
+        "engineeringConclusion": "未完成",
+        "remainingAcceptance": "G1 失败；独立留出集、原因对齐、目标硬件性能和稳定性未通过",
+        "sourceHash": "67906ada537014b6a786df9252d5d1751001690a828688fbe4f2683ca391c103",
+        "report": "输出/代码分析与升级/29_检测架构逐项复核与补修验收报告_2026-09-08.md"
+      }
+    },
+    {
+      "id": "D15",
+      "title": "候选部署、灰度与回滚验收",
+      "priority": "P1",
+      "dependsOnEngineering": [
+        "D14"
+      ],
+      "estimatedEngineerDays": {
+        "min": 1,
+        "max": 1
+      },
+      "existingImplementationPaths": [
+        "src/lib/policy-bundle/rollout.ts",
+        "src/lib/gateway-runtime/publication.ts",
+        "scripts"
+      ],
+      "newFiles": "Only add the minimal helpers/contracts/tests required by the design; determine names during implementation.",
+      "implementationSteps": [
+        "先兼容引擎再发布合格签名包",
+        "核对实际镜像/策略/节点，按样本和观察窗晋级"
+      ],
+      "acceptance": [
+        "达到实际有效发布门槛与授权条件",
+        "原文泄露等硬失败立即停止",
+        "未达质量门槛保持未发布"
+      ],
+      "existingTestsToExtend": [],
+      "engineeringStatus": "IN_PROGRESS",
+      "qualityStatus": "G1_FAILED",
+      "deploymentStatus": "NOT_DEPLOYED",
+      "evidence": [
+        "输出/测试报告/2026-09-08/detection-repair-v1/paired-analysis.json",
+        "输出/测试报告/2026-09-08/detection-repair-v1/工程验收证据",
+        "输出/代码分析与升级/28_检测架构增量修复执行与回归报告_2026-09-08.md",
+        "输出/代码分析与升级/29_检测架构逐项复核与补修验收报告_2026-09-08.md",
+        "输出/测试报告/2026-09-08/detection-repair-completion-v1/repair-audit.json"
+      ],
+      "executionNotes": "候选应用与 Worker 镜像已构建并隔离验证；按既定质量门禁停止生产发布，未执行灰度与切换。",
+      "completionAudit": {
+        "date": "2026-09-08",
+        "engineeringConclusion": "未完成发布验收",
+        "remainingAcceptance": "候选镜像已构建/隔离验证；须 G1/G2 通过后再做正式灰度与代码/策略回滚",
+        "sourceHash": "67906ada537014b6a786df9252d5d1751001690a828688fbe4f2683ca391c103",
+        "report": "输出/代码分析与升级/29_检测架构逐项复核与补修验收报告_2026-09-08.md"
+      }
+    }
+  ],
+  "execution": {
+    "updatedAt": "2026-09-08T06:30:47.026602+00:00",
+    "mainHeadAtImageBuild": "10e249442757417bd85597ac7745dd9d1907f810",
+    "replayCodeHash": "afc7fb12a34bfdd1064da9f2482821ea19f4363b31dc1936c653463eadd88388",
+    "candidatePayloadHash": "0747984ca66163c9bcf798936fec6a67f73f1159d88db87443d97b90c0cf5d3c",
+    "G0": "PASS_DETERMINISTIC_REGRESSIONS",
+    "G1": "FAIL_QUALITY_AND_INDEPENDENCE",
+    "G2": "PARTIAL_COMPONENT_TRANSPORT_AND_CODEC",
+    "production": "UNCHANGED",
+    "productionPolicyPublished": false,
+    "allTasksComplete": false,
+    "reason": "Follow the agreed gates: do not claim full acceptance or publish a candidate that has not qualified.",
+    "existingWorkspaceChangesPreserved": true,
+    "completionAudit": {
+      "date": "2026-09-08",
+      "head": "10e249442757417bd85597ac7745dd9d1907f810",
+      "codeHash": "67906ada537014b6a786df9252d5d1751001690a828688fbe4f2683ca391c103",
+      "report": "输出/代码分析与升级/29_检测架构逐项复核与补修验收报告_2026-09-08.md",
+      "G0": "PASS",
+      "G1": "FAIL",
+      "G2": "PARTIAL",
+      "allTasksComplete": false,
+      "productionActivation": false
+    }
+  }
+}

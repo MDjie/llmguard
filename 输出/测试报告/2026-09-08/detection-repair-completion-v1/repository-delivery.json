@@ -1,0 +1,14 @@
+{
+  "codeCommit": "bac40425de50793d3c6961953a36dedec8f80226",
+  "testedWorkspaceCodeHash": "67906ada537014b6a786df9252d5d1751001690a828688fbe4f2683ca391c103",
+  "sourceFileCount": 732,
+  "gitSourceIndexHash": "939c3c0582f6df60760113a3fb89f3ec8c7f2a2de8665adedcc773d3178513b4",
+  "gitSourceIndexHashFormat": "SHA-256 of UTF-8 newline-joined path + NUL + SHA-256(blob), in code-index.json file order",
+  "sourceContentVerifiedAgainstCommit": true,
+  "filesWithOnlyCRLFvsLFDifferences": 369,
+  "preservedEvidenceBytes": true,
+  "rawDatasetsAndLargeReplayOutputsCommitted": false,
+  "productionDeployed": false,
+  "candidatePolicyActivated": false,
+  "acceptanceSnapshotBeforeCommit": true
+}

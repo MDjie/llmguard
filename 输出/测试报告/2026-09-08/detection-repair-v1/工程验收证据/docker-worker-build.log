@@ -1,0 +1,81 @@
+#0 building with "desktop-linux" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 2.88kB done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/node:24.20.0-alpine
+#2 DONE 0.0s
+
+#3 [internal] load .dockerignore
+#3 transferring context: 1.36kB done
+#3 DONE 0.0s
+
+#4 [dependencies 1/6] FROM docker.io/library/node:24.20.0-alpine@sha256:e67514e5d0f6c46656005e1b693b2ec9d52e80b641307de684d4a015ba7a4eaf
+#4 resolve docker.io/library/node:24.20.0-alpine@sha256:e67514e5d0f6c46656005e1b693b2ec9d52e80b641307de684d4a015ba7a4eaf 0.0s done
+#4 DONE 0.1s
+
+#5 [internal] load build context
+#5 transferring context: 62.72kB 0.1s done
+#5 DONE 0.1s
+
+#6 [dependencies 3/6] WORKDIR /app
+#6 CACHED
+
+#7 [dependencies 4/6] COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+#7 CACHED
+
+#8 [dependencies 5/6] COPY scripts/enforce-pnpm.mjs ./scripts/enforce-pnpm.mjs
+#8 CACHED
+
+#9 [dependencies 2/6] RUN corepack enable && corepack prepare pnpm@11.19.0 --activate
+#9 CACHED
+
+#10 [dependencies 6/6] RUN pnpm install --frozen-lockfile
+#10 CACHED
+
+#11 [worker  2/12] WORKDIR /app
+#11 CACHED
+
+#12 [worker  3/12] COPY --from=dependencies --chown=node:node /app/node_modules ./node_modules
+#12 DONE 4.8s
+
+#13 [worker  4/12] COPY --chown=node:node package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc tsconfig.json ./
+#13 DONE 0.4s
+
+#14 [worker  5/12] COPY --chown=node:node src ./src
+#14 DONE 0.2s
+
+#15 [worker  6/12] COPY --chown=node:node data/content-safety/lexicon/prompt-injection-bilingual.v1.json ./data/content-safety/lexicon/
+#15 DONE 0.1s
+
+#16 [worker  7/12] COPY --chown=node:node data/content-safety/taxonomy/risk-registry.v1.json ./data/content-safety/taxonomy/
+#16 DONE 0.1s
+
+#17 [worker  8/12] COPY --chown=node:node packages/contracts/generated ./packages/contracts/generated
+#17 DONE 0.1s
+
+#18 [worker  9/12] COPY --chown=node:node packages/contracts-appliance/generated ./packages/contracts-appliance/generated
+#18 DONE 0.1s
+
+#19 [worker 10/12] COPY --chown=node:node     scripts/archive-worker.ts     scripts/artifact-verifier-worker.ts     scripts/audio-video-worker.ts     scripts/audit-chain-worker.ts     scripts/audit-export-worker.ts     scripts/audit-timestamp-worker.ts     scripts/callback-dispatcher-worker.ts     scripts/content-marking-worker.ts     scripts/document-image-worker.ts     scripts/evaluation-worker.ts     scripts/gateway-request-worker.ts     scripts/gateway-shadow-worker.ts     scripts/native-multimodal-worker.ts     scripts/code-sentinel-worker.ts     scripts/rag-ingest-worker.ts     scripts/run-worker.mjs     scripts/security-scan-worker.ts     ./scripts/
+#19 DONE 0.3s
+
+#20 [worker 11/12] COPY --chown=node:node scripts/release/gateway-v2-migrate.mjs scripts/release/gateway-v2-identity-preflight.mjs ./scripts/release/
+#20 DONE 0.1s
+
+#21 [worker 12/12] COPY --chown=node:node drizzle ./drizzle
+#21 DONE 0.1s
+
+#22 exporting to image
+#22 exporting layers
+#22 exporting layers 21.4s done
+#22 exporting manifest sha256:2077c880c3923f1d849e16d2030d028858fd2e4adde8f87dbbb23e798c2d5a03 0.0s done
+#22 exporting config sha256:dcb43996a171113a175f25bd9b02dd2f79dc17e84b3ee10b82baa1199763b46d 0.0s done
+#22 exporting attestation manifest sha256:81aa634e71d1694c1c12419e682513109456ce84b094cfcf2c5598be77d06db1 0.0s done
+#22 exporting manifest list sha256:9649844cc7f4f48d0bc0e87e7b66d1ae73fc1b0bb133b9c5ae0a67b2d5f099cf
+#22 exporting manifest list sha256:9649844cc7f4f48d0bc0e87e7b66d1ae73fc1b0bb133b9c5ae0a67b2d5f099cf 0.0s done
+#22 naming to docker.io/library/guardllm-main-worker:detection-repair-20260908 done
+#22 unpacking to docker.io/library/guardllm-main-worker:detection-repair-20260908
+#22 unpacking to docker.io/library/guardllm-main-worker:detection-repair-20260908 8.1s done
+#22 DONE 29.7s

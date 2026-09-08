@@ -1,0 +1,280 @@
+#0 building with "desktop-linux" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 DONE 0.0s
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 2.88kB done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/node:24.20.0-alpine
+#2 DONE 0.0s
+
+#3 [internal] load .dockerignore
+#3 transferring context: 1.36kB done
+#3 DONE 0.0s
+
+#4 [dependencies 1/6] FROM docker.io/library/node:24.20.0-alpine@sha256:e67514e5d0f6c46656005e1b693b2ec9d52e80b641307de684d4a015ba7a4eaf
+#4 resolve docker.io/library/node:24.20.0-alpine@sha256:e67514e5d0f6c46656005e1b693b2ec9d52e80b641307de684d4a015ba7a4eaf 0.0s done
+#4 DONE 0.1s
+
+#5 [internal] load build context
+#5 transferring context: 19.91MB 0.8s done
+#5 DONE 0.9s
+
+#6 [dependencies 3/6] WORKDIR /app
+#6 CACHED
+
+#7 [dependencies 4/6] COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+#7 CACHED
+
+#8 [dependencies 5/6] COPY scripts/enforce-pnpm.mjs ./scripts/enforce-pnpm.mjs
+#8 CACHED
+
+#9 [dependencies 2/6] RUN corepack enable && corepack prepare pnpm@11.19.0 --activate
+#9 CACHED
+
+#10 [dependencies 6/6] RUN pnpm install --frozen-lockfile
+#10 CACHED
+
+#11 [builder 1/2] COPY . .
+#11 DONE 0.3s
+
+#12 [builder 2/2] RUN pnpm run build
+#12 1.039 $ next build
+#12 1.457 ▲ Next.js 16.3.3 (Turbopack)
+#12 1.530 ✓ Running next.config.ts took 73ms
+#12 1.539 
+#12 1.590   Creating an optimized production build ...
+#12 13.90 ✓ Compiled successfully in 12.1s
+#12 13.90   Running TypeScript ...
+#12 34.18   Finished TypeScript in 20.3s ...
+#12 34.19   Collecting page data using 31 workers ...
+#12 41.56   Generating static pages using 31 workers (0/89) ...
+#12 41.71   Generating static pages using 31 workers (22/89) 
+#12 41.80   Generating static pages using 31 workers (44/89) 
+#12 41.89   Generating static pages using 31 workers (66/89) 
+#12 42.00 ✓ Generating static pages using 31 workers (89/89) in 445ms
+#12 42.01   Finalizing page optimization ...
+#12 43.03 
+#12 43.04 Route (app)
+#12 43.04 ┌ ƒ /
+#12 43.04 ├ ƒ /_not-found
+#12 43.04 ├ ƒ /agent-logs
+#12 43.04 ├ ƒ /api/agent-logs
+#12 43.04 ├ ƒ /api/application-credentials
+#12 43.04 ├ ƒ /api/applications
+#12 43.04 ├ ƒ /api/archived-content/[id]/raw-access
+#12 43.04 ├ ƒ /api/archived-content/[id]/raw-access/consume
+#12 43.04 ├ ƒ /api/archived-content/[id]/raw-access/requests
+#12 43.04 ├ ƒ /api/audit/events
+#12 43.04 ├ ƒ /api/audit/reports
+#12 43.04 ├ ƒ /api/auth/change-password
+#12 43.04 ├ ƒ /api/auth/login
+#12 43.04 ├ ƒ /api/auth/logout
+#12 43.04 ├ ƒ /api/auth/me
+#12 43.04 ├ ƒ /api/auth/scope
+#12 43.04 ├ ƒ /api/chat
+#12 43.04 ├ ƒ /api/content-access-requests
+#12 43.04 ├ ƒ /api/content-access-requests/[id]/review
+#12 43.04 ├ ƒ /api/conversations
+#12 43.04 ├ ƒ /api/conversations/[id]/messages
+#12 43.04 ├ ƒ /api/data-catalog
+#12 43.04 ├ ƒ /api/data-catalog/[id]
+#12 43.04 ├ ƒ /api/detect
+#12 43.04 ├ ƒ /api/detection-sessions
+#12 43.04 ├ ƒ /api/dimensions
+#12 43.04 ├ ƒ /api/dimensions/[id]
+#12 43.04 ├ ƒ /api/dimensions/[id]/rules
+#12 43.04 ├ ƒ /api/dimensions/[id]/rules/[ruleId]
+#12 43.04 ├ ƒ /api/dimensions/[id]/test
+#12 43.04 ├ ƒ /api/document-scan
+#12 43.04 ├ ƒ /api/document-scan/[id]
+#12 43.04 ├ ƒ /api/document-scan/[id]/findings/[findingId]
+#12 43.04 ├ ƒ /api/document-scan/[id]/rescan
+#12 43.04 ├ ƒ /api/document-scan/[id]/retry
+#12 43.04 ├ ƒ /api/escalation-summary
+#12 43.04 ├ ƒ /api/evaluation-runs
+#12 43.04 ├ ƒ /api/evaluation-runs/[id]
+#12 43.04 ├ ƒ /api/export
+#12 43.04 ├ ƒ /api/export/approvals
+#12 43.04 ├ ƒ /api/export/stats
+#12 43.04 ├ ƒ /api/gateway-routing
+#12 43.04 ├ ƒ /api/gateway/audit-batches
+#12 43.04 ├ ƒ /api/gateway/content-retention
+#12 43.04 ├ ƒ /api/gateway/onboarding
+#12 43.04 ├ ƒ /api/gateway/publications
+#12 43.04 ├ ƒ /api/gateway/requests
+#12 43.04 ├ ƒ /api/gateway/runtime
+#12 43.04 ├ ƒ /api/health
+#12 43.04 ├ ƒ /api/health/db
+#12 43.04 ├ ƒ /api/health/live
+#12 43.04 ├ ƒ /api/health/policy
+#12 43.04 ├ ƒ /api/history
+#12 43.04 ├ ƒ /api/incidents
+#12 43.04 ├ ƒ /api/incidents/[id]
+#12 43.04 ├ ƒ /api/incidents/[id]/conversation
+#12 43.04 ├ ƒ /api/incidents/[id]/raw-access
+#12 43.04 ├ ƒ /api/incidents/[id]/raw-access/consume
+#12 43.04 ├ ƒ /api/incidents/[id]/raw-access/requests
+#12 43.04 ├ ƒ /api/internal/gateway/archive
+#12 43.04 ├ ƒ /api/internal/gateway/archive/complete
+#12 43.04 ├ ƒ /api/internal/gateway/authorize
+#12 43.04 ├ ƒ /api/internal/gateway/evaluate
+#12 43.04 ├ ƒ /api/internal/gateway/events
+#12 43.04 ├ ƒ /api/internal/gateway/runtime
+#12 43.04 ├ ƒ /api/internal/gateway/runtime/ack
+#12 43.04 ├ ƒ /api/judge/helpers
+#12 43.04 ├ ƒ /api/media-evidence/[id]/hold
+#12 43.04 ├ ƒ /api/media-evidence/[id]/raw-access
+#12 43.04 ├ ƒ /api/media-evidence/[id]/raw-access/consume
+#12 43.04 ├ ƒ /api/media-evidence/[id]/raw-access/requests
+#12 43.04 ├ ƒ /api/metrics
+#12 43.04 ├ ƒ /api/ocr-models
+#12 43.04 ├ ƒ /api/operations/inspection
+#12 43.04 ├ ƒ /api/policies
+#12 43.04 ├ ƒ /api/policies/[id]
+#12 43.04 ├ ƒ /api/policies/[id]/clone
+#12 43.04 ├ ƒ /api/policies/[id]/escalation
+#12 43.04 ├ ƒ /api/policies/[id]/judge-config
+#12 43.04 ├ ƒ /api/policies/[id]/judge-evaluations
+#12 43.04 ├ ƒ /api/policies/[id]/keyword-categories
+#12 43.04 ├ ƒ /api/policies/[id]/keywords
+#12 43.04 ├ ƒ /api/policies/[id]/keywords/batch
+#12 43.04 ├ ƒ /api/policies/[id]/keywords/export
+#12 43.04 ├ ƒ /api/policies/[id]/set-default
+#12 43.04 ├ ƒ /api/policies/[id]/toggle
+#12 43.04 ├ ƒ /api/policies/[id]/versions
+#12 43.04 ├ ƒ /api/policies/compare
+#12 43.04 ├ ƒ /api/policy-bundles
+#12 43.04 ├ ƒ /api/policy-bundles/health-check
+#12 43.04 ├ ƒ /api/policy-governance/dictionaries
+#12 43.04 ├ ƒ /api/policy-governance/dictionaries/[id]/activate
+#12 43.04 ├ ƒ /api/policy-governance/dictionaries/[id]/approve
+#12 43.04 ├ ƒ /api/policy-governance/dictionaries/[id]/publish
+#12 43.04 ├ ƒ /api/policy-governance/dictionaries/[id]/rollback
+#12 43.04 ├ ƒ /api/policy-governance/dictionaries/[id]/test
+#12 43.04 ├ ƒ /api/policy-governance/dictionaries/[id]/validate
+#12 43.04 ├ ƒ /api/policy-governance/release-sets
+#12 43.04 ├ ƒ /api/policy-governance/release-sets/[id]/activate
+#12 43.04 ├ ƒ /api/policy-governance/release-sets/[id]/approve
+#12 43.04 ├ ƒ /api/policy-governance/release-sets/[id]/canary
+#12 43.04 ├ ƒ /api/policy-governance/release-sets/[id]/rollback
+#12 43.04 ├ ƒ /api/policy-governance/release-sets/[id]/shadow
+#12 43.04 ├ ƒ /api/policy-governance/shadow-compare
+#12 43.04 ├ ƒ /api/policy-governance/templates
+#12 43.04 ├ ƒ /api/policy-governance/templates/[id]/approve
+#12 43.04 ├ ƒ /api/policy-governance/templates/[id]/preview
+#12 43.04 ├ ƒ /api/policy-governance/templates/[id]/rollback
+#12 43.04 ├ ƒ /api/policy-runtime
+#12 43.04 ├ ƒ /api/policy-state
+#12 43.04 ├ ƒ /api/providers
+#12 43.04 ├ ƒ /api/providers/meta
+#12 43.04 ├ ƒ /api/providers/test
+#12 43.04 ├ ƒ /api/security-alerts
+#12 43.04 ├ ƒ /api/security-alerts/[id]
+#12 43.04 ├ ƒ /api/security-alerts/[id]/feedback
+#12 43.04 ├ ƒ /api/security-alerts/[id]/feedback/candidate
+#12 43.04 ├ ƒ /api/security-alerts/[id]/feedback/review
+#12 43.04 ├ ƒ /api/security-alerts/[id]/incident
+#12 43.04 ├ ƒ /api/security-alerts/[id]/media-evidence
+#12 43.04 ├ ƒ /api/security-scan-assets
+#12 43.04 ├ ƒ /api/security-scan-findings/[id]/reviews
+#12 43.04 ├ ƒ /api/security-scans
+#12 43.04 ├ ƒ /api/security-scans/[id]
+#12 43.04 ├ ƒ /api/simulate
+#12 43.04 ├ ƒ /api/stats
+#12 43.04 ├ ƒ /api/tenants
+#12 43.04 ├ ƒ /api/test-cases
+#12 43.04 ├ ƒ /api/test-cases/[id]
+#12 43.04 ├ ƒ /api/test-cases/import
+#12 43.04 ├ ƒ /api/test-cases/run
+#12 43.04 ├ ƒ /api/tool-registry
+#12 43.04 ├ ƒ /api/users
+#12 43.04 ├ ƒ /api/users/[id]
+#12 43.04 ├ ƒ /api/v1/content-marks/media/[contentId]
+#12 43.04 ├ ƒ /api/v1/content-marks/text
+#12 43.04 ├ ƒ /api/v1/content-marks/verify
+#12 43.04 ├ ƒ /api/v1/guard/artifacts/[id]
+#12 43.04 ├ ƒ /api/v1/guard/artifacts/[id]/complete
+#12 43.04 ├ ƒ /api/v1/guard/artifacts/[id]/parts/[partNumber]
+#12 43.04 ├ ƒ /api/v1/guard/artifacts/[id]/retry
+#12 43.04 ├ ƒ /api/v1/guard/artifacts/uploads
+#12 43.04 ├ ƒ /api/v1/guard/evaluate
+#12 43.04 ├ ƒ /api/v1/guard/evaluate-shadow
+#12 43.04 ├ ƒ /api/v1/guard/jobs
+#12 43.04 ├ ƒ /api/v1/guard/jobs/[id]
+#12 43.04 ├ ƒ /api/v1/guard/rag/evaluate
+#12 43.04 ├ ƒ /api/v1/guard/rag/retrieve
+#12 43.04 ├ ƒ /api/v1/guard/tools/approvals
+#12 43.04 ├ ƒ /api/v1/guard/tools/authorize
+#12 43.04 ├ ƒ /api/v1/guard/tools/execute
+#12 43.04 ├ ƒ /api/v1/guard/tools/reconcile
+#12 43.04 ├ ƒ /api/v1/guard/tools/result
+#12 43.04 ├ ƒ /api/whitelist
+#12 43.04 ├ ƒ /api/whitelist-rules
+#12 43.04 ├ ƒ /api/whitelist-rules/test
+#12 43.04 ├ ƒ /api/whitelist/[id]
+#12 43.04 ├ ƒ /applications
+#12 43.04 ├ ƒ /change-password
+#12 43.04 ├ ƒ /conversations
+#12 43.04 ├ ƒ /dashboard
+#12 43.04 ├ ƒ /dictionaries
+#12 43.04 ├ ƒ /dimensions
+#12 43.04 ├ ƒ /dimensions/[id]
+#12 43.04 ├ ƒ /document-scan
+#12 43.04 ├ ƒ /document-scan/[id]
+#12 43.04 ├ ƒ /evaluation-runs
+#12 43.04 ├ ƒ /export
+#12 43.04 ├ ƒ /gateway-requests
+#12 43.04 ├ ƒ /history
+#12 43.04 ├ ƒ /incidents
+#12 43.04 ├ ƒ /login
+#12 43.04 ├ ƒ /model-eval
+#12 43.04 ├ ƒ /operations
+#12 43.04 ├ ƒ /policies
+#12 43.04 ├ ƒ /policies/[id]
+#12 43.04 ├ ƒ /policy-releases
+#12 43.04 ├ ƒ /providers
+#12 43.04 ├ ƒ /response-templates
+#12 43.04 ├ ○ /robots.txt
+#12 43.04 ├ ƒ /security-alerts
+#12 43.04 ├ ƒ /simulate
+#12 43.04 ├ ƒ /test-cases
+#12 43.04 └ ƒ /whitelist
+#12 43.04 
+#12 43.04 
+#12 43.04 ƒ Proxy (Middleware)
+#12 43.04 
+#12 43.04 ○  (Static)   prerendered as static content
+#12 43.04 ƒ  (Dynamic)  server-rendered on demand
+#12 43.04 
+#12 DONE 43.2s
+
+#13 [runner 2/6] WORKDIR /app
+#13 CACHED
+
+#14 [runner 3/6] COPY --from=builder --chown=node:node /app/public ./public
+#14 CACHED
+
+#15 [runner 4/6] COPY --from=builder --chown=node:node /app/.next/standalone ./
+#15 DONE 0.6s
+
+#16 [runner 5/6] COPY --from=builder --chown=node:node /app/.next/static ./.next/static
+#16 DONE 0.3s
+
+#17 [runner 6/6] COPY --chown=node:node scripts/runtime-ingress.mjs scripts/gateway-v2-runtime-config.mjs scripts/gateway-v2-health.mjs ./scripts/
+#17 DONE 0.2s
+
+#18 exporting to image
+#18 exporting layers
+#18 exporting layers 2.9s done
+#18 exporting manifest sha256:370001420123961650936efac83d4df8130378d27d4eebf432a2b1b3931ead3c 0.0s done
+#18 exporting config sha256:76abffa59d307c2852e4102a7517413ab513c3bc0451b658439475e9cb563563 0.0s done
+#18 exporting attestation manifest sha256:28db38b9e4771ea9cc51d8cfcb23f0e1917309c1934ebdfcc3859292f914e9ff
+#18 exporting attestation manifest sha256:28db38b9e4771ea9cc51d8cfcb23f0e1917309c1934ebdfcc3859292f914e9ff 0.0s done
+#18 exporting manifest list sha256:e19e122e90dce2a7774387e32909cd96910676b558bb5c13ace8fb847cad78c7 0.0s done
+#18 naming to docker.io/library/guardllm-main-app:detection-completion-20260908 done
+#18 unpacking to docker.io/library/guardllm-main-app:detection-completion-20260908
+#18 unpacking to docker.io/library/guardllm-main-app:detection-completion-20260908 1.0s done
+#18 DONE 4.0s

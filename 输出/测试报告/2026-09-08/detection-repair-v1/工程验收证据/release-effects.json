@@ -1,0 +1,37 @@
+{
+  "status": "PASS",
+  "checks": [
+    "http_plain_output_delivered",
+    "http_client_receives_masked_rechecked_output",
+    "http_client_receives_no_blocked_secret",
+    "split_sse_secret_never_committed_to_http_client",
+    "safe_sse_completes_over_http",
+    "keyword_free_unauthorized_tool_has_zero_side_effects"
+  ],
+  "toolCalls": 0,
+  "seen": [
+    {
+      "path": "/complete",
+      "action": "ALLOW",
+      "bytes": 42
+    },
+    {
+      "path": "/complete",
+      "action": "MASK",
+      "bytes": 57
+    },
+    {
+      "path": "/complete",
+      "action": "BLOCK",
+      "bytes": 99
+    }
+  ],
+  "candidatePayloadHash": "0747984ca66163c9bcf798936fec6a67f73f1159d88db87443d97b90c0cf5d3c",
+  "execution": "ACTUAL_LOOPBACK_HTTP_WITH_PRODUCTION_ENGINE_STREAM_GATE_AND_ACTION_FIREWALL",
+  "productionAuthenticationTested": false,
+  "databasePermitConsumptionTested": false,
+  "productionProxyE2ETested": false,
+  "syntheticOnly": true,
+  "judgeInvocations": 0,
+  "externalNetworkRequired": false
+}

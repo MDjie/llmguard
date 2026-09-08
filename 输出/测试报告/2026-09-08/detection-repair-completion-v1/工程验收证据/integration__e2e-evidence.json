@@ -1,0 +1,166 @@
+{
+  "schemaVersion": "2.0",
+  "capturedAt": "2026-09-08T07:13:59.567Z",
+  "status": "PASS",
+  "environment": {
+    "java": "real Spring WebFlux",
+    "control": "real Next.js and GuardEngine",
+    "storage": "isolated PostgreSQL",
+    "internalTransport": "mutual TLS",
+    "proxyTransport": "required mutual TLS",
+    "model": "synthetic capture service"
+  },
+  "claims": {
+    "realModelQuality": false,
+    "targetHardwarePerformance": false,
+    "soak24Hours": false,
+    "externalIntegration": false
+  },
+  "results": [
+    {
+      "id": "IT-V2-01",
+      "name": "normal completion and durable execution chain",
+      "status": "PASS"
+    },
+    {
+      "id": "IT-V2-02",
+      "name": "input MASK changes actual upstream content",
+      "status": "PASS"
+    },
+    {
+      "id": "IT-V2-03",
+      "name": "input BLOCK never calls upstream",
+      "status": "PASS"
+    },
+    {
+      "id": "IT-V2-04",
+      "name": "output MASK changes actual client content",
+      "status": "PASS"
+    },
+    {
+      "id": "IT-V2-05",
+      "name": "output BLOCK leaks no model text",
+      "status": "PASS"
+    },
+    {
+      "id": "IT-V2-06",
+      "name": "standard stream=true handles fragmented UTF-8 and one DONE",
+      "status": "PASS"
+    },
+    {
+      "id": "IT-V2-07",
+      "name": "stream replacement contains no original sensitive delta",
+      "status": "PASS"
+    },
+    {
+      "id": "IT-V2-08",
+      "name": "truncated upstream stream releases no buffered content",
+      "status": "PASS"
+    },
+    {
+      "id": "IT-V2-09",
+      "name": "same idempotency key never invokes model twice",
+      "status": "PASS"
+    },
+    {
+      "id": "IT-V2-10",
+      "name": "conflicting credentials are rejected before execution",
+      "status": "PASS"
+    },
+    {
+      "id": "IT-V2-11",
+      "name": "session request serializes and commits each direction once",
+      "status": "PASS"
+    },
+    {
+      "id": "IT-V2-13",
+      "name": "unchecked generation fields are rejected without model call",
+      "status": "PASS"
+    },
+    {
+      "id": "IT-V2-14",
+      "name": "structured response format is included in input detection",
+      "status": "PASS"
+    },
+    {
+      "id": "IT-V2-15",
+      "name": "input REWRITE uses approved template and preserves other messages",
+      "status": "PASS"
+    },
+    {
+      "id": "IT-V2-16",
+      "name": "input SAFE_RESPONSE is rechecked without upstream invocation",
+      "status": "PASS"
+    },
+    {
+      "id": "IT-V2-17",
+      "name": "output SAFE_RESPONSE replaces upstream bytes after recheck",
+      "status": "PASS"
+    },
+    {
+      "id": "IT-V2-18",
+      "name": "output REWRITE has durable original and recheck decisions",
+      "status": "PASS"
+    },
+    {
+      "id": "IT-V2-19",
+      "name": "REQUIRE_REVIEW persists an incident and releases no content",
+      "status": "PASS"
+    },
+    {
+      "id": "IT-V2-20",
+      "name": "WARN permits inspected text and records the actual warning action",
+      "status": "PASS"
+    },
+    {
+      "id": "IT-V2-21",
+      "name": "node load failure during upstream wait prevents release",
+      "status": "PASS"
+    },
+    {
+      "id": "IT-V2-22",
+      "name": "client cancellation persists termination without output release",
+      "status": "PASS"
+    },
+    {
+      "id": "IT-V2-23",
+      "name": "public proxy requires a trusted TLS client certificate",
+      "status": "PASS"
+    },
+    {
+      "id": "IT-V2-24",
+      "name": "WebSocket releases approved frames with one durable completion",
+      "status": "PASS"
+    },
+    {
+      "id": "IT-V2-25",
+      "name": "WebSocket blocked output closes without releasing model frames",
+      "status": "PASS"
+    },
+    {
+      "id": "IT-V2-26",
+      "name": "WebSocket credential rejection causes no upstream call",
+      "status": "PASS"
+    },
+    {
+      "id": "IT-V2-27",
+      "name": "real console BFF binds current user and returns only masked gateway output",
+      "status": "PASS"
+    },
+    {
+      "id": "IT-V2-28",
+      "name": "console rejects body role injection and missing CSRF before model call",
+      "status": "PASS"
+    },
+    {
+      "id": "IT-V2-29",
+      "name": "disabled console user cannot reuse a still-signed session",
+      "status": "PASS"
+    },
+    {
+      "id": "IT-V2-12",
+      "name": "authorization revocation during upstream wait stops release",
+      "status": "PASS"
+    }
+  ]
+}
