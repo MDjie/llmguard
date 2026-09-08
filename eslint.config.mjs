@@ -42,6 +42,7 @@ const eslintConfig = defineConfig([
     '.next/**',
     '.next-upgrade-build/**',
     '.next-upgrade-v2/**',
+    '.next-comprehensive-build/**',
     'out/**',
     'build/**',
     'next-env.d.ts',

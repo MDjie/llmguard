@@ -18,9 +18,11 @@ async function main() {
   const scope = { tenantId: fixture.tenantId, applicationId: fixture.applicationId };
   async function refresh() { const [binding] = await db.select().from(applicationPolicyBindings).where(scopePredicate(applicationPolicyBindings, scope)); await refreshGatewayPublication(scope, 'isolated-profile-fixture', binding.generation); }
   try {
+    // Preflight the exact restore target before touching qualifications or publication.
+    await refresh();
     if (mode === 'FULL_BUFFER') writeFileSync(qualificationFile, '[]');
     await refresh(); console.log('ISOLATED_PROFILE ' + mode);
     process.exitCode = await new Promise<number>((resolve, reject) => { const child = spawn(process.execPath, [script], { stdio: 'inherit', windowsHide: true }); child.on('error', reject); child.on('exit', code => resolve(code ?? 1)); });
-  } finally { writeFileSync(qualificationFile, original); await refresh(); await closeDatabaseConnection(); }
+  } finally { try { writeFileSync(qualificationFile, original); await refresh(); } finally { await closeDatabaseConnection(); } }
 }
 main().catch((error: unknown) => { const code = error instanceof Error && /^[A-Z][A-Z0-9_]*$/.test(error.message) ? error.message : 'UNCLASSIFIED'; console.error('ISOLATED_PROFILE_RUN_FAILED ' + code); process.exitCode = 1; });

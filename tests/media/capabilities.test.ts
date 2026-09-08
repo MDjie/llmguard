@@ -6,14 +6,15 @@ vi.mock('@/lib/egress',()=>({safeFetchJson:fetchJson,ProviderEndpointPolicy:clas
 afterEach(()=>{vi.unstubAllEnvs();vi.clearAllMocks();});
 describe('shared legacy/new capability projection',()=>{
  it('keeps the catalog while clearly reporting a missing analyzer',async()=>{
-  vi.stubEnv('MULTIMODAL_ANALYZER_BASE_URL','');
+  vi.stubEnv('MULTIMODAL_ANALYZER_BASE_URL','');vi.stubEnv('MEDIA_ANALYZER_BASE_URL','');
   const result=await readMediaCapabilities();
   expect(result.formats).toEqual(MEDIA_FORMATS);expect(result.limits).toEqual(MEDIA_LIMITS);
   expect(result.unavailableReason).toBe('ANALYZER_UNAVAILABLE');expect(fetchJson).not.toHaveBeenCalled();
  });
  it('does not equate configured adapters with semantic qualification',async()=>{
   vi.stubEnv('MULTIMODAL_ANALYZER_BASE_URL','https://analyzer.test');vi.stubEnv('ANALYZER_SHARED_TOKEN','t'.repeat(32));
-  fetchJson.mockResolvedValue({adapters:{asr:true,visual:true}});
+  vi.stubEnv('MEDIA_ANALYZER_BASE_URL','https://analyzer.test');
+  fetchJson.mockResolvedValue({version:'test',checkedAt:'2026-09-09T00:00:00Z',decoding:{ffmpeg:true},codecAvailability:{},adapters:{asr:true,visual:true}});
   const result=await readMediaCapabilities();expect(result.unavailableReason).toBeNull();
   expect(result.qualification).toBe('POLICY_AND_MODEL_APPROVAL_REQUIRED');
  });

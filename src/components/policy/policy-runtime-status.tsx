@@ -6,42 +6,14 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
-interface BundleSummary {
-  id: string;
-  version: number;
-  state: string;
-  contentHash: string;
-  signingKeyId: string;
-  policyId: string;
-}
-
-interface RuntimeSummary {
-  ready: boolean;
-  reasonCode: string | null;
-  generation: number;
-  assurance?: string | null;
-  signatureVerified?: boolean;
-  binding: null | {
-    active: BundleSummary | null;
-    shadow: BundleSummary | null;
-    canary: BundleSummary | null;
-    previous: BundleSummary | null;
-    canaryPercent: number;
-    updatedAt: string;
-  };
-  governedDigests: {
-    dictionaryDigests: Array<{ id: string; version: string; sha256: string }>;
-    modelDigests: Array<{ id: string; version: string; sha256: string }>;
-    tokenizerDigest: { id: string; version: string; sha256: string } | null;
-  };
-}
+import { policyRuntimeResponseSchema, isProductionPolicyReady, type PolicyRuntimeSummary as RuntimeSummary, type BundleSummary } from '@/contracts/http/policy-runtime';
 
 async function readSummary(): Promise<RuntimeSummary> {
   const response = await fetch('/api/policy-runtime', { cache: 'no-store' });
-  const raw = await response.text();
-  const payload = raw ? JSON.parse(raw) as { data?: RuntimeSummary; detail?: string } : {};
-  if (!response.ok || !payload.data) throw new Error(payload.detail ?? '策略运行时状态加载失败');
-  return payload.data;
+  if (!response.ok) throw new Error('策略运行时状态加载失败，请刷新重试');
+  const parsed = policyRuntimeResponseSchema.safeParse(await response.json());
+  if (!parsed.success) throw new Error('策略运行时响应格式不兼容，请刷新或联系管理员');
+  return parsed.data.data;
 }
 
 function BundleBinding({ label, bundle }: { readonly label: string; readonly bundle: BundleSummary | null }) {
@@ -88,7 +60,7 @@ export function PolicyRuntimeStatus() {
             <Badge className={summary.ready ? 'bg-emerald-600' : 'bg-amber-600'}>{summary.ready ? 'READY' : 'NOT READY'}</Badge>
             <Badge variant="outline" className="gap-1"><GitCommitHorizontal className="h-3.5 w-3.5" />generation {summary.generation}</Badge>
             <Badge variant="outline" className="gap-1"><Fingerprint className="h-3.5 w-3.5" />{summary.signatureVerified ? '签名已验证' : '签名未验证'}</Badge>
-            {summary.assurance && <Badge variant="outline">{summary.assurance}</Badge>}
+            {summary.assurance && <Badge variant="outline">{summary.assurance.level} · {summary.assurance.externalApproval ? '外部审批已验证' : '无外部审批'}</Badge>}
             {summary.reasonCode && <Badge variant="destructive">{summary.reasonCode}</Badge>}
           </div>
           <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
@@ -102,7 +74,7 @@ export function PolicyRuntimeStatus() {
             <div className="rounded-md bg-gray-50 p-3"><p className="text-gray-500">模型摘要</p><p className="mt-1 font-medium">{summary.governedDigests.modelDigests.length} 个版本</p></div>
             <div className="rounded-md bg-gray-50 p-3"><p className="text-gray-500">Tokenizer</p><p className="mt-1 truncate font-medium" title={summary.governedDigests.tokenizerDigest?.sha256}>{summary.governedDigests.tokenizerDigest ? `${summary.governedDigests.tokenizerDigest.id} · ${summary.governedDigests.tokenizerDigest.version}` : '未声明'}</p></div>
           </div>
-          {summary.ready && <p className="flex items-center gap-1.5 text-xs text-emerald-700"><CheckCircle2 className="h-4 w-4" />当前应用绑定的签名策略包可用于生产请求。</p>}
+          {summary.ready && <p className="flex items-center gap-1.5 text-xs text-emerald-700"><CheckCircle2 className="h-4 w-4" />{isProductionPolicyReady(summary) ? '当前签名策略包已满足生产发布资格。' : '当前策略仅满足开发验证条件，尚不具备生产发布资格。'}</p>}
         </> : null}
       </CardContent>
     </Card>

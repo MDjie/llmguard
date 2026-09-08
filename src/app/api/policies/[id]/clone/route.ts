@@ -2,11 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { jsonObjectResponseSchema } from '@/contracts/http/common';
 import { clonePolicySchema, policyParamsSchema } from '@/contracts/http/policies';
 import { withLegacyApiSecurity } from '@/lib/api-security';
-import { getDb } from '@/lib/db';
+import { getDb, transactionalCompatibilityHandler } from '@/lib/db';
 
 interface CloneRuleRow {
   dimension: string;
   enabled?: boolean;
+  warn_enabled?: boolean;
+  block_enabled?: boolean;
   warn_threshold?: number;
   block_threshold?: number;
   auto_mask?: boolean;
@@ -122,6 +124,8 @@ async function clonePolicy(
           policy_id: newPolicy.id,
           dimension: rule.dimension,
           enabled: rule.enabled,
+          warn_enabled: rule.warn_enabled ?? true,
+          block_enabled: rule.block_enabled ?? true,
           warn_threshold: rule.warn_threshold,
           block_threshold: rule.block_threshold,
           auto_mask: rule.auto_mask,
@@ -182,6 +186,7 @@ async function clonePolicy(
       );
     }
 
+    await client.from('policy_versions').insert({ policy_id: newPolicy.id, version: 1, snapshot: { profile: newPolicy, rules: (await client.from('policy_rules').select().eq('policy_id', newPolicy.id)).data ?? [], keywords: (await client.from('keyword_rules').select().eq('policy_id', newPolicy.id)).data ?? [], categories: (await client.from('keyword_categories').select().eq('policy_id', newPolicy.id)).data ?? [] }, change_summary: '克隆创建', changed_by: 'user' });
     return NextResponse.json({
       success: true,
       data: newPolicy,
@@ -211,5 +216,5 @@ export const POST = withLegacyApiSecurity(
       scope: 'principal',
     },
   },
-  clonePolicy,
+  transactionalCompatibilityHandler(clonePolicy),
 );

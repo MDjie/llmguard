@@ -1,28 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState, useEffect, useCallback } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, RefreshCw, ChevronLeft, ChevronRight, FileText, Clock, Zap } from 'lucide-react';
 
-interface AgentLog {
-  id: string;
-  session_id: string;
-  workflow_type: string;
-  model_provider: string;
-  model_name: string;
-  input_tokens: number;
-  output_tokens: number;
-  latency_ms: number;
-  status: string;
-  input_text: string;
-  output_text: string;
-  trace: Record<string, unknown>;
-  error_message?: string;
-  created_at: string;
-}
+import { agentLogsResponseSchema, type AgentLog } from '@/contracts/http/agent-logs';
 
 export default function AgentLogsPage() {
   const [logs, setLogs] = useState<AgentLog[]>([]);
@@ -32,7 +17,7 @@ export default function AgentLogsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [workflowType, setWorkflowType] = useState<string>('all');
 
-  const fetchLogs = async () => {
+  const fetchLogs = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -47,22 +32,23 @@ export default function AgentLogsPage() {
       const response = await fetch(`/api/agent-logs?${params}`);
       const data = await response.json();
 
-      if (data.success) {
-        setLogs(data.data.items || []);
-        setTotalPages(data.data.totalPages || 1);
+      const parsed = agentLogsResponseSchema.safeParse(data);
+      if (response.ok && parsed.success) {
+        setLogs(parsed.data.data.items);
+        setTotalPages(Math.max(1, parsed.data.data.totalPages));
       } else {
         setError(data.error || '加载失败');
       }
-    } catch (err) {
+    } catch {
       setError('网络错误，请稍后重试');
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, workflowType]);
 
   useEffect(() => {
-    fetchLogs();
-  }, [page, workflowType]);
+    void fetchLogs();
+  }, [fetchLogs]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -153,45 +139,33 @@ export default function AgentLogsPage() {
           {logs.map((log) => (
             <Card key={log.id}>
               <CardContent className="pt-6">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-2 flex-1">
-                    <div className="flex items-center gap-2">
-                      {getWorkflowTypeBadge(log.workflow_type)}
-                      {getStatusBadge(log.status)}
+                <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0 break-all space-y-2 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {getWorkflowTypeBadge(log.workflowName ?? '未记录')}
+                      {getStatusBadge(log.success === null ? '未知（历史结果未记录）' : log.success ? 'success' : 'failed')}
                       <span className="text-sm text-muted-foreground">
-                        {log.model_provider} / {log.model_name}
+                        {log.providerId ?? '未关联模型'}
                       </span>
                     </div>
                     <div className="text-sm">
-                      <span className="font-medium">Session:</span> {log.session_id}
+                      <span className="font-medium">检测记录:</span> {log.recordId ?? '未关联'}
                     </div>
-                    {log.input_text && (
-                      <div className="text-sm">
-                        <span className="font-medium">输入:</span>{' '}
-                        <span className="text-muted-foreground truncate inline-block max-w-lg">
-                          {log.input_text}
-                        </span>
-                      </div>
-                    )}
-                    {log.error_message && (
-                      <div className="text-sm text-destructive">
-                        <span className="font-medium">错误:</span> {log.error_message}
-                      </div>
-                    )}
+
                   </div>
                   <div className="text-right space-y-2">
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <div className="flex items-center gap-1">
                         <Zap className="h-4 w-4" />
-                        {log.latency_ms}ms
+                        {log.latencyMs === null ? '耗时未记录' : log.latencyMs + 'ms'}
                       </div>
                       <div>
-                        Token: {log.input_tokens}/{log.output_tokens}
+                        Token 统计见裁判调用记录
                       </div>
                     </div>
                     <div className="flex items-center gap-1 text-sm text-muted-foreground">
                       <Clock className="h-4 w-4" />
-                      {new Date(log.created_at).toLocaleString()}
+                      {new Date(log.createdAt).toLocaleString()}
                     </div>
                   </div>
                 </div>

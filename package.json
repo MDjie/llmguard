@@ -103,7 +103,8 @@
     "test:integration:resilience": "tsx scripts/integration/check-runtime-resilience.ts",
     "acceptance:v11": "node scripts/acceptance/v11-readiness.mjs",
     "detection:replay-offline": "tsx scripts/content-safety/replay-offline.ts",
-    "detection:multiformat-quality": "tsx scripts/content-safety/multiformat-quality.ts"
+    "detection:multiformat-quality": "tsx scripts/content-safety/multiformat-quality.ts",
+    "test:comprehensive": "node scripts/integration/comprehensive/run.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

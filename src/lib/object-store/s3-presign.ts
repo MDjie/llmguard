@@ -30,6 +30,11 @@ export function objectStoreConfig(environment: NodeJS.ProcessEnv = process.env):
   };
 }
 
+/** Sign for the network used by the analyzer; never rewrite a URL after signing. */
+export function analyzerObjectStoreConfig(environment: NodeJS.ProcessEnv = process.env): ObjectStoreConfig {
+  return objectStoreConfig({ ...environment, OBJECT_STORE_ENDPOINT: environment.OBJECT_STORE_ANALYZER_ENDPOINT ?? environment.OBJECT_STORE_ENDPOINT });
+}
+
 function hmac(key: Buffer | string, value: string): Buffer {
   return createHmac('sha256', key).update(value, 'utf8').digest();
 }

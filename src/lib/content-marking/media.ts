@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { ProviderEndpointPolicy, safeFetchJson } from '@/lib/egress';
-import { objectStoreConfig, S3Presigner } from '@/lib/object-store';
+import { analyzerObjectStoreConfig, S3Presigner } from '@/lib/object-store';
 import type { TenantScope } from '@/lib/tenancy';
 import type { artifactParts, artifacts } from '@/storage/database/shared/schema';
 import { createSignedContentMark, resolveContentMarkingConfiguration } from './mark';
@@ -65,7 +65,7 @@ export async function markMediaArtifact(input: {
   });
   const format = outputFormat(input.artifact);
   const outputObjectKey = `${input.artifact.objectPrefix}/generated-marks/${mark.metadata.contentId}.${format.extension}`;
-  const signer = new S3Presigner(objectStoreConfig());
+  const signer = new S3Presigner(analyzerObjectStoreConfig());
   const signedParts = await Promise.all(input.parts.map(async (part) => ({
     partNumber: part.partNumber,
     sizeBytes: part.sizeBytes,

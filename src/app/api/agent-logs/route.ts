@@ -1,9 +1,9 @@
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { jsonObjectResponseSchema } from '@/contracts/http/common';
+import { agentLogsResponseSchema } from '@/contracts/http/agent-logs';
 import { withApiSecurity } from '@/lib/api-security';
-import { db, agentTraces } from '@/lib/db';
+import { db, agentTraces, detectionRecords } from '@/lib/db';
 import { requireTenantContext, scopePredicate } from '@/lib/tenancy';
 
 const querySchema = z.object({
@@ -17,7 +17,7 @@ export const GET = withApiSecurity(
   {
     permission: 'audit:read',
     querySchema,
-    responseSchema: jsonObjectResponseSchema,
+    responseSchema: agentLogsResponseSchema,
     maxBodyBytes: 0,
     auditEvent: 'agent-log.list',
     rateLimitPolicy: { id: 'agent-log-list', windowMs: 60_000, maxRequests: 60, scope: 'principal' },
@@ -26,7 +26,7 @@ export const GET = withApiSecurity(
     const scope = requireTenantContext(principal);
     const conditions = [scopePredicate(agentTraces, scope)];
     if (query.workflowType) conditions.push(eq(agentTraces.workflowName, query.workflowType));
-    if (query.sessionId) conditions.push(eq(agentTraces.recordId, query.sessionId));
+    if (query.sessionId) conditions.push(inArray(agentTraces.recordId, db.select({ id: detectionRecords.id }).from(detectionRecords).where(and(eq(detectionRecords.sessionId, query.sessionId), scopePredicate(detectionRecords, scope)))));
     const where = and(...conditions);
     const offset = (query.page - 1) * query.pageSize;
     const [items, countRows] = await Promise.all([

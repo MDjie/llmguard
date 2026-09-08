@@ -1,3 +1,4 @@
+import { withWorkerHeartbeat } from '../src/lib/operations/worker-health';
 import { loadEnvConfig } from '@next/env';
 loadEnvConfig(process.cwd());
 async function main() {
@@ -17,4 +18,4 @@ async function main() {
     for (let i = 0; i < 5 && !stopping; i++) await new Promise(resolve => setTimeout(resolve, 1000));
   } while (!stopping); } finally { await closeDatabaseConnection(); }
 }
-main().catch(() => { console.error('ARCHIVE_WORKER_FAILED'); process.exitCode = 1; });
+withWorkerHeartbeat('archive', main).catch(() => { console.error('ARCHIVE_WORKER_FAILED'); process.exitCode = 1; });

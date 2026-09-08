@@ -8,7 +8,7 @@ import {
   updatePolicySchema,
 } from '@/contracts/http/policies';
 import { withLegacyApiSecurity } from '@/lib/api-security';
-import { getDb } from '@/lib/db';
+import { getDb, transactionalCompatibilityHandler, afterCompatibilityCommit } from '@/lib/db';
 import { clearPolicyCache } from '@/lib/detection/dynamic-engine';
 
 type CreatePolicyInput = z.infer<typeof createPolicySchema>;
@@ -174,6 +174,8 @@ async function createPolicy(request: NextRequest) {
 
     // 如果是从现有策略克隆
     if (cloneFrom) {
+      const source = await client.from('policy_profiles').select('id').eq('id', cloneFrom).single();
+      if (!source.data) return NextResponse.json({ success: false, error: '源策略不存在' }, { status: 404 });
       const [rulesResult, keywordsResult, categoriesResult] = await Promise.all([
         client.from<CloneRuleRow>('policy_rules').select().eq('policy_id', cloneFrom),
         client.from<CloneKeywordRow>('keyword_rules').select().eq('policy_id', cloneFrom),
@@ -246,7 +248,7 @@ async function createPolicy(request: NextRequest) {
     }
 
     // 克隆分类和关键词
-    if (categoriesToClone.length > 0) {
+    {
       const categoryIdMap: Record<string, string> = {};
 
       for (const cat of categoriesToClone) {
@@ -299,8 +301,8 @@ async function createPolicy(request: NextRequest) {
       snapshot: {
         profile,
         rules: newRules || [],
-        keywords: [],
-        categories: [],
+        keywords: (await client.from('keyword_rules').select().eq('policy_id', profile.id)).data ?? [],
+        categories: (await client.from('keyword_categories').select().eq('policy_id', profile.id)).data ?? [],
       },
       change_summary: '初始创建',
       changed_by: 'system',
@@ -418,7 +420,7 @@ async function updatePolicy(request: NextRequest) {
               auto_mask: rule.auto_mask,
               auto_rewrite: rule.auto_rewrite,
             })
-            .eq('id', rule.id);
+            .eq('id', rule.id).eq('policy_id', policyId);
 
           if (error) {
             console.error(`更新规则 ${rule.id} 失败:`, error);
@@ -427,7 +429,7 @@ async function updatePolicy(request: NextRequest) {
       );
 
       // 清除策略缓存，确保下次检测使用最新配置
-      clearPolicyCache(policyId);
+      afterCompatibilityCommit(() => clearPolicyCache(policyId));
     }
 
     // 创建版本快照
@@ -562,7 +564,7 @@ export const POST = withLegacyApiSecurity(
       scope: 'principal',
     },
   },
-  createPolicy,
+  transactionalCompatibilityHandler(createPolicy),
 );
 
 export const PUT = withLegacyApiSecurity(
@@ -579,7 +581,7 @@ export const PUT = withLegacyApiSecurity(
       scope: 'principal',
     },
   },
-  updatePolicy,
+  transactionalCompatibilityHandler(updatePolicy),
 );
 
 export const DELETE = withLegacyApiSecurity(
@@ -596,5 +598,5 @@ export const DELETE = withLegacyApiSecurity(
       scope: 'principal',
     },
   },
-  deletePolicy,
+  transactionalCompatibilityHandler(deletePolicy),
 );

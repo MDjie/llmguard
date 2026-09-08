@@ -5,130 +5,13 @@ import { withLegacyApiSecurity, type AuthenticatedPrincipal } from '@/lib/api-se
 import { db } from '@/lib/db';
 import { whitelistRules, whitelistRulePolicies, policyProfiles, detectionDimensions } from '@/lib/db';
 import { and, eq, sql } from 'drizzle-orm';
+import { createWhitelistRuleSchema, updateWhitelistRuleSchema } from '@/contracts/http/whitelist';
+import { ApiProblem } from '@/lib/api-security';
+import { validateWhitelistTargets } from '@/lib/policy-governance/whitelist';
 import { compileSafeRegex } from '@/lib/detection/safe-regex';
+import { clearPolicyCache } from '@/lib/detection/dynamic-engine';
 import { requireTenantContext, scopePredicate } from '@/lib/tenancy';
 
-const whitelistRuleFields = {
-  name: z.string().trim().min(1).max(128),
-  description: z.string().max(2_000).optional(),
-  policyScope: z.enum(['all', 'specific']),
-  policyIds: z.array(z.string().min(1).max(36)).max(100).default([]),
-  dimensionScope: z.enum(['all', 'specific']),
-  dimensionCodes: z
-    .array(z.string().min(1).max(64).regex(/^[a-z][a-z0-9_]*$/))
-    .max(100)
-    .default([]),
-  targetRuleIds: z
-    .array(z.string().min(1).max(256).regex(/^[A-Za-z0-9][A-Za-z0-9._:-]*$/))
-    .min(1)
-    .max(5_000)
-    .default([]),
-  directions: z
-    .array(z.enum([
-      'INPUT',
-      'OUTPUT_COMPLETE',
-      'OUTPUT_CHUNK',
-      'RAG_INGEST',
-      'RAG_CONTEXT',
-      'TOOL_REQUEST',
-      'TOOL_RESULT',
-    ]))
-    .min(1)
-    .max(7)
-    .default([]),
-  validFrom: z.string().datetime({ offset: true }).optional(),
-  expiresAt: z.string().datetime({ offset: true }),
-  priority: z.number().int().min(0).max(10_000).default(100),
-  pattern: z.string().trim().min(1).max(4_096),
-  matchType: z.enum(['exact', 'contains', 'prefix', 'suffix', 'regex']),
-  caseSensitive: z.boolean().default(false),
-  enabled: z.literal(false).default(false),
-};
-
-function validateWhitelistScope(
-  value: {
-    policyScope: 'all' | 'specific';
-    policyIds: string[];
-    dimensionScope: 'all' | 'specific';
-    dimensionCodes: string[];
-    targetRuleIds: string[];
-    directions: Array<'INPUT' | 'OUTPUT_COMPLETE' | 'OUTPUT_CHUNK' | 'RAG_INGEST' | 'RAG_CONTEXT' | 'TOOL_REQUEST' | 'TOOL_RESULT'>;
-    validFrom?: string;
-    expiresAt: string;
-    matchType: 'exact' | 'contains' | 'prefix' | 'suffix' | 'regex';
-    pattern: string;
-    caseSensitive: boolean;
-  },
-  context: z.RefinementCtx,
-): void {
-  if (value.policyScope === 'specific' && value.policyIds.length === 0) {
-    context.addIssue({
-      code: 'custom',
-      path: ['policyIds'],
-      message: 'At least one policy is required for a specific policy scope',
-    });
-  }
-  if (value.dimensionScope !== 'specific' || value.dimensionCodes.length === 0) {
-    context.addIssue({
-      code: 'custom',
-      path: ['dimensionScope'],
-      message: 'Whitelist rules must target one or more explicit dimensions',
-    });
-  }
-  if (new Set(value.targetRuleIds).size !== value.targetRuleIds.length) {
-    context.addIssue({
-      code: 'custom',
-      path: ['targetRuleIds'],
-      message: 'Target rule IDs must be unique',
-    });
-  }
-  if (new Set(value.directions).size !== value.directions.length) {
-    context.addIssue({
-      code: 'custom',
-      path: ['directions'],
-      message: 'Directions must be unique',
-    });
-  }
-  if (value.targetRuleIds.length === 0) {
-    context.addIssue({
-      code: 'custom',
-      path: ['targetRuleIds'],
-      message: 'Whitelist rules must target one or more explicit rules',
-    });
-  }
-  if (value.directions.length === 0) {
-    context.addIssue({
-      code: 'custom',
-      path: ['directions'],
-      message: 'Whitelist rules must target one or more explicit directions',
-    });
-  }
-  const validFrom = value.validFrom ? Date.parse(value.validFrom) : Date.now();
-  const expiresAt = Date.parse(value.expiresAt);
-  if (expiresAt <= validFrom || expiresAt <= Date.now()) {
-    context.addIssue({ code: 'custom', path: ['expiresAt'], message: 'Expiry must be after the effective time and in the future' });
-  }
-  if (value.matchType === 'regex') {
-    try {
-      compileSafeRegex(value.pattern, value.caseSensitive ? '' : 'i');
-    } catch {
-      context.addIssue({
-        code: 'custom',
-        path: ['pattern'],
-        message: 'The regular expression is invalid or unsupported',
-      });
-    }
-  }
-}
-
-const createWhitelistRuleSchema = z
-  .object(whitelistRuleFields)
-  .strict()
-  .superRefine(validateWhitelistScope);
-const updateWhitelistRuleSchema = z
-  .object({ id: z.string().min(1).max(128), ...whitelistRuleFields })
-  .strict()
-  .superRefine(validateWhitelistScope);
 type CreateWhitelistRuleInput = z.infer<typeof createWhitelistRuleSchema>;
 type UpdateWhitelistRuleInput = z.infer<typeof updateWhitelistRuleSchema>;
 const listQuerySchema = z
@@ -201,6 +84,7 @@ async function getWhitelistRules(
 
     return NextResponse.json({ success: true, data: filteredRules });
   } catch (error) {
+    if (error instanceof ApiProblem) throw error;
     console.error('获取白名单规则失败:', error);
     return NextResponse.json(
       { success: false, error: '获取白名单规则失败' },
@@ -235,6 +119,11 @@ async function createWhitelistRule(
       caseSensitive
     } = body;
 
+    if (matchType === 'regex') {
+      try { compileSafeRegex(pattern, caseSensitive ? '' : 'i'); }
+      catch { throw new ApiProblem({ status: 422, code: 'WHITELIST_PATTERN_INVALID', title: '匹配内容无效', detail: '正则表达式无效或使用了不支持的语法，请修改匹配内容。' }); }
+    }
+    await validateWhitelistTargets(scope, body);
     const newRule = await db.transaction(async (transaction) => {
       const [created] = await transaction.insert(whitelistRules).values({
         tenantId: scope.tenantId,
@@ -248,6 +137,7 @@ async function createWhitelistRule(
         directions,
         validFrom: validFrom ? new Date(validFrom) : new Date(),
         expiresAt: new Date(expiresAt),
+        proposedBy: context.principal!.subject,
         approvalStatus: 'pending',
         approvedBy: null,
         approvedAt: null,
@@ -271,6 +161,7 @@ async function createWhitelistRule(
 
     return NextResponse.json({ success: true, data: newRule });
   } catch (error) {
+    if (error instanceof ApiProblem) throw error;
     console.error('创建白名单规则失败:', error);
     return NextResponse.json(
       { success: false, error: '创建白名单规则失败' },
@@ -306,6 +197,11 @@ async function updateWhitelistRule(
       caseSensitive
     } = body;
 
+    if (matchType === 'regex') {
+      try { compileSafeRegex(pattern, caseSensitive ? '' : 'i'); }
+      catch { throw new ApiProblem({ status: 422, code: 'WHITELIST_PATTERN_INVALID', title: '匹配内容无效', detail: '正则表达式无效或使用了不支持的语法，请修改匹配内容。' }); }
+    }
+    await validateWhitelistTargets(scope, body);
     const updatedRule = await db.transaction(async (transaction) => {
       const [updated] = await transaction.update(whitelistRules)
         .set({
@@ -318,6 +214,8 @@ async function updateWhitelistRule(
           directions,
           validFrom: validFrom ? new Date(validFrom) : new Date(),
           expiresAt: new Date(expiresAt),
+          proposedBy: context.principal!.subject,
+          revision: sql`${whitelistRules.revision} + 1`,
           approvalStatus: 'pending',
           approvedBy: null,
           approvedAt: null,
@@ -330,6 +228,7 @@ async function updateWhitelistRule(
         })
         .where(and(
           eq(whitelistRules.id, id),
+          eq(whitelistRules.revision, body.expectedRevision),
           scopePredicate(whitelistRules, scope),
         ))
         .returning();
@@ -352,13 +251,15 @@ async function updateWhitelistRule(
 
     if (!updatedRule) {
       return NextResponse.json(
-        { success: false, error: '白名单规则不存在' },
-        { status: 404 }
+        { success: false, error: '白名单已被修改或不存在，请刷新', code: 'WHITELIST_REVISION_CONFLICT' },
+        { status: 409 }
       );
     }
 
+    clearPolicyCache();
     return NextResponse.json({ success: true, data: updatedRule });
   } catch (error) {
+    if (error instanceof ApiProblem) throw error;
     console.error('更新白名单规则失败:', error);
     return NextResponse.json(
       { success: false, error: '更新白名单规则失败' },
@@ -407,8 +308,10 @@ async function deleteWhitelistRule(
       );
     }
 
+    clearPolicyCache();
     return NextResponse.json({ success: true, message: '删除成功' });
   } catch (error) {
+    if (error instanceof ApiProblem) throw error;
     console.error('删除白名单规则失败:', error);
     return NextResponse.json(
       { success: false, error: '删除白名单规则失败' },

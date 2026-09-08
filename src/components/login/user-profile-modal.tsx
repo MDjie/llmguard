@@ -55,19 +55,25 @@ export function UserProfileModal({ open, onOpenChange, user, onUserUpdate }: Use
     e.preventDefault();
     if (!user) return;
 
+    const changes: Record<string, string | null> = {};
+    for (const key of ['nickname', 'email', 'phone', 'department'] as const) {
+      const value = formData[key].trim();
+      if (value !== (user[key] ?? '')) changes[key] = value || null;
+    }
+    if (!Object.keys(changes).length) { onOpenChange(false); return; }
     setIsLoading(true);
     try {
       const response = await fetch(`/api/users/${user.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(changes),
       });
 
       const data = await response.json();
 
-      if (data.success) {
+      if (response.ok && data.success) {
         toast.success('用户信息更新成功');
-        onUserUpdate?.({ ...user, ...formData });
+        onUserUpdate?.({ ...user, nickname: data.user.nickname ?? '', email: data.user.email ?? '', phone: data.user.phone ?? '', department: data.user.department ?? '' });
         onOpenChange(false);
       } else {
         toast.error(data.detail || data.error || '更新失败');

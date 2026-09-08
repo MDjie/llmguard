@@ -1,0 +1,24 @@
+import { readFileSync, mkdirSync, writeFileSync, existsSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { Client } from 'pg';
+import {randomBytes} from 'node:crypto';
+const [source, directory] = process.argv.slice(2);
+if (!source || !directory) throw new Error('Usage: initialize.mjs <private-env-source> <new-run-directory>');
+const out = resolve(directory); const artifactRoot = resolve('.artifact-build');
+if (!out.startsWith(artifactRoot + '/') && !out.startsWith(artifactRoot + '\\')) throw new Error('PRIVATE_ARTIFACT_DIRECTORY_REQUIRED');
+if (existsSync(out)) throw new Error('RUN_ALREADY_EXISTS');
+const values = JSON.parse(readFileSync(resolve(source, 'environment.private.json'), 'utf8'));
+const url = new URL(values.DATABASE_URL); if (url.hostname !== '127.0.0.1' || url.port !== '5438') throw new Error('ISOLATION_REQUIRED');
+const database = 'guardllm_integration_full_' + Date.now(); url.pathname = '/postgres';
+const client = new Client({ connectionString: url.href }); await client.connect();
+try { await client.query(`CREATE DATABASE "${database}"`); } finally { await client.end(); }
+url.pathname = '/' + database;
+for (const key of ['DATABASE_URL', 'PGDATABASE_URL', 'COZE_SUPABASE_DB_URL']) values[key] = url.href;
+values.GUARD_NEXT_DIST_DIR = '.next-comprehensive-build';
+values.EXPORT_APPROVAL_REQUIRED = 'true';
+values.GATEWAY_ARCHIVE_MODE = 'STRICT_OBJECT';
+values.GATEWAY_ARCHIVE_POLICIES_JSON = '[]';
+values.ANALYZER_SHARED_TOKEN=randomBytes(48).toString('base64url');
+values.PROVIDER_ALLOWED_HOSTS='127.0.0.1';values.PROVIDER_ALLOWED_PRIVATE_HOSTS='127.0.0.1';
+mkdirSync(out); writeFileSync(resolve(out, 'environment.private.json'), JSON.stringify(values));
+console.log(JSON.stringify({ initialized: true, database, directory: out }));

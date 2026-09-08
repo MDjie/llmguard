@@ -1,6 +1,7 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import pg from 'pg';
+import { spawnSync } from 'node:child_process';
 
 const databaseUrl = process.argv.find((argument) => argument.startsWith('postgres://'))
   ?? process.env.INTEGRATION_DATABASE_URL;
@@ -44,6 +45,11 @@ try {
     for (const relativePath of sqlFiles) {
       await client.query(readFileSync(resolve(root, relativePath), 'utf8'));
     }
+  }
+
+  if (!process.argv.includes('--policy-governance-schema-only')) {
+    const parity = spawnSync(process.execPath, ['--import', 'tsx', 'scripts/integration/comprehensive/schema-parity.ts'], { cwd: root, env: { ...process.env, INTEGRATION_DATABASE_URL: databaseUrl }, stdio: 'inherit', windowsHide: true });
+    if (parity.status !== 0) throw new Error('ORM_SCHEMA_PARITY_FAILED');
   }
 
   const isolationSql = readFileSync(resolve(root, 'tests/integration/tenancy-isolation.sql'), 'utf8')

@@ -1,3 +1,4 @@
+import { withWorkerHeartbeat } from '../src/lib/operations/worker-health';
 import { verifyNextArtifact } from '../src/lib/artifacts';
 
 let stopping = false;
@@ -14,7 +15,7 @@ async function main() {
   } while (!once && !stopping);
 }
 
-main().catch((error) => {
+withWorkerHeartbeat('verifier', main).catch((error) => {
   console.error(JSON.stringify({ event: 'artifact.worker.failed', type: error?.constructor?.name ?? 'unknown' }));
   process.exitCode = 1;
 });

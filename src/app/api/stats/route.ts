@@ -32,7 +32,7 @@ async function getStats(
     const [summary] = await db
       .select({
         total: sql<number>`count(*)`,
-        today: sql<number>`count(*) filter (where ${detectionSessions.createdAt} >= ${todayStart})`,
+        today: sql<number>`count(*) filter (where ${gte(detectionSessions.createdAt, todayStart)})`,
         allow: sql<number>`count(*) filter (where ${detectionSessions.finalAction} = 'allow')`,
         warn: sql<number>`count(*) filter (where ${detectionSessions.finalAction} = 'warn')`,
         block: sql<number>`count(*) filter (where ${detectionSessions.finalAction} = 'block')`,

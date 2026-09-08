@@ -5,7 +5,7 @@ import {
 } from '@/contracts/http/common';
 import { policyParamsSchema } from '@/contracts/http/policies';
 import { withLegacyApiSecurity } from '@/lib/api-security';
-import { getDb } from '@/lib/db';
+import { getDb, transactionalCompatibilityHandler } from '@/lib/db';
 
 // 设为默认策略
 async function setDefaultPolicy(
@@ -84,5 +84,5 @@ export const PUT = withLegacyApiSecurity(
       scope: 'principal',
     },
   },
-  setDefaultPolicy,
+  transactionalCompatibilityHandler(setDefaultPolicy),
 );

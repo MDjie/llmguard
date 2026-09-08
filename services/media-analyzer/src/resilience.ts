@@ -27,6 +27,9 @@ export class AnalyzerDependencyGuard {
     this.now = options.now ?? Date.now;
   }
 
+  /** A single request must not schedule more work than this dependency can accept. */
+  get maximumConcurrent(): number { return this.options.maximumConcurrent; }
+
   async execute<T>(
     operation: (signal: AbortSignal, attempt: number) => Promise<T>,
     callerSignal?: AbortSignal,

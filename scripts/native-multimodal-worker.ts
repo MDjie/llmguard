@@ -1,4 +1,5 @@
+import { withWorkerHeartbeat } from '../src/lib/operations/worker-health';
 import { loadEnvConfig } from '@next/env';
 loadEnvConfig(process.cwd());
 async function main(){const {processNextNativeJointJob}=await import('../src/lib/multimodal/native-worker');const {closeDatabaseConnection}=await import('../src/storage/database/shared/db');let stopping=false;process.once('SIGTERM',()=>{stopping=true;});process.once('SIGINT',()=>{stopping=true;});try{do{try{const result=await processNextNativeJointJob();if(result)console.log(JSON.stringify({event:'native_joint.processed',...result}));else if(!process.argv.includes('--once'))await new Promise(resolve=>setTimeout(resolve,2000));}catch{console.error('NATIVE_JOINT_WORKER_ITERATION_FAILED');if(process.argv.includes('--once'))throw new Error('NATIVE_JOINT_WORKER_FAILED');await new Promise(resolve=>setTimeout(resolve,5000));}}while(!stopping&&!process.argv.includes('--once'));}finally{await closeDatabaseConnection();}}
-main().catch(()=>{console.error('NATIVE_JOINT_WORKER_FAILED');process.exitCode=1;});
+withWorkerHeartbeat('native', main).catch(()=>{console.error('NATIVE_JOINT_WORKER_FAILED');process.exitCode=1;});

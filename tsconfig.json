@@ -41,7 +41,9 @@
     ".next-upgrade-v2/types/**/*.ts",
     ".next-upgrade-v2/dev/types/**/*.ts",
     ".next-upgrade-build/types/**/*.ts",
-    ".next-upgrade-build/dev/types/**/*.ts"
+    ".next-upgrade-build/dev/types/**/*.ts",
+    ".next-comprehensive-build/types/**/*.ts",
+    ".next-comprehensive-build/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",

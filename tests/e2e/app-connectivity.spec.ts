@@ -1,7 +1,5 @@
 import { expect, test } from '@playwright/test';
 
-const authenticatedUsername = process.env.E2E_USERNAME;
-const authenticatedPassword = process.env.E2E_PASSWORD;
 
 test.describe('frontend and backend connectivity', () => {
   test('serves operational endpoints and a defined database readiness state', async ({ request }) => {
@@ -13,26 +11,19 @@ test.describe('frontend and backend connectivity', () => {
     });
 
     const readiness = await request.get('/api/health/db');
-    expect([200, 503]).toContain(readiness.status());
+    expect(readiness.status()).toBe(200);
     const readinessBody = await readiness.json() as {
       status?: string;
       code?: string;
     };
-    if (readiness.status() === 200) {
-      expect(readinessBody.status).toBe('ready');
-    } else {
-      expect(readinessBody.code).toBe('DATABASE_NOT_READY');
-    }
+    expect(readinessBody.status).toBe('ready');
   });
 
   test('rejects anonymous access at protected backend boundaries', async ({ request }) => {
     for (const path of ['/api/auth/me', '/api/users', '/api/policies']) {
       const response = await request.get(path);
-      expect([401, 503], path).toContain(response.status());
-      const expectedProblem = response.status() === 401
-        ? { code: 'AUTHENTICATION_REQUIRED', status: 401 }
-        : { code: 'AUDIT_UNAVAILABLE', status: 503 };
-      await expect(response.json()).resolves.toMatchObject(expectedProblem);
+      expect(response.status(), path).toBe(401);
+      await expect(response.json()).resolves.toMatchObject({ code: 'AUTHENTICATION_REQUIRED', status: 401 });
     }
   });
 
@@ -62,7 +53,7 @@ test.describe('frontend and backend connectivity', () => {
       response.url().endsWith('/api/auth/login') && response.request().method() === 'POST');
     await page.getByRole('button', { name: '登 录' }).click();
     const loginResponse = await loginResponsePromise;
-    expect([401, 500, 503]).toContain(loginResponse.status());
+    expect(loginResponse.status()).toBe(401);
     await expect(page.getByText(
       loginResponse.status() === 401
         ? '用户名、密码或账户状态无效。'
@@ -84,7 +75,9 @@ test.describe('frontend and backend connectivity', () => {
     await expect(page.getByRole('dialog')).toBeHidden();
   });
 
-  test('completes an authenticated navigation and logout workflow', async ({ page }) => {
+  test('completes an authenticated navigation and logout workflow', async ({ page }, testInfo) => {
+    const authenticatedUsername = process.env[testInfo.project.name.includes('mobile') ? 'E2E_MOBILE_USERNAME' : 'E2E_DESKTOP_USERNAME'] ?? process.env.E2E_USERNAME;
+    const authenticatedPassword = process.env[testInfo.project.name.includes('mobile') ? 'E2E_MOBILE_PASSWORD' : 'E2E_DESKTOP_PASSWORD'] ?? process.env.E2E_PASSWORD;
     test.skip(
       !authenticatedUsername || !authenticatedPassword,
       'Set E2E_USERNAME and E2E_PASSWORD to run the authenticated workflow.',
@@ -103,7 +96,7 @@ test.describe('frontend and backend connectivity', () => {
     expect((await loginResponsePromise).status()).toBe(200);
 
     await expect(page).toHaveURL(/\/$/);
-    await expect(page.getByRole('heading', { name: '大模型安全护栏检测平台' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '安全对话工作台' })).toBeVisible();
 
     const currentUser = await page.request.get('/api/auth/me');
     expect(currentUser.status()).toBe(200);
@@ -112,14 +105,16 @@ test.describe('frontend and backend connectivity', () => {
       user: { username: authenticatedUsername },
     });
 
+    const navigation = page.getByRole('button', { name: '打开导航' });
+    if (await navigation.isVisible()) await navigation.click();
     await page.getByRole('link', { name: /模型管理/ }).click();
     await expect(page).toHaveURL(/\/providers$/);
     await expect(page.getByRole('heading', { name: '模型供应商管理' })).toBeVisible();
 
-    await page.getByRole('button', { name: /系统管理员|e2e-admin/ }).click();
+    await page.getByRole('button', { name: '用户菜单' }).click();
     const logoutResponsePromise = page.waitForResponse((response) =>
       response.url().endsWith('/api/auth/logout') && response.request().method() === 'POST');
-    await page.getByRole('button', { name: '退出登录' }).click();
+    await page.getByRole('menuitem', { name: '退出登录' }).click();
     const logoutResponse = await logoutResponsePromise;
     const logoutPayload = await logoutResponse.json().catch(() => null) as unknown;
     expect(logoutResponse.status(), JSON.stringify(logoutPayload)).toBe(200);

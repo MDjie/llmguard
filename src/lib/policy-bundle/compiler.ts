@@ -213,6 +213,12 @@ export function compilePolicyBundle(
         'Enabled whitelist is inactive or expired',
       );
     }
+    for (const id of exception.targetRuleIds) {
+      const target = sourceRules.find(rule => rule.id === id);
+      if (!target || target.mandatoryDeny || !exception.dimensionCodes.includes(target.riskType)) {
+        throw new PolicyGovernanceValidationError('WHITELIST_TARGET_INVALID', 'Whitelist target is missing, has a different dimension, or cannot be exempted');
+      }
+    }
     if (exception.matchType === 'regex') {
       validateSafeRegexPattern(exception.pattern, exception.caseSensitive ? '' : 'i');
     }

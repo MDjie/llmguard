@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { ProviderEndpointPolicy, safeFetchJson } from '@/lib/egress';
-import { objectStoreConfig, S3Presigner } from '@/lib/object-store';
+import { analyzerObjectStoreConfig, S3Presigner } from '@/lib/object-store';
 import type { TenantScope } from '@/lib/tenancy';
 import type { artifactParts, artifacts } from '@/storage/database/shared/schema';
 import { createImageViewPlan } from './view-plan';
@@ -104,7 +104,7 @@ export async function analyzeDocumentOrImage(input: {
   if (!sharedToken || Buffer.byteLength(sharedToken) < 32) {
     throw new Error('ANALYZER_SHARED_TOKEN must contain at least 32 bytes');
   }
-  const signer = new S3Presigner(objectStoreConfig());
+  const signer = new S3Presigner(analyzerObjectStoreConfig());
   const signedParts = await Promise.all(input.parts.map(async (part) => ({
     partNumber: part.partNumber,
     sizeBytes: part.sizeBytes,

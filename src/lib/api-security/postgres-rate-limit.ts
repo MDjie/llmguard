@@ -38,12 +38,13 @@ export class PostgresRateLimiter implements ApiRateLimiter {
     try {
       const result = await this.executeSql(sql`
         INSERT INTO rate_limit_buckets (bucket_key, window_start, count)
-        VALUES (${bucketKey}, ${windowStart}, 1)
+        VALUES (${bucketKey}, ${windowStart.toISOString()}::timestamptz, 1)
         ON CONFLICT (bucket_key, window_start)
         DO UPDATE SET count = rate_limit_buckets.count + 1
         RETURNING count
       `);
-      const count = Number(result.rows[0]?.count ?? 0);
+      const count = Number(result.rows[0]?.count);
+      if (!Number.isSafeInteger(count) || count < 1) throw new Error('Invalid database rate-limit count');
       if (count > 1) await this.cleanupExpired(now);
       return {
         allowed: count <= policy.maxRequests,
@@ -64,7 +65,7 @@ export class PostgresRateLimiter implements ApiRateLimiter {
     try {
       await this.executeSql(sql`
         DELETE FROM rate_limit_buckets
-        WHERE window_start < ${new Date(now - RETENTION_MS)}
+        WHERE window_start < ${new Date(now - RETENTION_MS).toISOString()}::timestamptz
       `);
     } catch {
       // 清理失败不影响限流主路径，下个周期重试

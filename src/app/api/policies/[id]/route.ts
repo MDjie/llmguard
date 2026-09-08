@@ -8,7 +8,7 @@ import {
   updatePolicyMetadataSchema,
 } from '@/contracts/http/policies';
 import { withLegacyApiSecurity } from '@/lib/api-security';
-import { getDb } from '@/lib/db';
+import { getDb, transactionalCompatibilityHandler, afterCompatibilityCommit } from '@/lib/db';
 import { clearPolicyCache } from '@/lib/detection/dynamic-engine';
 
 // camelCase 转 snake_case
@@ -197,7 +197,7 @@ async function updatePolicyMetadata(
     }
 
     // 清除检测缓存
-    clearPolicyCache(id);
+    afterCompatibilityCommit(() => clearPolicyCache(id));
 
     return NextResponse.json({
       success: true,
@@ -245,5 +245,5 @@ export const PUT = withLegacyApiSecurity(
       scope: 'principal',
     },
   },
-  updatePolicyMetadata,
+  transactionalCompatibilityHandler(updatePolicyMetadata),
 );

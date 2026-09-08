@@ -1,3 +1,4 @@
+import type { SecretEnvelope } from '@/lib/secrets/types';
 import { sql } from "drizzle-orm";
 import { pgTable, varchar, text, timestamp, boolean, integer, bigint, decimal, jsonb, index, uniqueIndex, serial, uuid, primaryKey, foreignKey, type AnyPgColumn } from "drizzle-orm/pg-core";
 
@@ -188,6 +189,7 @@ export const exportApprovalRequests = pgTable(
 		approverId: varchar("approver_id", { length: 100 }),
 		status: varchar("status", { length: 16 }).notNull().default("pending"),
 		purpose: varchar("purpose", { length: 500 }).notNull(),
+		exportQuery: jsonb("export_query").$type<{ format: string; startDate?: string; endDate?: string; action?: string; riskType?: string }>(),
 		queryHash: varchar("query_hash", { length: 64 }).notNull(),
 		expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
 		decidedAt: timestamp("decided_at", { withTimezone: true }),
@@ -1116,6 +1118,8 @@ export const whitelistRules = pgTable(
 		>>().default([]).notNull(),
 		validFrom: timestamp("valid_from", { withTimezone: true }).defaultNow().notNull(),
 		expiresAt: timestamp("expires_at", { withTimezone: true }),
+		proposedBy: varchar("proposed_by", { length: 100 }),
+		revision: integer("revision").notNull().default(1),
 		approvalStatus: varchar("approval_status", { length: 32 }).default("pending").notNull(),
 		approvedBy: varchar("approved_by", { length: 100 }),
 		approvedAt: timestamp("approved_at", { withTimezone: true }),
@@ -1124,7 +1128,7 @@ export const whitelistRules = pgTable(
 		pattern: text("pattern").notNull(),
 		matchType: varchar("match_type", { length: 20 }).default("contains").notNull(),
 		caseSensitive: boolean("case_sensitive").default(false).notNull(),
-		enabled: boolean("enabled").default(true).notNull(),
+		enabled: boolean("enabled").default(false).notNull(),
 		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 		updatedAt: timestamp("updated_at", { withTimezone: true }),
 	},
@@ -1207,7 +1211,8 @@ export const agentTraces = pgTable(
 		requestPayload: jsonb("request_payload"),
 		responsePayload: jsonb("response_payload"),
 		latencyMs: integer("latency_ms"),
-		success: boolean("success").notNull(),
+		// null denotes a legacy trace whose outcome was not recorded. New writers provide a boolean.
+		success: boolean("success"),
 		errorMessage: text("error_message"),
 		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 	},
@@ -1345,7 +1350,7 @@ export const judgeModelInvocations = pgTable(
 		providerId: varchar("provider_id", { length: 36 }).references(() => llmProviders.id),
 
 		// 输入信息
-		direction: varchar("direction", { length: 10 }), // input, output
+		direction: varchar("direction", { length: 10 }).notNull(), // input, output
 		modelName: varchar("model_name", { length: 100 }),
 		promptVersion: varchar("prompt_version", { length: 20 }),
 		inputHash: varchar("input_hash", { length: 64 }),
@@ -2741,3 +2746,19 @@ export const feedbackCandidateExports=pgTable('feedback_candidate_exports',{
  feedbackId:uuid('feedback_id').notNull(),grantId:uuid('grant_id').notNull(),resourceType:varchar('resource_type',{length:32}).notNull(),resourceId:varchar('resource_id',{length:128}).notNull(),
  sourceDigest:varchar('source_digest',{length:64}).notNull(),candidateDigest:varchar('candidate_digest',{length:64}).notNull(),createdBy:varchar('created_by',{length:100}).notNull(),createdAt:timestamp('created_at',{withTimezone:true}).notNull().defaultNow(),
 },t=>[foreignKey({columns:[t.tenantId,t.applicationId,t.feedbackId],foreignColumns:[badcaseFeedback.tenantId,badcaseFeedback.applicationId,badcaseFeedback.id]}),foreignKey({columns:[t.tenantId,t.applicationId,t.grantId],foreignColumns:[contentAccessRequests.tenantId,contentAccessRequests.applicationId,contentAccessRequests.id]}),uniqueIndex('feedback_candidate_grant_uq').on(t.tenantId,t.applicationId,t.grantId)]);
+
+export const runtimeWorkerHeartbeats = pgTable('runtime_worker_heartbeats', {
+  deploymentId: varchar('deployment_id', { length: 128 }).notNull(),
+  instanceId: varchar('instance_id', { length: 64 }).notNull(),
+  kind: varchar('kind', { length: 64 }).notNull(),
+  state: varchar('state', { length: 16 }).notNull(),
+  heartbeatAt: timestamp('heartbeat_at', { withTimezone: true }).notNull(),
+}, table => [uniqueIndex('runtime_worker_heartbeats_identity').on(table.deploymentId, table.instanceId)]);
+
+export const mediaEvidenceChunks = pgTable('media_evidence_chunks', {
+  ...tenantScopeColumns(), id: varchar('id', { length: 64 }).primaryKey(),
+  snapshotId: varchar('snapshot_id', { length: 64 }).notNull(),
+  ordinal: integer('ordinal').notNull(), plaintextSha256: varchar('plaintext_sha256', { length: 64 }).notNull(), plaintextBytes: integer('plaintext_bytes').notNull(),
+  ciphertextSha256: varchar('ciphertext_sha256', { length: 64 }).notNull(), sizeBytes: integer('size_bytes').notNull(),
+  objectKey: text('object_key').notNull(), objectVersion: text('object_version'), spool: jsonb('spool').$type<SecretEnvelope[]>(),
+}, table => [uniqueIndex('media_evidence_chunks_snapshot_ordinal').on(table.snapshotId, table.ordinal)]);

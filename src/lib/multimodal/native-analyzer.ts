@@ -1,6 +1,6 @@
 import { nativeAssessmentSchema, type NativeBinding } from '@/contracts/http/native-multimodal';
 import { safeFetchJson, ProviderEndpointPolicy } from '@/lib/egress';
-import { S3Presigner, objectStoreConfig } from '@/lib/object-store';
+import { S3Presigner, analyzerObjectStoreConfig } from '@/lib/object-store';
 import { canonicalJson, sha256 } from '@/lib/gateway-runtime/protocol';
 import { evaluateNativeAssessment } from './native-gate';
 import type { TenantScope } from '@/lib/tenancy';
@@ -21,7 +21,7 @@ export async function analyzeNativeArtifacts(input: {
     try {
       const baseUrl=process.env.MULTIMODAL_ANALYZER_BASE_URL,token=process.env.ANALYZER_SHARED_TOKEN;
       if(!baseUrl||!token||Buffer.byteLength(token)<32)throw new Error('NATIVE_ANALYZER_UNCONFIGURED');
-      const signer=new S3Presigner(objectStoreConfig());
+      const signer=new S3Presigner(analyzerObjectStoreConfig());
       const items=await Promise.all(input.artifacts.map(async({artifact,parts})=>({id:artifact.id,kind:artifact.kind,mediaType:artifact.detectedMediaType,sizeBytes:artifact.verifiedSize,sha256:artifact.verifiedSha256,
         parts:await Promise.all(parts.map(async part=>({partNumber:part.partNumber,sizeBytes:part.sizeBytes,sha256:part.sha256,...await signer.presign('GET',part.objectKey,{expiresSeconds:300})}))) })));
       assessment=nativeAssessmentSchema.parse(await safeFetchJson({baseUrl,path:'/v1/analyze/native-joint',providerType:'custom',signal:input.signal,timeoutMs:120000,maxRequestBytes:1048576,maxResponseBytes:1048576,headers:{'X-Analyzer-Token':token},

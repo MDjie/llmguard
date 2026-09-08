@@ -1,5 +1,5 @@
 import {createArtifactUploadSchema} from '@/contracts/http/artifacts';
-import {pcmFromMetadata,pcmInputArguments} from '@/lib/media/formats/pcm';
+import {pcmFromMetadata,pcmInputArguments,pcmProbeArguments} from '@/lib/media/formats/pcm';
 import {createChunks,parseDocument} from '@/lib/document/parser';
 import {describe,it,expect} from 'vitest';
 import {validateMediaFileMetadata,normalizeMediaType,formatForFile} from '@/lib/media/formats/registry';
@@ -36,6 +36,8 @@ describe('explicit raw PCM and source offsets',()=>{
   expect(()=>pcmFromMetadata('a.pcm',{pcm:{sampleRate:16000,channels:2,sampleFormat:'s16le'}},3)).toThrow('PCM_FRAME_ALIGNMENT_INVALID');
   const pcm=pcmFromMetadata('a.pcm',{pcm:{sampleRate:16000,channels:2,sampleFormat:'s16le'}},64000);
   expect(pcmInputArguments(pcm)).toEqual(['-f','s16le','-ar','16000','-ac','2']);
+  expect(pcmProbeArguments(pcm)).toEqual(['-f','s16le','-ar','16000','-ch_layout','2c']);
+  expect(pcmProbeArguments()).toEqual([]);
  });
  it('preserves positions after multiple blank lines and leading newlines',async()=>{
   const text='\n\n甲\n\n\n\n乙\n丙';const parsed=await parseDocument(Buffer.from(text),'txt');

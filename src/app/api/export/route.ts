@@ -1,8 +1,9 @@
 import type { z } from 'zod';
-import { and, desc, eq, gte, inArray, lte } from 'drizzle-orm';
+import { and, desc, inArray } from 'drizzle-orm';
 import { jsonObjectResponseSchema } from '@/contracts/http/common';
 import { exportHistoryQuerySchema } from '@/contracts/http/history';
-import { withApiSecurity } from '@/lib/api-security';
+import { ApiProblem, withApiSecurity } from '@/lib/api-security';
+import { exportConditions, EXPORT_RECORD_LIMIT } from '@/lib/data-protection/export-query';
 import { csvCell } from '@/lib/csv';
 import {
   db,
@@ -38,18 +39,7 @@ async function loadSafeExportSessions(
   scope: TenantScope,
   query: ExportHistoryQuery,
 ): Promise<SafeExportSession[]> {
-  const conditions = [scopePredicate(detectionSessions, scope)];
-  if (query.startDate) {
-    conditions.push(gte(detectionSessions.createdAt, new Date(query.startDate)));
-  }
-  if (query.endDate) {
-    const end = new Date(query.endDate);
-    end.setHours(23, 59, 59, 999);
-    conditions.push(lte(detectionSessions.createdAt, end));
-  }
-  if (query.action) {
-    conditions.push(eq(detectionSessions.finalAction, query.action));
-  }
+  const conditions = exportConditions(scope, query);
 
   const sessions = await db
     .select({
@@ -66,7 +56,8 @@ async function loadSafeExportSessions(
     .from(detectionSessions)
     .where(and(...conditions))
     .orderBy(desc(detectionSessions.createdAt))
-    .limit(1_000);
+    .limit(EXPORT_RECORD_LIMIT + 1);
+  if (sessions.length > EXPORT_RECORD_LIMIT) throw new ApiProblem({ status: 422, code: 'EXPORT_LIMIT_EXCEEDED', title: '导出范围过大', detail: `单次最多导出 ${EXPORT_RECORD_LIMIT} 条，请缩小筛选范围。` });
 
   const sessionIds = sessions.map((session) => session.id);
   const records =
@@ -224,13 +215,13 @@ export const GET = withApiSecurity(
   },
   async ({ query, principal, request }) => {
     const scope = requireTenantContext(principal);
+    const sessions = await loadSafeExportSessions(scope, query);
     await consumeExportApproval(
       scope,
       request.headers.get('x-export-approval-id'),
       principal!.subject,
       query,
     );
-    const sessions = await loadSafeExportSessions(scope, query);
     const date = new Date().toISOString().slice(0, 10);
 
     if (query.format === 'csv') {

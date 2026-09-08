@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
+import { mapInBatches } from '../../services/media-analyzer/src/batching';
 import { AnalyzerDependencyGuard } from '../../services/media-analyzer/src/resilience';
 
 describe('media analyzer dependency resilience', () => {
+  it('completes every view of one request without self-induced bulkhead rejection', async () => {
+    const guard=new AnalyzerDependencyGuard({component:'ASR',timeoutMs:1000,maxAttempts:1,maximumConcurrent:2,circuitFailureThreshold:3,circuitResetMs:1000});
+    let active=0,peak=0;
+    const result=await mapInBatches([0,1,2,3,4,5],Math.min(6,guard.maximumConcurrent),item=>guard.execute(async()=>{active++;peak=Math.max(peak,active);await new Promise(resolve=>setTimeout(resolve,2));active--;return item;}));
+    expect(result).toEqual([0,1,2,3,4,5]);expect(peak).toBe(2);expect(guard.snapshot().active).toBe(0);
+  });
   it('retries bounded failures and closes the circuit after recovery', async () => {
     const guard = new AnalyzerDependencyGuard({
       component: 'OCR', timeoutMs: 1_000, maxAttempts: 2,

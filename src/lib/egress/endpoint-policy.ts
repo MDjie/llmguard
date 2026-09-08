@@ -1,4 +1,4 @@
-import { resolve4, resolve6 } from 'node:dns/promises';
+import { lookup, resolve4, resolve6 } from 'node:dns/promises';
 import ipaddr from 'ipaddr.js';
 import { providerHosts, type ProviderType } from '@/lib/providers/registry';
 
@@ -22,10 +22,13 @@ function configuredHosts(value: string | undefined): readonly string[] {
 
 async function systemResolver(hostname: string): Promise<readonly string[]> {
   if (ipaddr.isValid(hostname)) return [hostname];
-  const [ipv4, ipv6] = await Promise.allSettled([resolve4(hostname), resolve6(hostname)]);
+  // Include OS resolution (hosts files and Docker service names). Validate every
+  // observed address below; an OS-only private address never bypasses the allowlist.
+  const [ipv4, ipv6, system] = await Promise.allSettled([resolve4(hostname), resolve6(hostname), lookup(hostname, { all: true })]);
   const addresses = [
     ...(ipv4.status === 'fulfilled' ? ipv4.value : []),
     ...(ipv6.status === 'fulfilled' ? ipv6.value : []),
+    ...(system.status === 'fulfilled' ? system.value.map(record => record.address) : []),
   ];
   if (addresses.length === 0) throw new EgressPolicyError('DNS_RESOLUTION_FAILED', 'Provider host did not resolve');
   return addresses;

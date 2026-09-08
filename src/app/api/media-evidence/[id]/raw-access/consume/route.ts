@@ -1,3 +1,4 @@
+import { mediaEvidenceProblem } from '@/lib/evidence/problem';
 import { z } from 'zod';
 import { contentAccessConsumeResponseSchema, consumeContentAccessRequestSchema } from '@/contracts/http/content-access';
 import { withApiSecurity } from '@/lib/api-security';
@@ -8,5 +9,5 @@ export const POST = withApiSecurity({ permission: 'content:raw:read', paramsSche
   rateLimitPolicy: { id: 'media-evidence-access-consume', windowMs: 60000, maxRequests: 30, scope: 'principal' },
 }, async ({ principal, routeContext, body }) => {
   const { id } = await (routeContext as { params: Promise<{ id: string }> }).params;
-  return Response.json({ success: true, data: await consumeMediaEvidence(requireTenantContext(principal), id, body.requestId) }, { headers: { 'cache-control': 'no-store, max-age=0', pragma: 'no-cache' } });
+  return Response.json({ success: true, data: await consumeMediaEvidence(requireTenantContext(principal), id, body.requestId).catch(mediaEvidenceProblem) }, { headers: { 'cache-control': 'no-store, max-age=0', pragma: 'no-cache' } });
 });

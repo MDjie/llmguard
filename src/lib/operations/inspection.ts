@@ -1,4 +1,5 @@
 import os from 'node:os';
+import { inspectWorkerHealth } from './worker-health';
 import { statfs } from 'node:fs/promises';
 import { z } from 'zod';
 import { db } from '@/storage/database/shared/db';
@@ -42,11 +43,12 @@ async function prometheusMetrics() {
   }catch{return {status:'unavailable',message:'监控数据源不可用，请检查允许的主机、连接和凭据',groups:[]};}
 }
 export async function inspectRuntime(){
+  const workers = await inspectWorkerHealth();
   const before=cpuCounters(os.cpus());
   const [disk,database,cluster]=await Promise.all([
     statfs(process.cwd()).then(info=>({status:'available',totalBytes:info.blocks*info.bsize,availableBytes:info.bavail*info.bsize})).catch(()=>({status:'unavailable',totalBytes:null,availableBytes:null})),
     (async()=>{let timer:ReturnType<typeof setTimeout>|undefined;try{await Promise.race([db.execute(sql`select 1`),new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(new Error('timeout')),2000);})]);return {name:'PostgreSQL',status:'healthy',message:'连接检查成功'};}catch{return {name:'PostgreSQL',status:'unavailable',message:'连接检查失败或超时'};}finally{if(timer)clearTimeout(timer);}})(),
     prometheusMetrics(),new Promise<void>(resolve=>setTimeout(resolve,120)),
   ]);
-  return {sampledAt:new Date().toISOString(),site:process.env.GUARDLLM_SITE_ID??'未配置中心',instance:os.hostname(),scope:'当前进程可见主机资源；容器环境不代表整个集群',cpu:{count:os.cpus().length,usagePercent:cpuUsage(before,cpuCounters(os.cpus()))},memory:{totalBytes:os.totalmem(),availableBytes:os.freemem(),processRssBytes:process.memoryUsage().rss},disk,services:[{name:'应用进程',status:'healthy',message:`运行${Math.floor(process.uptime())}秒`},database],cluster};
+  return {sampledAt:new Date().toISOString(),site:process.env.GUARDLLM_SITE_ID??'未配置中心',instance:os.hostname(),scope:'当前进程可见主机资源；容器环境不代表整个集群',cpu:{count:os.cpus().length,usagePercent:cpuUsage(before,cpuCounters(os.cpus()))},memory:{totalBytes:os.totalmem(),availableBytes:os.freemem(),processRssBytes:process.memoryUsage().rss},disk,services:[{name:'应用进程',status:'healthy',message:`运行${Math.floor(process.uptime())}秒`},database,...workers],cluster};
 }

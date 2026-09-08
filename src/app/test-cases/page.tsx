@@ -299,12 +299,12 @@ export default function TestCasesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex min-w-0 flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">策略验证集</h1>
           <p className="text-gray-600 mt-1">管理策略验证样本，用于回归评测与发布门禁</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex shrink-0 flex-wrap gap-2">
           <Button variant="outline" onClick={fetchTestCases}>
             <RefreshCw className="h-4 w-4 mr-2" />
             刷新
@@ -342,7 +342,7 @@ export default function TestCasesPage() {
         <>
           <div className="bg-white rounded-lg border">
             <div className="p-4 border-b">
-              <div className="flex items-center justify-between">
+              <div className="flex min-w-0 flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
                 <span className="text-sm text-gray-600">共 {testCases.length} 条验证样本</span>
               </div>
             </div>
@@ -350,10 +350,10 @@ export default function TestCasesPage() {
             <div className="divide-y">
               {testCases.map((testCase) => (
                 <div key={testCase.id} className="p-4 hover:bg-gray-50 transition-colors">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="font-medium text-gray-900">{testCase.title}</h3>
+                  <div className="flex min-w-0 flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
+                    <div className="w-full min-w-0 flex-1">
+                      <div className="flex min-w-0 flex-wrap items-center gap-3 mb-2">
+                        <h3 className="min-w-0 break-words [overflow-wrap:anywhere] font-medium text-gray-900">{testCase.title}</h3>
                         <Badge className={getCategoryColor(testCase.category)}>
                           {getCategoryLabel(testCase.category)}
                         </Badge>
@@ -365,14 +365,14 @@ export default function TestCasesPage() {
                         )}
                       </div>
                       {testCase.description && (
-                        <p className="text-sm text-gray-600 mb-2">{testCase.description}</p>
+                        <p className="break-words [overflow-wrap:anywhere] text-sm text-gray-600 mb-2">{testCase.description}</p>
                       )}
-                      <div className="flex items-center gap-4 text-sm text-gray-500">
+                      <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
                         <span>期望动作: <strong>{getActionLabel(testCase.expectedAction)}</strong></span>
                         <span>分数范围: {testCase.expectedScoreMin}-{testCase.expectedScoreMax}</span>
                       </div>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex shrink-0 flex-wrap gap-2">
                       <Button variant="outline" size="sm" disabled={!canManage} onClick={() => handleEdit(testCase)}>
                         <Pencil className="h-4 w-4 mr-1" />
                         编辑

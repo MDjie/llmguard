@@ -1,5 +1,8 @@
 import { createHash } from 'node:crypto';
 import { objectStoreConfig, S3Presigner } from '@/lib/object-store';
+export class ArchiveObjectError extends Error {
+  constructor(readonly code: 'ARCHIVE_OBJECT_MISSING' | 'ARCHIVE_OBJECT_ACCESS_DENIED' | 'ARCHIVE_OBJECT_UNAVAILABLE', readonly status: number) { super(code); }
+}
 const MAXIMUM_BYTES = 16 * 1024 * 1024;
 const sha256 = (bytes: Uint8Array) => createHash('sha256').update(bytes).digest('hex');
 export interface StoredArchiveObject { readonly objectVersion: string; readonly ciphertextSha256: string; readonly sizeBytes: number }
@@ -25,7 +28,8 @@ export class S3ArchiveObjectStore implements ArchiveObjectStore {
   constructor(private readonly signer: Pick<S3Presigner, 'presign'>, private readonly fetchImpl: typeof fetch = fetch) {}
   private async request(method: 'GET' | 'PUT' | 'DELETE', key: string, options: Parameters<S3Presigner['presign']>[2], bytes?: Uint8Array, signal?: AbortSignal) {
     validKey(key); const signed = await this.signer.presign(method, key, { expiresSeconds: 60, ...options });
-    return this.fetchImpl(signed.url, { method, headers: signed.headers, body: bytes ? new Uint8Array(bytes) : undefined, redirect: 'error', cache: 'no-store', signal: AbortSignal.any([AbortSignal.timeout(30000), ...(signal ? [signal] : [])]) });
+    try { return await this.fetchImpl(signed.url, { method, headers: signed.headers, body: bytes ? new Uint8Array(bytes) : undefined, redirect: 'error', cache: 'no-store', signal: AbortSignal.any([AbortSignal.timeout(30000), ...(signal ? [signal] : [])]) }); }
+    catch { throw new ArchiveObjectError('ARCHIVE_OBJECT_UNAVAILABLE', 503); }
   }
   async putImmutable(key: string, bytes: Uint8Array, signal?: AbortSignal): Promise<StoredArchiveObject> {
     if (!bytes.length || bytes.length > MAXIMUM_BYTES) throw new Error('ARCHIVE_OBJECT_SIZE_INVALID');
@@ -47,7 +51,7 @@ export class S3ArchiveObjectStore implements ArchiveObjectStore {
     validVersion(reference.objectVersion);
     if (!Number.isSafeInteger(reference.sizeBytes) || reference.sizeBytes < 1 || reference.sizeBytes > MAXIMUM_BYTES) throw new Error('ARCHIVE_OBJECT_SIZE_INVALID');
     const response = await this.request('GET', key, { versionId: reference.objectVersion }, undefined, signal);
-    if (!response.ok) { await response.body?.cancel(); throw new Error('ARCHIVE_OBJECT_READ_FAILED'); }
+    if (!response.ok) { await response.body?.cancel(); throw new ArchiveObjectError(response.status === 404 ? 'ARCHIVE_OBJECT_MISSING' : [401,403].includes(response.status) ? 'ARCHIVE_OBJECT_ACCESS_DENIED' : 'ARCHIVE_OBJECT_UNAVAILABLE', response.status === 404 ? 410 : 503); }
     if (validVersion(response.headers.get('x-amz-version-id')) !== reference.objectVersion) { await response.body?.cancel(); throw new Error('ARCHIVE_OBJECT_VERSION_MISMATCH'); }
     const bytes = await boundedBytes(response, reference.sizeBytes);
     if (bytes.length !== reference.sizeBytes || sha256(bytes) !== reference.ciphertextSha256) throw new Error('ARCHIVE_OBJECT_DIGEST_MISMATCH'); return bytes;
@@ -55,6 +59,8 @@ export class S3ArchiveObjectStore implements ArchiveObjectStore {
   async deleteVersion(key: string, version: string, signal?: AbortSignal) {
     const response = await this.request('DELETE', key, { versionId: validVersion(version) }, undefined, signal);
     await response.body?.cancel(); if (!response.ok && response.status !== 404) throw new Error('ARCHIVE_OBJECT_DELETE_FAILED');
+    const verify = await this.request('GET', key, { versionId: version }, undefined, signal);
+    await verify.body?.cancel(); if (verify.status !== 404) throw new Error('ARCHIVE_OBJECT_DELETE_UNCONFIRMED');
   }
 }
 export function archiveObjectStore() { return new S3ArchiveObjectStore(new S3Presigner(objectStoreConfig())); }

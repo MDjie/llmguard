@@ -10,7 +10,7 @@ import {
   updateKeywordCategorySchema,
 } from '@/contracts/http/policies';
 import { withLegacyApiSecurity } from '@/lib/api-security';
-import { getDb } from '@/lib/db';
+import { getDb, transactionalCompatibilityHandler } from '@/lib/db';
 
 // 获取策略的关键词分类列表
 async function getKeywordCategories(
@@ -245,7 +245,7 @@ export const POST = withLegacyApiSecurity(
       scope: 'principal',
     },
   },
-  createKeywordCategory,
+  transactionalCompatibilityHandler(createKeywordCategory),
 );
 
 export const PUT = withLegacyApiSecurity(
@@ -263,7 +263,7 @@ export const PUT = withLegacyApiSecurity(
       scope: 'principal',
     },
   },
-  updateKeywordCategory,
+  transactionalCompatibilityHandler(updateKeywordCategory),
 );
 
 export const DELETE = withLegacyApiSecurity(
@@ -281,5 +281,5 @@ export const DELETE = withLegacyApiSecurity(
       scope: 'principal',
     },
   },
-  deleteKeywordCategory,
+  transactionalCompatibilityHandler(deleteKeywordCategory),
 );

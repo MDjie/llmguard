@@ -1,3 +1,4 @@
+import { withWorkerHeartbeat } from '../src/lib/operations/worker-health';
 import { processNextEvaluationRun } from '../src/lib/evaluation';
 
 let stopping = false;
@@ -18,7 +19,7 @@ async function main(): Promise<void> {
   } while (!runOnce && !stopping);
 }
 
-main().catch((error) => {
+withWorkerHeartbeat('evaluation', main).catch((error) => {
   console.error(JSON.stringify({
     event: 'evaluation.worker.failed',
     message: error instanceof Error ? error.message : 'unknown',

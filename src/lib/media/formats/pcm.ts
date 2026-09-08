@@ -21,3 +21,8 @@ export function pcmFromMetadata(fileName: string, metadata: unknown, sizeBytes: 
 export function pcmInputArguments(pcm?: PcmParameters): string[] {
   return pcm ? ['-f', pcm.sampleFormat, '-ar', String(pcm.sampleRate), '-ac', String(pcm.channels)] : [];
 }
+
+/** ffprobe uses channel layout; unlike ffmpeg it does not accept the -ac option. */
+export function pcmProbeArguments(pcm?: PcmParameters): string[] {
+  return pcm ? ['-f', pcm.sampleFormat, '-ar', String(pcm.sampleRate), '-ch_layout', `${pcm.channels}c`] : [];
+}

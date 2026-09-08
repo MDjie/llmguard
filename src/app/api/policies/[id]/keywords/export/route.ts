@@ -8,7 +8,7 @@ import {
 } from '@/contracts/http/policies';
 import { withLegacyApiSecurity } from '@/lib/api-security';
 import { csvCell } from '@/lib/csv';
-import { getDb } from '@/lib/db';
+import { getDb, transactionalCompatibilityHandler } from '@/lib/db';
 
 type ImportKeywordInput = z.infer<typeof importKeywordSchema>;
 
@@ -192,5 +192,5 @@ export const POST = withLegacyApiSecurity(
       scope: 'principal',
     },
   },
-  importKeywords,
+  transactionalCompatibilityHandler(importKeywords),
 );

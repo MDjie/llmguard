@@ -9,7 +9,7 @@ import {
   updateKeywordSchema,
 } from '@/contracts/http/policies';
 import { withLegacyApiSecurity } from '@/lib/api-security';
-import { getDb } from '@/lib/db';
+import { getDb, transactionalCompatibilityHandler } from '@/lib/db';
 import { prepareKeywordCreateRow } from '@/lib/policy/keyword-batch';
 
 function escapeLike(value: string): string {
@@ -272,7 +272,7 @@ export const POST = withLegacyApiSecurity(
       scope: 'principal',
     },
   },
-  createKeyword,
+  transactionalCompatibilityHandler(createKeyword),
 );
 
 export const PUT = withLegacyApiSecurity(
@@ -290,7 +290,7 @@ export const PUT = withLegacyApiSecurity(
       scope: 'principal',
     },
   },
-  updateKeyword,
+  transactionalCompatibilityHandler(updateKeyword),
 );
 
 export const DELETE = withLegacyApiSecurity(
@@ -308,5 +308,5 @@ export const DELETE = withLegacyApiSecurity(
       scope: 'principal',
     },
   },
-  deleteKeyword,
+  transactionalCompatibilityHandler(deleteKeyword),
 );

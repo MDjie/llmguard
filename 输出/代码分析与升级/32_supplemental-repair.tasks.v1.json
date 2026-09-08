@@ -315,11 +315,12 @@
         "T05",
         "T09"
       ],
-      "status": "OPEN",
+      "status": "PARTIAL_VERIFIED",
       "deliverables": "注册表投影逐格式upload/decode/detect/qualified状态、缺失依赖及版本；前端与旧OCR接口同源；上传后仍校验真实字节。",
       "constraints": "不得将ffmpeg存在当作所有codec可用；资格从已批准范围读取，UI不展示秘密或内部地址。",
       "acceptance": "无适配器、缺codec、过期资格、文本独立可用四类契约测试。",
-      "dependsOn": []
+      "dependsOn": [],
+      "latestAudit": "新增格式分阶段能力、codec/适配器缺口、9 Worker心跳、文档/音视频独立预检；真实模型资格仍待鉴定。"
     },
     {
       "id": "R02",
@@ -370,11 +371,12 @@
         "T17",
         "T21"
       ],
-      "status": "OPEN",
+      "status": "PARTIAL_VERIFIED",
       "deliverables": "NormalizedAsset固定父/子SHA、转换版本、覆盖/坐标映射；证据索引与受限分块密文分开，持久化ready前不能签发释放。",
       "constraints": "保留原件；不能截断证据来凑4MiB；对象版本、授权访问、保留/删除与幂等必须覆盖全部分块。",
       "acceptance": "大文档与多媒体超过4MiB、部分上传、重试、授权消费、hold/删除冲突。",
-      "dependsOn": []
+      "dependsOn": [],
+      "latestAudit": "6.9MB证据分7块、部分失败重试、不可变版本、hold与确切删除已通过真实PG/MinIO；NormalizedAsset标准派生对象及对应释放协议仍未完成。"
     },
     {
       "id": "R05",
@@ -390,7 +392,8 @@
       "dependsOn": [
         "R04",
         "R10"
-      ]
+      ],
+      "latestAudit": "混合/文档聊天仍受资格门限制，尚未完成标准派生件到精确目标模型wire的受控释放。"
     },
     {
       "id": "R06",
@@ -407,7 +410,8 @@
       "dependsOn": [
         "R03",
         "R04"
-      ]
+      ],
+      "latestAudit": "多模态RAG派生入库及媒体评测manifest仍待完成；文本RAG取消原子化不等于本项完成。"
     },
     {
       "id": "R07",
@@ -419,14 +423,15 @@
         "T09",
         "T12"
       ],
-      "status": "OPEN",
+      "status": "PARTIAL_VERIFIED",
       "deliverables": "补旧Office/OOXML嵌入图像与对象清单、OFD受控适配器、WPS/AMR/HEIF序列/多视频流profile；视图/页/轨预算一致。",
       "constraints": "不能执行宏或嵌入程序；不可解对象明确缺口；稀有格式未通过实际样本鉴定时标为条件支持。",
       "acceptance": "每个声明profile至少正常/风险/损坏/预算边界四类；不得静默漏页或漏轨。",
       "dependsOn": [
         "R01",
         "R04"
-      ]
+      ],
+      "latestAudit": "45格式上传及真实解析矩阵已建立，PCM/RTF和音频时长兼容性已修复；OFD/WPS/AMR/HEIF序列及嵌入对象四类样本未完成。"
     },
     {
       "id": "R08",
@@ -441,7 +446,8 @@
       "acceptance": "对象写入后崩溃、重复删除、hold竞争、版本回写、旧预签名TTL及配额恢复。",
       "dependsOn": [
         "R04"
-      ]
+      ],
+      "latestAudit": "证据对象版本删除已实现；原Artifact清理账本、活跃引用/hold竞争、旧预签名TTL及容量释放仍待独立实现与验收。"
     },
     {
       "id": "R09",
@@ -450,13 +456,14 @@
       "originalTasks": [
         "T21"
       ],
-      "status": "OPEN",
+      "status": "PARTIAL_VERIFIED",
       "deliverables": "复用证据访问授权，支持图片框/PDF页/音视频时间点；显示正反证、模型身份、来源映射、覆盖和运行失败。",
       "constraints": "浏览器仅获取已授权的正确版本；证据视图偏移不可套用到脱敏文本；不加载任意外部URL。",
       "acceptance": "浏览器点击定位、授权过期/使用一次、跨用户、正反证及处理失败分类。",
       "dependsOn": [
         "R04"
-      ]
+      ],
+      "latestAudit": "F轮原文独立授权、一次读取、位置高亮、关闭清除、反馈双人复核和候选下载通过；完整音视频定位仍依赖标准派生资产，不宣称整体完成。"
     },
     {
       "id": "R10",
@@ -467,13 +474,14 @@
         "T10",
         "T11"
       ],
-      "status": "OPEN",
+      "status": "BLOCKED",
       "deliverables": "对已有配置中的文本裁判、视觉、ASR、音频分类、原生联合角色分别接线；仅文本ASR返回值保留段级定位并标明无置信度，或调用已鉴定对齐器。",
       "constraints": "不猜endpoint/密钥；不伪造逐字时间或confidence=1；未经批准不启用云端回退和ENFORCE。",
       "acceptance": "真实端点权限、返回契约、边界时长、角色范围、超时、模型版本固定的验收。",
       "dependsOn": [
         "R01"
-      ]
+      ],
+      "latestAudit": "测试环境没有真实ASR/VLM/音频分类/联合裁判角色资格，不以合成端点或协议占位符替代真实模型鉴定。"
     },
     {
       "id": "R11",
@@ -484,14 +492,15 @@
         "T19",
         "T22"
       ],
-      "status": "OPEN",
+      "status": "BLOCKED",
       "deliverables": "开发复核工作流、金融黑白对照、Base/Refiner/关系引擎消融、阈值与校准产物版本化；独立集按来源隔离且双人审定。",
       "constraints": "不代填人工签名；独立集不参与阈值选择；保留FPR≤1%与FDR≤10%及既有召回门槛。",
       "acceptance": "双人审定开发与独立数据、可复现消融产物及最终一次冻结评测。",
       "dependsOn": [
         "R06",
         "R10"
-      ]
+      ],
+      "latestAudit": "独立双人审定开发/验收标签、模型与数据运行身份尚未齐备。"
     },
     {
       "id": "R12",
@@ -508,7 +517,7 @@
         "T23",
         "T24"
       ],
-      "status": "OPEN",
+      "status": "IN_PROGRESS",
       "deliverables": "按格式×入口×模型×动作运行真实闭环，容量/故障/断网/录音测试，冻结镜像与策略后影子/灰度及业务FDR观察。",
       "constraints": "本轮补充单测或合成格式样本不能替代独立安全验收；未满足门槛不激活生产。",
       "acceptance": "G0-G5全部证据、可回退部署、无未解决P0/P1，才关闭原方案。",
@@ -524,7 +533,8 @@
         "R09",
         "R10",
         "R11"
-      ]
+      ],
+      "latestAudit": "33号D01-D09及新增生命周期约束已修复；F轮执行无失败、媒体语义与质量门槛BLOCKED。32号剩余研发和G0-G5尚未关闭。"
     }
   ],
   "updatedAt": "2026-09-08T12:18:46.274817+00:00",
@@ -535,5 +545,6 @@
     ],
     "openCount": 10,
     "evidenceDirectory": "输出/代码分析与升级/32_补充修复证据_2026-09-08"
-  }
+  },
+  "latestDevelopmentAudit": "2026-09-09"
 }

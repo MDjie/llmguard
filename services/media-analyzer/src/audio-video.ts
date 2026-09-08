@@ -1,5 +1,5 @@
 import {audioExecutionSummary,probeDecodedAudio,mergeAudioIntervals,subtractAudioIntervals,type AudioTrackExecution,type AudioInterval} from './audio-coverage';
-import {pcmInputArguments, type PcmParameters} from '../../../src/lib/media/formats/pcm';
+import {pcmInputArguments, pcmProbeArguments, type PcmParameters} from '../../../src/lib/media/formats/pcm';
 import { readdir, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { z } from 'zod';
@@ -93,7 +93,7 @@ async function probe(
 ) {
   const result = await runner.run(process.env.ANALYZER_FFPROBE_COMMAND ?? 'ffprobe', [
     '-v', 'error', '-show_format', '-show_streams', '-of', 'json',
-    '-protocol_whitelist', 'file,pipe', ...pcmInputArguments(pcm), inputPath,
+    '-protocol_whitelist', 'file,pipe', ...pcmProbeArguments(pcm), inputPath,
   ], {
     cwd: workspace,
     timeoutMs,
@@ -398,7 +398,7 @@ async function analyzeFrames(input: {
 }): Promise<FrameAnalysis[]> {
   return mapInBatches(
     input.files,
-    input.request.sampling.batchSize,
+    Math.min(input.request.sampling.batchSize,ocrGuard.maximumConcurrent,visualGuard.maximumConcurrent,codeGuard.maximumConcurrent),
     async (file, localIndex) => {
       const frameIndex = input.indexOffset + localIndex;
       const viewId = `frame_${frameIndex}`;
@@ -533,8 +533,15 @@ export async function analyzeAudioVideo(
         runner, inputPath, audioPath, workspace, request.sandbox.ffmpegTimeoutMs, signal,unit.track,unit.channel,request.artifact.pcm);
       generatedPaths.push(audioPath);
       const samples=await probeDecodedAudio(runner,audioPath,workspace,signal);
-      if(unit.sourceStartMs+samples.durationMs>metadata.durationMs+2)throw new Error('ANALYZER_AUDIO_DURATION_MISMATCH');
-      metadata.durationMs=Math.max(metadata.durationMs,unit.sourceStartMs+samples.durationMs);
+      // Codec padding and edit lists can extend decoded PCM beyond container metadata.
+      // Inspect every decoded sample and retain an explicit incomplete reason.
+      const decodedEndMs=unit.sourceStartMs+samples.durationMs;
+      if(decodedEndMs>metadata.durationMs+2){
+        failures.push({component:'ASR',required:true,code:'ANALYZER_AUDIO_CONTAINER_DURATION_MISMATCH'});
+        coordinateMappings.push({mappingVersion:'audio-duration-reconciliation-1',track:unit.track,channel:unit.channel,containerDurationMs:metadata.durationMs,decodedEndMs,basis:'DECODED_PCM_SAMPLES',requiresReview:true});
+      }
+      metadata.durationMs=Math.max(metadata.durationMs,decodedEndMs);
+      assertMediaResourceBudget({durationMs:metadata.durationMs,maxDurationMs:request.sampling.maxDurationMs,decodedBytes:await decodedBytes(generatedPaths),maxDecodedBytes:request.sandbox.maxDecodedBytes});
       const audioViews = await materializeAudioViews({
         request,
         runner,
@@ -572,7 +579,7 @@ export async function analyzeAudioVideo(
       coordinateMappings.push(...audioViews.map(view=>({viewId:prefix+'-'+view.id,track:unit.track,channel:unit.channel,mappingVersion:'audio-time-to-source-2',guardPaddingMs:view.id==='speed_0_9'||view.id==='speed_1_1'?1000:0,mappingAccuracy:view.timeScale===1?'SOURCE_TIME':'NOMINAL_RATE',basis:'SOURCE_TIME_MS',sourceStartMs:unit.sourceStartMs,timeScale:view.timeScale,reverseDurationMs:view.reverseDurationMs??null,sourceDurationMs:samples.durationMs,sampleRate:samples.sampleRate,sampleCount:samples.sampleCount})));
       const asrViews = await mapInBatches(
         audioViews,
-        request.sampling.batchSize,
+        Math.min(request.sampling.batchSize,asrGuard.maximumConcurrent),
         async (view) => {
           const viewSamples=await probeDecodedAudio(runner,view.path,workspace,signal);
           const expectedIntervals=[{startMs:unit.sourceStartMs,endMs:unit.sourceStartMs+Math.min(samples.durationMs,view.reverseDurationMs??samples.durationMs)}];

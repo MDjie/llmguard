@@ -1,4 +1,4 @@
-import { jsonObjectResponseSchema } from '@/contracts/http/common';
+import { policyRuntimeResponseSchema } from '@/contracts/http/policy-runtime';
 import { withApiSecurity } from '@/lib/api-security';
 import { getPolicyRuntimeSummary, PolicyGovernanceOperationError } from '@/lib/policy-governance';
 import { policyGovernanceProblem } from '@/lib/policy-governance/problem';
@@ -6,7 +6,7 @@ import { requireTenantContext } from '@/lib/tenancy';
 
 export const GET = withApiSecurity(
   {
-    permission: 'policy:read', responseSchema: jsonObjectResponseSchema, maxBodyBytes: 0,
+    permission: 'policy:read', responseSchema: policyRuntimeResponseSchema, maxBodyBytes: 0,
     auditEvent: 'policy.runtime.read',
     rateLimitPolicy: { id: 'policy-runtime-read', windowMs: 60_000, maxRequests: 120, scope: 'application' },
   },

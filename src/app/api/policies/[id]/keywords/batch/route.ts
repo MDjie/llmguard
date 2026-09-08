@@ -3,7 +3,7 @@ import type { z } from 'zod';
 import { jsonObjectResponseSchema } from '@/contracts/http/common';
 import { batchKeywordSchema, policyParamsSchema } from '@/contracts/http/policies';
 import { withLegacyApiSecurity } from '@/lib/api-security';
-import { getDb } from '@/lib/db';
+import { getDb, transactionalCompatibilityHandler } from '@/lib/db';
 import { prepareKeywordBatchRows } from '@/lib/policy/keyword-batch';
 
 type BatchKeywordInput = z.infer<typeof batchKeywordSchema>;
@@ -105,5 +105,5 @@ export const POST = withLegacyApiSecurity(
       scope: 'principal',
     },
   },
-  batchCreateKeywords,
+  transactionalCompatibilityHandler(batchCreateKeywords),
 );

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { jsonObjectResponseSchema } from '@/contracts/http/common';
 import { policyParamsSchema, togglePolicySchema } from '@/contracts/http/policies';
 import { withLegacyApiSecurity } from '@/lib/api-security';
-import { getDb } from '@/lib/db';
+import { getDb, transactionalCompatibilityHandler, afterCompatibilityCommit } from '@/lib/db';
 import { clearPolicyCache } from '@/lib/detection/dynamic-engine';
 
 // 启用/禁用策略
@@ -37,7 +37,7 @@ async function togglePolicy(
     }
 
     // 清除检测缓存
-    clearPolicyCache(id);
+    afterCompatibilityCommit(() => clearPolicyCache(id));
 
     return NextResponse.json({
       success: true,
@@ -67,5 +67,5 @@ export const PUT = withLegacyApiSecurity(
       scope: 'principal',
     },
   },
-  togglePolicy,
+  transactionalCompatibilityHandler(togglePolicy),
 );

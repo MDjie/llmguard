@@ -1,3 +1,4 @@
+import { withWorkerHeartbeat } from '../src/lib/operations/worker-health';
 import { loadEnvConfig } from '@next/env';
 loadEnvConfig(process.cwd());
 async function main() {
@@ -27,4 +28,4 @@ async function main() {
     } while (!stopping);
   } finally { await closeDatabaseConnection(); }
 }
-main().catch(() => { console.error('GATEWAY_RECONCILIATION_WORKER_FAILED'); process.exitCode = 1; });
+withWorkerHeartbeat('gateway-reconcile', main).catch(() => { console.error('GATEWAY_RECONCILIATION_WORKER_FAILED'); process.exitCode = 1; });

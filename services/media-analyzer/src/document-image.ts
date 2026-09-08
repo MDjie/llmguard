@@ -52,6 +52,7 @@ export function assertImageResourceBudget(input: {
   readonly maxPixels: number;
   readonly maxDecodedBytes: number;
   readonly maxDecompressionRatio: number;
+  readonly expansionBasis?: 'COMPRESSED_IMAGE' | 'DOCUMENT_RENDER';
 }): void {
   if (
     !Number.isSafeInteger(input.pixels) || input.pixels < 0 ||
@@ -64,7 +65,9 @@ export function assertImageResourceBudget(input: {
   if (input.decodedBytes > input.maxDecodedBytes) {
     throw new Error('ANALYZER_DECODED_BYTES_LIMIT');
   }
-  if (input.decodedBytes / Math.max(1, input.artifactBytes) > input.maxDecompressionRatio) {
+  // Document rasterization is not decompression: a short RTF may render a full page.
+  // ZIP expansion is checked in inspectOfficeZip; all documents retain page/pixel/byte/time limits.
+  if (input.expansionBasis !== 'DOCUMENT_RENDER' && input.decodedBytes / Math.max(1, input.artifactBytes) > input.maxDecompressionRatio) {
     throw new Error('ANALYZER_DECOMPRESSION_RATIO_LIMIT');
   }
 }
@@ -270,6 +273,7 @@ async function assertDecodeBudgets(
     pixels,
     decodedBytes,
     artifactBytes: request.artifact.sizeBytes,
+    expansionBasis: request.artifact.kind === 'DOCUMENT' ? 'DOCUMENT_RENDER' : 'COMPRESSED_IMAGE',
     maxPixels: request.limits.maxPixels,
     maxDecodedBytes: request.limits.maxDecodedBytes,
     maxDecompressionRatio: request.limits.maxDecompressionRatio,
@@ -363,7 +367,7 @@ export async function analyzeDocumentImage(
     let lowConfidenceOcr=false;
     const analyzedViews = await mapInBatches(
       views,
-      request.limits.batchSize,
+      Math.min(request.limits.batchSize,ocrGuard.maximumConcurrent,visualGuard.maximumConcurrent,codeGuard.maximumConcurrent),
       async (view) => {
         const [ocrResult, visualResult, codeResult] = await Promise.allSettled([
           ocrGuard.execute((attemptSignal) => runOcr({

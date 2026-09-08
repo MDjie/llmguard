@@ -226,7 +226,7 @@ export default function EvaluationRunsPage() {
         </Button>
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
+      <div className="grid min-w-0 grid-cols-1 gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
         <section className="space-y-4 rounded-md border border-gray-200 bg-white p-4">
           <div className="space-y-1.5">
             <Label>签名策略包</Label>
@@ -260,7 +260,7 @@ export default function EvaluationRunsPage() {
           </div>
           <div className="max-h-[420px] space-y-1 overflow-y-auto border-y border-gray-100 py-2">
             {visibleCases.map((testCase) => (
-              <label key={testCase.id} className="flex cursor-pointer items-start gap-2 rounded px-2 py-2 hover:bg-gray-50">
+              <label key={testCase.id} className="flex min-w-0 cursor-pointer items-start gap-2 rounded px-2 py-2 hover:bg-gray-50">
                 <Checkbox checked={selectedCases.includes(testCase.id)} onCheckedChange={() => toggleCase(testCase.id)} />
                 <span className="min-w-0">
                   <span className="block truncate text-sm font-medium text-gray-800">{testCase.title}</span>

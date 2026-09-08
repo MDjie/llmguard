@@ -1,3 +1,4 @@
+import { withWorkerHeartbeat } from '../src/lib/operations/worker-health';
 import { processNextAudioVideoJob } from '../src/lib/media';
 
 let stopping = false;
@@ -25,7 +26,7 @@ async function main() {
   } while (!once && !stopping);
 }
 
-main().catch((error) => {
+withWorkerHeartbeat('media', main).catch((error) => {
   console.error(JSON.stringify({ event: 'media.worker.failed', type: error?.constructor?.name ?? 'unknown' }));
   process.exitCode = 1;
 });

@@ -1,3 +1,4 @@
+import { withWorkerHeartbeat } from '../src/lib/operations/worker-health';
 import { processNextIntakeJob } from '../src/lib/media/intake-worker';
 import { processNextDocumentImageJob } from '../src/lib/multimodal';
 
@@ -20,7 +21,7 @@ async function main() {
   } while (!once && !stopping);
 }
 
-main().catch((error) => {
+withWorkerHeartbeat('intake', main).catch((error) => {
   console.error(JSON.stringify({ event: 'multimodal.worker.failed', type: error?.constructor?.name ?? 'unknown' }));
   process.exitCode = 1;
 });

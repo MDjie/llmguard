@@ -57,6 +57,7 @@ describe('signed policy bundles', () => {
   it('preserves target rule scopes on compiled exceptions', () => {
     const payload = compilePolicyBundle({
       ...config,
+      rules: new Map([['dimension-1', ['rule-1', 'rule-2'].map(id => ({ ...config.rules.get('dimension-1')![0], id, config: {} }))]]),
       whitelists: [{
         id: 'allow-1',
         policyScope: 'specific',
@@ -87,6 +88,10 @@ describe('signed policy bundles', () => {
       approvedBy: 'reviewer-2',
       mandatoryDenyExempt: false,
     })]);
+  });
+
+  it.each(['rule-1', 'missing-rule'])('rejects non-exemptible or missing exception target %s', target => {
+    expect(() => compilePolicyBundle({ ...config, whitelists: [{ id: 'invalid-exception', policyScope: 'specific', policyIds: ['policy-1'], dimensionScope: 'specific', dimensionCodes: ['prompt_injection'], targetRuleIds: [target], directions: ['INPUT'], validFromEpochMs: 1_700_000_000_000, expiresAtEpochMs: 1_800_000_000_000, approvalStatus: 'approved', approvedBy: 'reviewer', priority: 1, pattern: 'example', matchType: 'contains', caseSensitive: false, enabled: true }] }, 4, { compileTimeEpochMs: 1_750_000_000_000 })).toThrow('Whitelist target is missing');
   });
 
   it('is deterministic and rejects any payload tampering', () => {

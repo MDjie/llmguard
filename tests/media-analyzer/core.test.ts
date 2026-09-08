@@ -100,6 +100,14 @@ describe('media analyzer core', () => {
     ])).toEqual([{ ...speedMapped, confidence: 0.95 }]);
   });
 
+  it('keeps absolute document render budgets without treating text-to-page rasterization as compression', () => {
+    const budget={pixels:100,decodedBytes:2000,artifactBytes:25,maxPixels:100,maxDecodedBytes:2000,maxDecompressionRatio:10,expansionBasis:'DOCUMENT_RENDER' as const};
+    expect(()=>assertImageResourceBudget(budget)).not.toThrow();
+    expect(()=>assertImageResourceBudget({...budget,decodedBytes:2001})).toThrow('ANALYZER_DECODED_BYTES_LIMIT');
+    expect(()=>assertImageResourceBudget({...budget,pixels:101})).toThrow('ANALYZER_PIXEL_LIMIT');
+    expect(()=>assertImageResourceBudget({...budget,expansionBasis:'COMPRESSED_IMAGE'})).toThrow('ANALYZER_DECOMPRESSION_RATIO_LIMIT');
+  });
+
   it('rejects oversized images, decompression bombs and long or oversized media', () => {
     expect(() => assertImageResourceBudget({
       pixels: 100_000_001, decodedBytes: 1, artifactBytes: 1,

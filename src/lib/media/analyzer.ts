@@ -2,7 +2,7 @@ import {pcmFromMetadata} from '@/lib/media/formats/pcm';
 import { z } from 'zod';
 import { analysisCoverageSchema } from '@/lib/multimodal/coverage';
 import { ProviderEndpointPolicy, safeFetchJson } from '@/lib/egress';
-import { objectStoreConfig, S3Presigner } from '@/lib/object-store';
+import { analyzerObjectStoreConfig, S3Presigner } from '@/lib/object-store';
 import type { TenantScope } from '@/lib/tenancy';
 import type { artifactParts, artifacts } from '@/storage/database/shared/schema';
 import { createVideoSamplingPlan } from './sampling-plan';
@@ -81,7 +81,7 @@ export async function analyzeAudioVideo(input: {
   if (!sharedToken || Buffer.byteLength(sharedToken) < 32) {
     throw new Error('ANALYZER_SHARED_TOKEN must contain at least 32 bytes');
   }
-  const signer = new S3Presigner(objectStoreConfig());
+  const signer = new S3Presigner(analyzerObjectStoreConfig());
   const signedParts = await Promise.all(input.parts.map(async (part) => ({
     partNumber: part.partNumber, sizeBytes: part.sizeBytes, sha256: part.sha256,
     ...(await signer.presign('GET', part.objectKey, { expiresSeconds: 300 })),

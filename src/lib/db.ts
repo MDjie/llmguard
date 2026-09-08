@@ -3,6 +3,7 @@
  * 提供类似 Supabase 风格的 API，内部使用 Drizzle ORM
  */
 
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { db } from '@/storage/database/shared/db';
 import {
   detectionDimensions,
@@ -61,7 +62,58 @@ interface QueryOptions {
   readonly offset?: number;
 }
 
+type CompatibilityTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+interface TransactionState {
+  executor: CompatibilityTransaction;
+  failed: boolean;
+  afterCommit: Array<() => void>;
+}
+const transactions = new AsyncLocalStorage<TransactionState>();
+const executor = () => transactions.getStore()?.executor ?? db;
+class CompatibilityRollback extends Error {
+  constructor(readonly response: Response) { super('Compatibility transaction rolled back'); }
+}
+
+/** Legacy handlers may consume error results. A poisoned transaction can never commit. */
+export function transactionalCompatibilityHandler<Args extends unknown[]>(
+  handler: (...args: Args) => Promise<Response>,
+): (...args: Args) => Promise<Response> {
+  return async (...args) => {
+    const callbacks: Array<() => void> = [];
+    try {
+      const response = await db.transaction(async (tx) => {
+        const scope = getCurrentTenantScope();
+        if (!scope) throw new Error('Tenant scope required');
+        // Serialize policy mutations within the application, including version allocation.
+        await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`policy:${scope.tenantId}:${scope.applicationId}`}, 0))`);
+        return transactions.run({ executor: tx, failed: false, afterCommit: callbacks }, async () => {
+          const result = await handler(...args);
+          if (transactions.getStore()?.failed) throw new CompatibilityRollback(Response.json(
+            { success: false, error: 'Database operation failed', code: 'DB_OPERATION_FAILED' }, { status: 500 },
+          ));
+          if (!result.ok) throw new CompatibilityRollback(result);
+          return result;
+        });
+      });
+      for (const callback of callbacks) callback();
+      return response;
+    } catch (error) {
+      if (error instanceof CompatibilityRollback) return error.response;
+      logger.error('database.compatibility.transaction_failed', { errorType: error instanceof Error ? error.name : 'unknown' });
+      return Response.json({ success: false, error: 'Database operation failed', code: 'DB_OPERATION_FAILED' }, { status: 500 });
+    }
+  };
+}
+
+export function afterCompatibilityCommit(callback: () => void): void {
+  const state = transactions.getStore();
+  if (state) state.afterCommit.push(callback);
+  else callback();
+}
+
 function compatibilityError(): CompatibilityError {
+  const state = transactions.getStore();
+  if (state) state.failed = true;
   return { code: 'DB_OPERATION_FAILED', message: 'Database operation failed' };
 }
 
@@ -314,7 +366,6 @@ class QueryBuilder<T extends object = CompatibilityRow> {
   }
 
   order(column: string, options?: { ascending?: boolean }) {
-    const orderFn = options?.ascending ? asc : desc;
     this.orderByClause.push({
       column,
       direction: options?.ascending ? 'asc' : 'desc',
@@ -339,8 +390,11 @@ class QueryBuilder<T extends object = CompatibilityRow> {
   }
 
   async single(): Promise<CompatibilityResult<T>> {
-    this.limitValue = 1;
-    const result = await this.execute();
+    if (this.operationType === 'select') this.limitValue = 1;
+    if (this.operationType === 'insert' && this.insertData?.length !== 1) {
+      return { data: null, error: compatibilityError() };
+    }
+    const result = await this.executeOperation();
     return {
       ...result,
       data: result.data?.[0] ?? null,
@@ -359,7 +413,7 @@ class QueryBuilder<T extends object = CompatibilityRow> {
 
       if (this.headOnly) {
         // 只获取计数，不返回数据
-        const result = await db
+        const result = await executor()
           .select({ count: sql<number>`count(*)` })
           .from(this.schema)
           .where(validConditions.length > 0 ? and(...validConditions) : undefined);
@@ -367,12 +421,12 @@ class QueryBuilder<T extends object = CompatibilityRow> {
         return {
           data: null,
           error: null,
-          count: result[0]?.count || 0,
+          count: Number(result[0]?.count ?? 0),
         };
       }
 
       // 正常查询
-      let query = db.select().from(this.schema).$dynamic();
+      let query = executor().select().from(this.schema).$dynamic();
 
       if (validConditions.length > 0) {
         query = query.where(and(...validConditions));
@@ -409,7 +463,7 @@ class QueryBuilder<T extends object = CompatibilityRow> {
 
       // 如果请求了 count，额外查询总数
       if (this.countMode) {
-        const countResult = await db
+        const countResult = await executor()
           .select({ count: sql<number>`count(*)` })
           .from(this.schema)
           .where(validConditions.length > 0 ? and(...validConditions) : undefined);
@@ -417,7 +471,7 @@ class QueryBuilder<T extends object = CompatibilityRow> {
         return {
           data,
           error: null,
-          count: countResult[0]?.count || 0,
+          count: Number(countResult[0]?.count ?? 0),
         };
       }
 
@@ -427,7 +481,7 @@ class QueryBuilder<T extends object = CompatibilityRow> {
         count: data.length,
       };
     } catch (error) {
-      logger.error('database.compatibility.query_failed', { table: this.tableName, error });
+      logger.error('database.compatibility.query_failed', { table: this.tableName, errorType: error instanceof Error ? error.name : 'unknown' });
       return {
         data: null,
         error: compatibilityError(),
@@ -451,6 +505,7 @@ class QueryBuilder<T extends object = CompatibilityRow> {
       }
       // 转换 snake_case 字段名到 camelCase（匹配 Drizzle schema）
       const scope = getCurrentTenantScope();
+      if (getSchemaField(this.schema, 'tenantId') && !scope) throw new Error('Tenant scope required');
       const convertedData = this.insertData.map((item: Record<string, unknown>) => {
         const converted: CompatibilityRow = {};
         for (const [key, value] of Object.entries(item)) {
@@ -468,18 +523,30 @@ class QueryBuilder<T extends object = CompatibilityRow> {
         }
         return converted;
       });
-      const inserted = ((await db.insert(this.schema).values(convertedData).returning()) as unknown) as Readonly<Record<string, unknown>>[];
+      for (const item of convertedData) await this.assertParentScope(item);
+      const inserted = ((await executor().insert(this.schema).values(convertedData).returning()) as unknown) as Readonly<Record<string, unknown>>[];
       const result = inserted.map((row) => mapCompatibilityRow(row, this.selectFields)) as T[];
       return {
         data: result,
         error: null,
       };
     } catch (error) {
-      logger.error('database.compatibility.insert_failed', { table: this.tableName, error });
+      logger.error('database.compatibility.insert_failed', { table: this.tableName, errorType: error instanceof Error ? error.name : 'unknown' });
       return {
         data: null,
         error: compatibilityError(),
       };
+    }
+  }
+
+  private async assertParentScope(item: CompatibilityRow): Promise<void> {
+    // A single-column legacy FK must not link a scoped child to another application.
+    const parents = { policyId: 'policy_profiles', categoryId: 'keyword_categories', dimensionId: 'detection_dimensions' } as const;
+    for (const [field, table] of Object.entries(parents)) {
+      if (!getSchemaField(this.schema, field) || typeof item[field] !== 'string') continue;
+      const parent = await new QueryBuilder(table).select('id, policy_id').eq('id', item[field]).single();
+      if (parent.error || !parent.data) throw new Error('Parent scope mismatch');
+      if (field === 'categoryId' && item.policyId && parent.data.policy_id !== item.policyId) throw new Error('Category policy mismatch');
     }
   }
 
@@ -510,8 +577,9 @@ class QueryBuilder<T extends object = CompatibilityRow> {
           convertedData[camelKey] = value;
         }
       }
+      await this.assertParentScope(convertedData);
       const scopedConditions = this.scopedConditions();
-      const updated = ((await db
+      const updated = ((await executor()
         .update(this.schema)
         .set(convertedData)
         .where(and(...scopedConditions))
@@ -522,7 +590,7 @@ class QueryBuilder<T extends object = CompatibilityRow> {
         error: null,
       };
     } catch (error) {
-      logger.error('database.compatibility.update_failed', { table: this.tableName, error });
+      logger.error('database.compatibility.update_failed', { table: this.tableName, errorType: error instanceof Error ? error.name : 'unknown' });
       return {
         data: null,
         error: compatibilityError(),
@@ -543,7 +611,7 @@ class QueryBuilder<T extends object = CompatibilityRow> {
         throw new Error('Delete requires at least one condition');
       }
       const scopedConditions = this.scopedConditions();
-      const deleted = ((await db
+      const deleted = ((await executor()
         .delete(this.schema)
         .where(and(...scopedConditions))
         .returning()) as unknown) as Readonly<Record<string, unknown>>[];
@@ -553,7 +621,7 @@ class QueryBuilder<T extends object = CompatibilityRow> {
         error: null,
       };
     } catch (error) {
-      logger.error('database.compatibility.delete_failed', { table: this.tableName, error });
+      logger.error('database.compatibility.delete_failed', { table: this.tableName, errorType: error instanceof Error ? error.name : 'unknown' });
       return {
         data: null,
         error: compatibilityError(),
@@ -561,21 +629,19 @@ class QueryBuilder<T extends object = CompatibilityRow> {
     }
   }
 
+  private executeOperation(): Promise<CompatibilityResult<T[]>> {
+    if (this.operationType === 'insert') return this.executeInsert();
+    if (this.operationType === 'update') return this.executeUpdate();
+    if (this.operationType === 'delete') return this.executeDelete();
+    return this.execute();
+  }
+
   // 使 thenable 以支持 await
   then<TResult1 = CompatibilityResult<T[]>, TResult2 = never>(
     resolve?: ((value: CompatibilityResult<T[]>) => TResult1 | PromiseLike<TResult1>) | null,
     reject?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
   ): Promise<TResult1 | TResult2> {
-    if (this.operationType === 'delete') {
-      return this.executeDelete().then(resolve, reject);
-    }
-    if (this.operationType === 'insert') {
-      return this.executeInsert().then(resolve, reject);
-    }
-    if (this.operationType === 'update') {
-      return this.executeUpdate().then(resolve, reject);
-    }
-    return this.execute().then(resolve, reject);
+    return this.executeOperation().then(resolve, reject);
   }
 }
 

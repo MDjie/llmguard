@@ -33,6 +33,7 @@ export const POST = withApiSecurity(
       requesterId: principal!.subject,
       purpose: body.purpose,
       queryHash: exportQueryHash(body.exportQuery),
+      exportQuery: body.exportQuery,
       expiresAt: new Date(Date.now() + APPROVAL_TTL_MS),
     }).returning({ id: exportApprovalRequests.id, status: exportApprovalRequests.status, expiresAt: exportApprovalRequests.expiresAt });
     return NextResponse.json({ success: true, data: request }, { status: 201 });
@@ -77,7 +78,7 @@ export const PATCH = withApiSecurity(
 
 export const GET = withApiSecurity(
   {
-    permission: 'audit:approve',
+    permission: 'profile:self:write',
     querySchema: exportApprovalListQuerySchema,
     responseSchema: jsonObjectResponseSchema,
     rateLimitPolicy: APPROVAL_RATE_LIMIT,
@@ -86,7 +87,11 @@ export const GET = withApiSecurity(
   },
   async ({ query, principal }) => {
     const scope = requireTenantContext(principal);
+    const mine = query.mine === 'true';
+    if (!principal?.permissions.includes(mine ? 'audit:export' : 'audit:approve')) throw new ApiProblem({ status: 403, code: 'EXPORT_APPROVAL_LIST_DENIED', title: '无权查看', detail: '缺少导出申请或审批权限。' });
     const items = await db.select({
+      queryHash: exportApprovalRequests.queryHash,
+      exportQuery: exportApprovalRequests.exportQuery,
       id: exportApprovalRequests.id,
       requesterId: exportApprovalRequests.requesterId,
       approverId: exportApprovalRequests.approverId,
@@ -97,6 +102,7 @@ export const GET = withApiSecurity(
       createdAt: exportApprovalRequests.createdAt,
     }).from(exportApprovalRequests).where(and(
       eq(exportApprovalRequests.status, query.status),
+      mine ? eq(exportApprovalRequests.requesterId, principal!.subject) : undefined,
       scopePredicate(exportApprovalRequests, scope),
     ))
       .orderBy(desc(exportApprovalRequests.createdAt)).limit(query.limit);

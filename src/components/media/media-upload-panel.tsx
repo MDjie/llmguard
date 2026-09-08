@@ -1,4 +1,5 @@
 'use client';
+import {z} from 'zod';
 import {useEffect,useRef,useState,useCallback} from 'react';
 import {Upload,Mic,Square,X,RotateCcw} from 'lucide-react';
 import {Button} from '@/components/ui/button';
@@ -10,7 +11,10 @@ import {Progress} from '@/components/ui/progress';
 import {MEDIA_ACCEPT,MAX_ATTACHMENTS,MAX_ATTACHMENT_TOTAL_BYTES,validateMediaFileMetadata} from '@/lib/media/formats/registry';
 import {uploadMedia,mediaJson,type UploadedMedia} from '@/lib/media/upload-client';
 interface Item {pcm?:PcmParameters;encoding?:TextEncoding;id:string;file:File;state:string;progress:number;result?:UploadedMedia;artifactId?:string;error?:string;}
+const effectiveSchema=z.object({data:z.object({effectiveFormats:z.array(z.object({id:z.string(),decode:z.string(),detect:z.string(),missingDependencies:z.array(z.string())}))})});
 export function MediaUploadPanel({onChange,onBusyChange,disabled=false,recordAudio=false}:{onChange:(items:UploadedMedia[])=>void;onBusyChange?:(busy:boolean)=>void;disabled?:boolean;recordAudio?:boolean}){
+  const [capabilities,setCapabilities]=useState<z.infer<typeof effectiveSchema>['data']['effectiveFormats']>([]);
+  useEffect(()=>{const controller=new AbortController();void fetch('/api/media/capabilities',{signal:controller.signal,cache:'no-store'}).then(async response=>{if(!response.ok)return;const value=effectiveSchema.safeParse(await response.json());if(value.success)setCapabilities(value.data.data.effectiveFormats);}).catch(()=>undefined);return()=>controller.abort();},[]);
   const [pcmRate,setPcmRate]=useState(''),[pcmChannels,setPcmChannels]=useState(''),[pcmFormat,setPcmFormat]=useState('');
   const [encoding,setEncoding]=useState<TextEncoding|'auto'>('auto');
   const [items,setItems]=useState<Item[]>([]),[error,setError]=useState(''),[recording,setRecording]=useState(false);
@@ -52,6 +56,7 @@ export function MediaUploadPanel({onChange,onBusyChange,disabled=false,recordAud
     <Select value={encoding} disabled={disabled||items.length>0} onValueChange={value=>setEncoding(value as TextEncoding|'auto')}><SelectTrigger className="w-64" aria-label="文本文件编码"><SelectValue/></SelectTrigger><SelectContent>{[['auto','UTF-8 / 自动识别 BOM'],['utf-8','UTF-8'],['utf-16le','UTF-16 小端'],['utf-16be','UTF-16 大端'],['gb18030','GB18030（明确指定）']].map(([value,label])=><SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent></Select>
     <details className="text-xs text-muted-foreground"><summary>原始 PCM 音频参数（选择 .pcm 前填写）</summary><div className="mt-2 flex flex-wrap gap-2"><Input className="w-36" aria-label="PCM 采样率" placeholder="采样率 Hz" type="number" min={8000} max={192000} value={pcmRate} disabled={disabled} onChange={event=>setPcmRate(event.target.value)}/><Input className="w-28" aria-label="PCM 声道数" placeholder="声道 1–8" type="number" min={1} max={8} value={pcmChannels} disabled={disabled} onChange={event=>setPcmChannels(event.target.value)}/><Select value={pcmFormat} disabled={disabled} onValueChange={setPcmFormat}><SelectTrigger className="w-40" aria-label="PCM 采样格式"><SelectValue placeholder="位深与字节序"/></SelectTrigger><SelectContent>{['s16le','s16be','s24le','s24be','s32le','s32be','f32le','f32be'].map(value=><SelectItem key={value} value={value}>{value}</SelectItem>)}</SelectContent></Select></div></details>
     <p className="text-xs text-muted-foreground">支持文本、Office/PDF、图片及常见音视频格式。上传后校验真实格式，解析与检测能力由当前部署和策略决定。</p>
+    <details className="text-xs text-muted-foreground"><summary>当前部署解析与检测能力（含录音入口）</summary>{capabilities.length?capabilities.map(item=><p key={item.id}>{item.id} · 解析 {item.decode} · 检测 {item.detect}{item.missingDependencies.length?" · "+item.missingDependencies.join(", "):""}</p>):<p>能力尚未加载；上传成功不表示检测完成。</p>}</details>
     {items.map(item=><div key={item.id} className="space-y-1 text-xs"><div className="flex items-center justify-between gap-2"><span className="break-all">{item.file.name} · {(item.file.size/1024/1024).toFixed(2)} MiB · {item.error??item.state}</span><span className="flex">{item.error&&<Button size="icon" variant="ghost" disabled={disabled} aria-label={'重试 '+item.file.name} onClick={()=>void start(item)}><RotateCcw className="size-3"/></Button>}<Button size="icon" variant="ghost" disabled={disabled} aria-label={'移除 '+item.file.name} onClick={()=>remove(item)}><X className="size-3"/></Button></span></div><Progress value={item.progress}/></div>)}
     {error&&<p role="alert" className="text-xs text-destructive">{error}</p>}
   </section>;

@@ -8,5 +8,5 @@ export default defineConfig({
   outDir: "services/media-analyzer/dist",
   splitting: false,
   clean: true,
-  noExternal: ["zod"],
+  noExternal: ["zod", "saxes", "xmlchars"],
 });

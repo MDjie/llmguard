@@ -79,6 +79,20 @@ export const decideExportApprovalSchema = z.object({
 }).strict();
 
 export const exportApprovalListQuerySchema = z.object({
+  mine: z.enum(['true', 'false']).default('false'),
   status: z.enum(['pending', 'approved', 'rejected', 'consumed']).default('pending'),
   limit: z.coerce.number().int().min(1).max(100).default(50),
 }).strict();
+
+export type ExportHistoryQuery = z.infer<typeof exportHistoryQuerySchema>;
+export type ExportDateRange = '7d' | '30d' | '90d' | 'all';
+/** Calendar days in UTC, inclusive today; shared by stats, approvals and export. */
+export function exportDateRange(range: ExportDateRange, now = new Date()): Pick<ExportHistoryQuery, 'startDate' | 'endDate'> {
+  if (range === 'all') return {};
+  const endDate = now.toISOString().slice(0, 10);
+  const start = new Date(`${endDate}T00:00:00.000Z`);
+  start.setUTCDate(start.getUTCDate() - Number(range.slice(0, -1)) + 1);
+  return { startDate: start.toISOString().slice(0, 10), endDate };
+}
+export const exportStatsQuerySchema = exportHistoryQuerySchema.omit({ format: true }).extend({ days: z.coerce.number().int().min(0).max(3650).optional() }).strict();
+export const exportStatsResponseSchema = z.object({ success: z.literal(true), data: z.object({ totalRecords: z.number().int().nonnegative(), exportLimit: z.number().int().positive(), dateRange: z.string() }) });

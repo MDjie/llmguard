@@ -1,294 +1,90 @@
 'use client';
-
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Download, FileJson, FileSpreadsheet, FileText, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { usePermissions } from '@/hooks/use-permissions';
+import { csrfHeaders } from '@/lib/auth/csrf-client';
+import { exportDateRange, exportStatsResponseSchema, requestExportApprovalSchema, type ExportDateRange, type ExportHistoryQuery } from '@/contracts/http/history';
 import { toast } from 'sonner';
 
-interface DetectionSession {
-  id: string;
-  user_prompt: string;
-  input_score: number;
-  input_action: string;
-  final_action: string;
-  created_at: string;
+type Approval = { id: string; status: string; requesterId: string; purpose: string; expiresAt: string; queryHash: string; exportQuery: ExportHistoryQuery | null };
+const queryKey = (query: ExportHistoryQuery) => JSON.stringify([query.format, query.startDate, query.endDate, query.action, query.riskType]);
+async function approvalRequest(method: string, body?: unknown, query = '') {
+  const response = await fetch(`/api/export/approvals${query}`, { method, cache: 'no-store', headers: body ? { 'Content-Type': 'application/json', ...csrfHeaders() } : undefined, body: body ? JSON.stringify(body) : undefined });
+  const payload = await response.json();
+  if (!response.ok || !payload.success) throw new Error(payload.detail || payload.error || `审批请求失败 (${response.status})`);
+  return payload.data;
 }
-
-interface ExportStats {
-  totalRecords: number;
-  dateRange: string;
-}
-
 export default function ExportPage() {
-  const [format, setFormat] = useState<'json' | 'csv' | 'markdown'>('json');
-  const [dateRange, setDateRange] = useState<'7d' | '30d' | '90d' | 'all'>('30d');
-  const [actionFilter, setActionFilter] = useState<'all' | 'allow' | 'warn' | 'block'>('all');
-  const [exporting, setExporting] = useState(false);
-  const [stats, setStats] = useState<ExportStats | null>(null);
+  const can = usePermissions();
+  const [format, setFormat] = useState<ExportHistoryQuery['format']>('json');
+  const [range, setRange] = useState<ExportDateRange>('30d');
+  const [action, setAction] = useState<NonNullable<ExportHistoryQuery['action']> | 'all'>('all');
+  const [dates, setDates] = useState<Pick<ExportHistoryQuery, 'startDate' | 'endDate'> | null>(null);
+  const [purpose, setPurpose] = useState('');
+  const [ownApprovals, setOwnApprovals] = useState<Approval[]>([]);
+  const [pending, setPending] = useState<Approval[]>([]);
+  const [stats, setStats] = useState<{ totalRecords: number; exportLimit: number; dateRange: string } | null>(null);
+  const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
-
-  async function fetchStats() {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      params.set('days', dateRange === 'all' ? '0' : dateRange);
-      
-      const response = await fetch(`/api/export/stats?${params}`);
-      const data = await response.json();
-      
-      if (data.success) {
-        setStats(data.data);
-      }
-    } catch (error) {
-      console.error('Failed to fetch stats:', error);
-    } finally {
-      setLoading(false);
-    }
-  }
-
+  const [busy, setBusy] = useState(false);
+  const [refresh, setRefresh] = useState(0);
+  useEffect(() => { setDates(exportDateRange(range)); }, [range]);
+  const query = useMemo<ExportHistoryQuery>(() => ({ format, ...dates, ...(action !== 'all' ? { action } : {}) }), [format, dates, action]);
+  const loadApprovals = useCallback(async () => {
+    if (can('audit:export')) setOwnApprovals(await approvalRequest('GET', undefined, '?status=approved&mine=true'));
+    if (can('audit:approve')) setPending(await approvalRequest('GET', undefined, '?status=pending'));
+  }, [can]);
+  // Permission hook returns a fresh predicate; depend on primitive permissions below.
+  const canExport = can('audit:export'); const canApprove = can('audit:approve');
   useEffect(() => {
-    fetchStats();
-  }, [dateRange]);
-
-  const handleExport = async () => {
-    setExporting(true);
-    try {
-      const params = new URLSearchParams();
-      params.set('format', format);
-      params.set('dateRange', dateRange);
-      if (actionFilter !== 'all') {
-        params.set('action', actionFilter);
-      }
-
-      const response = await fetch(`/api/export?${params}`);
-      
-      if (!response.ok) {
-        throw new Error('导出失败');
-      }
-
-      const data = await response.json();
-      
-      if (data.success) {
-        // 创建下载链接
-        const blob = new Blob([data.data.content], { 
-          type: format === 'json' ? 'application/json' : format === 'csv' ? 'text/csv' : 'text/markdown' 
-        });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `guardrail-report-${new Date().toISOString().split('T')[0]}.${format}`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        
-        toast.success('导出成功', {
-          description: `已导出 ${data.data.recordCount || 0} 条记录`
-        });
-      } else {
-        throw new Error(data.error || '导出失败');
-      }
-    } catch (error) {
-      toast.error('导出失败', {
-        description: error instanceof Error ? error.message : '请稍后重试'
-      });
-    } finally {
-      setExporting(false);
-    }
+    if (!dates || !canExport) { setLoading(false); return; }
+    const controller = new AbortController(); setLoading(true); setError('');
+    const params = new URLSearchParams(Object.entries(query).filter(([key]) => key !== 'format'));
+    void fetch(`/api/export/stats?${params}`, { signal: controller.signal, cache: 'no-store' }).then(async response => {
+      if (!response.ok) throw new Error('统计加载失败，请刷新重试');
+      const parsed = exportStatsResponseSchema.safeParse(await response.json());
+      if (!parsed.success) throw new Error('统计响应格式错误');
+      setStats(parsed.data.data);
+    }).catch(caught => { if (!controller.signal.aborted) { setStats(null); setError(caught instanceof Error ? caught.message : '统计失败'); } }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    return () => controller.abort();
+  }, [query, dates, canExport, refresh]);
+  useEffect(() => {
+    let cancelled = false;
+    void Promise.all([canExport ? approvalRequest('GET', undefined, '?status=approved&mine=true') : [], canApprove ? approvalRequest('GET', undefined, '?status=pending') : []]).then(([own, requests]) => { if (!cancelled) { setOwnApprovals(own); setPending(requests); } }).catch(caught => { if (!cancelled) setError(caught instanceof Error ? caught.message : '审批加载失败'); });
+    return () => { cancelled = true; };
+  }, [canExport, canApprove, refresh]);
+  const approved = ownApprovals.find(item => item.exportQuery && queryKey(item.exportQuery) === queryKey(query));
+  const perform = async (operation: () => Promise<void>) => { setBusy(true); try { await operation(); await loadApprovals(); } catch (caught) { toast.error(caught instanceof Error ? caught.message : '操作失败'); } finally { setBusy(false); } };
+  const download = async () => {
+    if (!approved) return;
+    await perform(async () => {
+      const response = await fetch(`/api/export?${new URLSearchParams(Object.entries(query))}`, { headers: { 'x-export-approval-id': approved.id }, cache: 'no-store' });
+      if (!response.ok) { const problem = await response.json(); throw new Error(problem.detail || problem.error || `导出失败 (${response.status})`); }
+      const type = response.headers.get('content-type') ?? '';
+      if (!type.startsWith(format === 'json' ? 'application/json' : format === 'csv' ? 'text/csv' : 'text/markdown')) throw new Error('导出响应格式错误');
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob); const anchor = document.createElement('a');
+      anchor.href = url; anchor.download = response.headers.get('content-disposition')?.match(/filename="([^"]+)"/)?.[1] ?? `detection_records.${format === 'markdown' ? 'md' : format}`;
+      document.body.appendChild(anchor); anchor.click(); anchor.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setOwnApprovals(items => items.filter(item => item.id !== approved.id)); toast.success('导出文件已下载');
+    });
   };
-
-  return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">导出报告</h1>
-        <p className="text-muted-foreground mt-1">导出检测记录与安全分析报告</p>
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* 导出配置 */}
-        <Card>
-          <CardHeader>
-            <CardTitle>导出配置</CardTitle>
-            <CardDescription>选择导出格式和筛选条件</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* 格式选择 */}
-            <div className="space-y-2">
-              <Label>导出格式</Label>
-              <div className="grid grid-cols-3 gap-2">
-                <Button
-                  variant={format === 'json' ? 'default' : 'outline'}
-                  className="justify-start"
-                  onClick={() => setFormat('json')}
-                >
-                  <FileJson className="h-4 w-4 mr-2" />
-                  JSON
-                </Button>
-                <Button
-                  variant={format === 'csv' ? 'default' : 'outline'}
-                  className="justify-start"
-                  onClick={() => setFormat('csv')}
-                >
-                  <FileSpreadsheet className="h-4 w-4 mr-2" />
-                  CSV
-                </Button>
-                <Button
-                  variant={format === 'markdown' ? 'default' : 'outline'}
-                  className="justify-start"
-                  onClick={() => setFormat('markdown')}
-                >
-                  <FileText className="h-4 w-4 mr-2" />
-                  Markdown
-                </Button>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                {format === 'json' && '适合程序处理，保留完整数据结构'}
-                {format === 'csv' && '适合 Excel 打开，便于数据分析'}
-                {format === 'markdown' && '适合文档报告，便于阅读分享'}
-              </p>
-            </div>
-
-            {/* 时间范围 */}
-            <div className="space-y-2">
-              <Label>时间范围</Label>
-              <Select value={dateRange} onValueChange={(v) => setDateRange(v as typeof dateRange)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="7d">最近 7 天</SelectItem>
-                  <SelectItem value="30d">最近 30 天</SelectItem>
-                  <SelectItem value="90d">最近 90 天</SelectItem>
-                  <SelectItem value="all">全部记录</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* 动作筛选 */}
-            <div className="space-y-2">
-              <Label>处理动作</Label>
-              <Select value={actionFilter} onValueChange={(v) => setActionFilter(v as typeof actionFilter)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">全部动作</SelectItem>
-                  <SelectItem value="allow">放行</SelectItem>
-                  <SelectItem value="warn">警告</SelectItem>
-                  <SelectItem value="block">拦截</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <Button 
-              className="w-full" 
-              size="lg"
-              onClick={handleExport}
-              disabled={exporting || !stats || stats.totalRecords === 0}
-            >
-              {exporting ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  导出中...
-                </>
-              ) : (
-                <>
-                  <Download className="h-4 w-4 mr-2" />
-                  导出报告
-                </>
-              )}
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* 数据统计 */}
-        <Card>
-          <CardHeader>
-            <CardTitle>数据统计</CardTitle>
-            <CardDescription>当前筛选条件下的数据概览</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : !stats || stats.totalRecords === 0 ? (
-              <div className="text-center py-8">
-                <AlertCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">暂无可导出记录</p>
-                <p className="text-sm text-muted-foreground mt-2">
-                  执行检测任务后，数据将在此显示
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
-                  <span className="font-medium">可导出记录数</span>
-                  <Badge variant="secondary" className="text-lg">
-                    {stats.totalRecords} 条
-                  </Badge>
-                </div>
-                
-                <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
-                  <span className="font-medium">时间范围</span>
-                  <span className="text-muted-foreground">
-                    {dateRange === 'all' ? '全部' : 
-                     dateRange === '7d' ? '最近 7 天' :
-                     dateRange === '30d' ? '最近 30 天' : '最近 90 天'}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2 p-4 rounded-lg bg-green-500/10 text-green-600">
-                  <CheckCircle2 className="h-5 w-5" />
-                  <span>数据已准备就绪，可以导出</span>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* 格式说明 */}
-      <Card>
-        <CardHeader>
-          <CardTitle>格式说明</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <FileJson className="h-5 w-5 text-blue-500" />
-                <span className="font-medium">JSON 格式</span>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                包含完整的检测记录、风险分析、处理动作等信息，适合程序处理或数据迁移。
-              </p>
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <FileSpreadsheet className="h-5 w-5 text-green-500" />
-                <span className="font-medium">CSV 格式</span>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                表格格式，可用 Excel 或 Google Sheets 打开，便于数据分析和统计图表制作。
-              </p>
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-purple-500" />
-                <span className="font-medium">Markdown 格式</span>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                人类可读的文档格式，适合生成安全报告或分享给团队成员审阅。
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
+  return <div className="space-y-5"><h1 className="text-3xl font-bold">导出报告</h1><p className="text-muted-foreground">导出脱敏审计摘要；统计与导出使用相同的 UTC 自然日边界。每次下载需独立审批。</p>{error && <p role="alert" className="text-red-600">{error}</p>}
+    <Button variant="outline" disabled={busy} onClick={() => setRefresh(value => value + 1)}>刷新统计与审批</Button>
+    {canExport && <div className="grid gap-4 md:grid-cols-2"><Card><CardHeader><CardTitle>导出配置</CardTitle></CardHeader><CardContent className="space-y-4">
+      <Label>导出格式</Label><div className="flex flex-wrap gap-2">{(['json', 'csv', 'markdown'] as const).map(item => <Button key={item} variant={format === item ? 'default' : 'outline'} onClick={() => setFormat(item)}>{item.toUpperCase()}</Button>)}</div>
+      <Label>时间范围</Label><Select value={range} onValueChange={value => { if (value !== range) { setDates(null); setRange(value as ExportDateRange); } }}><SelectTrigger aria-label="时间范围"><SelectValue /></SelectTrigger><SelectContent>{(['7d', '30d', '90d', 'all'] as const).map(item => <SelectItem key={item} value={item}>{item === 'all' ? '全部记录' : `最近 ${item.slice(0, -1)} 天`}</SelectItem>)}</SelectContent></Select>
+      <Label>处理动作</Label><Select value={action} onValueChange={value => setAction(value as typeof action)}><SelectTrigger aria-label="处理动作"><SelectValue /></SelectTrigger><SelectContent>{Object.entries({ all: '全部动作', allow: '放行', warn: '警告', block: '拦截', mask: '脱敏', rewrite: '改写' }).map(([key, label]) => <SelectItem key={key} value={key}>{label}</SelectItem>)}</SelectContent></Select>
+      <Label htmlFor="export-purpose">导出用途（至少 10 字）</Label><Textarea id="export-purpose" value={purpose} onChange={event => setPurpose(event.target.value)} />
+      <Button disabled={busy || loading || !dates || !stats?.totalRecords || stats.totalRecords > stats.exportLimit} onClick={() => void perform(async () => { const parsed = requestExportApprovalSchema.safeParse({ purpose, exportQuery: query }); if (!parsed.success) throw new Error('请填写 10 至 500 字的导出用途'); const item = await approvalRequest('POST', parsed.data); toast.success(`已提交申请 ${item.id}，请另一名审批人审核`); })}>申请导出审批</Button>
+      <Button disabled={busy || loading || !approved || !stats?.totalRecords || stats.totalRecords > stats.exportLimit} onClick={() => void download()}>下载已批准的报告</Button>
+      <p className="text-sm">{approved ? `审批 ${approved.id}；有效期至 ${approved.expiresAt}` : '当前查询尚无可用批准。申请后等待另一名审批人审核，再刷新。'} 修改筛选条件或格式后需重新申请。</p>
+    </CardContent></Card><Card><CardHeader><CardTitle>数据统计</CardTitle><CardDescription>单次最多导出 1,000 条；超限须缩小范围</CardDescription></CardHeader><CardContent>{loading ? '正在加载…' : stats ? <><Badge>{stats.totalRecords} 条</Badge><p className="mt-3">{stats.dateRange}</p>{stats.totalRecords === 0 && <p>暂无可导出记录</p>}{stats.totalRecords > stats.exportLimit && <p role="alert">当前范围超过单次上限，请缩小时间或动作范围。</p>}</> : '统计不可用'}</CardContent></Card></div>}
+    {canApprove && <Card><CardHeader><CardTitle>待审批申请</CardTitle><CardDescription>只能审批其他主体的申请；审批不改变其查询范围</CardDescription></CardHeader><CardContent className="space-y-4">{!pending.length && <p>暂无待审批申请</p>}{pending.map(item => <div key={item.id} className="rounded border p-3 space-y-2 break-all"><p>{item.purpose}</p><p className="text-xs">申请人 {item.requesterId} · 到期 {item.expiresAt}</p><pre className="whitespace-pre-wrap text-xs">{JSON.stringify(item.exportQuery ?? { legacyQueryHash: item.queryHash }, null, 2)}</pre><div className="flex gap-2">{(['approved', 'rejected'] as const).map(decision => <Button key={decision} variant="outline" disabled={busy} onClick={() => void perform(async () => { await approvalRequest('PATCH', { id: item.id, decision }); })}>{decision === 'approved' ? '批准' : '拒绝'}</Button>)}</div></div>)}</CardContent></Card>}
+  </div>;
 }

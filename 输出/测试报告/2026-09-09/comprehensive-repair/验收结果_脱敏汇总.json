@@ -1,0 +1,1477 @@
+{
+  "schemaVersion": 1,
+  "scope": "SYNTHETIC_REAL_BROWSER_HTTP_PG_OBJECT_STORE",
+  "run": "comprehensive-repair-20260909-f",
+  "status": "BLOCKED",
+  "headBeforeCommit": "13b36f872f6320abe86ffd4a8f5346014f587a82",
+  "sourceSha256": "ffd4e3440e5dede78602b08587bf95ab3bd4a61fe5bfddddf4be7e815602d3a9",
+  "unit": {
+    "numTotalTests": 1733,
+    "numPassedTests": 1733,
+    "numFailedTests": 0,
+    "numPendingTests": 0
+  },
+  "surface": {
+    "pages": 28,
+    "routes": 161,
+    "exhaustiveRouteCoverage": false
+  },
+  "schema": {
+    "status": "PASS",
+    "tables": 102,
+    "expectedColumns": 1618,
+    "missing": [],
+    "shapeErrors": []
+  },
+  "commands": [
+    {
+      "id": "initialize",
+      "status": "PASS",
+      "exitCode": 0
+    },
+    {
+      "id": "database",
+      "status": "PASS",
+      "exitCode": 0
+    },
+    {
+      "id": "fixture",
+      "status": "PASS",
+      "exitCode": 0
+    },
+    {
+      "id": "analyzer-build",
+      "status": "PASS",
+      "exitCode": 0
+    },
+    {
+      "id": "provision",
+      "status": "PASS",
+      "exitCode": 0
+    },
+    {
+      "id": "build",
+      "status": "PASS",
+      "exitCode": 0
+    },
+    {
+      "id": "unit",
+      "status": "PASS",
+      "exitCode": 0
+    },
+    {
+      "id": "start",
+      "status": "PASS",
+      "exitCode": 0
+    },
+    {
+      "id": "schema-parity",
+      "status": "PASS",
+      "exitCode": 0
+    },
+    {
+      "id": "policy-mutations",
+      "status": "PASS",
+      "exitCode": 0
+    },
+    {
+      "id": "trace-fixture",
+      "status": "PASS",
+      "exitCode": 0
+    },
+    {
+      "id": "format-fixture",
+      "status": "PASS",
+      "exitCode": 0
+    },
+    {
+      "id": "format-generate",
+      "status": "PASS",
+      "exitCode": 0
+    },
+    {
+      "id": "crawl",
+      "status": "PASS",
+      "exitCode": 0
+    },
+    {
+      "id": "journeys",
+      "status": "PASS",
+      "exitCode": 0
+    },
+    {
+      "id": "repair-workflows",
+      "status": "PASS",
+      "exitCode": 0
+    },
+    {
+      "id": "extended",
+      "status": "PASS",
+      "exitCode": 0
+    },
+    {
+      "id": "diagnostics",
+      "status": "PASS",
+      "exitCode": 0
+    },
+    {
+      "id": "final",
+      "status": "PASS",
+      "exitCode": 0
+    },
+    {
+      "id": "evidence-workflow",
+      "status": "PASS",
+      "exitCode": 0
+    },
+    {
+      "id": "security",
+      "status": "PASS",
+      "exitCode": 0
+    },
+    {
+      "id": "uploads",
+      "status": "PASS",
+      "exitCode": 0
+    },
+    {
+      "id": "media-stages",
+      "status": "BLOCKED",
+      "exitCode": 2
+    },
+    {
+      "id": "layered-evidence",
+      "status": "PASS",
+      "exitCode": 0
+    },
+    {
+      "id": "data-audit",
+      "status": "PASS",
+      "exitCode": 0
+    },
+    {
+      "id": "archive-boundaries",
+      "status": "PASS",
+      "exitCode": 0
+    },
+    {
+      "id": "auth-workflows",
+      "status": "PASS",
+      "exitCode": 0
+    },
+    {
+      "id": "single-audit",
+      "status": "PASS",
+      "exitCode": 0
+    },
+    {
+      "id": "health-recovery",
+      "status": "PASS",
+      "exitCode": 0
+    },
+    {
+      "id": "release-gates",
+      "status": "BLOCKED",
+      "exitCode": 2
+    },
+    {
+      "id": "cleanup",
+      "status": "PASS",
+      "exitCode": 0
+    }
+  ],
+  "suites": {
+    "policy-mutations": {
+      "status": "PASS",
+      "counts": {
+        "PASS": 4
+      },
+      "results": [
+        {
+          "id": "PG-MUTATION-RETURNING",
+          "status": "PASS"
+        },
+        {
+          "id": "PG-MULTISTEP-ROLLBACK",
+          "status": "PASS"
+        },
+        {
+          "id": "PG-DELETE-RETURNING",
+          "status": "PASS"
+        },
+        {
+          "id": "PG-REAL-DRIVER-SHARED-LIMITER",
+          "status": "PASS"
+        }
+      ]
+    },
+    "journeys": {
+      "status": null,
+      "counts": {
+        "PASS": 16
+      },
+      "results": [
+        {
+          "id": "J02",
+          "status": "PASS"
+        },
+        {
+          "id": "J03",
+          "status": "PASS"
+        },
+        {
+          "id": "J04",
+          "status": "PASS"
+        },
+        {
+          "id": "J05",
+          "status": "PASS"
+        },
+        {
+          "id": "J06",
+          "status": "PASS"
+        },
+        {
+          "id": "J07",
+          "status": "PASS"
+        },
+        {
+          "id": "J08",
+          "status": "PASS"
+        },
+        {
+          "id": "J09",
+          "status": "PASS"
+        },
+        {
+          "id": "J10",
+          "status": "PASS"
+        },
+        {
+          "id": "J11",
+          "status": "PASS"
+        },
+        {
+          "id": "J12",
+          "status": "PASS"
+        },
+        {
+          "id": "J13",
+          "status": "PASS"
+        },
+        {
+          "id": "J14",
+          "status": "PASS"
+        },
+        {
+          "id": "J15",
+          "status": "PASS"
+        },
+        {
+          "id": "J16",
+          "status": "PASS"
+        },
+        {
+          "id": "J17",
+          "status": "PASS"
+        }
+      ]
+    },
+    "repair-workflows": {
+      "status": null,
+      "counts": {
+        "PASS": 9
+      },
+      "results": [
+        {
+          "id": "FX01-HTTP-ATOMIC-POLICY",
+          "status": "PASS"
+        },
+        {
+          "id": "FX02-AGENT-POPULATED-SESSION-FILTER",
+          "status": "PASS"
+        },
+        {
+          "id": "FX03-POLICY-RUNTIME-REAL-DTO",
+          "status": "PASS"
+        },
+        {
+          "id": "FX04-EXPORT-STATS-FILTER-COUNTS",
+          "status": "PASS"
+        },
+        {
+          "id": "FX05-INDEPENDENT-WHITELIST-APPROVAL",
+          "status": "PASS"
+        },
+        {
+          "id": "FX06-APPROVED-BROWSER-DOWNLOADS",
+          "status": "PASS"
+        },
+        {
+          "id": "FX07-PROFILE-EMPTY-EMAIL-AND-RELOAD",
+          "status": "PASS"
+        },
+        {
+          "id": "FX08-RESPONSIVE-POPULATED-CASES",
+          "status": "PASS"
+        },
+        {
+          "id": "FX10-READINESS-AND-DECODER-PROJECTION",
+          "status": "PASS"
+        }
+      ]
+    },
+    "extended": {
+      "status": null,
+      "counts": {
+        "PASS": 8
+      },
+      "results": [
+        {
+          "id": "J19",
+          "status": "PASS"
+        },
+        {
+          "id": "J20",
+          "status": "PASS"
+        },
+        {
+          "id": "J21",
+          "status": "PASS"
+        },
+        {
+          "id": "J22",
+          "status": "PASS"
+        },
+        {
+          "id": "J23",
+          "status": "PASS"
+        },
+        {
+          "id": "J24",
+          "status": "PASS"
+        },
+        {
+          "id": "J25",
+          "status": "PASS"
+        },
+        {
+          "id": "J26",
+          "status": "PASS"
+        }
+      ]
+    },
+    "diagnostics": {
+      "status": null,
+      "counts": {
+        "PASS": 2,
+        "OBSERVATION": 2
+      },
+      "results": [
+        {
+          "id": "J27",
+          "status": "PASS"
+        },
+        {
+          "id": "J28",
+          "status": "PASS"
+        },
+        {
+          "id": "J29",
+          "status": "OBSERVATION"
+        },
+        {
+          "id": "J30",
+          "status": "OBSERVATION"
+        }
+      ]
+    },
+    "final": {
+      "status": null,
+      "counts": {
+        "PASS": 3
+      },
+      "results": [
+        {
+          "id": "J31",
+          "status": "PASS"
+        },
+        {
+          "id": "J32",
+          "status": "PASS"
+        },
+        {
+          "id": "J33",
+          "status": "PASS"
+        }
+      ]
+    },
+    "evidence-workflow": {
+      "status": null,
+      "counts": {
+        "PASS": 2
+      },
+      "results": [
+        {
+          "id": "EVIDENCE-INDEPENDENT-GRANT-HIGHLIGHT-CLEAR-REPLAY",
+          "status": "PASS"
+        },
+        {
+          "id": "FEEDBACK-INDEPENDENT-REVIEW-CANDIDATE-NOT-PUBLISHED",
+          "status": "PASS"
+        }
+      ]
+    },
+    "auth-workflows": {
+      "status": null,
+      "counts": {
+        "PASS": 2
+      },
+      "results": [
+        {
+          "id": "AUTH-LOGOUT",
+          "status": "PASS"
+        },
+        {
+          "id": "AUTH-LOGOUT",
+          "status": "PASS"
+        }
+      ]
+    },
+    "security-smoke": {
+      "status": null,
+      "counts": {
+        "404": 2,
+        "409": 2,
+        "UNCLASSIFIED": 2
+      },
+      "results": [
+        {
+          "status": 404,
+          "id": "security-smoke:0"
+        },
+        {
+          "status": 409,
+          "id": "security-smoke:1"
+        },
+        {
+          "status": 404,
+          "id": "security-smoke:2"
+        },
+        {
+          "status": 409,
+          "id": "security-smoke:3"
+        },
+        {
+          "id": "security-smoke:4"
+        },
+        {
+          "id": "security-smoke:5"
+        }
+      ]
+    },
+    "upload-matrix": {
+      "status": null,
+      "counts": {
+        "UNCLASSIFIED": 48
+      },
+      "results": [
+        {
+          "id": "upload-matrix:0"
+        },
+        {
+          "id": "upload-matrix:1"
+        },
+        {
+          "id": "upload-matrix:2"
+        },
+        {
+          "id": "upload-matrix:3"
+        },
+        {
+          "id": "upload-matrix:4"
+        },
+        {
+          "id": "upload-matrix:5"
+        },
+        {
+          "id": "upload-matrix:6"
+        },
+        {
+          "id": "upload-matrix:7"
+        },
+        {
+          "id": "upload-matrix:8"
+        },
+        {
+          "id": "upload-matrix:9"
+        },
+        {
+          "id": "upload-matrix:10"
+        },
+        {
+          "id": "upload-matrix:11"
+        },
+        {
+          "id": "upload-matrix:12"
+        },
+        {
+          "id": "upload-matrix:13"
+        },
+        {
+          "id": "upload-matrix:14"
+        },
+        {
+          "id": "upload-matrix:15"
+        },
+        {
+          "id": "upload-matrix:16"
+        },
+        {
+          "id": "upload-matrix:17"
+        },
+        {
+          "id": "upload-matrix:18"
+        },
+        {
+          "id": "upload-matrix:19"
+        },
+        {
+          "id": "upload-matrix:20"
+        },
+        {
+          "id": "upload-matrix:21"
+        },
+        {
+          "id": "upload-matrix:22"
+        },
+        {
+          "id": "upload-matrix:23"
+        },
+        {
+          "id": "upload-matrix:24"
+        },
+        {
+          "id": "upload-matrix:25"
+        },
+        {
+          "id": "upload-matrix:26"
+        },
+        {
+          "id": "upload-matrix:27"
+        },
+        {
+          "id": "upload-matrix:28"
+        },
+        {
+          "id": "upload-matrix:29"
+        },
+        {
+          "id": "upload-matrix:30"
+        },
+        {
+          "id": "upload-matrix:31"
+        },
+        {
+          "id": "upload-matrix:32"
+        },
+        {
+          "id": "upload-matrix:33"
+        },
+        {
+          "id": "upload-matrix:34"
+        },
+        {
+          "id": "upload-matrix:35"
+        },
+        {
+          "id": "upload-matrix:36"
+        },
+        {
+          "id": "upload-matrix:37"
+        },
+        {
+          "id": "upload-matrix:38"
+        },
+        {
+          "id": "upload-matrix:39"
+        },
+        {
+          "id": "upload-matrix:40"
+        },
+        {
+          "id": "upload-matrix:41"
+        },
+        {
+          "id": "upload-matrix:42"
+        },
+        {
+          "id": "upload-matrix:43"
+        },
+        {
+          "id": "upload-matrix:44"
+        },
+        {
+          "id": "upload-matrix:45"
+        },
+        {
+          "id": "upload-matrix:46"
+        },
+        {
+          "id": "upload-matrix:47"
+        }
+      ]
+    },
+    "media-stages": {
+      "status": null,
+      "counts": {
+        "BLOCKED": 43,
+        "PASS": 6
+      },
+      "results": [
+        {
+          "id": "MEDIA:audio.aac",
+          "status": "BLOCKED",
+          "jobStatus": "completed",
+          "action": "REQUIRE_REVIEW",
+          "outcome": "INCOMPLETE",
+          "reasonCodes": [
+            "MEDIA_ANALYSIS_INCOMPLETE",
+            "ANALYZER_AUDIO_CLASSIFIER_COMMAND_REQUIRED",
+            "ANALYZER_ASR_COMMAND_REQUIRED",
+            "ANALYZER_ASR_CIRCUIT_OPEN",
+            "ANALYZER_AUDIO_PROCESSING_INCOMPLETE"
+          ],
+          "semanticQualification": false
+        },
+        {
+          "id": "MEDIA:audio.aiff",
+          "status": "BLOCKED",
+          "jobStatus": "completed",
+          "action": "REQUIRE_REVIEW",
+          "outcome": "INCOMPLETE",
+          "reasonCodes": [
+            "MEDIA_ANALYSIS_INCOMPLETE",
+            "ANALYZER_AUDIO_CLASSIFIER_COMMAND_REQUIRED",
+            "ANALYZER_ASR_CIRCUIT_OPEN",
+            "ANALYZER_AUDIO_PROCESSING_INCOMPLETE"
+          ],
+          "semanticQualification": false
+        },
+        {
+          "id": "MEDIA:audio.flac",
+          "status": "BLOCKED",
+          "jobStatus": "completed",
+          "action": "REQUIRE_REVIEW",
+          "outcome": "INCOMPLETE",
+          "reasonCodes": [
+            "MEDIA_ANALYSIS_INCOMPLETE",
+            "ANALYZER_AUDIO_CLASSIFIER_COMMAND_REQUIRED",
+            "ANALYZER_ASR_CIRCUIT_OPEN",
+            "ANALYZER_AUDIO_PROCESSING_INCOMPLETE"
+          ],
+          "semanticQualification": false
+        },
+        {
+          "id": "MEDIA:audio.m4a",
+          "status": "BLOCKED",
+          "jobStatus": "completed",
+          "action": "REQUIRE_REVIEW",
+          "outcome": "INCOMPLETE",
+          "reasonCodes": [
+            "MEDIA_ANALYSIS_INCOMPLETE",
+            "ANALYZER_AUDIO_CONTAINER_DURATION_MISMATCH",
+            "ANALYZER_AUDIO_CLASSIFIER_CIRCUIT_OPEN",
+            "ANALYZER_ASR_CIRCUIT_OPEN",
+            "ANALYZER_AUDIO_PROCESSING_INCOMPLETE"
+          ],
+          "semanticQualification": false
+        },
+        {
+          "id": "MEDIA:audio.mp3",
+          "status": "BLOCKED",
+          "jobStatus": "completed",
+          "action": "REQUIRE_REVIEW",
+          "outcome": "INCOMPLETE",
+          "reasonCodes": [
+            "MEDIA_ANALYSIS_INCOMPLETE",
+            "ANALYZER_AUDIO_CLASSIFIER_CIRCUIT_OPEN",
+            "ANALYZER_ASR_CIRCUIT_OPEN",
+            "ANALYZER_AUDIO_PROCESSING_INCOMPLETE"
+          ],
+          "semanticQualification": false
+        },
+        {
+          "id": "MEDIA:audio.ogg",
+          "status": "BLOCKED",
+          "jobStatus": "completed",
+          "action": "REQUIRE_REVIEW",
+          "outcome": "INCOMPLETE",
+          "reasonCodes": [
+            "MEDIA_ANALYSIS_INCOMPLETE",
+            "ANALYZER_AUDIO_CLASSIFIER_CIRCUIT_OPEN",
+            "ANALYZER_ASR_CIRCUIT_OPEN",
+            "ANALYZER_AUDIO_PROCESSING_INCOMPLETE"
+          ],
+          "semanticQualification": false
+        },
+        {
+          "id": "MEDIA:audio.opus",
+          "status": "BLOCKED",
+          "jobStatus": "completed",
+          "action": "REQUIRE_REVIEW",
+          "outcome": "INCOMPLETE",
+          "reasonCodes": [
+            "MEDIA_ANALYSIS_INCOMPLETE",
+            "ANALYZER_AUDIO_CLASSIFIER_CIRCUIT_OPEN",
+            "ANALYZER_ASR_CIRCUIT_OPEN",
+            "ANALYZER_AUDIO_PROCESSING_INCOMPLETE"
+          ],
+          "semanticQualification": false
+        },
+        {
+          "id": "MEDIA:audio.pcm",
+          "status": "BLOCKED",
+          "jobStatus": "completed",
+          "action": "REQUIRE_REVIEW",
+          "outcome": "INCOMPLETE",
+          "reasonCodes": [
+            "MEDIA_ANALYSIS_INCOMPLETE",
+            "ANALYZER_AUDIO_CLASSIFIER_CIRCUIT_OPEN",
+            "ANALYZER_ASR_CIRCUIT_OPEN",
+            "ANALYZER_AUDIO_PROCESSING_INCOMPLETE"
+          ],
+          "semanticQualification": false
+        },
+        {
+          "id": "MEDIA:audio.wav",
+          "status": "BLOCKED",
+          "jobStatus": "completed",
+          "action": "REQUIRE_REVIEW",
+          "outcome": "INCOMPLETE",
+          "reasonCodes": [
+            "MEDIA_ANALYSIS_INCOMPLETE",
+            "ANALYZER_AUDIO_CLASSIFIER_CIRCUIT_OPEN",
+            "ANALYZER_ASR_CIRCUIT_OPEN",
+            "ANALYZER_AUDIO_PROCESSING_INCOMPLETE"
+          ],
+          "semanticQualification": false
+        },
+        {
+          "id": "MEDIA:audio.wma",
+          "status": "BLOCKED",
+          "jobStatus": "completed",
+          "action": "REQUIRE_REVIEW",
+          "outcome": "INCOMPLETE",
+          "reasonCodes": [
+            "MEDIA_ANALYSIS_INCOMPLETE",
+            "ANALYZER_AUDIO_CLASSIFIER_CIRCUIT_OPEN",
+            "ANALYZER_ASR_CIRCUIT_OPEN",
+            "ANALYZER_AUDIO_PROCESSING_INCOMPLETE"
+          ],
+          "semanticQualification": false
+        },
+        {
+          "id": "MEDIA:bom-utf16.txt",
+          "status": "PASS",
+          "jobStatus": "completed",
+          "action": "ALLOW",
+          "outcome": "COMPLETE",
+          "reasonCodes": [],
+          "semanticQualification": false
+        },
+        {
+          "id": "MEDIA:legacy-gb18030.txt",
+          "status": "PASS",
+          "jobStatus": "completed",
+          "action": "ALLOW",
+          "outcome": "COMPLETE",
+          "reasonCodes": [],
+          "semanticQualification": false
+        },
+        {
+          "id": "MEDIA:sample.ass",
+          "status": "PASS",
+          "jobStatus": "completed",
+          "action": "ALLOW",
+          "outcome": "COMPLETE",
+          "reasonCodes": [],
+          "semanticQualification": false
+        },
+        {
+          "id": "MEDIA:sample.avif",
+          "status": "BLOCKED",
+          "jobStatus": "completed",
+          "action": "REQUIRE_REVIEW",
+          "outcome": "INCOMPLETE",
+          "reasonCodes": [
+            "DOCUMENT_ANALYSIS_INCOMPLETE",
+            "ANALYZER_VISUAL_COMMAND_REQUIRED",
+            "ANALYZER_VISUAL_CIRCUIT_OPEN"
+          ],
+          "semanticQualification": false
+        },
+        {
+          "id": "MEDIA:sample.bmp",
+          "status": "BLOCKED",
+          "jobStatus": "completed",
+          "action": "REQUIRE_REVIEW",
+          "outcome": "INCOMPLETE",
+          "reasonCodes": [
+            "DOCUMENT_ANALYSIS_INCOMPLETE",
+            "ANALYZER_VISUAL_CIRCUIT_OPEN"
+          ],
+          "semanticQualification": false
+        },
+        {
+          "id": "MEDIA:sample.doc",
+          "status": "BLOCKED",
+          "jobStatus": "completed",
+          "action": "BLOCK",
+          "outcome": "INCOMPLETE",
+          "reasonCodes": [
+            "DOCUMENT_ANALYSIS_INCOMPLETE",
+            "ANALYZER_VISUAL_CIRCUIT_OPEN"
+          ],
+          "semanticQualification": false
+        },
+        {
+          "id": "MEDIA:sample.docx",
+          "status": "BLOCKED",
+          "jobStatus": "completed",
+          "action": "BLOCK",
+          "outcome": "INCOMPLETE",
+          "reasonCodes": [
+            "DOCUMENT_ANALYSIS_INCOMPLETE",
+            "ANALYZER_VISUAL_CIRCUIT_OPEN"
+          ],
+          "semanticQualification": false
+        },
+        {
+          "id": "MEDIA:sample.gif",
+          "status": "BLOCKED",
+          "jobStatus": "completed",
+          "action": "REQUIRE_REVIEW",
+          "outcome": "INCOMPLETE",
+          "reasonCodes": [
+            "DOCUMENT_ANALYSIS_INCOMPLETE",
+            "ANALYZER_VISUAL_COMMAND_REQUIRED",
+            "ANALYZER_VISUAL_CIRCUIT_OPEN"
+          ],
+          "semanticQualification": false
+        },
+        {
+          "id": "MEDIA:sample.heic",
+          "status": "BLOCKED",
+          "jobStatus": "completed",
+          "action": "REQUIRE_REVIEW",
+          "outcome": "INCOMPLETE",
+          "reasonCodes": [
+            "DOCUMENT_ANALYSIS_INCOMPLETE",
+            "ANALYZER_VISUAL_CIRCUIT_OPEN"
+          ],
+          "semanticQualification": false
+        },
+        {
+          "id": "MEDIA:sample.jpg",
+          "status": "BLOCKED",
+          "jobStatus": "completed",
+          "action": "REQUIRE_REVIEW",
+          "outcome": "INCOMPLETE",
+          "reasonCodes": [
+            "DOCUMENT_ANALYSIS_INCOMPLETE",
+            "ANALYZER_VISUAL_CIRCUIT_OPEN"
+          ],
+          "semanticQualification": false
+        },
+        {
+          "id": "MEDIA:sample.odp",
+          "status": "BLOCKED",
+          "jobStatus": "completed",
+          "action": "REQUIRE_REVIEW",
+          "outcome": "INCOMPLETE",
+          "reasonCodes": [
+            "DOCUMENT_ANALYSIS_INCOMPLETE",
+            "ANALYZER_VISUAL_CIRCUIT_OPEN"
+          ],
+          "semanticQualification": false
+        },
+        {
+          "id": "MEDIA:sample.ods",
+          "status": "BLOCKED",
+          "jobStatus": "completed",
+          "action": "REQUIRE_REVIEW",
+          "outcome": "INCOMPLETE",
+          "reasonCodes": [
+            "DOCUMENT_ANALYSIS_INCOMPLETE",
+            "ANALYZER_VISUAL_COMMAND_REQUIRED",
+            "ANALYZER_VISUAL_CIRCUIT_OPEN"
+          ],
+          "semanticQualification": false
+        },
+        {
+          "id": "MEDIA:sample.odt",
+          "status": "BLOCKED",
+          "jobStatus": "completed",
+          "action": "BLOCK",
+          "outcome": "INCOMPLETE",
+          "reasonCodes": [
+            "DOCUMENT_ANALYSIS_INCOMPLETE",
+            "ANALYZER_VISUAL_CIRCUIT_OPEN"
+          ],
+          "semanticQualification": false
+        },
+        {
+          "id": "MEDIA:sample.pdf",
+          "status": "BLOCKED",
+          "jobStatus": "completed",
+          "action": "REQUIRE_REVIEW",
+          "outcome": "INCOMPLETE",
+          "reasonCodes": [
+            "DOCUMENT_ANALYSIS_INCOMPLETE",
+            "ANALYZER_VISUAL_CIRCUIT_OPEN"
+          ],
+          "semanticQualification": false
+        },
+        {
+          "id": "MEDIA:sample.png",
+          "status": "BLOCKED",
+          "jobStatus": "completed",
+          "action": "REQUIRE_REVIEW",
+          "outcome": "INCOMPLETE",
+          "reasonCodes": [
+            "DOCUMENT_ANALYSIS_INCOMPLETE",
+            "ANALYZER_VISUAL_CIRCUIT_OPEN",
+            "ANALYZER_VISUAL_COMMAND_REQUIRED"
+          ],
+          "semanticQualification": false
+        },
+        {
+          "id": "MEDIA:sample.ppt",
+          "status": "BLOCKED",
+          "jobStatus": "completed",
+          "action": "REQUIRE_REVIEW",
+          "outcome": "INCOMPLETE",
+          "reasonCodes": [
+            "DOCUMENT_ANALYSIS_INCOMPLETE",
+            "ANALYZER_VISUAL_CIRCUIT_OPEN"
+          ],
+          "semanticQualification": false
+        },
+        {
+          "id": "MEDIA:sample.pptx",
+          "status": "BLOCKED",
+          "jobStatus": "completed",
+          "action": "REQUIRE_REVIEW",
+          "outcome": "INCOMPLETE",
+          "reasonCodes": [
+            "DOCUMENT_ANALYSIS_INCOMPLETE",
+            "ANALYZER_VISUAL_CIRCUIT_OPEN"
+          ],
+          "semanticQualification": false
+        },
+        {
+          "id": "MEDIA:sample.rtf",
+          "status": "BLOCKED",
+          "jobStatus": "completed",
+          "action": "REQUIRE_REVIEW",
+          "outcome": "INCOMPLETE",
+          "reasonCodes": [
+            "DOCUMENT_ANALYSIS_INCOMPLETE",
+            "ANALYZER_VISUAL_CIRCUIT_OPEN",
+            "ANALYZER_VISUAL_COMMAND_REQUIRED"
+          ],
+          "semanticQualification": false
+        },
+        {
+          "id": "MEDIA:sample.srt",
+          "status": "PASS",
+          "jobStatus": "completed",
+          "action": "ALLOW",
+          "outcome": "COMPLETE",
+          "reasonCodes": [],
+          "semanticQualification": false
+        },
+        {
+          "id": "MEDIA:sample.ssa",
+          "status": "PASS",
+          "jobStatus": "completed",
+          "action": "ALLOW",
+          "outcome": "COMPLETE",
+          "reasonCodes": [],
+          "semanticQualification": false
+        },
+        {
+          "id": "MEDIA:sample.tiff",
+          "status": "BLOCKED",
+          "jobStatus": "completed",
+          "action": "REQUIRE_REVIEW",
+          "outcome": "INCOMPLETE",
+          "reasonCodes": [
+            "DOCUMENT_ANALYSIS_INCOMPLETE",
+            "ANALYZER_VISUAL_CIRCUIT_OPEN"
+          ],
+          "semanticQualification": false
+        },
+        {
+          "id": "MEDIA:sample.vtt",
+          "status": "PASS",
+          "jobStatus": "completed",
+          "action": "ALLOW",
+          "outcome": "COMPLETE",
+          "reasonCodes": [],
+          "semanticQualification": false
+        },
+        {
+          "id": "MEDIA:sample.webp",
+          "status": "BLOCKED",
+          "jobStatus": "completed",
+          "action": "REQUIRE_REVIEW",
+          "outcome": "INCOMPLETE",
+          "reasonCodes": [
+            "DOCUMENT_ANALYSIS_INCOMPLETE",
+            "ANALYZER_VISUAL_CIRCUIT_OPEN"
+          ],
+          "semanticQualification": false
+        },
+        {
+          "id": "MEDIA:sample.xls",
+          "status": "BLOCKED",
+          "jobStatus": "completed",
+          "action": "REQUIRE_REVIEW",
+          "outcome": "INCOMPLETE",
+          "reasonCodes": [
+            "DOCUMENT_ANALYSIS_INCOMPLETE",
+            "ANALYZER_VISUAL_CIRCUIT_OPEN",
+            "ANALYZER_VISUAL_COMMAND_REQUIRED"
+          ],
+          "semanticQualification": false
+        },
+        {
+          "id": "MEDIA:sample.xlsx",
+          "status": "BLOCKED",
+          "jobStatus": "completed",
+          "action": "REQUIRE_REVIEW",
+          "outcome": "INCOMPLETE",
+          "reasonCodes": [
+            "DOCUMENT_ANALYSIS_INCOMPLETE",
+            "ANALYZER_VISUAL_CIRCUIT_OPEN"
+          ],
+          "semanticQualification": false
+        },
+        {
+          "id": "MEDIA:video.3gp",
+          "status": "BLOCKED",
+          "jobStatus": "completed",
+          "action": "REQUIRE_REVIEW",
+          "outcome": "INCOMPLETE",
+          "reasonCodes": [
+            "MEDIA_ANALYSIS_INCOMPLETE",
+            "ANALYZER_AUDIO_CONTAINER_DURATION_MISMATCH",
+            "ANALYZER_AUDIO_CLASSIFIER_COMMAND_REQUIRED",
+            "ANALYZER_ASR_COMMAND_REQUIRED",
+            "ANALYZER_ASR_CIRCUIT_OPEN",
+            "ANALYZER_VISUAL_COMMAND_REQUIRED",
+            "ANALYZER_VISUAL_CIRCUIT_OPEN",
+            "ANALYZER_AUDIO_PROCESSING_INCOMPLETE"
+          ],
+          "semanticQualification": false
+        },
+        {
+          "id": "MEDIA:video.avi",
+          "status": "BLOCKED",
+          "jobStatus": "completed",
+          "action": "REQUIRE_REVIEW",
+          "outcome": "INCOMPLETE",
+          "reasonCodes": [
+            "MEDIA_ANALYSIS_INCOMPLETE",
+            "ANALYZER_AUDIO_CLASSIFIER_COMMAND_REQUIRED",
+            "ANALYZER_ASR_CIRCUIT_OPEN",
+            "ANALYZER_VISUAL_CIRCUIT_OPEN",
+            "ANALYZER_AUDIO_PROCESSING_INCOMPLETE"
+          ],
+          "semanticQualification": false
+        },
+        {
+          "id": "MEDIA:video.flv",
+          "status": "BLOCKED",
+          "jobStatus": "completed",
+          "action": "REQUIRE_REVIEW",
+          "outcome": "INCOMPLETE",
+          "reasonCodes": [
+            "MEDIA_ANALYSIS_INCOMPLETE",
+            "ANALYZER_AUDIO_CONTAINER_DURATION_MISMATCH",
+            "ANALYZER_AUDIO_CLASSIFIER_COMMAND_REQUIRED",
+            "ANALYZER_ASR_CIRCUIT_OPEN",
+            "ANALYZER_VISUAL_CIRCUIT_OPEN",
+            "ANALYZER_VISUAL_COMMAND_REQUIRED",
+            "ANALYZER_AUDIO_PROCESSING_INCOMPLETE"
+          ],
+          "semanticQualification": false
+        },
+        {
+          "id": "MEDIA:video.mkv",
+          "status": "BLOCKED",
+          "jobStatus": "completed",
+          "action": "REQUIRE_REVIEW",
+          "outcome": "INCOMPLETE",
+          "reasonCodes": [
+            "MEDIA_ANALYSIS_INCOMPLETE",
+            "ANALYZER_AUDIO_CLASSIFIER_CIRCUIT_OPEN",
+            "ANALYZER_ASR_COMMAND_REQUIRED",
+            "ANALYZER_ASR_CIRCUIT_OPEN",
+            "ANALYZER_VISUAL_CIRCUIT_OPEN",
+            "ANALYZER_AUDIO_PROCESSING_INCOMPLETE"
+          ],
+          "semanticQualification": false
+        },
+        {
+          "id": "MEDIA:video.mov",
+          "status": "BLOCKED",
+          "jobStatus": "completed",
+          "action": "REQUIRE_REVIEW",
+          "outcome": "INCOMPLETE",
+          "reasonCodes": [
+            "MEDIA_ANALYSIS_INCOMPLETE",
+            "ANALYZER_AUDIO_CONTAINER_DURATION_MISMATCH",
+            "ANALYZER_AUDIO_CLASSIFIER_CIRCUIT_OPEN",
+            "ANALYZER_ASR_CIRCUIT_OPEN",
+            "ANALYZER_VISUAL_CIRCUIT_OPEN",
+            "ANALYZER_VISUAL_COMMAND_REQUIRED",
+            "ANALYZER_AUDIO_PROCESSING_INCOMPLETE"
+          ],
+          "semanticQualification": false
+        },
+        {
+          "id": "MEDIA:video.mp4",
+          "status": "BLOCKED",
+          "jobStatus": "completed",
+          "action": "REQUIRE_REVIEW",
+          "outcome": "INCOMPLETE",
+          "reasonCodes": [
+            "MEDIA_ANALYSIS_INCOMPLETE",
+            "ANALYZER_AUDIO_CONTAINER_DURATION_MISMATCH",
+            "ANALYZER_AUDIO_CLASSIFIER_COMMAND_REQUIRED",
+            "ANALYZER_ASR_CIRCUIT_OPEN",
+            "ANALYZER_VISUAL_CIRCUIT_OPEN",
+            "ANALYZER_AUDIO_PROCESSING_INCOMPLETE"
+          ],
+          "semanticQualification": false
+        },
+        {
+          "id": "MEDIA:video.mpg",
+          "status": "BLOCKED",
+          "jobStatus": "completed",
+          "action": "REQUIRE_REVIEW",
+          "outcome": "INCOMPLETE",
+          "reasonCodes": [
+            "MEDIA_ANALYSIS_INCOMPLETE",
+            "ANALYZER_AUDIO_CLASSIFIER_COMMAND_REQUIRED",
+            "ANALYZER_ASR_COMMAND_REQUIRED",
+            "ANALYZER_ASR_CIRCUIT_OPEN",
+            "ANALYZER_VISUAL_CIRCUIT_OPEN",
+            "ANALYZER_VISUAL_COMMAND_REQUIRED",
+            "ANALYZER_AUDIO_PROCESSING_INCOMPLETE"
+          ],
+          "semanticQualification": false
+        },
+        {
+          "id": "MEDIA:video.ts",
+          "status": "BLOCKED",
+          "jobStatus": "completed",
+          "action": "REQUIRE_REVIEW",
+          "outcome": "INCOMPLETE",
+          "reasonCodes": [
+            "MEDIA_ANALYSIS_INCOMPLETE",
+            "ANALYZER_AUDIO_CLASSIFIER_COMMAND_REQUIRED",
+            "ANALYZER_ASR_CIRCUIT_OPEN",
+            "ANALYZER_VISUAL_CIRCUIT_OPEN",
+            "ANALYZER_AUDIO_PROCESSING_INCOMPLETE"
+          ],
+          "semanticQualification": false
+        },
+        {
+          "id": "MEDIA:video.webm",
+          "status": "BLOCKED",
+          "jobStatus": "completed",
+          "action": "REQUIRE_REVIEW",
+          "outcome": "INCOMPLETE",
+          "reasonCodes": [
+            "MEDIA_ANALYSIS_INCOMPLETE",
+            "ANALYZER_AUDIO_CLASSIFIER_CIRCUIT_OPEN",
+            "ANALYZER_ASR_CIRCUIT_OPEN",
+            "ANALYZER_VISUAL_CIRCUIT_OPEN",
+            "ANALYZER_AUDIO_PROCESSING_INCOMPLETE"
+          ],
+          "semanticQualification": false
+        },
+        {
+          "id": "MEDIA:video.wmv",
+          "status": "BLOCKED",
+          "jobStatus": "completed",
+          "action": "REQUIRE_REVIEW",
+          "outcome": "INCOMPLETE",
+          "reasonCodes": [
+            "MEDIA_ANALYSIS_INCOMPLETE",
+            "ANALYZER_AUDIO_CLASSIFIER_CIRCUIT_OPEN",
+            "ANALYZER_ASR_COMMAND_REQUIRED",
+            "ANALYZER_ASR_CIRCUIT_OPEN",
+            "ANALYZER_VISUAL_COMMAND_REQUIRED",
+            "ANALYZER_VISUAL_CIRCUIT_OPEN",
+            "ANALYZER_AUDIO_PROCESSING_INCOMPLETE"
+          ],
+          "semanticQualification": false
+        },
+        {
+          "id": "MEDIA:sample.docx+sample.png",
+          "status": "BLOCKED",
+          "jobStatus": "completed",
+          "action": "BLOCK",
+          "outcome": "INCOMPLETE",
+          "reasonCodes": [
+            "DOCUMENT_ANALYSIS_INCOMPLETE",
+            "ANALYZER_VISUAL_COMMAND_REQUIRED",
+            "ANALYZER_VISUAL_CIRCUIT_OPEN"
+          ],
+          "semanticQualification": false
+        },
+        {
+          "id": "MEDIA:audio.wav+sample.srt",
+          "status": "BLOCKED",
+          "jobStatus": "completed",
+          "action": "REQUIRE_REVIEW",
+          "outcome": "INCOMPLETE",
+          "reasonCodes": [
+            "MEDIA_ANALYSIS_INCOMPLETE",
+            "ANALYZER_AUDIO_CLASSIFIER_COMMAND_REQUIRED",
+            "ANALYZER_ASR_CIRCUIT_OPEN",
+            "ANALYZER_AUDIO_PROCESSING_INCOMPLETE"
+          ],
+          "semanticQualification": false
+        },
+        {
+          "id": "MEDIA:video.mp4+audio.wav",
+          "status": "BLOCKED",
+          "jobStatus": "completed",
+          "action": "REQUIRE_REVIEW",
+          "outcome": "INCOMPLETE",
+          "reasonCodes": [
+            "MEDIA_ANALYSIS_INCOMPLETE",
+            "ANALYZER_AUDIO_CONTAINER_DURATION_MISMATCH",
+            "ANALYZER_AUDIO_CLASSIFIER_COMMAND_REQUIRED",
+            "ANALYZER_ASR_CIRCUIT_OPEN",
+            "ANALYZER_VISUAL_CIRCUIT_OPEN",
+            "ANALYZER_VISUAL_COMMAND_REQUIRED",
+            "ANALYZER_AUDIO_PROCESSING_INCOMPLETE",
+            "ANALYZER_ASR_COMMAND_REQUIRED"
+          ],
+          "semanticQualification": false
+        },
+        {
+          "id": "MEDIA:legacy-gb18030.txt+sample.png+audio.wav",
+          "status": "BLOCKED",
+          "jobStatus": "completed",
+          "action": "REQUIRE_REVIEW",
+          "outcome": "INCOMPLETE",
+          "reasonCodes": [
+            "DOCUMENT_ANALYSIS_INCOMPLETE",
+            "ANALYZER_VISUAL_CIRCUIT_OPEN",
+            "ANALYZER_VISUAL_COMMAND_REQUIRED",
+            "MEDIA_ANALYSIS_INCOMPLETE",
+            "ANALYZER_AUDIO_CLASSIFIER_CIRCUIT_OPEN",
+            "ANALYZER_ASR_CIRCUIT_OPEN",
+            "ANALYZER_AUDIO_PROCESSING_INCOMPLETE"
+          ],
+          "semanticQualification": false
+        }
+      ]
+    },
+    "health-recovery": {
+      "status": null,
+      "counts": {
+        "PASS": 4
+      },
+      "results": [
+        {
+          "id": "REAL_WORKER_STOP_DETECTED",
+          "status": "PASS"
+        },
+        {
+          "id": "REAL_WORKER_RESTART_RECOVERED",
+          "status": "PASS"
+        },
+        {
+          "id": "REAL_ANALYZER_STOP_DETECTED",
+          "status": "PASS"
+        },
+        {
+          "id": "REAL_ANALYZER_RESTART_RECOVERED",
+          "status": "PASS"
+        }
+      ]
+    },
+    "cleanup": {
+      "status": null,
+      "counts": {
+        "STOPPED": 11
+      },
+      "results": [
+        {
+          "status": "STOPPED",
+          "id": "cleanup:0"
+        },
+        {
+          "status": "STOPPED",
+          "id": "cleanup:1"
+        },
+        {
+          "status": "STOPPED",
+          "id": "cleanup:2"
+        },
+        {
+          "status": "STOPPED",
+          "id": "cleanup:3"
+        },
+        {
+          "status": "STOPPED",
+          "id": "cleanup:4"
+        },
+        {
+          "status": "STOPPED",
+          "id": "cleanup:5"
+        },
+        {
+          "status": "STOPPED",
+          "id": "cleanup:6"
+        },
+        {
+          "status": "STOPPED",
+          "id": "cleanup:7"
+        },
+        {
+          "status": "STOPPED",
+          "id": "cleanup:8"
+        },
+        {
+          "status": "STOPPED",
+          "id": "cleanup:9"
+        },
+        {
+          "status": "STOPPED",
+          "id": "cleanup:10"
+        }
+      ]
+    }
+  },
+  "productionDeploymentPerformed": false,
+  "qualityAccepted": false,
+  "archiveBoundary": {
+    "status": "PASS",
+    "scope": "REAL_HTTP_PG_SYNTHETIC_METADATA_ONLY",
+    "exact180DayBoundary": true,
+    "oneMillisecondBeforeExcluded": true,
+    "equalTimestampPagination": true,
+    "pages": 3,
+    "expected": 6,
+    "received": 6,
+    "duplicateCount": 0,
+    "crossScopeCursorRejected": true,
+    "changedFilterRejected": true,
+    "productionArchiveIntegrity": "NOT_TESTED",
+    "runtimeSnapshot": "REVOKED_INVALID_SYNTHETIC_NEVER_ACTIVATED"
+  },
+  "layeredEvidence": {
+    "status": "PASS",
+    "syntheticEvidenceOnly": true,
+    "realPostgres": true,
+    "realVersionedObjectStore": true,
+    "plaintextBytes": 6918074,
+    "chunkCount": 7,
+    "checks": [
+      "ack-loss-retry",
+      "partial-publish-not-readable",
+      "full-untruncated-roundtrip",
+      "immutable-chunk-identity",
+      "hold-blocks-delete",
+      "exact-version-delete-confirmed",
+      "deleted-unavailable"
+    ]
+  },
+  "singleCallAudit": {
+    "status": "PASS",
+    "total": 18,
+    "unwrappedMutations": 0
+  },
+  "releaseGates": {
+    "status": "BLOCKED",
+    "blockers": [
+      "DOUBLE_REVIEWED_INDEPENDENT_HOLDOUT_AND_DEVELOPMENT_LINEAGE_REQUIRED",
+      "EXACT_ASR_VLM_AUDIO_CLASSIFIER_JOINT_MODEL_QUALIFICATION_REQUIRED"
+    ],
+    "developmentDependencies": [
+      {
+        "id": "R04",
+        "title": "标准派生资产与大证据分层存储",
+        "status": "PARTIAL_VERIFIED",
+        "acceptance": "REQUIRES_SEPARATE_EVIDENCE; upload acceptance does not close this dependency"
+      },
+      {
+        "id": "R05",
+        "title": "混合与文档聊天受控释放",
+        "status": "OPEN",
+        "acceptance": "REQUIRES_SEPARATE_EVIDENCE; upload acceptance does not close this dependency"
+      },
+      {
+        "id": "R06",
+        "title": "RAG多模态入库和媒体评测manifest",
+        "status": "OPEN",
+        "acceptance": "REQUIRES_SEPARATE_EVIDENCE; upload acceptance does not close this dependency"
+      },
+      {
+        "id": "R07",
+        "title": "剩余格式和隐藏内容枚举",
+        "status": "PARTIAL_VERIFIED",
+        "acceptance": "REQUIRES_SEPARATE_EVIDENCE; upload acceptance does not close this dependency"
+      },
+      {
+        "id": "R08",
+        "title": "Artifact版本化清理与容量恢复",
+        "status": "OPEN",
+        "acceptance": "REQUIRES_SEPARATE_EVIDENCE; upload acceptance does not close this dependency"
+      },
+      {
+        "id": "R09",
+        "title": "告警链路与媒体定位交互",
+        "status": "PARTIAL_VERIFIED",
+        "acceptance": "REQUIRES_SEPARATE_EVIDENCE; upload acceptance does not close this dependency"
+      },
+      {
+        "id": "R10",
+        "title": "真实模型角色适配与协议鉴定",
+        "status": "BLOCKED",
+        "acceptance": "REQUIRES_SEPARATE_EVIDENCE; upload acceptance does not close this dependency"
+      },
+      {
+        "id": "R11",
+        "title": "金融复核、消融和校准运行器",
+        "status": "BLOCKED",
+        "acceptance": "REQUIRES_SEPARATE_EVIDENCE; upload acceptance does not close this dependency"
+      },
+      {
+        "id": "R12",
+        "title": "全入口回归、G0-G5与灰度关闭",
+        "status": "IN_PROGRESS",
+        "acceptance": "REQUIRES_SEPARATE_EVIDENCE; upload acceptance does not close this dependency"
+      }
+    ],
+    "thresholds": {
+      "fprUpper95": 0.01,
+      "fdrUpper95": 0.1,
+      "recallLower95": 0.95,
+      "accuracyLower95": 0.95,
+      "fnrMaximum": 0.05
+    },
+    "baselineStarted": false,
+    "productionDeployAllowed": false
+  }
+}

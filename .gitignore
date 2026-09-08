@@ -171,6 +171,7 @@ Desktop.ini
 # Isolated gateway integration build output
 .next-upgrade-v2/
 .next-upgrade-build/
+.next-comprehensive-build/
 
 # Small synthetic codec fixtures; business documents and eval-data remain ignored.
 !tests/fixtures/multiformat/*

@@ -1,0 +1,36 @@
+import assert from 'node:assert/strict';
+import { randomUUID, createHash } from 'node:crypto';
+import { readFileSync, writeFileSync } from 'node:fs';
+import { eq } from 'drizzle-orm';
+import { db, closeDatabaseConnection } from '../../../src/storage/database/shared/db';
+import { artifacts, guardJobs, mediaEvidenceChunks, mediaEvidenceSnapshots } from '../../../src/storage/database/shared/schema';
+import { archiveObjectStore, type ArchiveObjectStore } from '../../../src/lib/conversation-archive/object-store';
+import { enqueueMediaEvidenceSnapshot, publishMediaEvidence, readMediaEvidence, mediaEvidenceId, deleteExpiredMediaEvidence, setMediaEvidenceHold } from '../../../src/lib/evidence/media-snapshots';
+import { makeEvidenceView } from '../../../src/lib/evidence/media-views';
+async function main() {
+ const out = process.env.COMPREHENSIVE_RUN_DIR!; const fixture = JSON.parse(readFileSync(out + '/fixture.private.json','utf8')) as { tenantId: string; applicationId: string; bundleId: string; userId: string };
+ const scope = { tenantId: fixture.tenantId, applicationId: fixture.applicationId }, artifactId = randomUUID(), jobId = randomUUID(), sha = createHash('sha256').update('synthetic source').digest('hex');
+ const now = new Date();
+ await db.insert(artifacts).values({ ...scope, id: artifactId, ownerId: fixture.userId, kind: 'DOCUMENT', fileName: 'large-evidence-synthetic.pdf', declaredMediaType: 'application/pdf', declaredSize: 16, declaredSha256: sha, verifiedSha256: sha, verifiedSize: 16, objectPrefix: 'synthetic-only/' + artifactId, state: 'accepted', idempotencyKey: artifactId, requestHash: sha, partSize: 16 * 1024 * 1024, partCount: 1, contentExpiresAt: new Date(now.getTime() + 86400_000) });
+ const [job] = await db.insert(guardJobs).values({ ...scope, id: jobId, ownerId: fixture.userId, artifactId, bundleId: fixture.bundleId, jobType: 'document_image', status: 'completed', idempotencyKey: jobId, requestHash: sha }).returning();
+ const text = '金融安全合成证据'.repeat(18000);
+ const views = Array.from({length: 16}, (_, index) => makeEvidenceView({ artifactId, sourceDigest: sha, contentPath: 'pages.' + index, source: 'SYNTHETIC_ONLY', viewId: 'page-' + index, page: index + 1, text: text + index }));
+ const size = Buffer.byteLength(JSON.stringify(views)); assert.ok(size > 4 * 1024 * 1024);
+ await db.transaction(tx => enqueueMediaEvidenceSnapshot(tx, job, { views }));
+ const id = mediaEvidenceId(scope, jobId), store = archiveObjectStore(); let lost = false;
+ const fault: ArchiveObjectStore = { putImmutable: async (key, bytes) => { const result = await store.putImmutable(key, bytes); if (!lost) { lost = true; throw new Error('SYNTHETIC_ACK_LOSS'); } return result; }, readVersion: (key, ref) => store.readVersion(key, ref), deleteVersion: (key, version) => store.deleteVersion(key, version) };
+ await assert.rejects(publishMediaEvidence(scope, id, fault));
+ await assert.rejects(readMediaEvidence(scope, id, store), /NOT_AVAILABLE/);
+ await publishMediaEvidence(scope, id, store);
+ const read = await readMediaEvidence(scope, id, store); assert.deepEqual(read.content.views, views);
+ const chunks = await db.select().from(mediaEvidenceChunks).where(eq(mediaEvidenceChunks.snapshotId, id)); assert.ok(chunks.length > 4); assert.ok(chunks.every(chunk => chunk.objectVersion && !chunk.spool));
+ await assert.rejects(db.update(mediaEvidenceChunks).set({ plaintextSha256: '0'.repeat(64) }).where(eq(mediaEvidenceChunks.id, chunks[0].id)));
+ await setMediaEvidenceHold({ ...scope, principalId: fixture.userId }, id, new Date(now.getTime() + 182 * 86400_000));
+ assert.equal(await deleteExpiredMediaEvidence(scope, id, store, new Date(now.getTime() + 181 * 86400_000)), false);
+ assert.equal(await deleteExpiredMediaEvidence(scope, id, store, new Date(now.getTime() + 183 * 86400_000)), true);
+ const [deleted] = await db.select().from(mediaEvidenceSnapshots).where(eq(mediaEvidenceSnapshots.id, id)); assert.equal(deleted.state, 'DELETED');
+ await assert.rejects(readMediaEvidence(scope, id, store));
+ const report = { status: 'PASS', syntheticEvidenceOnly: true, realPostgres: true, realVersionedObjectStore: true, plaintextBytes: size, chunkCount: chunks.length, checks: ['ack-loss-retry', 'partial-publish-not-readable', 'full-untruncated-roundtrip', 'immutable-chunk-identity', 'hold-blocks-delete', 'exact-version-delete-confirmed', 'deleted-unavailable'] };
+ writeFileSync(out + '/layered-evidence.json', JSON.stringify(report, null, 2)); console.log(JSON.stringify(report));
+}
+main().finally(closeDatabaseConnection).catch(error => { console.error(error instanceof Error ? error.message : 'LAYERED_EVIDENCE_FAILED'); process.exitCode=1; });
