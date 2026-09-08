@@ -8,11 +8,21 @@ export interface ProviderTestFailure {
   readonly upstreamCode?: string;
 }
 
+// Thinking models burn the probe budget on hidden reasoning before emitting
+// content, so the cheap 10-token probe reports a misleading empty response.
+// Covers GLM-4.5+/5.x, DeepSeek reasoner/R1, Qwen3/QwQ, Doubao Seed and any
+// explicit *-thinking* model id (e.g. Kimi K2 Thinking) across vendors.
+const thinkingModelPattern = /(?:^glm-(?:4\.[5-9]|5))|(?:^deepseek-(?:reasoner|r1))|(?:^qwen3)|(?:^qwq)|(?:^doubao-seed)|thinking/u;
+
 export function providerConnectionTestOptions(
   provider: Pick<ProviderConnection, 'providerType' | 'defaultModel'>,
 ): ProviderChatOptions {
-  if (provider.providerType === 'glm' && /^glm-5\.3(?:$|-)/u.test(provider.defaultModel ?? '')) {
+  const model = provider.defaultModel ?? '';
+  if (provider.providerType === 'glm' && /^glm-5\.3(?:$|-)/u.test(model)) {
     return { maxTokens: 1_024, temperature: null, thinkingMode: 'enabled', reasoningEffort: 'low', timeoutMs: 30_000 };
+  }
+  if (thinkingModelPattern.test(model)) {
+    return { maxTokens: 1_024, temperature: null, timeoutMs: 30_000 };
   }
   return { maxTokens: 10, temperature: 0, timeoutMs: 10_000 };
 }
