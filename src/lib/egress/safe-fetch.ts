@@ -6,7 +6,7 @@ const DEFAULT_MAX_REQUEST_BYTES = 1 * 1_024 * 1_024;
 const DEFAULT_MAX_RESPONSE_BYTES = 2 * 1_024 * 1_024;
 
 export class EgressRequestError extends Error {
-  constructor(readonly code: string, message: string, readonly status?: number) {
+  constructor(readonly code: string, message: string, readonly status?: number, readonly upstreamCode?: string) {
     super(message);
     this.name = 'EgressRequestError';
   }
@@ -39,6 +39,23 @@ function endpointUrl(baseUrl: string, path: string): URL {
     throw new EgressRequestError('PATH_ORIGIN_CHANGED', 'Provider path changed the endpoint origin');
   }
   return endpoint;
+}
+
+// Only retain recognized public business codes; never propagate upstream messages or bodies.
+function upstreamBusinessCode(text: string, providerType: ProviderType): string | undefined {
+  if (providerType !== 'glm') return undefined;
+  try {
+    const payload: unknown = JSON.parse(text);
+    if (!payload || typeof payload !== 'object' || !('error' in payload)) return undefined;
+    const error = payload.error;
+    if (!error || typeof error !== 'object' || !('code' in error)) return undefined;
+    const code = error.code;
+    if (typeof code !== 'string' && typeof code !== 'number') return undefined;
+    const value = String(code);
+    return ['1113', '1211', '1309'].includes(value) ? value : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 async function readBoundedBody(response: Response, maximumBytes: number): Promise<string> {
@@ -111,7 +128,10 @@ export async function safeFetchJson(
     request.maxResponseBytes ?? DEFAULT_MAX_RESPONSE_BYTES,
   );
   if (!response.ok) {
-    throw new EgressRequestError('UPSTREAM_HTTP_ERROR', 'Provider returned an error status', response.status);
+    throw new EgressRequestError(
+      'UPSTREAM_HTTP_ERROR', 'Provider returned an error status', response.status,
+      upstreamBusinessCode(text, request.providerType),
+    );
   }
   const mediaType = response.headers.get('content-type')?.split(';')[0]?.trim().toLowerCase();
   if (mediaType !== 'application/json' && !mediaType?.endsWith('+json')) {

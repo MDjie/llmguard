@@ -239,7 +239,7 @@ export default function ProvidersPage() {
         body: JSON.stringify({ providerId }),
       });
 
-      let data: { success: boolean; data?: { testSuccess?: boolean; latencyMs?: number; error?: string; errorCode?: string }; error?: string; detail?: string } | null = null;
+      let data: { success: boolean; data?: { testSuccess?: boolean; latencyMs?: number; error?: string; errorCode?: string; errorMessage?: string }; error?: string; detail?: string } | null = null;
 
       try {
         data = await res.json();
@@ -252,14 +252,15 @@ export default function ProvidersPage() {
       }
 
       const latencyMs = data.data?.latencyMs ?? 0;
-      const testSuccess = data.data?.testSuccess ?? true;
+      const testSuccess = data.data?.testSuccess === true;
+      const testMessage = testSuccess ? '连接正常' : (data.data?.errorMessage || data.data?.errorCode || data.data?.error || '测试失败');
 
       setTestResults(prev => ({
         ...prev,
         [providerId]: {
           success: testSuccess,
           latencyMs,
-          message: testSuccess ? '连接正常' : (data?.data?.errorCode || data?.data?.error || '测试失败'),
+          message: testMessage,
           testedAt: new Date().toLocaleTimeString(),
         },
       }));
@@ -267,7 +268,7 @@ export default function ProvidersPage() {
       if (testSuccess) {
         toast.success(`测试成功，延迟 ${latencyMs}ms`);
       } else {
-        toast.error(data?.data?.error || '测试失败');
+        toast.error(testMessage);
       }
 
       // 刷新列表以显示最新测试结果
@@ -401,7 +402,7 @@ export default function ProvidersPage() {
                 <Input
                   value={formData.baseUrl}
                   onChange={(e) => setFormData({ ...formData, baseUrl: e.target.value })}
-                  placeholder="例如: https://api.deepseek.com"
+                  placeholder={formData.providerType === 'glm' ? 'https://open.bigmodel.cn/api/paas/v4' : '例如: https://api.deepseek.com'}
                 />
               </div>
 
@@ -430,7 +431,7 @@ export default function ProvidersPage() {
                 <Input
                   value={formData.defaultModel}
                   onChange={(e) => setFormData({ ...formData, defaultModel: e.target.value })}
-                  placeholder="例如: deepseek-chat"
+                  placeholder={formData.providerType === 'glm' ? 'glm-5.3' : '例如: deepseek-chat'}
                 />
               </div>
 

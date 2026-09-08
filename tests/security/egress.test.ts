@@ -105,3 +105,43 @@ describe('safeFetchJson', () => {
     await expect(rejection).rejects.not.toThrow('must-not-escape');
   });
 });
+
+describe('safe upstream diagnostics', () => {
+  it.each([
+    [1113, '1113'], ['1211', '1211'], ['1309', '1309'],
+    ['secret-must-not-escape', undefined], [{ token: 'secret-must-not-escape' }, undefined],
+    ['999999999999', undefined], [null, undefined],
+  ])('retains only recognized Zhipu codes (%j)', async (code, expected) => {
+    const rejection = safeFetchJson(
+      { baseUrl: 'https://open.bigmodel.cn/api/paas/v4', path: 'chat/completions', providerType: 'glm', body: {} },
+      {
+        policy: new ProviderEndpointPolicy({ resolver: publicResolver }),
+        fetchImpl: vi.fn<typeof fetch>(async () => Response.json(
+          { error: { code, message: 'secret-must-not-escape' } }, { status: 429 },
+        )),
+      },
+    );
+    await expect(rejection).rejects.toMatchObject({ code: 'UPSTREAM_HTTP_ERROR', status: 429, upstreamCode: expected });
+    await expect(rejection).rejects.not.toThrow('secret-must-not-escape');
+  });
+
+  it.each(['not-json secret-must-not-escape', 'null', '[]', '{"error":null}'])('tolerates malformed error bodies: %s', async body => {
+    await expect(safeFetchJson(
+      { baseUrl: 'https://open.bigmodel.cn/api/paas/v4', path: 'chat/completions', providerType: 'glm', body: {} },
+      {
+        policy: new ProviderEndpointPolicy({ resolver: publicResolver }),
+        fetchImpl: vi.fn<typeof fetch>(async () => new Response(body, { status: 404 })),
+      },
+    )).rejects.toMatchObject({ code: 'UPSTREAM_HTTP_ERROR', status: 404, upstreamCode: undefined });
+  });
+
+  it('does not interpret another provider business code as a Zhipu code', async () => {
+    await expect(safeFetchJson(
+      { baseUrl: 'https://api.deepseek.com/v1', path: 'chat/completions', providerType: 'deepseek', body: {} },
+      {
+        policy: new ProviderEndpointPolicy({ resolver: publicResolver }),
+        fetchImpl: vi.fn<typeof fetch>(async () => Response.json({ error: { code: 1113 } }, { status: 429 })),
+      },
+    )).rejects.toMatchObject({ code: 'UPSTREAM_HTTP_ERROR', status: 429, upstreamCode: undefined });
+  });
+});

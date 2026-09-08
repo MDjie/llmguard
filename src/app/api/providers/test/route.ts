@@ -1,8 +1,9 @@
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { ApiProblem, withApiSecurity } from '@/lib/api-security';
-import { EgressPolicyError, EgressRequestError } from '@/lib/egress';
-import { callProviderChat, ProviderConfigurationError } from '@/lib/providers';
+import { callProviderChat } from '@/lib/providers';
+import { providerConnectionTestOptions, providerTestFailure, type ProviderTestFailure } from '@/lib/providers/connection-test';
+import { logger } from '@/lib/observability/logger';
 import { db } from '@/storage/database/shared/db';
 import { llmProviders } from '@/storage/database/shared/schema';
 import { requireTenantContext, scopePredicate } from '@/lib/tenancy';
@@ -15,19 +16,11 @@ const responseSchema = z.object({
     testSuccess: z.boolean(),
     latencyMs: z.number().int().nonnegative(),
     errorCode: z.string().optional(),
+    errorMessage: z.string().optional(),
+    upstreamStatus: z.number().int().min(100).max(599).optional(),
+    upstreamCode: z.string().regex(/^\d{4}$/u).optional(),
   }),
 });
-
-function safeErrorCode(error: unknown): string {
-  if (
-    error instanceof EgressPolicyError ||
-    error instanceof EgressRequestError ||
-    error instanceof ProviderConfigurationError
-  ) {
-    return error.code;
-  }
-  return 'PROVIDER_TEST_FAILED';
-}
 
 export const POST = withApiSecurity(
   {
@@ -38,7 +31,7 @@ export const POST = withApiSecurity(
     auditEvent: 'provider.test',
     rateLimitPolicy: { id: 'provider-test', windowMs: 60_000, maxRequests: 10, scope: 'principal' },
   },
-  async ({ body, request, principal }) => {
+  async ({ body, request, principal, requestContext }) => {
     const scope = requireTenantContext(principal);
     const [provider] = await db
       .select()
@@ -59,20 +52,27 @@ export const POST = withApiSecurity(
 
     let testSuccess = false;
     let latencyMs = 0;
-    let errorCode: string | undefined;
+    let failure: ProviderTestFailure | undefined;
     const startedAt = Date.now();
     try {
-      const result = await callProviderChat(provider, [{ role: 'user', content: 'ping' }], {
-        maxTokens: 10,
-        temperature: 0,
-        timeoutMs: 10_000,
+      const result = await callProviderChat(provider, [{ role: 'user', content: 'Reply with OK only.' }], {
+        ...providerConnectionTestOptions(provider),
         signal: request.signal,
       });
       testSuccess = true;
       latencyMs = result.latencyMs;
     } catch (error) {
       latencyMs = Date.now() - startedAt;
-      errorCode = safeErrorCode(error);
+      failure = providerTestFailure(error);
+      logger.warn('provider.connection.failed', {
+        providerId: provider.id,
+        providerType: provider.providerType,
+        errorCode: failure.errorCode,
+        upstreamStatus: failure.upstreamStatus,
+        upstreamCode: failure.upstreamCode,
+        traceId: requestContext.traceId,
+        latencyMs,
+      });
     }
 
     await db
@@ -94,7 +94,7 @@ export const POST = withApiSecurity(
         providerId: provider.id,
         testSuccess,
         latencyMs,
-        ...(errorCode ? { errorCode } : {}),
+        ...failure,
       },
     });
   },

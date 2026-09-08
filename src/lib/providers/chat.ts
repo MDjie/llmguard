@@ -110,7 +110,7 @@ export function providerBaseUrl(providerType: ProviderType, configured: string |
 
 function chatPath(baseUrl: string): string {
   const pathname = new URL(baseUrl).pathname.replace(/\/$/, '');
-  return pathname.endsWith('/v1') || pathname.includes('/api/v') || pathname.includes('/compatible-mode/v1')
+  return /\/v\d+$/u.test(pathname) || pathname.includes('/api/v') || pathname.includes('/compatible-mode/v1')
     ? 'chat/completions'
     : 'v1/chat/completions';
 }
