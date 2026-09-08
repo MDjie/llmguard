@@ -1,25 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { LLMGateway } from '../../src/lib/llm/gateway';
-import type { LLMProvider } from '../../src/lib/llm/types';
 import {
   parseProviderType,
   ProviderConfigurationError,
   providerBaseUrl,
 } from '../../src/lib/providers';
-
-function provider(providerType: LLMProvider['providerType']): LLMProvider {
-  return {
-    id: `provider-${providerType}`,
-    name: `Provider ${providerType}`,
-    providerType,
-    baseUrl: 'https://llm.example.com/v1',
-    defaultModel: 'test-model',
-    isEnabled: true,
-    useCase: 'both',
-    createdAt: new Date('2026-01-01T00:00:00.000Z'),
-    updatedAt: new Date('2026-01-01T00:00:00.000Z'),
-  };
-}
+import {
+  PROVIDER_TYPES,
+  providerDescriptor,
+  providerRequiresSecret,
+} from '../../src/lib/providers/registry';
 
 describe('provider type registry', () => {
   it('rejects removed or unknown provider types at the boundary', () => {
@@ -40,13 +29,17 @@ describe('provider type registry', () => {
     );
   });
 
-  it('registers custom providers with a functional OpenAI-compatible adapter', () => {
-    const gateway = new LLMGateway();
-    gateway.registerProvider(provider('custom'));
+  it('describes every registered type exactly once', () => {
+    expect(new Set(PROVIDER_TYPES).size).toBe(PROVIDER_TYPES.length);
+    for (const type of PROVIDER_TYPES) {
+      expect(providerDescriptor(type)).toMatchObject({ type, label: expect.any(String) });
+    }
+    expect(providerDescriptor('coze')).toBeUndefined();
+  });
 
-    expect(gateway.getProvider('provider-custom')).toMatchObject({
-      providerType: 'custom',
-      name: 'Provider custom',
-    });
+  it('fails closed for unregistered types requiring secrets', () => {
+    expect(providerRequiresSecret('ollama')).toBe(false);
+    expect(providerRequiresSecret('deepseek')).toBe(true);
+    expect(providerRequiresSecret('coze')).toBe(true);
   });
 });

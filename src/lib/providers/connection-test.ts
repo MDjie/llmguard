@@ -1,5 +1,6 @@
 import { EgressPolicyError, EgressRequestError } from '@/lib/egress';
 import { ProviderConfigurationError, type ProviderChatOptions, type ProviderConnection } from './chat';
+import { providerUpstreamErrorMessages } from './registry';
 
 export interface ProviderTestFailure {
   readonly errorCode: string;
@@ -27,12 +28,6 @@ export function providerConnectionTestOptions(
   return { maxTokens: 10, temperature: 0, timeoutMs: 10_000 };
 }
 
-const glmMessages: Readonly<Record<string, string>> = {
-  '1113': '智谱当前端点返回余额不足（1113）。请核对套餐专属 Base URL、密钥归属及当前模型权限；这不代表企业套餐总额度已耗尽。',
-  '1211': '智谱模型标识无效或不可用（1211）。请填写账户实际支持的模型 ID。',
-  '1309': '智谱套餐已过期（1309）。请核对套餐有效期。',
-};
-
 const statusMessages: Readonly<Record<number, string>> = {
   401: '上游认证失败（HTTP 401），请核对 API Key。',
   403: '上游拒绝访问（HTTP 403），请核对账户和模型权限。',
@@ -59,7 +54,7 @@ export function providerTestFailure(error: unknown): ProviderTestFailure {
   const upstreamCode = error instanceof EgressRequestError ? error.upstreamCode : undefined;
   return {
     errorCode,
-    errorMessage: (upstreamCode ? glmMessages[upstreamCode] : undefined)
+    errorMessage: (upstreamCode ? providerUpstreamErrorMessages[upstreamCode] : undefined)
       ?? (upstreamStatus ? statusMessages[upstreamStatus] : undefined)
       ?? codeMessages[errorCode]
       ?? '模型连接测试失败，请根据错误码检查服务配置。',

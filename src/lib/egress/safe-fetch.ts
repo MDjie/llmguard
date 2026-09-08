@@ -1,5 +1,6 @@
 import type { ProviderType } from './endpoint-policy';
 import { ProviderEndpointPolicy } from './endpoint-policy';
+import { providerUpstreamErrorCodeAllowlist } from '@/lib/providers/registry';
 
 const DEFAULT_TIMEOUT_MS = 15_000;
 const DEFAULT_MAX_REQUEST_BYTES = 1 * 1_024 * 1_024;
@@ -43,7 +44,8 @@ function endpointUrl(baseUrl: string, path: string): URL {
 
 // Only retain recognized public business codes; never propagate upstream messages or bodies.
 function upstreamBusinessCode(text: string, providerType: ProviderType): string | undefined {
-  if (providerType !== 'glm') return undefined;
+  const allowlist = providerUpstreamErrorCodeAllowlist(providerType);
+  if (allowlist.length === 0) return undefined;
   try {
     const payload: unknown = JSON.parse(text);
     if (!payload || typeof payload !== 'object' || !('error' in payload)) return undefined;
@@ -52,7 +54,7 @@ function upstreamBusinessCode(text: string, providerType: ProviderType): string 
     const code = error.code;
     if (typeof code !== 'string' && typeof code !== 'number') return undefined;
     const value = String(code);
-    return ['1113', '1211', '1309'].includes(value) ? value : undefined;
+    return allowlist.includes(value) ? value : undefined;
   } catch {
     return undefined;
   }

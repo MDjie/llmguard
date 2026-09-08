@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { QuotaMetric, QuotaScopeType, QuotaWindow } from './quota-plan';
+import type { ProviderType } from '@/lib/providers/registry';
 
 export interface GuardQuotaLimit {
   readonly scopeType: QuotaScopeType;
@@ -14,15 +15,7 @@ export interface GuardResourceAdmissionSpec {
   readonly tokenizerDigest: string;
   readonly tokenizerBaseUrl: string;
   readonly tokenizerPath: string;
-  readonly tokenizerProviderType:
-    | 'openai_compatible'
-    | 'deepseek'
-    | 'kimi'
-    | 'doubao'
-    | 'qwen'
-    | 'glm'
-    | 'ollama'
-    | 'custom';
+  readonly tokenizerProviderType: ProviderType;
   readonly tokenizerTimeoutMs: number;
   readonly tokenizerMaximumRequestBytes: number;
   readonly tokenizerMaximumResponseBytes: number;

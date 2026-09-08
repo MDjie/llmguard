@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { ApiProblem, withApiSecurity } from '@/lib/api-security';
 import { EgressPolicyError, ProviderEndpointPolicy } from '@/lib/egress';
 import { parseProviderType, providerBaseUrl } from '@/lib/providers';
+import { PROVIDER_TYPES, providerRequiresSecret } from '@/lib/providers/registry';
 import { getSecretProvider } from '@/lib/secrets';
 import { db } from '@/storage/database/shared/db';
 import { llmProviders, policyBundles } from '@/storage/database/shared/schema';
@@ -12,16 +13,7 @@ import { privateEndpointApproved } from '@/lib/judge/profile-registry';
 
 type ProviderRecord = typeof llmProviders.$inferSelect;
 
-const providerTypeSchema = z.enum([
-  'openai_compatible',
-  'deepseek',
-  'kimi',
-  'doubao',
-  'qwen',
-  'glm',
-  'ollama',
-  'custom',
-]);
+const providerTypeSchema = z.enum(PROVIDER_TYPES);
 const useCaseSchema = z.enum(['target', 'judge', 'both', 'ocr']);
 const providerOutputSchema = z.object({
   id: z.string(),
@@ -161,7 +153,7 @@ export const POST = withApiSecurity(
   async ({ body, principal }) => {
     if (!principal) throw new Error('Authenticated principal missing after authorization');
     const scope = requireTenantContext(principal);
-    if ((body.deploymentConfig ? body.deploymentConfig.authMode !== 'none' : body.providerType !== 'ollama') && !body.apiKey) {
+    if ((body.deploymentConfig ? body.deploymentConfig.authMode !== 'none' : providerRequiresSecret(body.providerType)) && !body.apiKey) {
       throw new ApiProblem({
         status: 400,
         code: 'PROVIDER_SECRET_REQUIRED',
@@ -254,7 +246,7 @@ export const PUT = withApiSecurity(
     const retainsSecret =
       typeof body.apiKey === 'string' || (body.apiKey === undefined && Boolean(existing.secretRef));
     if (mustValidateEndpoint) assertDeployment(deployment, scope, baseUrl ?? providerBaseUrl(providerType, null));
-    if ((deployment ? deployment.authMode !== 'none' : providerType !== 'ollama') && !retainsSecret) {
+    if ((deployment ? deployment.authMode !== 'none' : providerRequiresSecret(providerType)) && !retainsSecret) {
       throw new ApiProblem({
         status: 400,
         code: 'PROVIDER_SECRET_REQUIRED',

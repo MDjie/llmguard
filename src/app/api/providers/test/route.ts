@@ -18,7 +18,7 @@ const responseSchema = z.object({
     errorCode: z.string().optional(),
     errorMessage: z.string().optional(),
     upstreamStatus: z.number().int().min(100).max(599).optional(),
-    upstreamCode: z.string().regex(/^\d{4}$/u).optional(),
+    upstreamCode: z.string().regex(/^\d{3,6}$/u).optional(),
   }),
 });
 
@@ -75,12 +75,16 @@ export const POST = withApiSecurity(
       });
     }
 
+    // Keep a smoothed average over successful probes only; failed probes say
+    // nothing about model latency.
     await db
       .update(llmProviders)
       .set({
         lastTestAt: new Date(),
         lastTestSuccess: testSuccess,
-        avgLatencyMs: latencyMs,
+        ...(testSuccess
+          ? { avgLatencyMs: provider.avgLatencyMs == null ? latencyMs : Math.round((provider.avgLatencyMs * 3 + latencyMs) / 4) }
+          : {}),
         updatedAt: new Date(),
       })
       .where(and(

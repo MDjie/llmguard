@@ -48,16 +48,16 @@ interface TestResult {
   testedAt: string;
 }
 
-const providerTypes = [
-  { value: 'openai_compatible', label: 'OpenAI Compatible' },
-  { value: 'deepseek', label: 'DeepSeek' },
-  { value: 'kimi', label: 'Kimi (月之暗面)' },
-  { value: 'doubao', label: '豆包 (字节跳动)' },
-  { value: 'qwen', label: '通义千问 (阿里)' },
-  { value: 'glm', label: 'GLM (智谱)' },
-  { value: 'ollama', label: 'Ollama (本地)' },
-  { value: 'custom', label: '自定义 OpenAI 兼容端点' },
-];
+// Catalog entry from GET /api/providers/meta; the vendor list lives only in
+// src/lib/providers/registry.ts.
+interface ProviderMetaEntry {
+  type: string;
+  label: string;
+  defaultBaseUrl: string | null;
+  allowedHosts: string[];
+  suggestedModels: string[];
+  requiresSecret: boolean;
+}
 
 const useCases = [
   { value: 'target', label: '业务模型', description: '接入安全对话等受控业务调用链' },
@@ -68,6 +68,7 @@ const useCases = [
 
 export default function ProvidersPage() {
   const [providers, setProviders] = useState<LLMProvider[]>([]);
+  const [providerMeta, setProviderMeta] = useState<ProviderMetaEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingProvider, setEditingProvider] = useState<LLMProvider | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -91,6 +92,7 @@ export default function ProvidersPage() {
 
   useEffect(() => {
     loadProviders();
+    loadProviderMeta();
   }, []);
 
   async function loadProviders() {
@@ -108,6 +110,20 @@ export default function ProvidersPage() {
       setLoading(false);
     }
   }
+
+  async function loadProviderMeta() {
+    try {
+      const response = await fetch('/api/providers/meta');
+      const data = await response.json();
+      if (data.success) {
+        setProviderMeta(data.data);
+      }
+    } catch (error) {
+      console.error('加载模型厂商目录失败:', error);
+    }
+  }
+
+  const metaFor = (type: string) => providerMeta.find(entry => entry.type === type);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -170,11 +186,11 @@ export default function ProvidersPage() {
       baseUrl: provider.baseUrl || '',
       apiKey: '', // 不显示已有密钥
       defaultModel: provider.defaultModel || '',
-      useCase: provider.useCase,
+      useCase: provider.useCase || 'both',
       deploymentMode: provider.deploymentConfig?.deploymentMode ?? (provider.providerType === 'ollama' ? 'private' : 'cloud'),
       authMode: provider.deploymentConfig?.authMode ?? (provider.providerType === 'ollama' && !provider.hasSecret ? 'none' : 'bearer'),
       authHeaderName: provider.deploymentConfig?.authHeaderName ?? '',
-      dataBoundaryPolicyId: provider.deploymentConfig?.dataBoundaryPolicyId ?? 'customer-default',
+      dataBoundaryPolicyId: provider.deploymentConfig?.dataBoundaryPolicyId ?? 'customer-cloud-approved',
     });
     setShowForm(true);
   };
@@ -292,7 +308,7 @@ export default function ProvidersPage() {
   };
 
   const getProviderTypeLabel = (type: string) => {
-    return providerTypes.find(p => p.value === type)?.label || type;
+    return metaFor(type)?.label || type;
   };
 
   const getUseCaseLabel = (useCase: string) => {
@@ -369,9 +385,9 @@ export default function ProvidersPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {providerTypes.map(type => (
-                        <SelectItem key={type.value} value={type.value}>
-                          {type.label}
+                      {providerMeta.map(entry => (
+                        <SelectItem key={entry.type} value={entry.type}>
+                          {entry.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -402,7 +418,7 @@ export default function ProvidersPage() {
                 <Input
                   value={formData.baseUrl}
                   onChange={(e) => setFormData({ ...formData, baseUrl: e.target.value })}
-                  placeholder={formData.providerType === 'glm' ? 'https://open.bigmodel.cn/api/paas/v4' : '例如: https://api.deepseek.com'}
+                  placeholder={metaFor(formData.providerType)?.defaultBaseUrl || '例如: https://api.deepseek.com/v1'}
                 />
               </div>
 
@@ -429,10 +445,16 @@ export default function ProvidersPage() {
               <div>
                 <label className="block text-sm font-medium mb-1">默认模型</label>
                 <Input
+                  list="provider-model-suggestions"
                   value={formData.defaultModel}
                   onChange={(e) => setFormData({ ...formData, defaultModel: e.target.value })}
-                  placeholder={formData.providerType === 'glm' ? 'glm-5.3' : '例如: deepseek-chat'}
+                  placeholder={metaFor(formData.providerType)?.suggestedModels[0] ? `例如: ${metaFor(formData.providerType)?.suggestedModels[0]}` : '例如: deepseek-chat'}
                 />
+                <datalist id="provider-model-suggestions">
+                  {(metaFor(formData.providerType)?.suggestedModels ?? []).map(model => (
+                    <option key={model} value={model} />
+                  ))}
+                </datalist>
               </div>
 
               <div className="flex gap-2">

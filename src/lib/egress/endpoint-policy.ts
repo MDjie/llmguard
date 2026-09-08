@@ -1,26 +1,10 @@
 import { resolve4, resolve6 } from 'node:dns/promises';
 import ipaddr from 'ipaddr.js';
+import { providerHosts, type ProviderType } from '@/lib/providers/registry';
 
-export type ProviderType =
-  | 'openai_compatible'
-  | 'deepseek'
-  | 'kimi'
-  | 'doubao'
-  | 'qwen'
-  | 'glm'
-  | 'ollama'
-  | 'custom';
+export type { ProviderType };
 
 export type DnsResolver = (hostname: string) => Promise<readonly string[]>;
-
-const PROVIDER_HOSTS: Readonly<Partial<Record<ProviderType, readonly string[]>>> = {
-  openai_compatible: ['api.openai.com'],
-  deepseek: ['api.deepseek.com'],
-  kimi: ['api.moonshot.cn'],
-  doubao: ['ark.cn-beijing.volces.com'],
-  qwen: ['dashscope.aliyuncs.com'],
-  glm: ['open.bigmodel.cn'],
-};
 
 export class EgressPolicyError extends Error {
   constructor(readonly code: string, message: string) {
@@ -98,7 +82,7 @@ export class ProviderEndpointPolicy {
       throw new EgressPolicyError('SCHEME_REJECTED', 'Provider endpoint must use HTTPS');
     }
 
-    const typeHosts = PROVIDER_HOSTS[providerType] ?? [];
+    const typeHosts = providerHosts(providerType);
     const hostAllowed = typeHosts.includes(hostname) || this.allowedHosts.has(hostname) || privateAllowed;
     if (!hostAllowed) {
       throw new EgressPolicyError('HOST_NOT_ALLOWED', 'Provider host is not on the outbound allowlist');

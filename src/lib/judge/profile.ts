@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import { providerAuthHeaderNameSchema, providerAuthModeSchema } from '@/lib/providers/deployment';
+import { PROVIDER_TYPES } from '@/lib/providers/registry';
 
-export const judgeProviderTypes = ['deepseek','glm','qwen','kimi','ollama','openai_compatible','custom','doubao'] as const;
+export const judgeProviderTypes = PROVIDER_TYPES;
 export const judgeDirectionSchema = z.enum(['INPUT','OUTPUT_COMPLETE','OUTPUT_CHUNK','RAG_INGEST','RAG_CONTEXT','TOOL_REQUEST','TOOL_RESULT']);
 const id = z.string().trim().min(1).max(128);
 const hash = z.string().regex(/^[a-f0-9]{64}$/);
@@ -13,7 +14,7 @@ export const judgeProfileSchema = z.object({
   enabled: z.boolean().default(false),
   mode: z.enum(['SHADOW','ENFORCE']).default('SHADOW'),
   providerId: id,
-  providerType: z.enum(judgeProviderTypes),
+  providerType: z.enum(PROVIDER_TYPES),
   backendKind: z.enum(['chat_judge','safety_classifier']).default('chat_judge'),
   role: z.enum(['base','refiner','grounding']).optional(),
   contextScope: z.enum(['full','window']).optional(),

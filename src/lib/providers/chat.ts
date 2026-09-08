@@ -5,6 +5,12 @@ import type { llmProviders } from '@/storage/database/shared/schema';
 import { privateEndpointApproved } from '@/lib/judge/profile-registry';
 import { readProviderDeployment } from './deployment';
 import { providerAuthHeaderNameSchema, type ProviderAuthMode } from './deployment';
+import {
+  providerChatRoute,
+  providerDefaultBaseUrl,
+  providerDescriptor,
+  providerThinkingParameters,
+} from './registry';
 
 type ProviderRecord = typeof llmProviders.$inferSelect;
 export type ProviderConnection = Pick<ProviderRecord, 'tenantId' | 'applicationId' | 'providerType' | 'baseUrl' | 'secretRef' | 'apiKeyEncrypted' | 'defaultModel'> & {
@@ -13,33 +19,12 @@ export type ProviderConnection = Pick<ProviderRecord, 'tenantId' | 'applicationI
   readonly configJson?: unknown;
 };
 
-const providerTypes = new Set<ProviderType>([
-  'openai_compatible',
-  'deepseek',
-  'kimi',
-  'doubao',
-  'qwen',
-  'glm',
-  'ollama',
-  'custom',
-]);
-
-const defaultBaseUrls: Readonly<Partial<Record<ProviderType, string>>> = {
-  openai_compatible: 'https://api.openai.com/v1',
-  deepseek: 'https://api.deepseek.com/v1',
-  kimi: 'https://api.moonshot.cn/v1',
-  doubao: 'https://ark.cn-beijing.volces.com/api/v3',
-  qwen: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-  glm: 'https://open.bigmodel.cn/api/paas/v4',
-  ollama: 'http://localhost:11434/v1',
-};
-
 const providerResponseSchema = z
   .object({
     id: z.string().optional(),
     model: z.string().optional(),
     choices: z
-      .array(z.object({ message: z.object({ content: z.string().nullable(), refusal: z.string().nullable().optional() }).passthrough(), finish_reason: z.string().nullable().optional() }).passthrough())
+      .array(z.object({ message: z.object({ content: z.string().nullable(), refusal: z.string().nullable().optional() }), finish_reason: z.string().nullable().optional() }).passthrough())
       .optional(),
     message: z.object({ content: z.string().nullable() }).optional(),
     usage: z
@@ -94,27 +79,19 @@ export class ProviderConfigurationError extends Error {
 }
 
 export function parseProviderType(value: string): ProviderType {
-  if (!providerTypes.has(value as ProviderType)) {
+  if (!providerDescriptor(value)) {
     throw new ProviderConfigurationError('PROVIDER_TYPE_UNSUPPORTED', 'Provider type is unsupported');
   }
   return value as ProviderType;
 }
 
 export function providerBaseUrl(providerType: ProviderType, configured: string | null): string {
-  const value = configured?.trim() || defaultBaseUrls[providerType];
+  const value = configured?.trim() || providerDefaultBaseUrl(providerType);
   if (!value) {
     throw new ProviderConfigurationError('PROVIDER_BASE_URL_REQUIRED', 'Provider base URL is required');
   }
   return value;
 }
-
-// Chat routes for vendors whose bare host serves no OpenAI-style /v1: Zhipu,
-// Volcano Ark and DashScope only expose their own versioned paths.
-const providerChatPaths: Readonly<Partial<Record<ProviderType, string>>> = {
-  glm: 'api/paas/v4/chat/completions',
-  doubao: 'api/v3/chat/completions',
-  qwen: 'compatible-mode/v1/chat/completions',
-};
 
 // Tolerate endpoints pasted with the full chat route already appended; keep
 // versioned bases as-is and give bare hosts the vendor's documented route.
@@ -126,25 +103,9 @@ function chatEndpoint(providerType: ProviderType, configured: string): { baseUrl
   const path = /\/v\d+$/u.test(base) || base.includes('/api/v') || base.includes('/compatible-mode/v1')
     ? 'chat/completions'
     : base === ''
-      ? providerChatPaths[providerType] ?? 'v1/chat/completions'
+      ? providerChatRoute(providerType)
       : 'v1/chat/completions';
   return { baseUrl: pasted ? `${url.origin}${base}` : configured, path };
-}
-
-// Thinking switches are vendor dialects: Zhipu and Volcano Ark use a typed
-// object, DashScope a boolean, Ollama a reasoning effort; the other vendors have
-// no switch (DeepSeek reasoner always thinks, OpenAI rejects unknown fields).
-function thinkingParameters(providerType: ProviderType, mode: 'enabled' | 'disabled') {
-  switch (providerType) {
-    case 'glm': case 'doubao':
-      return { thinking: { type: mode } };
-    case 'qwen':
-      return { enable_thinking: mode === 'enabled' };
-    case 'ollama':
-      return { reasoning_effort: mode === 'disabled' ? 'none' : 'medium' };
-    default:
-      return {};
-  }
 }
 
 export async function resolveProviderSecret(
@@ -213,7 +174,7 @@ export async function callProviderChat(
       ...(options.responseFormat ? { response_format: options.responseFormat==='json_schema'
         ? {type:'json_schema',json_schema:{name:'guard_response',strict:true,schema:options.responseSchema}}
         : {type:options.responseFormat} } : {}),
-      ...(options.thinkingMode ? thinkingParameters(providerType, options.thinkingMode) : {}),
+      ...(options.thinkingMode ? providerThinkingParameters(providerType, options.thinkingMode) : {}),
       ...(options.reasoningEffort ? { reasoning_effort: options.reasoningEffort } : {}),
       max_tokens: options.maxTokens ?? 2_048,
       stream: false,
