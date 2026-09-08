@@ -1,3 +1,4 @@
+import { evaluateSampleDirections } from './sample-detection';
 import { createHash, randomUUID } from 'node:crypto';
 import { and, asc, eq, inArray, lt, sql } from 'drizzle-orm';
 import type { GuardAction, GuardRequest } from '@guardllm/contracts';
@@ -198,13 +199,14 @@ async function executeClaimedRun(run: typeof evaluationRuns.$inferSelect): Promi
       },
       content: { text: testCase.inputText },
     };
-    const decision = await engine.evaluate(guardRequest);
+    const evaluated = await evaluateSampleDirections(request => engine.evaluate(request), guardRequest, testCase.outputText);
+    const decision = evaluated.decision;
     const expectedAction = normalizedExpectedAction(testCase.expectedAction);
     const isCorrect = decision.action === expectedAction;
     metricInputs.push({
       expectedAction,
       actualAction: decision.action as GuardAction,
-      latencyMs: decision.latencyMs,
+      latencyMs: evaluated.latencyMs,
     });
     await db.insert(evaluationResults).values({
       ...scope,
@@ -212,13 +214,13 @@ async function executeClaimedRun(run: typeof evaluationRuns.$inferSelect): Promi
       testCaseId: testCase.id,
       expectedAction,
       actualAction: decision.action,
-      actualScore: scoreForDecision(decision.observations),
+      actualScore: scoreForDecision(evaluated.observations),
       decisionId: decision.decisionId,
-      latencyMs: decision.latencyMs,
+      latencyMs: evaluated.latencyMs,
       attempt: run.attempt,
       isCorrect,
       findings: [],
-      decision: decision as unknown as Record<string, unknown>,
+      decision: { ...decision, directions: { input: evaluated.input, output: evaluated.output } } as unknown as Record<string, unknown>,
     }).onConflictDoNothing({
       target: [
         evaluationResults.tenantId,

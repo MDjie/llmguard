@@ -6,27 +6,22 @@ import {
   updateTestCaseSchema,
 } from '@/contracts/http/test-cases';
 import { withLegacyApiSecurity } from '@/lib/api-security';
+import { db } from '@/storage/database/shared/db';
+import { testCases } from '@/storage/database/shared/schema';
+import { getCurrentTenantScope } from '@/lib/tenancy/runtime';
+import { scopePredicate } from '@/lib/tenancy';
+import { desc } from 'drizzle-orm';
 import { getDb } from '@/lib/db';
 
 async function getTestCases() {
   try {
-    const client = getDb();
-    
-    const result = await client
-      .from('test_cases')
-      .select()
-      .order('created_at', { ascending: false });
-
-    if (result.error) {
-      return NextResponse.json(
-        { success: false, error: `Failed to fetch test cases: ${result.error}` },
-        { status: 500 }
-      );
-    }
+    const scope = getCurrentTenantScope();
+    if (!scope) throw new Error('TENANT_SCOPE_REQUIRED');
+    const data = await db.select().from(testCases).where(scopePredicate(testCases, scope)).orderBy(desc(testCases.createdAt));
 
     return NextResponse.json({
       success: true,
-      data: result.data || [],
+      data,
     });
   } catch (error) {
     console.error('Error fetching test cases:', error);
@@ -40,7 +35,7 @@ async function getTestCases() {
 async function createTestCase(request: NextRequest) {
   try {
     const body = await request.json();
-    const { title, description, category, inputText, outputText, expectedAction, expectedDimensions, severity, enabled } = body;
+    const { title, description, category, inputText, outputText, expectedAction, expectedDimensions, expectedScoreMin, expectedScoreMax, severity, enabled } = body;
 
     if (!title || !inputText) {
       return NextResponse.json(
@@ -61,6 +56,8 @@ async function createTestCase(request: NextRequest) {
         outputText: outputText || null,
         expectedAction: expectedAction || 'allow',
         expectedDimensions: expectedDimensions || [],
+        expectedScoreMin: expectedScoreMin === undefined ? null : String(expectedScoreMin),
+        expectedScoreMax: expectedScoreMax === undefined ? null : String(expectedScoreMax),
         severity: severity || 'medium',
         enabled: enabled ?? true,
       });
@@ -88,7 +85,7 @@ async function createTestCase(request: NextRequest) {
 async function updateTestCase(request: NextRequest) {
   try {
     const body = await request.json();
-    const { id, title, description, category, inputText, outputText, expectedAction, expectedDimensions, severity, enabled } = body;
+    const { id, title, description, category, inputText, outputText, expectedAction, expectedDimensions, expectedScoreMin, expectedScoreMax, severity, enabled } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -109,6 +106,8 @@ async function updateTestCase(request: NextRequest) {
         outputText,
         expectedAction,
         expectedDimensions,
+        expectedScoreMin: expectedScoreMin === undefined ? undefined : String(expectedScoreMin),
+        expectedScoreMax: expectedScoreMax === undefined ? undefined : String(expectedScoreMax),
         severity,
         enabled,
       })

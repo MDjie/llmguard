@@ -1,3 +1,4 @@
+import { riskLabel } from '@/lib/incidents/labels';
 import { ApiProblem } from '@/lib/api-security';
 const queryProblem = (code: string, status: number) => new ApiProblem({ status, code, title: 'Request cannot be completed', detail: code });
 import { createHash } from 'node:crypto';
@@ -103,7 +104,7 @@ export async function createAlertIncident(scope: TenantContext, alertId: string)
     let incidentId = existing?.id;
     if (!incidentId) {
       const records = buildIncidentPersistenceRecords(scope, {
-        title: `安全告警复核：${alert.riskId}`.slice(0, 200), severity: alert.category !== 'SECURITY_RISK' ? 'MEDIUM' : alert.score >= 90 ? 'CRITICAL' : alert.score >= 75 ? 'HIGH' : 'MEDIUM',
+        title: `安全告警复核：${riskLabel(alert.riskId)}`.slice(0, 200), severity: alert.category !== 'SECURITY_RISK' ? 'MEDIUM' : alert.score >= 90 ? 'CRITICAL' : alert.score >= 75 ? 'HIGH' : 'MEDIUM',
         traceId: alert.traceId, sessionId: alert.sessionId ?? undefined, riskType: alert.riskId,
         eventAnalysis: canonicalJson({ alertId: alert.id, category: alert.category, decisionAction: alert.action, source: alert.source }),
         attackTechnique: canonicalJson({ ruleIds: alert.evidence.flatMap(item => item.ruleId ? [item.ruleId] : []) }),

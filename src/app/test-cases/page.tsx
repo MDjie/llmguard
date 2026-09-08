@@ -34,6 +34,9 @@ import {
 } from '@/components/ui/alert-dialog';
 import { ShieldCheck, RefreshCw, Plus, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { SampleImportDialog } from '@/components/evaluation/sample-import-dialog';
+import { usePermissions } from '@/hooks/use-permissions';
+import { apiErrorMessage } from '@/lib/api-client-error';
 import { csrfHeaders } from '@/lib/auth/csrf-client';
 
 interface TestCase {
@@ -92,6 +95,7 @@ const DEFAULT_FORM = {
 };
 
 export default function TestCasesPage() {
+  const canManage = usePermissions()('policy:manage');
   const [testCases, setTestCases] = useState<TestCase[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -179,7 +183,7 @@ export default function TestCasesPage() {
       
       const payload = {
         title: form.title,
-        description: form.description || null,
+        description: form.description || '',
         category: form.category,
         inputText: form.inputText,
         outputText: form.outputText || null,
@@ -216,7 +220,7 @@ export default function TestCasesPage() {
         setDialogOpen(false);
         fetchTestCases();
       } else {
-        toast.error(result.error || '保存失败');
+        toast.error(apiErrorMessage(result, '保存失败'));
       }
     } catch (err) {
       console.error('保存失败:', err);
@@ -243,7 +247,7 @@ export default function TestCasesPage() {
         setDeletingId(null);
         fetchTestCases();
       } else {
-        toast.error(result.error || '删除失败');
+        toast.error(apiErrorMessage(result, '删除失败'));
       }
     } catch (err) {
       console.error('删除失败:', err);
@@ -305,7 +309,8 @@ export default function TestCasesPage() {
             <RefreshCw className="h-4 w-4 mr-2" />
             刷新
           </Button>
-          <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleAdd}>
+          <SampleImportDialog disabled={!canManage} onImported={()=>void fetchTestCases()}/>
+          <Button disabled={!canManage} className="bg-blue-600 hover:bg-blue-700" onClick={handleAdd}>
             <Plus className="h-4 w-4 mr-2" />
             新增用例
           </Button>
@@ -328,7 +333,7 @@ export default function TestCasesPage() {
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-12 text-center">
           <ShieldCheck className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <p className="text-gray-600">暂无策略验证样本</p>
-          <Button className="mt-4" onClick={handleAdd}>
+          <Button disabled={!canManage} className="mt-4" onClick={handleAdd}>
             <Plus className="h-4 w-4 mr-2" />
             添加验证样本
           </Button>
@@ -368,7 +373,7 @@ export default function TestCasesPage() {
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <Button variant="outline" size="sm" onClick={() => handleEdit(testCase)}>
+                      <Button variant="outline" size="sm" disabled={!canManage} onClick={() => handleEdit(testCase)}>
                         <Pencil className="h-4 w-4 mr-1" />
                         编辑
                       </Button>
@@ -376,7 +381,7 @@ export default function TestCasesPage() {
                         variant="outline" 
                         size="sm" 
                         className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                        onClick={() => handleDeleteConfirm(testCase.id)}
+                        disabled={!canManage} onClick={() => handleDeleteConfirm(testCase.id)}
                       >
                         <Trash2 className="h-4 w-4 mr-1" />
                         删除
@@ -568,7 +573,7 @@ export default function TestCasesPage() {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>取消</Button>
-            <Button onClick={handleSave} disabled={saving}>
+            <Button onClick={handleSave} disabled={saving || !canManage}>
               {saving ? '保存中...' : '保存'}
             </Button>
           </DialogFooter>
@@ -589,7 +594,7 @@ export default function TestCasesPage() {
             <AlertDialogAction 
               onClick={handleDelete}
               className="bg-red-600 hover:bg-red-700"
-              disabled={saving}
+              disabled={saving || !canManage}
             >
               {saving ? '删除中...' : '删除'}
             </AlertDialogAction>

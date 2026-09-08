@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -38,6 +37,8 @@ import {
   Eye,
   Pencil,
 } from 'lucide-react';
+import { apiErrorMessage } from '@/lib/api-client-error';
+import { usePermissions } from '@/hooks/use-permissions';
 import { csrfHeaders } from '@/lib/auth/csrf-client';
 
 interface Dimension {
@@ -73,6 +74,7 @@ const categoryLabels: Record<string, string> = {
   spam: '垃圾信息',
   safety: '人身安全',
   quality: '质量',
+  custom: '自定义',
 };
 
 const dimensionIcons: Record<string, React.ReactNode> = {
@@ -105,6 +107,10 @@ const dimensionIcons: Record<string, React.ReactNode> = {
 
 export default function DimensionsPage() {
   const router = useRouter();
+  const canManage = usePermissions()('policy:manage');
+  const [search, setSearch] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [dimensions, setDimensions] = useState<Dimension[]>([]);
   const [loading, setLoading] = useState(true);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -114,7 +120,7 @@ export default function DimensionsPage() {
     code: '',
     name: '',
     description: '',
-    category: '',
+    category: 'custom',
     weight: '1.0',
     priority: '100',
   });
@@ -125,7 +131,7 @@ export default function DimensionsPage() {
       const result = await response.json();
       if (result.success) {
         setDimensions(result.data);
-      }
+      } else { toast.error(apiErrorMessage(result, '获取维度列表失败')); }
     } catch (error) {
       console.error('获取维度列表失败:', error);
       toast.error('获取维度列表失败');
@@ -163,13 +169,13 @@ export default function DimensionsPage() {
           code: '',
           name: '',
           description: '',
-          category: '',
+          category: 'custom',
           weight: '1.0',
           priority: '100',
         });
         fetchDimensions();
       } else {
-        toast.error(result.error || '创建失败');
+        toast.error(apiErrorMessage(result, '创建失败'));
       }
     } catch (error) {
       console.error('创建维度失败:', error);
@@ -183,7 +189,7 @@ export default function DimensionsPage() {
       code: dimension.code,
       name: dimension.name,
       description: dimension.description || '',
-      category: dimension.category || '',
+      category: dimension.category || 'custom',
       weight: dimension.weight,
       priority: dimension.priority.toString(),
     });
@@ -216,7 +222,7 @@ export default function DimensionsPage() {
         setEditingDimension(null);
         fetchDimensions();
       } else {
-        toast.error(result.error || '更新失败');
+        toast.error(apiErrorMessage(result, '更新失败'));
       }
     } catch (error) {
       console.error('更新维度失败:', error);
@@ -237,7 +243,7 @@ export default function DimensionsPage() {
         toast.success(enabled ? '已启用' : '已禁用');
         fetchDimensions();
       } else {
-        toast.error(result.error || '操作失败');
+        toast.error(apiErrorMessage(result, '操作失败'));
       }
     } catch (error) {
       console.error('切换状态失败:', error);
@@ -259,7 +265,7 @@ export default function DimensionsPage() {
         toast.success('删除成功');
         fetchDimensions();
       } else {
-        toast.error(result.error || '删除失败');
+        toast.error(apiErrorMessage(result, '删除失败'));
       }
     } catch (error) {
       console.error('删除维度失败:', error);
@@ -287,15 +293,22 @@ export default function DimensionsPage() {
             管理检测维度和规则，支持自定义检测能力
           </p>
         </div>
-        <Button onClick={() => setCreateDialogOpen(true)}>
+        <Button disabled={!canManage} onClick={() => { setFormData({ code: "", name: "", description: "", category: "custom", weight: "1.0", priority: "100" }); setCreateDialogOpen(true); }}>
           <Plus className="h-4 w-4 mr-2" />
           新建维度
         </Button>
       </div>
 
+      <div className="mb-6 flex flex-wrap gap-3">
+        <Input className="max-w-sm" aria-label="搜索维度" placeholder="按名称或编码搜索" value={search} onChange={event=>setSearch(event.target.value)}/>
+        <Select value={categoryFilter} onValueChange={setCategoryFilter}><SelectTrigger className="w-40" aria-label="筛选分类"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">全部分类</SelectItem>{[...new Set([...Object.keys(categoryLabels),...dimensions.flatMap(item=>item.category?[item.category]:[])])].map(key=><SelectItem key={key} value={key}>{categoryLabels[key]??key}</SelectItem>)}</SelectContent></Select>
+        <Select value={statusFilter} onValueChange={setStatusFilter}><SelectTrigger className="w-40" aria-label="筛选状态"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">全部状态</SelectItem><SelectItem value="true">已启用</SelectItem><SelectItem value="false">已停用</SelectItem></SelectContent></Select>
+        <Button variant="outline" onClick={()=>{setSearch('');setCategoryFilter('all');setStatusFilter('all');}}>重置筛选</Button>
+      </div>
+      {!canManage && <p className="mb-4 text-sm text-muted-foreground">当前角色仅可查看检测配置。</p>}
       {/* 维度卡片 */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {dimensions.map((dimension) => (
+        {dimensions.filter(dimension => (!search.trim() || `${dimension.name} ${dimension.code}`.toLowerCase().includes(search.trim().toLowerCase())) && (categoryFilter === 'all' || dimension.category === categoryFilter) && (statusFilter === 'all' || String(dimension.enabled) === statusFilter)).map((dimension) => (
           <Card key={dimension.id} className="relative">
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
@@ -336,6 +349,8 @@ export default function DimensionsPage() {
               <div className="flex items-center justify-between pt-4 border-t">
                 <div className="flex items-center gap-2">
                   <Switch
+                    disabled={!canManage}
+                    aria-label={`${dimension.name}启用状态`}
                     checked={dimension.enabled}
                     onCheckedChange={(checked) => handleToggle(dimension.id, checked)}
                   />
@@ -349,6 +364,7 @@ export default function DimensionsPage() {
                     variant="ghost"
                     size="sm"
                     title="编辑"
+                    disabled={!canManage}
                     onClick={() => handleEdit(dimension)}
                   >
                     <Pencil className="h-4 w-4" />
@@ -366,6 +382,7 @@ export default function DimensionsPage() {
                       variant="ghost"
                       size="sm"
                       title="删除"
+                      disabled={!canManage}
                       onClick={() => handleDelete(dimension.id)}
                     >
                       <Trash2 className="h-4 w-4 text-red-500" />
@@ -377,6 +394,7 @@ export default function DimensionsPage() {
           </Card>
         ))}
       </div>
+      {dimensions.filter(item => (!search.trim() || `${item.name} ${item.code}`.toLowerCase().includes(search.trim().toLowerCase())) && (categoryFilter === "all" || item.category === categoryFilter) && (statusFilter === "all" || String(item.enabled) === statusFilter)).length === 0 && <p className="py-12 text-center text-muted-foreground">没有符合筛选条件的维度</p>}
 
       {/* 创建对话框 */}
       <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
@@ -432,9 +450,7 @@ export default function DimensionsPage() {
                   <SelectValue placeholder="选择分类" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="security">安全</SelectItem>
-                  <SelectItem value="compliance">合规</SelectItem>
-                  <SelectItem value="content">内容</SelectItem>
+                  {[...new Set([...Object.keys(categoryLabels), ...(formData.category ? [formData.category] : [])])].map(key=><SelectItem key={key} value={key}>{categoryLabels[key]??key}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -466,7 +482,7 @@ export default function DimensionsPage() {
             <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
               取消
             </Button>
-            <Button onClick={handleCreate}>创建</Button>
+            <Button disabled={!canManage} onClick={handleCreate}>创建</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -525,9 +541,7 @@ export default function DimensionsPage() {
                   <SelectValue placeholder="选择分类" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="security">安全</SelectItem>
-                  <SelectItem value="compliance">合规</SelectItem>
-                  <SelectItem value="content">内容</SelectItem>
+                  {[...new Set([...Object.keys(categoryLabels), ...(formData.category ? [formData.category] : [])])].map(key=><SelectItem key={key} value={key}>{categoryLabels[key]??key}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -559,7 +573,7 @@ export default function DimensionsPage() {
             <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
               取消
             </Button>
-            <Button onClick={handleUpdate}>保存</Button>
+            <Button disabled={!canManage} onClick={handleUpdate}>保存</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

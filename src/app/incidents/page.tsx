@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, Clock3, Eye, Loader2, Plus, RefreshCw, ShieldAlert, UserRound } from 'lucide-react';
 import { toast } from 'sonner';
+import { ConversationEvidencePanel } from '@/components/incidents/conversation-evidence-panel';
+import { riskLabel, severityLabel, incidentTitle, incidentText } from '@/lib/incidents/labels';
 import { EvidenceAccessPanel } from '@/components/incidents/evidence-access-panel';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -298,7 +300,7 @@ export default function IncidentsPage() {
           <SelectTrigger className="w-40"><SelectValue placeholder="全部级别" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="ALL">全部级别</SelectItem>
-            {(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as const).map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}
+            {(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as const).map((item) => <SelectItem key={item} value={item}>{severityLabel[item]??item}</SelectItem>)}
           </SelectContent>
         </Select>
         <span className="ml-auto text-sm text-gray-500">共 {total} 条</span>
@@ -327,10 +329,10 @@ export default function IncidentsPage() {
               <TableRow key={incident.id} data-state={selected?.id === incident.id ? 'selected' : undefined} className="cursor-pointer" onClick={() => void loadDetail(incident.id)}>
                 <TableCell className="font-mono text-xs text-gray-700">{incident.incidentNumber}</TableCell>
                 <TableCell>
-                  <p className="max-w-xl truncate font-medium text-gray-900">{incident.title}</p>
-                  <p className="mt-1 max-w-xl truncate text-xs text-gray-500">{incident.riskType}</p>
+                  <p className="max-w-xl truncate font-medium text-gray-900">{incidentTitle(incident.title, incident.riskType)}</p>
+                  <p className="mt-1 max-w-xl truncate text-xs text-gray-500">{riskLabel(incident.riskType)}</p>
                 </TableCell>
-                <TableCell><Badge variant="outline" className={severityClass[incident.severity]}>{incident.severity}</Badge></TableCell>
+                <TableCell><Badge variant="outline" className={severityClass[incident.severity]}>{severityLabel[incident.severity]}</Badge></TableCell>
                 <TableCell><Badge variant="outline" className={statusClass[incident.status]}>{statusLabel[incident.status]}</Badge></TableCell>
                 <TableCell className="text-sm text-gray-600">{incident.assigneeId ?? '未分派'}</TableCell>
                 <TableCell><span className={cn('flex items-center gap-1 text-xs', incident.slaBreached ? 'font-medium text-red-600' : 'text-gray-600')}><Clock3 className="h-3.5 w-3.5" />{slaText(incident)}</span></TableCell>
@@ -356,26 +358,27 @@ export default function IncidentsPage() {
             <>
               <div className="border-b border-border px-4 py-4">
                 <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant="outline" className={severityClass[selected.severity]}>{selected.severity}</Badge>
+                  <Badge variant="outline" className={severityClass[selected.severity]}>{severityLabel[selected.severity]}</Badge>
                   <Badge variant="outline" className={statusClass[selected.status]}>{statusLabel[selected.status]}</Badge>
                   {selected.slaBreached && <Badge variant="destructive">SLA 超时</Badge>}
                 </div>
-                <h2 className="mt-3 text-base font-semibold">{selected.title}</h2>
+                <h2 className="mt-3 text-base font-semibold">{incidentTitle(selected.title, selected.riskType)}</h2>
                 <p className="mt-2 break-all font-mono text-[11px] text-muted-foreground">{selected.incidentNumber}</p>
               </div>
               <div className="space-y-5 px-4 py-4">
                 <div className="grid grid-cols-2 gap-x-5 gap-y-3 text-sm">
-                  <div><p className="text-xs text-gray-500">风险类型</p><p className="mt-1 break-words">{selected.riskType}</p></div>
+                  <div><p className="text-xs text-gray-500">风险类型</p><p className="mt-1 break-words">{riskLabel(selected.riskType)}</p></div>
                   <div><p className="text-xs text-gray-500">责任人</p><p className="mt-1">{selected.assigneeId ?? '未分派'}</p></div>
-                  <div><p className="text-xs text-gray-500">Trace ID</p><p className="mt-1 break-all font-mono text-xs">{selected.traceId ?? '-'}</p></div>
-                  <div><p className="text-xs text-gray-500">Session ID</p><p className="mt-1 break-all font-mono text-xs">{selected.sessionId ?? '-'}</p></div>
+                  <div><p className="text-xs text-gray-500">追踪标识</p><p className="mt-1 break-all font-mono text-xs">{selected.traceId ?? '-'}</p></div>
+                  <div><p className="text-xs text-gray-500">会话标识</p><p className="mt-1 break-all font-mono text-xs">{selected.sessionId ?? '-'}</p></div>
                   <div><p className="text-xs text-gray-500">创建时间</p><p className="mt-1">{formatDate(selected.createdAt)}</p></div>
                   <div><p className="text-xs text-gray-500">SLA 截止</p><p className="mt-1">{formatDate(selected.slaDueAt)}</p></div>
                 </div>
+                <ConversationEvidencePanel key={selected.id} incidentId={selected.id} />
                 {[
-                  ['事件分析', selected.eventAnalysis],
-                  ['攻击技术', selected.attackTechnique],
-                  ['影响范围', selected.impact],
+                  ['事件分析', incidentText(selected.eventAnalysis)],
+                  ['攻击技术', incidentText(selected.attackTechnique)],
+                  ['影响范围', incidentText(selected.impact)],
                   ['回答与证据', selected.answerEvidence],
                   ...(selected.resolution ? [['处置结论', selected.resolution]] : []),
                 ].map(([label, value]) => (
@@ -424,7 +427,7 @@ export default function IncidentsPage() {
                             <span className="ml-auto text-xs text-gray-500">{formatDate(transition.createdAt)}</span>
                           </div>
                           <p className="mt-1 flex items-center gap-1 text-xs text-gray-500"><UserRound className="h-3 w-3" />{transition.actorId}{transition.assigneeId ? ' · 分派给 ' + transition.assigneeId : ''}</p>
-                          {transition.note && <p className="mt-2 whitespace-pre-wrap text-sm text-gray-700">{transition.note}</p>}
+                          {transition.note && <p className="mt-2 whitespace-pre-wrap text-sm text-gray-700">{incidentText(transition.note)}</p>}
                         </div>
                       </div>
                     ))}
@@ -451,7 +454,7 @@ export default function IncidentsPage() {
               <Label>风险级别</Label>
               <Select value={createForm.severity} onValueChange={(value) => setCreateForm((current) => ({ ...current, severity: value as IncidentSeverity }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as const).map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}</SelectContent>
+                <SelectContent>{(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as const).map((item) => <SelectItem key={item} value={item}>{severityLabel[item]??item}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">

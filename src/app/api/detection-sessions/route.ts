@@ -1,3 +1,4 @@
+import { riskLabel } from '@/lib/incidents/labels';
 import { enqueueDecisionRecord } from '@/lib/security-alerts/service';
 import { fromLegacySession } from '@/lib/security-alerts/record';
 import type { z } from 'zod';
@@ -74,7 +75,7 @@ function automaticIncidentInput(
       : 'MEDIUM';
   const riskType = primary?.dimension ?? 'guard_block';
   return {
-    title: 'Blocked model interaction: ' + riskType,
+    title: '模型交互已阻断：' + riskLabel(riskType),
     severity,
     sessionId,
     riskType,
@@ -90,7 +91,7 @@ function automaticIncidentInput(
       dimensions: [...new Set(findings.map((finding) => finding.dimension))],
       matchedRules: [...new Set(findings.flatMap((finding) => finding.matchedRules ?? []))],
     }),
-    impact: 'The unsafe interaction was blocked and queued for security review.',
+    impact: '风险交互已阻断，等待安全人员复核。',
     answerEvidence: canonicalJson({
       sessionId,
       inputHash: contentFingerprint(params.userPrompt),

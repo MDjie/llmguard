@@ -1,7 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { RuleForm } from '@/components/dimensions/rule-form';
+import { apiErrorMessage } from '@/lib/api-client-error';
+import { usePermissions } from '@/hooks/use-permissions';
 import { csrfHeaders } from '@/lib/auth/csrf-client';
 import { PromptInjectionCatalogPanel } from '@/components/content-safety/PromptInjectionCatalogPanel';
 import { Button } from '@/components/ui/button';
@@ -27,20 +30,12 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import {
   ArrowLeft,
   Plus,
   Trash2,
-  Edit,
   Play,
   Loader2,
   Pencil,
@@ -97,12 +92,7 @@ interface DimensionTestResult {
   evidence?: string[];
 }
 
-const RULE_TYPE_LABEL: Record<string, string> = {
-  keyword: '关键词',
-  regex: '正则表达式',
-  semantic: '语义分析',
-  llm: 'LLM 判断',
-};
+const RULE_TYPE_LABEL: Record<string, string> = { keyword: '关键词', regex: '正则表达式', semantic: '语义分析', llm: 'LLM 判断' };
 
 const MATCH_TYPE_LABEL: Record<string, string> = {
   contains: '包含',
@@ -117,15 +107,15 @@ const MATCH_TYPE_LABEL: Record<string, string> = {
 function mapRuleRow(row: Record<string, unknown>): Rule {
   return {
     id: String(row.id ?? ''),
-    dimensionId: String(row.dimension_id ?? ''),
-    groupId: row.group_id ? String(row.group_id) : null,
+    dimensionId: String(row.dimensionId ?? row.dimension_id ?? ''),
+    groupId: (row.groupId ?? row.group_id) ? String(row.groupId ?? row.group_id) : null,
     name: String(row.name ?? ''),
     type: String(row.type ?? ''),
     pattern: row.pattern != null ? String(row.pattern) : null,
-    matchType: row.match_type ? String(row.match_type) : 'contains',
-    caseSensitive: Boolean(row.case_sensitive),
+    matchType: String(row.matchType ?? row.match_type ?? 'contains'),
+    caseSensitive: Boolean(row.caseSensitive ?? row.case_sensitive),
     score: String(row.score ?? '0'),
-    confidence: String(row.confidence ?? '0'),
+    confidence: String(Number(row.confidence ?? 0) > 1 ? Number(row.confidence) / 100 : Number(row.confidence ?? 0)),
     priority: Number(row.priority ?? 100),
     enabled: Boolean(row.enabled),
     description: row.description != null ? String(row.description) : null,
@@ -146,6 +136,8 @@ function testSeverity(score: number): { label: string; variant: 'destructive' | 
 export default function DimensionDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const canManage = usePermissions()('policy:manage');
+  const [togglingRule, setTogglingRule] = useState<string | null>(null);
   const dimensionId = params.id as string;
 
   const [dimension, setDimension] = useState<Dimension | null>(null);
@@ -172,7 +164,7 @@ export default function DimensionDetailPage() {
     suggestion: '',
   });
 
-  const fetchDimension = async () => {
+  const fetchDimension = useCallback(async () => {
     try {
       const response = await fetch(`/api/dimensions/${dimensionId}`);
       const result = await response.json();
@@ -182,18 +174,18 @@ export default function DimensionDetailPage() {
           ? result.data.rules
           : [];
         setRules(rawRules.map(mapRuleRow));
-      }
+      } else { toast.error(apiErrorMessage(result, "获取维度详情失败")); }
     } catch (error) {
       console.error('获取维度详情失败:', error);
       toast.error('获取维度详情失败');
     } finally {
       setLoading(false);
     }
-  };
+  }, [dimensionId]);
 
   useEffect(() => {
-    fetchDimension();
-  }, [dimensionId]);
+    void fetchDimension();
+  }, [fetchDimension]);
 
   const handleCreateRule = async () => {
     if (!ruleForm.name || !ruleForm.type) {
@@ -236,7 +228,7 @@ export default function DimensionDetailPage() {
         });
         fetchDimension();
       } else {
-        toast.error(result.error || '创建失败');
+        toast.error(apiErrorMessage(result, '创建失败'));
       }
     } catch (error) {
       console.error('创建规则失败:', error);
@@ -303,7 +295,7 @@ export default function DimensionDetailPage() {
         });
         fetchDimension();
       } else {
-        toast.error(result.error || '更新失败');
+        toast.error(apiErrorMessage(result, '更新失败'));
       }
     } catch (error) {
       console.error('更新规则失败:', error);
@@ -325,12 +317,24 @@ export default function DimensionDetailPage() {
         toast.success('删除成功');
         fetchDimension();
       } else {
-        toast.error(result.error || '删除失败');
+        toast.error(apiErrorMessage(result, '删除失败'));
       }
     } catch (error) {
       console.error('删除规则失败:', error);
       toast.error('删除规则失败');
     }
+  };
+
+  const handleToggleRule = async (ruleId: string, enabled: boolean) => {
+    setTogglingRule(ruleId);
+    try {
+      const response = await fetch(`/api/dimensions/${dimensionId}/rules/${ruleId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', ...csrfHeaders() }, body: JSON.stringify({ enabled }) });
+      const result: unknown = await response.json();
+      if (!response.ok) throw new Error(apiErrorMessage(result));
+      toast.success(enabled ? '规则已启用' : '规则已停用');
+      await fetchDimension();
+    } catch (error) { toast.error(error instanceof Error ? error.message : '操作失败'); }
+    finally { setTogglingRule(null); }
   };
 
   const handleTest = async () => {
@@ -340,6 +344,7 @@ export default function DimensionDetailPage() {
     }
 
     setTesting(true);
+    setTestResult(null);
     try {
       const response = await fetch(`/api/dimensions/${dimensionId}/test`, {
         method: 'POST',
@@ -352,6 +357,7 @@ export default function DimensionDetailPage() {
         // 后端返回结构:score / matchedCount / ruleCount / matchedRules[] / evidence[],
         // 与旧版 totalRules/matches 不同,这里统一做一次归一化,避免渲染崩溃。
         const data = result.data ?? {};
+        if (Array.isArray(data.skippedRules) && data.skippedRules.length) toast.info(`有 ${data.skippedRules.length} 条语义规则未执行，请使用策略验证`);
         const matchedRules: MatchedTestRule[] = Array.isArray(data.matchedRules) ? data.matchedRules : [];
         setTestResult({
           score: Number(data.score) || 0,
@@ -361,7 +367,7 @@ export default function DimensionDetailPage() {
           evidence: Array.isArray(data.evidence) ? data.evidence : [],
         });
       } else {
-        toast.error(result.error || '测试失败');
+        toast.error(apiErrorMessage(result, '测试失败'));
       }
     } catch (error) {
       console.error('测试失败:', error);
@@ -432,7 +438,7 @@ export default function DimensionDetailPage() {
                     管理该维度的检测规则，支持关键词、正则表达式、语义分析等
                   </CardDescription>
                 </div>
-                <Button onClick={() => setCreateRuleOpen(true)}>
+                <Button disabled={!canManage} onClick={() => { setRuleForm({ name: "", type: "keyword", pattern: "", matchType: "contains", caseSensitive: false, score: "50", confidence: "0.8", priority: "100", description: "", suggestion: "" }); setCreateRuleOpen(true); }}>
                   <Plus className="h-4 w-4 mr-2" />
                   新建规则
                 </Button>
@@ -482,15 +488,15 @@ export default function DimensionDetailPage() {
                         </TableCell>
                         <TableCell>{rule.score}</TableCell>
                         <TableCell>
-                          <Badge variant={rule.enabled ? 'default' : 'secondary'}>
-                            {rule.enabled ? '启用' : '禁用'}
-                          </Badge>
+                          <div className="flex items-center gap-2"><Switch aria-label={`${rule.name}启用状态`} disabled={!canManage || togglingRule !== null} checked={rule.enabled} onCheckedChange={enabled=>void handleToggleRule(rule.id,enabled)}/><span>{rule.enabled ? '启用' : '停用'}</span></div>
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-1">
                             <Button
                               variant="ghost"
                               size="sm"
+                              disabled={!canManage}
+                              aria-label={`编辑${rule.name}`}
                               onClick={() => openEditDialog(rule)}
                             >
                               <Pencil className="h-4 w-4 text-blue-500" />
@@ -498,6 +504,8 @@ export default function DimensionDetailPage() {
                             <Button
                               variant="ghost"
                               size="sm"
+                              disabled={!canManage}
+                              aria-label={`删除${rule.name}`}
                               onClick={() => handleDeleteRule(rule.id)}
                             >
                               <Trash2 className="h-4 w-4 text-red-500" />
@@ -555,7 +563,7 @@ export default function DimensionDetailPage() {
 
       {/* 创建规则对话框 */}
       <Dialog open={createRuleOpen} onOpenChange={setCreateRuleOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>创建检测规则</DialogTitle>
             <DialogDescription>
@@ -563,124 +571,13 @@ export default function DimensionDetailPage() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>规则名称</Label>
-              <Input
-                placeholder="例如：SQL注入检测"
-                value={ruleForm.name}
-                onChange={(e) => setRuleForm({ ...ruleForm, name: e.target.value })}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>规则类型</Label>
-              <Select
-                value={ruleForm.type}
-                onValueChange={(value) => setRuleForm({ ...ruleForm, type: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="keyword">关键词匹配</SelectItem>
-                  <SelectItem value="regex">正则表达式</SelectItem>
-                  <SelectItem value="semantic">语义分析</SelectItem>
-                  <SelectItem value="llm">LLM检测</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {(ruleForm.type === 'keyword' || ruleForm.type === 'regex') && (
-              <div className="space-y-2">
-                <Label>匹配模式</Label>
-                <Input
-                  placeholder={ruleForm.type === 'regex' ? '正则表达式' : '关键词'}
-                  value={ruleForm.pattern}
-                  onChange={(e) => setRuleForm({ ...ruleForm, pattern: e.target.value })}
-                />
-              </div>
-            )}
-
-            {ruleForm.type === 'keyword' && (
-              <div className="space-y-2">
-                <Label>匹配方式</Label>
-                <Select
-                  value={ruleForm.matchType}
-                  onValueChange={(value) => setRuleForm({ ...ruleForm, matchType: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="contains">包含</SelectItem>
-                    <SelectItem value="exact">精确匹配</SelectItem>
-                    <SelectItem value="prefix">前缀匹配</SelectItem>
-                    <SelectItem value="suffix">后缀匹配</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>风险分数 (0-100)</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={ruleForm.score}
-                  onChange={(e) => setRuleForm({ ...ruleForm, score: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>置信度 (0-1)</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  max="1"
-                  step="0.1"
-                  value={ruleForm.confidence}
-                  onChange={(e) => setRuleForm({ ...ruleForm, confidence: e.target.value })}
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <Switch
-                checked={ruleForm.caseSensitive}
-                onCheckedChange={(checked) => setRuleForm({ ...ruleForm, caseSensitive: checked })}
-              />
-              <Label>区分大小写</Label>
-            </div>
-
-            <div className="space-y-2">
-              <Label>描述</Label>
-              <Textarea
-                placeholder="规则描述..."
-                value={ruleForm.description}
-                onChange={(e) => setRuleForm({ ...ruleForm, description: e.target.value })}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>修复建议</Label>
-              <Textarea
-                placeholder="命中此规则后的修复建议..."
-                value={ruleForm.suggestion}
-                onChange={(e) => setRuleForm({ ...ruleForm, suggestion: e.target.value })}
-              />
-              <p className="text-xs text-muted-foreground">
-                当检测命中此规则时，会向用户展示此建议
-              </p>
-            </div>
-          </div>
+          <RuleForm value={ruleForm} onChange={setRuleForm} />
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateRuleOpen(false)}>
               取消
             </Button>
-            <Button onClick={handleCreateRule}>创建</Button>
+            <Button disabled={!canManage} onClick={handleCreateRule}>创建</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -695,131 +592,13 @@ export default function DimensionDetailPage() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>规则名称 *</Label>
-                <Input
-                  placeholder="规则名称"
-                  value={ruleForm.name}
-                  onChange={(e) => setRuleForm({ ...ruleForm, name: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>规则类型 *</Label>
-                <Select value={ruleForm.type} onValueChange={(v) => setRuleForm({ ...ruleForm, type: v })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="选择类型" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="keyword">关键词匹配</SelectItem>
-                    <SelectItem value="regex">正则表达式</SelectItem>
-                    <SelectItem value="semantic">语义检测</SelectItem>
-                    <SelectItem value="llm">LLM判断</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>匹配模式</Label>
-                <Select value={ruleForm.matchType} onValueChange={(v) => setRuleForm({ ...ruleForm, matchType: v })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="选择匹配模式" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="contains">包含</SelectItem>
-                    <SelectItem value="exact">精确匹配</SelectItem>
-                    <SelectItem value="prefix">前缀匹配</SelectItem>
-                    <SelectItem value="suffix">后缀匹配</SelectItem>
-                    <SelectItem value="regex">正则表达式</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>优先级</Label>
-                <Input
-                  type="number"
-                  placeholder="100"
-                  value={ruleForm.priority}
-                  onChange={(e) => setRuleForm({ ...ruleForm, priority: e.target.value })}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>匹配内容</Label>
-              <Textarea
-                placeholder="关键词或正则表达式..."
-                value={ruleForm.pattern}
-                onChange={(e) => setRuleForm({ ...ruleForm, pattern: e.target.value })}
-                rows={3}
-              />
-              <p className="text-xs text-muted-foreground">
-                多个关键词用换行分隔，每行一个关键词
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>风险分数 (0-100)</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={ruleForm.score}
-                  onChange={(e) => setRuleForm({ ...ruleForm, score: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>置信度 (0-1)</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  max="1"
-                  step="0.1"
-                  value={ruleForm.confidence}
-                  onChange={(e) => setRuleForm({ ...ruleForm, confidence: e.target.value })}
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <Switch
-                checked={ruleForm.caseSensitive}
-                onCheckedChange={(checked) => setRuleForm({ ...ruleForm, caseSensitive: checked })}
-              />
-              <Label>区分大小写</Label>
-            </div>
-
-            <div className="space-y-2">
-              <Label>描述</Label>
-              <Textarea
-                placeholder="规则描述..."
-                value={ruleForm.description}
-                onChange={(e) => setRuleForm({ ...ruleForm, description: e.target.value })}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>修复建议</Label>
-              <Textarea
-                placeholder="命中此规则后的修复建议..."
-                value={ruleForm.suggestion}
-                onChange={(e) => setRuleForm({ ...ruleForm, suggestion: e.target.value })}
-              />
-              <p className="text-xs text-muted-foreground">
-                当检测命中此规则时，会向用户展示此建议
-              </p>
-            </div>
-          </div>
+          <RuleForm value={ruleForm} onChange={setRuleForm} />
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditRuleOpen(false)}>
               取消
             </Button>
-            <Button onClick={handleEditRule}>保存</Button>
+            <Button disabled={!canManage} onClick={handleEditRule}>保存</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

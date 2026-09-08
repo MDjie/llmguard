@@ -66,7 +66,7 @@ const navigationGroups: readonly {
     title: '配置管理',
     items: [
       { name: '应用接入', href: '/applications', icon: Building2, desc: '应用、凭据与运行版本', permission: 'application:read' },
-      { name: '检测维度', href: '/dimensions', icon: Layers, desc: '维度与规则配置', permission: 'policy:manage' },
+      { name: '检测维度', href: '/dimensions', icon: Layers, desc: '维度与规则配置', permission: 'policy:read' },
       { name: '白名单规则', href: '/whitelist', icon: CheckCircle, desc: '安全内容放行', permission: 'policy:manage' },
       { name: '安全策略', href: '/policies', icon: Settings, desc: '检测策略管理', permission: 'policy:manage' },
       { name: '敏感词典', href: '/dictionaries', icon: BookOpenCheck, desc: '分层词典与版本治理', permission: 'policy:read' },
@@ -78,7 +78,7 @@ const navigationGroups: readonly {
   {
     title: '策略验证',
     items: [
-      { name: '策略验证集', href: '/test-cases', icon: CheckCircle, desc: '验证样本管理', permission: 'policy:manage' },
+      { name: '策略验证集', href: '/test-cases', icon: CheckCircle, desc: '验证样本管理', permission: 'policy:read' },
       { name: '评测原型', href: '/model-eval', icon: Cpu, desc: '非生产策略评测原型', permission: 'policy:read', experimental: true },
       { name: '评测门禁', href: '/evaluation-runs', icon: GitCompare, desc: '异步回归与发布证据', permission: 'policy:read' },
     ]
@@ -91,6 +91,7 @@ const navigationGroups: readonly {
       { name: '请求执行', href: '/gateway-requests', icon: GitCompare, desc: '检测与实际执行链路', permission: 'history:read' },
       { name: '内容审计', href: '/history', icon: History, desc: '检测历史查询', permission: 'history:read' },
       { name: 'Agent日志', href: '/agent-logs', icon: FileText, desc: '调用日志追踪', permission: 'audit:read' },
+      { name: '运维巡检', href: '/operations', icon: Cpu, desc: '服务器资源与后台服务', permission: 'observability:metrics:read' },
       { name: '导出报告', href: '/export', icon: Download, desc: '数据导出报告', permission: 'audit:export' },
     ]
   },
