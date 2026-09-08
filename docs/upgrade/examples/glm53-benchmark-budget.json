@@ -1,0 +1,7 @@
+{
+  "maximumCases": 100,
+  "maximumCalls": 100,
+  "maximumReservedTokens": 1000000,
+  "totalTimeoutMs": 1800000,
+  "concurrency": 1
+}

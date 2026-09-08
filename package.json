@@ -96,7 +96,12 @@
     "financial:check": "tsx scripts/content-safety/prepare-financial-library.ts --check",
     "alerts:backfill": "tsx scripts/content-safety/backfill-security-alerts.ts",
     "native:worker": "tsx scripts/native-multimodal-worker.ts",
-    "alerts:recover": "tsx scripts/content-safety/recover-alert-projections.ts"
+    "alerts:recover": "tsx scripts/content-safety/recover-alert-projections.ts",
+    "joint:prepare-glm": "tsx scripts/content-safety/prepare-glm-joint-profile.ts",
+    "test:integration:media-transforms": "tsx scripts/integration/check-media-transforms.ts",
+    "acceptance:resilience": "tsx scripts/acceptance/runtime-resilience.ts",
+    "test:integration:resilience": "tsx scripts/integration/check-runtime-resilience.ts",
+    "acceptance:v11": "node scripts/acceptance/v11-readiness.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
