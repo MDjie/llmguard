@@ -27,8 +27,9 @@ function assertObjectUrl(value: string): URL {
 }
 
 export async function uploadArtifactFile(
-  target: MediaMarkRequest['output'],
+  target: { readonly url: string; readonly headers?: Readonly<Record<string, string>>; readonly mediaType: string; readonly maxBytes: number },
   filePath: string,
+  signal?: AbortSignal,
 ): Promise<{ readonly sizeBytes: number; readonly sha256: string }> {
   const file = await stat(filePath);
   if (!file.isFile() || file.size <= 0 || file.size > target.maxBytes) {
@@ -40,6 +41,7 @@ export async function uploadArtifactFile(
   await new Promise<void>((resolveUpload, rejectUpload) => {
     const request = (url.protocol === 'https:' ? httpsRequest : httpRequest)(url, {
       method: 'PUT',
+      signal,
       headers: {
         ...target.headers,
         'content-type': target.mediaType,
@@ -96,7 +98,18 @@ export async function withLoadedArtifact<T>(
       if (Number.isFinite(declared) && declared !== part.sizeBytes) {
         throw new Error('ANALYZER_PART_SIZE_MISMATCH');
       }
-      const bytes = Buffer.from(await response.arrayBuffer());
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error('ANALYZER_PART_DOWNLOAD_FAILED');
+      const chunks: Buffer[] = []; let received = 0;
+      try {
+        for (;;) {
+          const { done, value } = await reader.read(); if (done) break;
+          received += value.byteLength;
+          if (received > part.sizeBytes) { await reader.cancel(); throw new Error('ANALYZER_PART_SIZE_MISMATCH'); }
+          chunks.push(Buffer.from(value));
+        }
+      } finally { reader.releaseLock(); }
+      const bytes = Buffer.concat(chunks);
       if (bytes.length !== part.sizeBytes ||
           createHash('sha256').update(bytes).digest('hex') !== part.sha256) {
         throw new Error('ANALYZER_PART_HASH_MISMATCH');

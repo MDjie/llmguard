@@ -8,6 +8,7 @@ COPY services/media-analyzer services/media-analyzer
 COPY tsconfig.json ./tsconfig.json
 COPY src/lib/evidence/coordinate-mapping.ts src/lib/evidence/coordinate-mapping.ts
 COPY src/contracts/http/native-multimodal.ts src/contracts/http/native-multimodal.ts
+COPY src/contracts/http/media-transform.ts src/contracts/http/media-transform.ts
 COPY src/lib/multimodal/native-gate.ts src/lib/multimodal/native-gate.ts
 COPY src/lib/gateway-runtime/protocol.ts src/lib/gateway-runtime/protocol.ts
 COPY src/lib/gateway-runtime/native-content.ts src/lib/gateway-runtime/native-content.ts
