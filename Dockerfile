@@ -27,11 +27,15 @@ ENV NODE_ENV=production \
 COPY --from=dependencies --chown=node:node /app/node_modules ./node_modules
 COPY --chown=node:node package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc tsconfig.json ./
 COPY --chown=node:node src ./src
+COPY --chown=node:node data/content-safety/lexicon/prompt-injection-bilingual.v1.json ./data/content-safety/lexicon/
+COPY --chown=node:node data/content-safety/taxonomy/risk-registry.v1.json ./data/content-safety/taxonomy/
 COPY --chown=node:node packages/contracts/generated ./packages/contracts/generated
 COPY --chown=node:node packages/contracts-appliance/generated ./packages/contracts-appliance/generated
 COPY --chown=node:node \
+    scripts/archive-worker.ts \
     scripts/artifact-verifier-worker.ts \
     scripts/audio-video-worker.ts \
+    scripts/audit-chain-worker.ts \
     scripts/audit-export-worker.ts \
     scripts/audit-timestamp-worker.ts \
     scripts/callback-dispatcher-worker.ts \
@@ -40,6 +44,7 @@ COPY --chown=node:node \
     scripts/evaluation-worker.ts \
     scripts/gateway-request-worker.ts \
     scripts/gateway-shadow-worker.ts \
+    scripts/native-multimodal-worker.ts \
     scripts/code-sentinel-worker.ts \
     scripts/rag-ingest-worker.ts \
     scripts/run-worker.mjs \
