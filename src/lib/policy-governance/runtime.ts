@@ -81,7 +81,18 @@ export async function getPolicyRuntimeSummary(scope: TenantScope) {
   ));
   const byId = new Map(rows.map((row) => [row.id, row]));
   const summary = (id: string | null) => id ? byId.get(id) ?? null : null;
-  const active = await loadVerifiedPolicyBundle(scope, binding.activeBundleId);
+  // An active bundle that cannot be verified (e.g. signing-key identity is not
+  // configured) must surface as NOT READY with a reason code, not as a 500
+  // that takes the release console's runtime card down.
+  let active: Awaited<ReturnType<typeof loadVerifiedPolicyBundle>> | null = null;
+  let signatureVerified = true;
+  let verificationReason: string | null = null;
+  try {
+    active = await loadVerifiedPolicyBundle(scope, binding.activeBundleId);
+  } catch (error) {
+    signatureVerified = false;
+    verificationReason = isPolicyBundleRuntimeError(error) ? error.code : 'POLICY_BUNDLE_VERIFICATION_FAILED';
+  }
   let readiness: Awaited<ReturnType<typeof inspectPolicyReadiness>> | null = null;
   let readinessReason: string | null = null;
   try {
@@ -92,10 +103,10 @@ export async function getPolicyRuntimeSummary(scope: TenantScope) {
   observePolicyBundleGeneration({ generation: binding.generation, tenantId: scope.tenantId, applicationId: scope.applicationId });
   return {
     ready: readiness?.ready ?? false,
-    reasonCode: readinessReason,
+    reasonCode: readinessReason ?? verificationReason,
     generation: binding.generation,
     assurance: readiness?.assurance ?? null,
-    signatureVerified: true,
+    signatureVerified,
     binding: {
       active: summary(binding.activeBundleId),
       shadow: summary(binding.shadowBundleId),
@@ -104,7 +115,7 @@ export async function getPolicyRuntimeSummary(scope: TenantScope) {
       canaryPercent: binding.canaryPercent,
       updatedAt: binding.updatedAt,
     },
-    governedDigests: digestSummary(active),
+    governedDigests: active ? digestSummary(active) : { dictionaryDigests: [], modelDigests: [], tokenizerDigest: null },
   };
 }
 

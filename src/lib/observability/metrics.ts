@@ -411,7 +411,8 @@ export type SafetyAlertType =
   | 'POLICY_PUBLIC_KEY_MISMATCH'
   | 'AUDIT_CHAIN_BREAK'
   | 'MANDATORY_DENY_BYPASS'
-  | 'STREAM_COMMIT_GATE_FAILURE';
+  | 'STREAM_COMMIT_GATE_FAILURE'
+  | 'EVALUATION_TRACE_CALLBACK_FAILED';
 
 export function observeSafetyAlert(type: SafetyAlertType): void {
   increment('guardllm_safety_alerts_total', { alert_type: type, priority: 'high' });

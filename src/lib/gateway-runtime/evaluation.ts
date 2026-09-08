@@ -11,7 +11,7 @@ import { gatewayExecutionEvents, gatewayRequests, gatewaySteps } from '@/storage
 import { scopePredicate } from '@/lib/tenancy';
 import { loadVerifiedPolicyBundle } from '@/lib/policy-bundle/runtime';
 import { createEngineForPolicyBundle, createProtectedContextFingerprint, evaluateWithSessionContext } from '@/lib/guard-engine-v2';
-import { transformDlpText, type DlpTransformEntity } from '@/lib/dlp';
+import { transformGatewayInput } from './input-mask';
 import { gatewayDecisionSchema } from '@/contracts/http/gateway-v2';
 import type { ContentSegment, GatewayDecision, GatewayRequest, TransformPatch } from '../../../packages/contracts/generated/typescript/gateway-v2';
 import { canonicalJson, GatewayError, sha256 } from './protocol';
@@ -29,11 +29,8 @@ export function mapDecision(body: GatewayRequest, legacy: LegacyDecision, spans:
   let transformed = inputAction.safeResponse ?? legacy.transformedText;
   let ranges = legacy.transform?.ranges ?? [];
   if (body.stage === 'INPUT' && legacy.action === 'MASK' && transformed === undefined) {
-    const entities: DlpTransformEntity[] = legacy.observations.filter((o) => o.status === 'MATCH' && (o.detectorId === 'structured-dlp' || Boolean(o.category && o.detectorId.includes('dlp'))))
-      .flatMap((o) => o.evidence.flatMap((e) => e.start === undefined || e.end === undefined ? [] : [{ entityType: o.category ?? o.riskType, start: e.start, end: e.end, confidence: o.confidence ?? o.score, contentHmac: e.contentHmac }]));
-    if (!entities.length) throw new GatewayError('INPUT_TRANSFORM_EVIDENCE_MISSING', 503);
-    const result = transformDlpText(spans.map(({ segment }) => segment.text).join('\n'), entities, { evidenceHmacKey: process.env.CONTENT_HASH_KEY ?? '', tokenizationHmacKey: process.env.DLP_TOKENIZATION_HMAC_KEY });
-    if (result.blocked) throw new GatewayError('INPUT_TRANSFORM_BLOCKED', 403);
+    const text = spans.map(({ segment }) => segment.text).join('\n');
+    const result = transformGatewayInput(text, legacy.observations);
     transformed = result.transformedText; ranges = result.ranges;
   }
   const patches: TransformPatch[] = [...inputAction.patches];

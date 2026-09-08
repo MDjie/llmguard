@@ -1,4 +1,7 @@
+import { collectTransformEntities } from '@/lib/dlp/entity-contract';
 import { createHash } from 'node:crypto';
+import { deriveContextEnvelope, resolveContextEnvelopes, validateActionIntent } from '@/lib/context-trust';
+import { isConfirmedObservation } from '@/lib/guard-engine-v2/observation-role';
 import type {
   DecisionTransform,
   GuardAction,
@@ -8,7 +11,6 @@ import type {
 } from '@guardllm/contracts';
 import {
   transformDlpText,
-  type DlpTransformEntity,
   type DlpTransformRange,
 } from '@/lib/dlp';
 import { observeOutputControl } from '@/lib/observability/metrics';
@@ -42,14 +44,8 @@ export interface OutputInterventionOptions {
 }
 
 const TRANSFORM_RECHECK_ACTIONS = new Set<GuardAction>(['MASK', 'REWRITE', 'SAFE_RESPONSE']);
-const DLP_DETECTORS = new Set([
-  'output-privacy-dlp',
-  'output-internal-data',
-  'output-credential-leak',
-]);
-
 function matched(decision: GuardDecision): readonly Observation[] {
-  return decision.observations.filter((observation) => observation.status === 'MATCH');
+  return decision.observations.filter(isConfirmedObservation);
 }
 
 function strongestRiskType(decision: GuardDecision): string | undefined {
@@ -57,22 +53,6 @@ function strongestRiskType(decision: GuardDecision): string | undefined {
     (observation) => OUTPUT_ACTION_OVERRIDES[observation.riskType] === decision.action,
   );
   return matchingAction?.riskType ?? matched(decision)[0]?.riskType;
-}
-
-function dlpEntities(decision: GuardDecision): readonly DlpTransformEntity[] {
-  return matched(decision).flatMap((observation) => {
-    if (!DLP_DETECTORS.has(observation.detectorId) || !observation.category) return [];
-    return observation.evidence.flatMap((evidence) => {
-      if (evidence.start === undefined || evidence.end === undefined) return [];
-      return [{
-        entityType: observation.category!,
-        start: evidence.start,
-        end: evidence.end,
-        confidence: observation.confidence ?? observation.score,
-        contentHmac: evidence.contentHmac,
-      }];
-    });
-  });
 }
 
 const INSURANCE_REWRITES: readonly [RegExp, string][] = [
@@ -186,15 +166,18 @@ export async function applyOutputIntervention(
   let recheckStatus: 'completed' | 'failed' | 'not_required' = 'not_required';
   let templateFallback = false;
   const addedReasonCodes: string[] = [];
+  const recheckObservations:Observation[]=[];
   const degradationReasons = [...decision.degradationReasons];
 
   if (action === 'MASK') {
-    const entities = dlpEntities(decision);
+    try {
+    const entities = collectTransformEntities(decision.observations,originalText.length);
     if (entities.length === 0) {
       action = 'BLOCK';
       transformedText = PLATFORM_FIXED_SAFE_RESPONSE;
       transformType = 'BLOCK';
       addedReasonCodes.push('DLP_TRANSFORM_EVIDENCE_MISSING');
+      degradationReasons.push('DLP_TRANSFORM_EVIDENCE_MISSING');
     } else {
       const transformed = transformDlpText(originalText, entities, {
         evidenceHmacKey: options.evidenceHmacKey,
@@ -206,6 +189,13 @@ export async function applyOutputIntervention(
       ranges = transformedRanges(transformed.ranges);
       degradationReasons.push(...transformed.degradationReasons);
       if (transformed.blocked) addedReasonCodes.push('DLP_TRANSFORM_BLOCKED');
+    }
+    } catch {
+      action = 'BLOCK';
+      transformedText = PLATFORM_FIXED_SAFE_RESPONSE;
+      transformType = 'BLOCK';
+      addedReasonCodes.push('DLP_TRANSFORM_ENTITY_INVALID');
+      degradationReasons.push('DLP_TRANSFORM_ENTITY_INVALID');
     }
   } else if (action === 'REWRITE') {
     const template = renderResponseTemplate(
@@ -249,28 +239,52 @@ export async function applyOutputIntervention(
     const outputHash = createHash('sha256').update(transformedText, 'utf8').digest('hex');
     try {
       if (request.context.absoluteDeadlineEpochMs <= now()) throw new Error('OUTPUT_RECHECK_DEADLINE_EXCEEDED');
+      const parents = resolveContextEnvelopes(request, now());
+      validateActionIntent(request, parents, now());
+      const envelope = deriveContextEnvelope({
+        content: transformedText,
+        sourceType: 'AGENT',
+        sourceId: 'output-recheck:' + outputHash,
+        parents,
+        eventSeq: Math.max(...parents.map(parent => parent.eventSeq)) + 1,
+        policyVersion: String(bundle.payload.policyVersion),
+      });
+      // This pass evaluates derived output content. Original action authorization
+      // was validated against its original sources; it cannot be rebound to AGENT text.
       const recheck = await options.evaluateRecheck({
         ...request,
+        actionIntent: undefined,
         context: {
           ...request.context,
           requestId: boundedRecheckRequestId(request.context.requestId, outputHash),
           direction: 'OUTPUT_COMPLETE',
           stage: 'OUTPUT_POST',
         },
-        content: { ...request.content, text: transformedText },
+        content: { ...request.content, text: transformedText, envelopes: [envelope] },
       });
       recheckDecisionId = recheck.decisionId;
-      const recheckFailed = !['ALLOW', 'WARN'].includes(recheck.action) ||
+      const unavailable = Boolean(recheck.degraded || recheck.degradationReasons.length || (recheck.failMode && recheck.failMode !== 'NORMAL'));
+      const recheckFailed = unavailable || !['ALLOW', 'WARN'].includes(recheck.action) ||
         matched(recheck).some((observation) => isOutputRedline(observation.riskType));
       recheckStatus = recheckFailed ? 'failed' : 'completed';
       if (recheckFailed) {
         action = 'BLOCK';
         transformedText = PLATFORM_FIXED_SAFE_RESPONSE;
         transformType = 'BLOCK';
-        addedReasonCodes.push('OUTPUT_RECHECK_REDLINE_MATCH');
+        const reason=unavailable?'OUTPUT_RECHECK_UNAVAILABLE':matched(recheck).some(observation=>isOutputRedline(observation.riskType))?'OUTPUT_RECHECK_REDLINE_MATCH':'OUTPUT_RECHECK_CONSTRAINT_UNRESOLVED';
+        addedReasonCodes.push(reason);
+        if(unavailable)degradationReasons.push(reason,...recheck.degradationReasons.map(code=>'recheck:'+code));
+        for(const observation of recheck.observations.slice(0,128))recheckObservations.push({...observation,
+          evidence:observation.evidence.slice(0,16).map(item=>({
+            viewId:'output_recheck:'+outputHash,contentHmac:item.contentHmac,maskedPreview:item.maskedPreview,
+            sourceEnvelopeIds:[envelope.envelopeId],
+          })),
+        });
+        addedReasonCodes.push(...(recheck.reasonCodes??[]).map(code=>'OUTPUT_RECHECK:'+code));
       }
     } catch (error) {
       recheckStatus = 'failed';
+      degradationReasons.push('OUTPUT_RECHECK_FAILED');
       action = 'BLOCK';
       transformedText = PLATFORM_FIXED_SAFE_RESPONSE;
       transformType = 'BLOCK';
@@ -299,6 +313,7 @@ export async function applyOutputIntervention(
       templateVersion,
       recheckDecisionId,
       contentHmac: matched(decision)[0]?.evidence[0]?.contentHmac,
+      recheckReasons:recheckObservations.flatMap(observation=>observation.reasonCode?[observation.reasonCode]:[]).slice(0,32),
     });
     if (!eventPersisted) degradationReasons.push('OUTPUT_SECURITY_EVENT_PERSIST_FAILED');
   }
@@ -326,9 +341,10 @@ export async function applyOutputIntervention(
         ...(recheckDecisionId ? { recheckDecisionId } : {}),
       }
     : undefined;
-  const score = riskScore(decision);
+  const score = Math.max(riskScore(decision), ...recheckObservations.filter(isConfirmedObservation).map(observation => observation.score));
   return {
     ...decision,
+    observations:[...decision.observations,...recheckObservations],
     action,
     riskLevel: action === 'BLOCK' && decision.riskLevel !== 'CRITICAL' ? 'HIGH' : decision.riskLevel,
     policyPath: [...decision.policyPath, 'output-control', context.policyVersion],
@@ -346,5 +362,7 @@ export async function applyOutputIntervention(
     reasonCodes: [...new Set([...(decision.reasonCodes ?? []), ...addedReasonCodes])].sort(),
     degradationReasons: [...new Set(degradationReasons)].sort(),
     degraded: degradationReasons.length > 0,
+    failMode: degradationReasons.length > 0 ? (action === 'BLOCK' ? 'FAIL_CLOSED' : 'DEGRADED') : decision.failMode,
+    evidenceComplete: degradationReasons.length > 0 ? false : decision.evidenceComplete,
   };
 }

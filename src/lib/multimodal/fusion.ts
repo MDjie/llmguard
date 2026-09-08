@@ -1,14 +1,17 @@
+import { fusionSourceContent, type FusionSourceSpan } from '@/lib/multimodal/source-content';
+import { inspectRiskRelations } from '@/lib/guard-engine-v2/risk-relations';
 import { makeEvidenceView } from '@/lib/evidence/media-views';
 import { validateEvidenceLocation } from '@/lib/evidence/location';
 import { createHash } from 'node:crypto';
 import type { GuardAction, GuardDecision, GuardRequest } from '@guardllm/contracts';
 import { createEngineForPolicyBundle } from '@/lib/guard-engine-v2';
-import { ACTION_PRIORITY, combineActionConstraints } from '@/lib/guard-engine-v2/action-constraints';
+import { combineActionConstraints } from '@/lib/guard-engine-v2/action-constraints';
 import type { RuntimePolicyBundle } from '@/lib/policy-bundle';
 import { assessAnalysisCoverage,type AnalysisCoverage } from './coverage';
 
 export interface OcrFusionRegion {
   readonly text: string;
+  readonly confidence?: number;
   readonly artifactId: string;
   readonly artifactSha256?: string;
   readonly viewId: string;
@@ -78,6 +81,7 @@ async function evaluate(
     Partial<Pick<GuardRequest['context'], 'direction'>>,
   requestSuffix: string,
   text: string,
+  spans: readonly FusionSourceSpan[],
 ): Promise<GuardDecision> {
   const requestId = `${base.traceId}-${requestSuffix}`.slice(0, 128);
   // Absent optional tracks must not invoke detectors on synthetic business content.
@@ -97,7 +101,7 @@ async function evaluate(
       direction: base.direction ?? 'INPUT',
       policyBundleId: bundle.id,
     },
-    content: { text },
+    content: fusionSourceContent(text, spans, { ...base, requestId, direction: base.direction ?? 'INPUT', policyBundleId: bundle.id }),
   });
 }
 
@@ -168,6 +172,7 @@ export async function fuseMultimodal(input: {
   readonly sourceTrust?: 'TRUSTED' | 'CONTROLLED' | 'UNTRUSTED' | 'UNKNOWN';
   readonly instructionCapability?: 'ALLOWED' | 'DATA_ONLY' | 'FORBIDDEN' | 'UNKNOWN';
   readonly anomalyScore?: number;
+  readonly minimumConfidence?: number;
   readonly reviewThreshold?: number;
   readonly blockThreshold?: number;
 }) {
@@ -199,24 +204,37 @@ export async function fuseMultimodal(input: {
   const codes = buildText(codeSegments);
   const combined = buildText([...userSegments, ...ocrSegments, ...codeSegments]);
   const [userDecision, imageDecision, codeDecision, combinedDecision] = await Promise.all([
-    evaluate(input.bundle, input.context, 'user', user.text),
-    evaluate(input.bundle, input.context, 'image', image.text),
-    evaluate(input.bundle, input.context, 'codes', codes.text),
-    evaluate(input.bundle, input.context, 'combined', combined.text),
+    evaluate(input.bundle, input.context, 'user', user.text, user.spans),
+    evaluate(input.bundle, input.context, 'image', image.text, image.spans),
+    evaluate(input.bundle, input.context, 'codes', codes.text, codes.spans),
+    evaluate(input.bundle, input.context, 'combined', combined.text, combined.spans),
   ]);
-  const strongestIndividual = Math.max(
-    ACTION_PRIORITY[userDecision.action],
-    ACTION_PRIORITY[imageDecision.action],
-    ACTION_PRIORITY[codeDecision.action],
-  );
-  const populatedModalities = [user.text, image.text, codes.text].filter(Boolean).length;
-  const cooperativeAttack = populatedModalities >= 2 &&
-    ACTION_PRIORITY[combinedDecision.action] > strongestIndividual;
+  const relationSegments=[...userSegments,...ocrSegments,...codeSegments];
+  const relationship=inspectRiskRelations(relationSegments.map((segment,index)=>({
+    id:'source-'+index,text:segment.text,sourceType:segment.source==='user_text'?'USER':'MEDIA',
+    instructionCapability:segment.source==='user_text'?'ALLOWED':'DATA_ONLY',objectRef:segment.artifactId,
+  })));
+  const confirmedRelations=relationship.relations.filter(relation=>relation.status==='CONFIRMED'&&relation.sourceEnvelopeIds.length>1);
+  const cooperativeAttack=confirmedRelations.length>0;
+  const relationAction:GuardAction=cooperativeAttack?'BLOCK':relationship.coverage==='PARTIAL'?'REQUIRE_REVIEW':'ALLOW';
+  const relationEvidence=confirmedRelations.map(relation=>{
+    const base={riskType:'prompt_injection.relation',score:0.96,action:'BLOCK' as const,
+      reasonCode:'MULTIMODAL_RELATION_CONFIRMED',traceId:input.context.traceId,relation,
+      sources:relation.sourceEnvelopeIds.flatMap(id=>{
+        const segment=relationSegments[Number(id.slice('source-'.length))];
+        if(!segment)return [];
+        return [{source:segment.source,artifactId:segment.artifactId,viewId:segment.viewId}];
+      })};
+    return {...base,evidenceRef:evidenceIdentity(input.context.traceId,base)};
+  });
   const reviewThreshold = input.reviewThreshold ?? 0.65;
   const blockThreshold = input.blockThreshold ?? 0.8;
   const visualScore = Math.max(input.anomalyScore ?? 0, 0, ...input.visual.map((item) => item.score));
   const visualAction = actionForScore(visualScore, reviewThreshold, blockThreshold);
-  const failures = input.analysisFailures ?? [];
+  const lowConfidence = [...input.ocr, ...(input.codes ?? [])].some(item => item.confidence !== undefined &&
+    (!Number.isFinite(item.confidence) || item.confidence < (input.minimumConfidence ?? 0.35) || item.confidence > 1));
+  const failures = [...(input.analysisFailures ?? []),
+    ...(lowConfidence ? [{ component: 'TEXT_EXTRACTION', required: true, code: 'MEDIA_EXTRACTION_CONFIDENCE_INSUFFICIENT' }] : [])];
   const failureAction: GuardAction = failures.some((item) => item.required)
     ? 'BLOCK'
     : failures.length > 0
@@ -238,7 +256,7 @@ export async function fuseMultimodal(input: {
     ...(codes.text ? [codeDecision.action] : []),
   ];
   const { action } = combineActionConstraints([
-    ...individual, combinedDecision.action, visualAction, failureAction, trustAction, coverageAction,
+    ...individual, combinedDecision.action, relationAction, visualAction, failureAction, trustAction, coverageAction,
   ]);
   const visualEvidence = input.visual.map((item) => {
     const position = validateEvidenceLocation({ artifactId: item.artifactId, sourceDigest: item.artifactSha256, contentVersion: item.artifactSha256,
@@ -283,7 +301,8 @@ export async function fuseMultimodal(input: {
     action,
     coverage,
     cooperativeAttack,
-    degraded: failures.length > 0 || (input.bundle.payload.semanticDecisionMode === 'coverage-v1' && !coverage.complete),
+    relationship: { ...relationship,evidence:relationship.evidence },
+    degraded: [userDecision, imageDecision, codeDecision, combinedDecision].some(value => value.degraded || value.degradationReasons.length > 0) || relationship.coverage==='PARTIAL' || failures.length > 0 || (input.bundle.payload.semanticDecisionMode === 'coverage-v1' && !coverage.complete),
     textDecisions: {
       user: userDecision,
       image: imageDecision,
@@ -291,6 +310,7 @@ export async function fuseMultimodal(input: {
       combined: combinedDecision,
     },
     evidence: [
+      ...relationEvidence,
       ...new Map(textEvidence.map((item) => [item.evidenceRef, item])).values(),
       ...visualEvidence,
       ...failureEvidence,

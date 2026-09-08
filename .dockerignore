@@ -91,3 +91,6 @@ temp
 # Environment overrides are always host managed.
 .env*
 services/guard-gateway/target
+
+# Benchmark corpora are never runtime image inputs.
+eval-data

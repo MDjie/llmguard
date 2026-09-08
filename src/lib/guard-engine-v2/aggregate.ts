@@ -2,6 +2,8 @@ import { createHash } from 'node:crypto';
 import { selectJudgeProfile } from '@/lib/judge/profile';
 import { coverageGaps } from './semantic-coverage';
 import { combineActionConstraints } from './action-constraints';
+import { isConfirmedObservation } from './observation-role';
+import { createObservationPolicy } from './observation-policy';
 import type {
   GuardDecision,
   GuardEnginePolicy,
@@ -50,42 +52,18 @@ export function aggregateGuardDecision(params: {
   const missingRisks=coverageGaps(params.policy,params.request,observations);
   const judgeMissing = coverageMode ? missingRisks.length>0 : (v2 && semanticCapabilityConfigured && selectedJudge?.mode !== 'ENFORCE') || (selectedJudge?.mode === 'ENFORCE' && selectedJudge.riskIds.some(id => !observations.some(o => o.detectorId === 'configurable-judge' && o.riskType === id && o.semanticCoverage === 'COMPLETE' && (o.decisionRole === 'CLEARED' || o.decisionRole === 'CONFIRMED_RISK'))));
   const candidates = observations.filter(o => o.decisionRole === 'CANDIDATE');
-  const unresolved = v2 && candidates.some(c => !observations.some(o => o.riskType === c.riskType && o.semanticCoverage === 'COMPLETE' && (o.decisionRole === 'CLEARED' || o.decisionRole === 'CONFIRMED_RISK')));
-  const matches = observations.filter((item) => item.status === 'MATCH' && (!v2 || !['CANDIDATE','CLEARED','UNKNOWN'].includes(item.decisionRole ?? '')));
-  // 阈值按风险类型解析（支持 "risk" 与 "risk.variant" 前缀匹配），并按风险缓存：
-  // v1 此前对所有风险套用全局最小阈值，一个维度的低阈值会污染全部风险类型
-  //（例如某维度 block=0.6 时，所有维度都在 0.6 拦截）。
-  const riskThresholdCache = new Map<string, { warn: number; block: number }>();
-  const thresholds = (risk: string): { warn: number; block: number } => {
-    const cached = riskThresholdCache.get(risk);
-    if (cached) return cached;
-    const table = params.policy.riskThresholds ?? {};
-    const key = Object.keys(table)
-      .filter((candidate) => risk === candidate || risk.startsWith(candidate + '.'))
-      .sort((left, right) => right.length - left.length)[0];
-    const resolved = key
-      ? table[key]
-      : { warn: params.policy.warnThreshold, block: params.policy.blockThreshold };
-    riskThresholdCache.set(risk, resolved);
-    return resolved;
-  };
+  const unresolvedCandidates = candidates.some(c => !observations.some(o => o.riskType === c.riskType && o.semanticCoverage === 'COMPLETE' && (o.decisionRole === 'CLEARED' || o.decisionRole === 'CONFIRMED_RISK')));
+  const unresolved = v2 && unresolvedCandidates;
+  const matches = observations.filter(isConfirmedObservation);
+  const { thresholds, override: applicableOverride, thresholdBlock: isThresholdBlock } = createObservationPolicy(params.policy, params.request.context.direction);
   const maximumRisk = matches.reduce<RiskLevel>(
     (maximum, item) => riskOrder[item.severity] > riskOrder[maximum] ? item.severity : maximum,
     'NONE',
   );
-  const mandatoryDeny = matches.some((item) => item.reasonCode === 'MANDATORY_DENY');
+  const mandatoryDeny = matches.some((item) => item.reasonCode === 'MANDATORY_DENY' || item.decisionRole === 'HARD_DENY');
   const degradedBlock =
     params.policy.failClosedOnRequiredDetectorFailure &&
     (params.requiredDetectorFailures.length > 0 || Boolean(judgeMissing));
-  const outputDirection = params.request.context.direction === 'OUTPUT_COMPLETE' ||
-    params.request.context.direction === 'OUTPUT_CHUNK' ||
-    params.request.context.direction === 'TOOL_RESULT';
-  const applicableOverride = (item: Observation): GuardDecision['action'] | undefined => {
-    const candidate = params.policy.actionOverrides?.[item.riskType];
-    const threshold = params.policy.actionOverrideThresholds?.[item.riskType]
-      ?? thresholds(item.riskType).warn;
-    return candidate && item.score >= threshold ? candidate : undefined;
-  };
   const overrideActions = matches.flatMap((item) => {
     const candidate = applicableOverride(item);
     return candidate ? [candidate] : [];
@@ -95,12 +73,10 @@ export function aggregateGuardDecision(params: {
   // an explicit MASK/REWRITE/REVIEW/SAFE_RESPONSE action may process a high-confidence
   // match, while unclassified high-confidence findings and explicit BLOCK overrides
   // still fail closed.
-  const thresholdBlock = matches.some((item) =>
-    item.score >= thresholds(item.riskType).block &&
-    (!outputDirection || applicableOverride(item) === undefined || applicableOverride(item) === 'BLOCK'));
+  const thresholdBlock = matches.some(isThresholdBlock);
   const action = mandatoryDeny || degradedBlock || thresholdBlock || override === 'BLOCK'
     ? 'BLOCK'
-    : unresolved || judgeMissing ? 'REQUIRE_REVIEW' : override ?? (matches.some(item => item.score >= thresholds(item.riskType).warn) ? 'WARN' : 'ALLOW');
+    : unresolved || judgeMissing ? 'REQUIRE_REVIEW' : override ?? (matches.some(item => item.score >= thresholds(item.riskType).warn) || unresolvedCandidates ? 'WARN' : 'ALLOW');
   const riskLevel = degradedBlock && riskOrder[maximumRisk] < riskOrder.HIGH
     ? 'HIGH'
     : maximumRisk;
@@ -126,13 +102,13 @@ export function aggregateGuardDecision(params: {
       ? 'FAIL_CLOSED'
       : 'DEGRADED';
   const reasonCodes = [...new Set([
-    ...(unresolved ? ['LEXICAL_CANDIDATE_REQUIRES_REVIEW'] : []),
+    ...(unresolvedCandidates ? [v2 ? 'LEXICAL_CANDIDATE_REQUIRES_REVIEW' : 'LEXICAL_CANDIDATE_UNRESOLVED'] : []),
     ...matches.flatMap((observation) => observation.reasonCode ? [observation.reasonCode] : []),
     ...params.requiredDetectorFailures,
     ...degradationReasons,
   ])].sort();
   const latencyMs = Math.min(600_000, Math.max(0, Math.round(params.latencyMs)));
-  const evidenceComplete = !judgeMissing && !unresolved && matches.every((observation) =>
+  const evidenceComplete = degradationReasons.length === 0 && !judgeMissing && !unresolvedCandidates && matches.every((observation) =>
     observation.evidence.length > 0 &&
     observation.evidence.every((evidence) =>
       evidence.artifactId !== undefined || (evidence.sourceEnvelopeIds?.length ?? 0) > 0,

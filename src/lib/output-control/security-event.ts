@@ -17,6 +17,7 @@ export interface OutputControlFailureInput {
   readonly templateId?: string;
   readonly templateVersion?: number;
   readonly recheckDecisionId?: string;
+  readonly recheckReasons?:readonly string[];
   readonly contentHmac?: string;
 }
 
@@ -34,6 +35,7 @@ export function outputControlFailureEvent(
     templateId: input.templateId ?? null,
     templateVersion: input.templateVersion ?? null,
     recheckDecisionId: input.recheckDecisionId ?? null,
+    recheckReasons:JSON.stringify(input.recheckReasons?.slice(0,32).map(reason=>reason.slice(0,128))??[]),
   };
   return {
     id: randomUUID(),

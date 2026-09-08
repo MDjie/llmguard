@@ -158,6 +158,7 @@ export function safeRegexMatches(
   text: string,
   pattern: string,
   caseSensitive: boolean,
+  accept?: (match: { raw: string; index: number }) => boolean,
 ): Array<{ raw: string; index: number }> {
   if (text.length > MAX_INPUT_LENGTH) {
     throw new UnsafeRegexError('INPUT_TOO_LARGE', 'Regular expression input exceeds 1048576 characters');
@@ -166,7 +167,7 @@ export function safeRegexMatches(
   const normalized = validatePatternEnvelope(pattern, flags);
   const minimumRun = repeatedCharacterMinimumRun(normalized);
   if (minimumRun !== undefined) {
-    return repeatedCharacterMatches(text, minimumRun, caseSensitive);
+    return repeatedCharacterMatches(text, minimumRun, caseSensitive).filter(match => accept?.(match) ?? true);
   }
   const regex = compileSafeRegex(normalized, flags);
   const matches: Array<{ raw: string; index: number }> = [];
@@ -175,7 +176,9 @@ export function safeRegexMatches(
     const match = regex.exec(text);
     if (!match) break;
     const raw = match[0] ?? '';
-    if (raw) matches.push({ raw, index: match.index });
+    const resumeAt = regex.lastIndex;
+    if (raw && (accept?.({ raw, index: match.index }) ?? true)) matches.push({ raw, index: match.index });
+    regex.lastIndex = resumeAt;
     if (!raw) regex.lastIndex = Math.min(text.length + 1, regex.lastIndex + 1);
   }
   return matches;

@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { resolveContextEnvelopes } from '@/lib/context-trust';
 import { projectContextDecision } from './context-projection';
+import { combineActionConstraints } from './action-constraints';
 import {
   advanceSessionRiskState,
   appendSecureMemoryEvaluation,
@@ -13,16 +14,6 @@ import {
 } from '@/lib/secure-memory';
 import type { TenantScope } from '@/lib/tenancy';
 import type { GuardDecision, GuardEngine, GuardRequest, Observation } from './types';
-
-const ACTION_RANK = {
-  ALLOW: 0,
-  WARN: 1,
-  MASK: 2,
-  REWRITE: 2,
-  REQUIRE_REVIEW: 3,
-  SAFE_RESPONSE: 4,
-  BLOCK: 5,
-} as const;
 
 function sessionObservation(observation: Observation): Observation {
   const reasoningChain = observation.riskType.startsWith('reasoning_attack.');
@@ -42,24 +33,36 @@ export function chooseSessionDecision(
   current: GuardDecision,
   session: GuardDecision,
 ): GuardDecision {
-  const sessionHasReasoningChain = session.observations.some(
-    (observation) =>
-      observation.status === 'MATCH' &&
-      observation.riskType.startsWith('reasoning_attack.'),
-  );
-  if (
-    ACTION_RANK[session.action] < ACTION_RANK[current.action] ||
-    (ACTION_RANK[session.action] === ACTION_RANK[current.action] && !sessionHasReasoningChain)
-  ) {
-    return current;
-  }
-  return {
-    ...session,
-    traceId: current.traceId,
-    observations: session.observations.map(sessionObservation),
-    policyPath: [...session.policyPath, 'multi-turn-secure-memory'],
+  if (current.bundleId !== session.bundleId) throw new Error('SESSION_POLICY_BUNDLE_MISMATCH');
+  const action = combineActionConstraints([current.action, session.action]).action;
+  if (session.observations.length === 0 && action === current.action && !session.degraded) return current;
+  const historical = session.observations.map(sessionObservation);
+  const riskOrder = { NONE: 0, LOW: 1, MEDIUM: 2, HIGH: 3, CRITICAL: 4 } as const;
+  const degradationReasons = [...new Set([...current.degradationReasons, ...session.degradationReasons])].sort();
+  const result: GuardDecision = {
+    ...current,
+    action,
+    decisionId: 'dec_' + createHash('sha256').update(JSON.stringify([
+      current.decisionId, session.decisionId, action,
+    ])).digest('hex').slice(0, 32),
+    riskLevel: riskOrder[current.riskLevel] >= riskOrder[session.riskLevel] ? current.riskLevel : session.riskLevel,
+    observations: [...historical, ...current.observations],
+    policyPath: [...new Set([...current.policyPath, ...session.policyPath, 'multi-turn-secure-memory'])],
     latencyMs: Math.min(600_000, current.latencyMs + session.latencyMs),
+    latencyBreakdown: { totalMs: Math.min(600_000, current.latencyMs + session.latencyMs) },
+    degradationReasons,
+    degraded: Boolean(current.degraded || session.degraded || degradationReasons.length),
+    reasonCodes: [...new Set([...(current.reasonCodes ?? []), ...(session.reasonCodes ?? [])])].sort(),
+    evidenceComplete: current.evidenceComplete === true && session.evidenceComplete === true,
+    failMode: current.failMode === 'FAIL_CLOSED' || session.failMode === 'FAIL_CLOSED' ? 'FAIL_CLOSED'
+      : degradationReasons.length > 0 ? 'DEGRADED' : current.failMode ?? session.failMode ?? 'NORMAL',
   };
+  // A combined-history transformation never describes the current response body.
+  if (action !== current.action) {
+    const { transformedText: _text, transform: _transform, ...withoutTransform } = result;
+    return withoutTransform;
+  }
+  return result;
 }
 
 function requestWithSecureMemory(
@@ -98,12 +101,13 @@ function requestWithSecureMemory(
           contentHash: createHash('sha256').update(memoryText, 'utf8').digest('hex'),
           parentEnvelopeIds: [],
           policyVersion: request.context.policyBundleId,
-          eventSeq: snapshot.lastEventSequence,
+          eventSeq: 0,
           contentStart: 0,
           contentEnd: memoryText.length,
         },
-        ...currentEnvelopes.map((envelope) => ({
+        ...currentEnvelopes.map((envelope, index) => ({
           ...envelope,
+          eventSeq: index + 1,
           contentStart: envelope.contentStart + memoryText.length,
           contentEnd: envelope.contentEnd + memoryText.length,
         })),

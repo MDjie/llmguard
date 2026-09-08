@@ -1,3 +1,4 @@
+import { ruleMatchConstraintsSchema } from '@/lib/guard-engine-v2/rule-constraints';
 import { z } from 'zod';
 import { guardRequestSchema } from './guard-v1';
 
@@ -14,6 +15,7 @@ export const dictionaryLayerSchema = z.enum([
 ]);
 
 export const dictionaryEntrySchema = z.object({
+  matchConstraints: ruleMatchConstraintsSchema.optional(),
   canonicalTermId: identifier.optional(),
   sourceIds: z.array(identifier).min(1).max(32).optional(),
   actionHint: identifier.optional(),

@@ -4,7 +4,7 @@ import type {
   OriginSpan,
 } from './types';
 
-export const NORMALIZATION_ALGORITHM_VERSION = 'guard-normalization-3.0.0';
+export const NORMALIZATION_ALGORITHM_VERSION = 'guard-normalization-3.2.0';
 
 export interface NormalizationBudget {
   readonly maxRounds: number;
@@ -22,6 +22,13 @@ export interface NormalizationResult {
   readonly views: readonly NormalizedView[];
   readonly totalOutputBytes: number;
   readonly elapsedMs: number;
+  readonly coverageState: 'COMPLETE' | 'PARTIAL';
+  readonly reasonCodes: readonly string[];
+  readonly attemptedDecoders: readonly string[];
+  readonly exhaustedBudgets?: readonly (keyof NormalizationBudget)[];
+  readonly unexpandedViews: number;
+  readonly depthBoundedViews: number;
+  readonly scope: { readonly maxDepth: number; readonly maxRounds: number };
 }
 
 interface CandidateView {
@@ -513,6 +520,8 @@ export function normalizeWithBudget(
   input: string,
   overrides: Partial<NormalizationBudget> = {},
   now: () => number = () => performance.now(),
+  sources?: readonly { readonly id: string; readonly start: number; readonly end: number }[],
+  failureMode: 'throw' | 'partial' = 'throw',
 ): NormalizationResult {
   const budget = resolvedBudget(overrides);
   const startedAt = now();
@@ -523,46 +532,57 @@ export function normalizeWithBudget(
   if (inputBytes > budget.maxTotalBytes) {
     throw new NormalizationBudgetExceededError('maxTotalBytes');
   }
-  const original: NormalizedView = {
-    id: 'original',
-    text: input,
-    originSpans: Array.from({ length: input.length }, (_, index) => ({
-      start: index,
-      end: index + 1,
-    })),
-    transforms: [],
-    confidence: 1,
-    depth: 0,
-  };
-  const views: NormalizedView[] = [original];
-  const queue: NormalizedView[] = [original];
-  const seenText = new Set([input]);
+  const partitions = sources ?? [{ id: '', start: 0, end: input.length }];
+  let cursor = 0;
+  for (const source of partitions) {
+    if (source.start !== cursor || source.end < source.start || source.end > input.length) throw new Error('NORMALIZATION_SOURCE_PARTITION_INVALID');
+    cursor = source.end;
+  }
+  if (cursor !== input.length || partitions.length === 0) throw new Error('NORMALIZATION_SOURCE_PARTITION_INVALID');
+  if (partitions.length > 256) throw new Error('NORMALIZATION_SOURCE_BUDGET_EXCEEDED');
+  const maximumViews=budget.maxViews+partitions.length-1;
+  const views: NormalizedView[] = partitions.map((source,index) => ({
+    id: partitions.length === 1 ? 'original' : 'original_source_' + index,
+    ...(source.id ? { sourceEnvelopeId:source.id } : {}),
+    text:input.slice(source.start,source.end),
+    originSpans:Array.from({length:source.end-source.start},(_,offset)=>({start:source.start+offset,end:source.start+offset+1})),
+    transforms:[],confidence:1,depth:0,
+  }));
+  const queue = [...views];
+  const textKey = (sourceId: string | undefined, text: string) => JSON.stringify([sourceId ?? '',text]);
+  const seenText = new Set(views.map(view=>textKey(view.sourceEnvelopeId,view.text)));
   const methodSequences = new Map<string, number>();
   let totalOutputBytes = inputBytes;
+  const reasons = new Set<string>();
+  const attemptedDecoders = new Set<string>();
+  let depthBoundedViews = 0;
 
-  while (queue.length > 0 && views.length < budget.maxViews) {
+  const exhaustedBudgets = new Set<keyof NormalizationBudget>();
+  try {
+  explore: while (queue.length > 0) {
     if (now() - startedAt > budget.maxCpuMs) {
       throw new NormalizationBudgetExceededError('maxCpuMs');
     }
     const source = queue.shift()!;
     const sourceDepth = source.depth ?? 0;
-    if (sourceDepth >= Math.min(budget.maxDepth, budget.maxRounds)) continue;
+    if (sourceDepth >= Math.min(budget.maxDepth, budget.maxRounds)) { depthBoundedViews++; continue; }
     let branchCount = 0;
     for (const decoder of NORMALIZATION_DECODER_REGISTRY) {
+      attemptedDecoders.add(decoder.id);
       const candidates = decoder.decode(source);
       branchCount += candidates.length;
       if (branchCount > budget.maxBranchesPerView) {
         throw new NormalizationBudgetExceededError('maxBranchesPerView');
       }
       for (const candidate of candidates) {
-        if (seenText.has(candidate.text)) continue;
+        if (seenText.has(textKey(source.sourceEnvelopeId,candidate.text))) continue;
         const candidateBytes = assertCandidateBudget(
           candidate,
           inputBytes,
           totalOutputBytes,
           budget,
         );
-        if (views.length >= budget.maxViews) break;
+        if (views.length >= maximumViews) { reasons.add('NORMALIZATION_VIEW_LIMIT'); exhaustedBudgets.add('maxViews'); break explore; }
         const sequence = methodSequences.get(candidate.method) ?? 0;
         methodSequences.set(candidate.method, sequence + 1);
         const transform: NormalizationTransform = {
@@ -576,6 +596,7 @@ export function normalizeWithBudget(
           : `${candidate.method}_${sequence}`;
         const view: NormalizedView = {
           id: viewId,
+          sourceEnvelopeId: source.sourceEnvelopeId,
           text: candidate.text,
           originSpans: candidate.originSpans,
           transforms: [...(source.transforms ?? []), transform],
@@ -583,24 +604,35 @@ export function normalizeWithBudget(
           depth: sourceDepth + 1,
           sourceViewId: source.id,
         };
-        seenText.add(candidate.text);
+        seenText.add(textKey(source.sourceEnvelopeId,candidate.text));
         totalOutputBytes += candidateBytes;
         views.push(view);
         queue.push(view);
       }
-      if (views.length >= budget.maxViews) break;
     }
   }
 
-  const elapsedMs = now() - startedAt;
-  if (elapsedMs > budget.maxCpuMs) {
+  if (now() - startedAt > budget.maxCpuMs) {
     throw new NormalizationBudgetExceededError('maxCpuMs');
   }
+  } catch (error: unknown) {
+    if (failureMode !== 'partial' || !(error instanceof NormalizationBudgetExceededError)) throw error;
+    exhaustedBudgets.add(error.budgetName);
+    reasons.add('NORMALIZATION_BUDGET_EXCEEDED');
+  }
+  const elapsedMs = now() - startedAt;
   return {
     algorithmVersion: NORMALIZATION_ALGORITHM_VERSION,
     views,
     totalOutputBytes,
     elapsedMs,
+    coverageState: reasons.size > 0 ? 'PARTIAL' : 'COMPLETE',
+    reasonCodes: [...reasons].sort(),
+    attemptedDecoders: [...attemptedDecoders],
+    exhaustedBudgets: [...exhaustedBudgets],
+    unexpandedViews: reasons.size > 0 ? queue.length + 1 : 0,
+    depthBoundedViews,
+    scope: { maxDepth: budget.maxDepth, maxRounds: budget.maxRounds },
   };
 }
 

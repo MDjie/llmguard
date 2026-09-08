@@ -68,8 +68,8 @@ describe('multi-turn session decision', () => {
 
   it('does not weaken or replace an equally strict current-turn decision', () => {
     const current = decision('BLOCK', 'MANDATORY_DENY');
-    expect(chooseSessionDecision(current, decision('WARN'))).toBe(current);
-    expect(chooseSessionDecision(current, decision('BLOCK'))).toBe(current);
+    expect(chooseSessionDecision(current, decision('WARN')).action).toBe('BLOCK');
+    expect(chooseSessionDecision(current, decision('BLOCK')).observations).toEqual(expect.arrayContaining([...current.observations]));
   });
 
   it('preserves anonymized step order for a multi-turn reasoning attack', () => {

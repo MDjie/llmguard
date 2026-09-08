@@ -23,6 +23,7 @@ const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
   {
+    files: ['**/*.{js,jsx,mjs,ts,tsx,mts,cts}'],
     rules: {
       'import/no-cycle': ['error', { ignoreExternal: true }],
       'react-hooks/set-state-in-effect': 'off',
@@ -54,6 +55,9 @@ const eslintConfig = defineConfig([
     'test-results/**',
     '.tmp/**',
     '.artifact-build/**',
+    '输出/**',
+    'eval-data/**',
+    '文档/**',
     // Script files (CommonJS):
     'scripts/**/*.js',
   ]),

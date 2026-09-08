@@ -101,7 +101,8 @@
     "test:integration:media-transforms": "tsx scripts/integration/check-media-transforms.ts",
     "acceptance:resilience": "tsx scripts/acceptance/runtime-resilience.ts",
     "test:integration:resilience": "tsx scripts/integration/check-runtime-resilience.ts",
-    "acceptance:v11": "node scripts/acceptance/v11-readiness.mjs"
+    "acceptance:v11": "node scripts/acceptance/v11-readiness.mjs",
+    "detection:replay-offline": "tsx scripts/content-safety/replay-offline.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

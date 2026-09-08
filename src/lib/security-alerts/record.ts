@@ -1,3 +1,4 @@
+import { decisionFunnel } from '@/lib/guard-engine-v2/decision-funnel';
 import { createHash } from 'node:crypto';
 import type { ContentSegment } from '../../../packages/contracts/generated/typescript/gateway-v2';
 import type { GuardDecision } from '@guardllm/contracts';
@@ -43,7 +44,7 @@ export function fromGuardDecision(input: { sourceId: string; requestId: string; 
   });
   return decisionRecordedSchema.parse({ version: '1.0', source: 'GATEWAY', sourceId: input.sourceId, requestId: input.requestId, sessionId: input.sessionId, stage: input.stage,
     traceId: decision.traceId, decisionId: decision.decisionId, bundleId: decision.bundleId, action: decision.action, occurredAt: new Date().toISOString(),
-    coverage: { evidenceComplete: decision.evidenceComplete ?? false, degraded: decision.degraded, reasonCodes: decision.degradationReasons }, findings,
+    coverage: { detectionFunnel: decisionFunnel(decision), evidenceComplete: decision.evidenceComplete ?? false, degraded: decision.degraded, reasonCodes: decision.degradationReasons }, findings,
   });
 }
 

@@ -1,3 +1,5 @@
+import { detectionCapabilitiesSchema } from './detection-capabilities';
+import { ruleMatchConstraintsSchema } from '@/lib/guard-engine-v2/rule-constraints';
 import { createHash, type KeyObject } from 'node:crypto';
 import { and, desc, eq } from 'drizzle-orm';
 import { z } from 'zod';
@@ -23,6 +25,7 @@ import { semanticCoveragePolicySchema } from '@/lib/guard-engine-v2/semantic-cov
 const sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
 
 const ruleSchema = z.object({
+  matchConstraints: ruleMatchConstraintsSchema.optional(),
   sourceIds: z.array(z.string()).optional(),
   actionHint: z.string().optional(),
   sourceMatchMode: z.string().optional(),
@@ -98,6 +101,7 @@ const payloadSchema = z.object({
   semanticDecisionMode:z.literal('coverage-v1').optional(),
   semanticCoverage:semanticCoveragePolicySchema.optional(),
   judgeProfiles: judgeProfileListSchema.optional(),
+  detectionCapabilities:detectionCapabilitiesSchema.optional(),
   schemaVersion: z.literal('1.0'),
   policyId: z.string(),
   policyVersion: z.number().int().positive(),

@@ -1,3 +1,6 @@
+import { inspectRiskRelations, protectedTargetKeys, RISK_RELATION_VERSION } from '@/lib/guard-engine-v2/risk-relations';
+import { classifyContextRole } from '@/lib/guard-engine-v2/intent-context';
+import { combineActionConstraints } from '@/lib/guard-engine-v2/action-constraints';
 import { createHash } from 'node:crypto';
 import type { GuardDecision, GuardRequest, RiskLevel } from '@guardllm/contracts';
 import type { SecureMemoryRiskState } from './types';
@@ -10,6 +13,13 @@ export type SessionIntentPhase =
   | 'BENIGN';
 
 export interface SessionIntentNode {
+  readonly relationVersion?: string;
+  readonly scopeDigest?: string;
+  readonly targetFingerprints?: readonly string[];
+  readonly continuationOf?: readonly string[];
+  readonly relationshipRisk?: boolean;
+  readonly confirmedBehaviorScore?: number;
+  readonly faultOnly?: boolean;
   readonly id: string;
   readonly occurredAt: string;
   readonly lastDecayedAt: string;
@@ -65,26 +75,6 @@ const PHASE_PATTERNS: ReadonlyArray<readonly [Exclude<SessionIntentPhase, 'BENIG
   ['EXECUTION_REQUEST', /(?:\b(?:execute|run|apply|assemble|combine|reconstruct|follow\s+these\s+instructions)\b|执行|运行|拼接|组合|还原|照做)/iu],
 ];
 
-const ACTION_SCORE: Readonly<Record<GuardDecision['action'], number>> = {
-  ALLOW: 0,
-  WARN: 0.25,
-  MASK: 0.35,
-  REWRITE: 0.45,
-  REQUIRE_REVIEW: 0.7,
-  SAFE_RESPONSE: 0.85,
-  BLOCK: 1,
-};
-
-const ACTION_RANK: Readonly<Record<GuardDecision['action'], number>> = {
-  ALLOW: 0,
-  WARN: 1,
-  MASK: 2,
-  REWRITE: 2,
-  REQUIRE_REVIEW: 3,
-  SAFE_RESPONSE: 4,
-  BLOCK: 5,
-};
-
 function clampScore(value: number): number {
   return Math.max(0, Math.min(1, Math.round(value * 10_000) / 10_000));
 }
@@ -114,18 +104,15 @@ function evidenceDigests(request: GuardRequest, decision: GuardDecision): readon
     .digest('hex')];
 }
 
-function initialScore(phases: readonly SessionIntentPhase[], decision: GuardDecision): number {
-  const phaseScore = phases.reduce((total, phase) => total + (
-    phase === 'BOUNDARY_PROBE' ? 0.18
-      : phase === 'FRAGMENT_REQUEST' ? 0.22
-        : phase === 'SENSITIVE_TARGET' ? 0.38
-          : phase === 'EXECUTION_REQUEST' ? 0.42
-            : 0
-  ), 0);
-  const observationScore = decision.observations
-    .filter(isConfirmedObservation)
-    .reduce((maximum, observation) => Math.max(maximum, observation.score), 0);
-  return clampScore(Math.max(phaseScore, observationScore, ACTION_SCORE[decision.action]));
+function behavioralScore(decision: GuardDecision): number {
+  return decision.observations.filter(o=>isConfirmedObservation(o) && o.detectorId !== 'session-risk-state' &&
+    /^(?:prompt_injection|reasoning_attack|malicious_code|illegal_content|fraud_scam|violence_hate|self_harm)(?:[.]|$)/u.test(o.riskType))
+    .reduce((maximum,o)=>Math.max(maximum,o.score),0);
+}
+function initialScore(phases: readonly SessionIntentPhase[], decision: GuardDecision, faultOnly: boolean): number {
+  if(faultOnly)return 0;
+  const phaseScore=phases.reduce((total,phase)=>total+(phase==='BOUNDARY_PROBE'?0.18:phase==='FRAGMENT_REQUEST'?0.22:phase==='SENSITIVE_TARGET'?0.3:phase==='EXECUTION_REQUEST'?0.3:0),0);
+  return clampScore(Math.max(Math.min(0.35,phaseScore),behavioralScore(decision)));
 }
 
 function decayNode(node: SessionIntentNode, at: Date, benignTurn: boolean): SessionIntentNode {
@@ -137,23 +124,33 @@ function decayNode(node: SessionIntentNode, at: Date, benignTurn: boolean): Sess
     ...node,
     lastDecayedAt: at.toISOString(),
     decayedScore: clampScore(node.decayedScore * timeFactor * turnFactor),
+    confirmedBehaviorScore:clampScore((node.confirmedBehaviorScore??0)*timeFactor*turnFactor),
   };
 }
 
 export function detectProgressiveIntentChain(
   nodes: readonly SessionIntentNode[],
 ): { readonly depth: number; readonly matchedNodeIds: readonly string[] } {
-  let expected = 0;
-  const matchedNodeIds: string[] = [];
-  for (const node of nodes) {
-    if (node.decayedScore < 0.08) continue;
-    if (node.phases.includes(PHASE_ORDER[expected])) {
-      matchedNodeIds.push(node.id);
-      expected += 1;
-      if (expected === PHASE_ORDER.length) break;
+  let best: {depth:number;matchedNodeIds:string[]}={depth:0,matchedNodeIds:[]};
+  for(let seed=0;seed<nodes.length;seed++){
+    const first=nodes[seed];
+    if(!first.phases.includes('BOUNDARY_PROBE') || !first.scopeDigest || !first.targetFingerprints?.length || first.faultOnly)continue;
+    let expected=1;let previous=first;let risk=Boolean(first.relationshipRisk);
+    const matched=[first.id];
+    for(const node of nodes.slice(seed+1)){
+      if(node.decayedScore<0.08 || node.faultOnly || node.scopeDigest!==first.scopeDigest)continue;
+      const sameTarget=node.targetFingerprints?.some(target=>first.targetFingerprints?.includes(target));
+      const linked=node.continuationOf?.includes(previous.id);
+      if(!sameTarget&&!linked)continue;
+      if(node.phases.includes(PHASE_ORDER[expected])){
+        matched.push(node.id);previous=node;risk ||= Boolean(node.relationshipRisk);expected++;
+        if(expected===PHASE_ORDER.length)break;
+      }
     }
+    const depth=risk?expected:Math.min(expected,2);
+    if(depth>best.depth)best={depth,matchedNodeIds:matched.slice(0,depth)};
   }
-  return { depth: expected, matchedNodeIds };
+  return best;
 }
 
 function stateFor(
@@ -161,16 +158,15 @@ function stateFor(
   nodes: readonly SessionIntentNode[],
   chainDepth: number,
 ): { readonly state: SecureMemoryRiskState; readonly reasonCode: string } {
-  const aggregate = nodes.reduce((total, node) => total + node.decayedScore, 0);
-  const peak = nodes.reduce((maximum, node) => Math.max(maximum, node.decayedScore), 0);
-  if (decision.action === 'BLOCK' || chainDepth >= 4 || aggregate >= 2.4) {
+  const aggregate = nodes.reduce((total, node) => total + (node.confirmedBehaviorScore ?? 0), 0);
+  const peak = nodes.reduce((maximum, node) => Math.max(maximum, node.confirmedBehaviorScore ?? 0), 0);
+  if (behavioralScore(decision) >= 0.95 || chainDepth >= 4 || aggregate >= 2.4) {
     return {
       state: 'LOCKED',
       reasonCode: chainDepth >= 4 ? 'SESSION_PROGRESSIVE_CHAIN_COMPLETE' : 'SESSION_CRITICAL_RISK',
     };
   }
   if (
-    decision.action === 'SAFE_RESPONSE' || decision.action === 'REQUIRE_REVIEW' ||
     chainDepth >= 3 || aggregate >= 1.25 || peak >= 0.85
   ) {
     return {
@@ -178,7 +174,7 @@ function stateFor(
       reasonCode: chainDepth >= 3 ? 'SESSION_PROGRESSIVE_CHAIN_ESCALATED' : 'SESSION_ACCUMULATED_RISK',
     };
   }
-  if (nodes.some((node) => node.decayedScore >= 0.16) || decision.action !== 'ALLOW') {
+  if (nodes.some((node) => node.decayedScore >= 0.16)) {
     return { state: 'WATCH', reasonCode: 'SESSION_RISK_WATCH' };
   }
   return { state: 'NORMAL', reasonCode: 'SESSION_RISK_DECAYED' };
@@ -193,9 +189,20 @@ export function advanceSessionRiskState(input: {
   readonly occurredAt?: Date;
 }): SessionRiskAssessment {
   const occurredAt = input.occurredAt ?? new Date();
-  const phases = classifyPhases(input.request.content.text ?? '');
+  const text=input.request.content.text??'';
+  const confirmed=behavioralScore(input.decision);
+  const faultOnly=confirmed===0 && Boolean(input.decision.degraded || input.decision.failMode==='FAIL_CLOSED' || input.decision.degradationReasons.length);
+  const contextual=classifyContextRole(text).suppressLexicalBlock;
+  const phases:readonly SessionIntentPhase[]=faultOnly||contextual?['BENIGN']:classifyPhases(text);
+  const scopeDigest=createHash('sha256').update(JSON.stringify([input.request.context.tenantId,input.request.context.applicationId,input.request.context.sessionId??''])).digest('hex');
+  const targetFingerprints=protectedTargetKeys(text).map(target=>createHash('sha256').update(scopeDigest+':'+target).digest('hex'));
+  const reference=/\b(?:continue from|previous|same|those|these|it|every part)\b|继续上次|上述|前述|同一|这些|照做/iu.test(text);
+  const preceding=input.previousNodes.at(-1);
+  const continuationOf=reference&&preceding?.scopeDigest===scopeDigest&&!preceding.faultOnly&&Date.parse(preceding.occurredAt)>=occurredAt.getTime()-30*60*1000?[preceding.id]:[];
+  const relationshipRisk=!faultOnly&&!contextual&&inspectRiskRelations([{id:'turn',text,sourceType:'USER',instructionCapability:'ALLOWED'}]).relations.some(relation=>relation.status==='CONFIRMED');
   const benignTurn = phases.length === 1 && phases[0] === 'BENIGN' && input.decision.action === 'ALLOW';
   const decayed = input.previousNodes
+    .filter(node=>node.scopeDigest===undefined||node.scopeDigest===scopeDigest)
     .map((node) => decayNode(node, occurredAt, benignTurn))
     .filter((node) => node.decayedScore >= 0.02);
   const riskTypes = [...new Set(input.decision.observations
@@ -209,8 +216,9 @@ export function advanceSessionRiskState(input: {
     occurredAt: occurredAt.toISOString(),
     lastDecayedAt: occurredAt.toISOString(),
     phases,
+    relationVersion:RISK_RELATION_VERSION,scopeDigest,targetFingerprints,continuationOf,relationshipRisk,confirmedBehaviorScore:confirmed,faultOnly,
     riskTypes,
-    decayedScore: initialScore(phases, input.decision),
+    decayedScore: initialScore(phases, input.decision, faultOnly),
     sources: sourceKinds(input.request),
     evidenceHmacs: evidenceDigests(input.request, input.decision),
     action: input.decision.action,
@@ -230,8 +238,8 @@ export function advanceSessionRiskState(input: {
     ...(input.previousTransitions ?? []),
     ...(transition ? [transition] : []),
   ].slice(-MAX_TRANSITIONS);
-  const riskVector = Object.fromEntries(intentNodes.flatMap((item) =>
-    item.riskTypes.map((riskType) => [riskType, item.decayedScore]))) as Record<string, number>;
+  const riskVector:Record<string,number>={};
+  for(const item of intentNodes)for(const riskType of item.riskTypes)riskVector[riskType]=Math.max(riskVector[riskType]??0,item.confirmedBehaviorScore??0);
   const recentRiskTypes = [...new Set(intentNodes.flatMap((item) => item.riskTypes))].slice(-32);
   const escalationLevel = next.state === 'NORMAL' ? 0
     : next.state === 'WATCH' ? 1
@@ -320,15 +328,17 @@ export function applySessionRiskControl(
   decision: GuardDecision,
   control: SessionRiskControl,
 ): GuardDecision {
-  if (!control.minimumAction || ACTION_RANK[decision.action] >= ACTION_RANK[control.minimumAction]) {
+  const action = combineActionConstraints([decision.action, ...(control.minimumAction ? [control.minimumAction] : [])]).action;
+  if (!control.minimumAction || action === decision.action) {
     return control.enhancedDetection
       ? { ...decision, policyPath: [...decision.policyPath, `session-state:${control.state.toLowerCase()}`] }
       : decision;
   }
+  const {transformedText:_transformedText,transform:_transform,...base}=decision;
   const riskLevel: RiskLevel = control.minimumAction === 'BLOCK' ? 'CRITICAL' : 'HIGH';
   return {
-    ...decision,
-    action: control.minimumAction,
+    ...base,
+    action,
     riskLevel,
     observations: [
       ...decision.observations,

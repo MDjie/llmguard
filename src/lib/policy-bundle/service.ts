@@ -1,3 +1,5 @@
+import { assertPublishableDetectionCapabilities } from './detection-capabilities';
+import { parseCompiledPolicyBundlePayload } from './runtime';
 import { synchronizeGatewayPublication } from '@/lib/gateway-runtime/publication';
 import { and, desc, eq, ne, sql } from 'drizzle-orm';
 import { db } from '@/storage/database/shared/db';
@@ -151,12 +153,13 @@ export async function transitionPolicyBundle(
     }
 
     let evaluation: typeof evaluationRuns.$inferSelect | undefined;
-    if (action === 'record_test_pass') {
-      if (!options.evaluationRunId) {
+    if (['record_test_pass','shadow','canary','activate'].includes(action)) {
+      const evaluationRunId = action === 'record_test_pass' ? options.evaluationRunId : bundle.testEvidenceId;
+      if (!evaluationRunId) {
         throw new PolicyBundleTransitionError('BUNDLE_EVALUATION_REQUIRED', 'A completed evaluation run is required');
       }
       [evaluation] = await transaction.select().from(evaluationRuns).where(and(
-        eq(evaluationRuns.id, options.evaluationRunId),
+        eq(evaluationRuns.id, evaluationRunId),
         eq(evaluationRuns.bundleId, bundleId),
         scopePredicate(evaluationRuns, scope),
       )).limit(1).for('update');
@@ -169,6 +172,7 @@ export async function transitionPolicyBundle(
       }
     }
 
+    if(['record_test_pass','shadow','canary','activate'].includes(action))assertPublishableDetectionCapabilities(parseCompiledPolicyBundlePayload(bundle.canonicalJson));
     const currentState = bundle.state as PolicyBundleState;
     const nextState = nextPolicyBundleState(currentState, action);
     const now = new Date();

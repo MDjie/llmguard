@@ -1,3 +1,4 @@
+import { assessRuleMatch } from './rule-constraints';
 import { safeRegexMatches } from '@/lib/detection/safe-regex';
 import { textEvidence } from './evidence';
 import { classifyContextRole, type ContextRole } from './intent-context';
@@ -168,10 +169,15 @@ export class RuleDetector implements GuardDetector {
 
   async detect(context: GuardDetectorContext): Promise<readonly Observation[]> {
     const observations: Observation[] = [];
+    let diagnosticCount = 0;
     const evaluationTime = this.now();
-    const lexicalMatches = new Map(
-      context.views.map((view) => [view.id, this.matcher.find(view)]),
-    );
+    // Signed literal hard denies also apply to the exact assembled text, without cross-source decoding.
+    // Every hit keeps all intersecting parent envelopes; ordinary rules remain source-local.
+    const text=context.request.content.text??'';
+    const assembled:NormalizedView|undefined=context.envelopes.length>1&&this.rules.some(rule=>rule.mandatoryDeny)?{
+      id:'assembled_original',text,originSpans:Array.from({length:text.length},(_,index)=>({start:index,end:index+1})),transforms:[],confidence:1,depth:0,
+    }:undefined;
+    const views=assembled?[...context.views,assembled]:context.views;
     // 每个（例外, 视图）的出现位置只计算一次：
     // 此前在每条规则×每条匹配上全量重扫例外文本，规则/例外/视图一多是平方级开销
     const exceptionOccurrences = new Map<
@@ -194,6 +200,37 @@ export class RuleDetector implements GuardDetector {
       }
       return occurrences;
     };
+    const retain = (view: NormalizedView, rule: RuleSpec, start: number, end: number): boolean => {
+      if (view.id==='assembled_original'&&!rule.mandatoryDeny) return false;
+      if (!ruleIsActiveForRequest(rule,context,evaluationTime)) return false;
+      const origin = mapViewRange(view,start,end);
+      const sourceScope = context.envelopes.find(e => e.contentStart <= origin.start && e.contentEnd >= origin.end);
+      const constraints = assessRuleMatch(view.text,{start,end},rule.matchConstraints,rule.caseSensitive);
+      if (!constraints.matched || constraints.evidence.some(range => {
+        const mapped = mapViewRange(view,range.start,range.end);
+        return context.envelopes.length > 0 && (!sourceScope || mapped.start < sourceScope.contentStart || mapped.end > sourceScope.contentEnd);
+      })) return false;
+      if (!rule.mandatoryDeny && this.exceptions.some(exception =>
+        exception.targetRuleIds?.includes(rule.id) && exceptionAppliesToRisk(exception,rule) &&
+        exceptionIsActiveForRequest(exception,context,evaluationTime) &&
+        matchWithinException({raw:view.text.slice(start,end),index:start},occurrencesFor(view,exception)))) return false;
+      const classification = classifyContextRole(context.request.content.text ?? '',origin,
+        sourceScope ? {start:sourceScope.contentStart,end:sourceScope.contentEnd} : undefined);
+      if (!rule.mandatoryDeny && (this.decisionPolicyVersion === 1 || rule.matchConstraints?.contextPolicy === 'LOCAL_INTENT_V1') &&
+          (context.envelopes.length === 0 || sourceScope) &&
+          (CONTEXTUAL_RISK_TYPES.has(rule.riskType) || rule.matchConstraints?.contextPolicy === 'LOCAL_INTENT_V1') &&
+          classification.suppressLexicalBlock) {
+        if (diagnosticCount++ < 128) observations.push({
+          detectorId:this.id,detectorVersion:this.version,riskType:rule.riskType,ruleId:rule.id,ruleVersion:rule.ruleVersion,
+          status:'SKIPPED',decisionRole:'CLEARED',contextRole:classification.role,score:0,severity:'NONE',scoreMeaning:'POLICY',
+          reasonCode:'CONTEXT_SUPPRESSED_OCCURRENCE',evidence:[textEvidence(context,view,start,end,view.text.slice(start,end),'[语境抑制]')],
+        });
+        return false;
+      }
+      return true;
+    };
+    const lexicalMatches = new Map(views.map(view =>
+      [view.id,this.matcher.find(view,(rule,start,end)=>retain(view,rule,start,end))]));
     for (const rule of this.ordered) {
       if (context.signal.aborted) throw context.signal.reason;
       if (!ruleIsActiveForRequest(rule, context, evaluationTime)) continue;
@@ -213,35 +250,64 @@ export class RuleDetector implements GuardDetector {
             exceptionAppliesToRisk(exception, rule) &&
             exceptionIsActiveForRequest(exception, context, evaluationTime));
       const evidence = [];
+      const evidenceRanges = new Set<string>();
       const roles = new Set<ContextRole>();
       let strongestViewConfidence = 0;
       let approximate = false;
-      for (const view of context.views) {
+      for (const view of views) {
+        if(view.id==='assembled_original'&&!rule.mandatoryDeny)continue;
+        const modes = rule.matchConstraints?.normalizationModes;
+        if (modes && !modes.includes((view.depth ?? 0) === 0 ? 'original' : (view.transforms?.at(-1)?.method ?? view.id))) continue;
         const viewMatches = rule.matchType === 'regex'
-          ? simpleOccurrences(view, rule).map((match): LexicalMatch => ({
+          ? safeRegexMatches(view.text,rule.pattern,rule.caseSensitive,match => retain(view,rule,match.index,match.index+match.raw.length)).slice(0,100).map((match): LexicalMatch => ({
               ruleId: rule.id,
               ...match,
               approximate: false,
             }))
           : lexicalMatches.get(view.id)?.get(rule.id) ?? [];
         for (const match of viewMatches) {
+          const constraint = assessRuleMatch(view.text,{start:match.index,end:match.index+match.raw.length},rule.matchConstraints,rule.caseSensitive);
+          if (!constraint.matched) continue;
           if (targetedExceptions.some((exception) =>
             matchWithinException(match, occurrencesFor(view, exception)))) continue;
           const origin = mapViewRange(view, match.index, match.index + match.raw.length);
+          const sourceScope = context.envelopes.find(envelope => envelope.contentStart <= origin.start && envelope.contentEnd >= origin.end);
+          if (constraint.evidence.some(range => {
+            const atomOrigin=mapViewRange(view,range.start,range.end);
+            return context.envelopes.length > 0 && (!sourceScope || atomOrigin.start < sourceScope.contentStart || atomOrigin.end > sourceScope.contentEnd);
+          })) continue;
           const contextRole = classifyContextRole(
             context.request.content.text ?? '',
             origin,
+            sourceScope ? { start: sourceScope.contentStart, end: sourceScope.contentEnd } : undefined,
           );
           if (
             !rule.mandatoryDeny &&
-            this.decisionPolicyVersion === 1 &&
-            CONTEXTUAL_RISK_TYPES.has(rule.riskType) &&
+            (this.decisionPolicyVersion === 1 || rule.matchConstraints?.contextPolicy === 'LOCAL_INTENT_V1') &&
+            (context.envelopes.length === 0 || sourceScope !== undefined) &&
+            (CONTEXTUAL_RISK_TYPES.has(rule.riskType) || rule.matchConstraints?.contextPolicy === 'LOCAL_INTENT_V1') &&
             contextRole.suppressLexicalBlock
-          ) continue;
+          ) {
+            if (diagnosticCount < 128) {
+              observations.push({ detectorId: this.id, detectorVersion: this.version, riskType: rule.riskType,
+                ruleId: rule.id, ruleVersion: rule.ruleVersion, status: 'SKIPPED', decisionRole: 'CLEARED',
+                contextRole: contextRole.role, score: 0, severity: 'NONE', scoreMeaning: 'POLICY',
+                reasonCode: 'CONTEXT_SUPPRESSED_OCCURRENCE',
+                evidence: [textEvidence(context, view, match.index, match.index + match.raw.length, match.raw, '[语境抑制]')] });
+              diagnosticCount++;
+            }
+            continue;
+          }
+          const rootKey = String(origin.start) + ':' + String(origin.end);
+          if (evidenceRanges.has(rootKey)) continue;
+          evidenceRanges.add(rootKey);
           roles.add(contextRole.role);
           approximate ||= match.approximate;
           strongestViewConfidence = Math.max(strongestViewConfidence, view.confidence ?? 1);
           if (evidence.length >= 100) break; // 证据条数封顶：截断只影响证据数量，不改变判定
+          for (const atom of constraint.evidence) {
+            if (evidence.length < 99) evidence.push(textEvidence(context,view,atom.start,atom.end,view.text.slice(atom.start,atom.end),'[关系证据]'));
+          }
           evidence.push(textEvidence(
             context,
             view,
@@ -262,10 +328,14 @@ export class RuleDetector implements GuardDetector {
       observations.push({
         detectorId: this.id,
         detectorVersion: this.version,
-        ...(this.decisionPolicyVersion === 2 ? { decisionRole: rule.mandatoryDeny ? 'HARD_DENY' as const : 'CANDIDATE' as const, scoreMeaning: 'UNCALIBRATED' as const } : {}),
+        ...(rule.matchConstraints?.evidenceClass || this.decisionPolicyVersion === 2 ? {
+          decisionRole: rule.mandatoryDeny ? 'HARD_DENY' as const
+            : rule.matchConstraints?.evidenceClass === 'DETERMINISTIC_RISK' ? 'CONFIRMED_RISK' as const : 'CANDIDATE' as const,
+        } : {}),
         riskType: rule.riskType,
         category: rule.riskType,
         confidence: score,
+        scoreMeaning: 'POLICY',
         ruleId: rule.id,
         ruleVersion: rule.ruleVersion,
         canonicalTermId: rule.canonicalTermId,

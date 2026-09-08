@@ -1,3 +1,5 @@
+import { currentDetectionCapabilities } from './detection-capabilities';
+import { ruleMatchConstraintsSchema } from '@/lib/guard-engine-v2/rule-constraints';
 import type { CachedPolicyConfig } from '@/lib/detection/types';
 import { builtInOutputResponseTemplates } from '@/lib/output-control/templates';
 import { validateSafeRegexPattern } from '@/lib/detection/safe-regex';
@@ -163,6 +165,7 @@ export function compilePolicyBundle(
           pattern: rule.pattern!,
           matchType: rule.matchType,
           caseSensitive: rule.caseSensitive,
+          ...(rule.config.matchConstraints ? {matchConstraints:ruleMatchConstraintsSchema.parse(rule.config.matchConstraints)} : {}),
           score: Math.min(1, Math.max(0, rule.score / 100)),
           mandatoryDeny:
             rule.config.mandatoryDeny === true ||
@@ -173,6 +176,7 @@ export function compilePolicyBundle(
   ];
   requireUniqueIds(sourceRules, 'rules');
   for (const rule of sourceRules) {
+    if(rule.matchConstraints)ruleMatchConstraintsSchema.parse(rule.matchConstraints);
     if (rule.matchType === 'regex') {
       validateSafeRegexPattern(rule.pattern, rule.caseSensitive ? '' : 'i');
     }
@@ -244,6 +248,7 @@ export function compilePolicyBundle(
 
   return {
     schemaVersion: '1.0',
+    detectionCapabilities:currentDetectionCapabilities(),
     policyId: config.policyId,
     policyVersion,
     dimensions,

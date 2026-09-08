@@ -45,7 +45,7 @@ function engine(
 
 describe('content safety intent detector', () => {
   it('is part of the versioned fail-closed baseline DAG', () => {
-    expect(DEFAULT_DETECTOR_DAG.version).toBe('guard-default-dag-4');
+    expect(DEFAULT_DETECTOR_DAG.version).toBe('guard-default-dag-5');
     expect(DEFAULT_DETECTOR_DAG.nodes).toEqual(expect.arrayContaining([
       expect.objectContaining({ detectorId: 'content-safety-intent-baseline', failurePolicy: 'FAIL_CLOSED' }),
       expect.objectContaining({ detectorId: 'protected-context-leak', failurePolicy: 'FAIL_CLOSED' }),
@@ -93,7 +93,7 @@ describe('content safety intent detector', () => {
   ])('does not classify defensive or educational text as actionable: %s', async (text) => {
     const result = await engine().evaluate(request(text));
     expect(result.action).toBe('ALLOW');
-    expect(result.observations).toEqual([]);
+    expect(result.observations.filter(item => item.status === 'MATCH')).toEqual([]);
   });
 
   it('detects an actionable request even when it includes research framing', async () => {
@@ -116,7 +116,8 @@ describe('rule detector defensive-context handling', () => {
       score: 0.95,
     }])]).evaluate(request('请识别常见电信诈骗的主要迹象和防范原则。'));
     expect(result.action).toBe('ALLOW');
-    expect(result.observations).toEqual([]);
+    expect(result.observations.filter(item => item.status === 'MATCH')).toEqual([]);
+    expect(result.observations.some(item => item.reasonCode === 'CONTEXT_SUPPRESSED_OCCURRENCE')).toBe(true);
   });
 
   it('never suppresses a mandatory-deny rule in educational framing', async () => {

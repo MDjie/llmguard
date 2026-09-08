@@ -32,7 +32,7 @@ describe('audio/video timeline fusion', () => {
       expect(result.decisions.audio.action).toBe('ALLOW');
       expect(result.decisions.frames.action).toBe('ALLOW');
       expect(result.action).toBe('BLOCK');
-      expect(result.cooperativeAttack).toBe(true);
+      expect(result.cooperativeAttack).toBe(false);
       expect(result.evidence).toEqual(expect.arrayContaining([
         expect.objectContaining({
           source: 'audio', startMs: 5_000, endMs: 5_500,
@@ -86,7 +86,7 @@ describe('audio/video timeline fusion', () => {
         visual: [],
       });
       expect(cooperative.action).toBe('BLOCK');
-      expect(cooperative.cooperativeAttack).toBe(true);
+      expect(cooperative.cooperativeAttack).toBe(false);
       expect(cooperative.evidence).toEqual(expect.arrayContaining([
         expect.objectContaining({ source: 'user_text', artifactId: 'text-artifact-1' }),
         expect.objectContaining({ source: 'audio', startMs: 500, endMs: 900 }),

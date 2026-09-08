@@ -1,3 +1,6 @@
+import { isEnforcementControl } from './detector-capabilities';
+import { createObservationPolicy } from './observation-policy';
+import { isConfirmedObservation } from './observation-role';
 import { observeGuardDetectorNode } from '@/lib/observability/metrics';
 import type {
   DetectorDagSpec,
@@ -5,6 +8,7 @@ import type {
   GuardDetector,
   GuardDetectorContext,
   Observation,
+  GuardEnginePolicy,
 } from './types';
 
 type NodeStatus = 'MATCH' | 'NO_MATCH' | 'TIMEOUT' | 'ERROR' | 'SKIPPED';
@@ -19,6 +23,7 @@ interface NodeOutcome {
 }
 
 export interface DetectorDagResult {
+  readonly trace:import('./types').GuardEvaluationTrace['nodes'];
   readonly observations: readonly Observation[];
   readonly degradationReasons: readonly string[];
   readonly failClosedReasons: readonly string[];
@@ -77,6 +82,7 @@ export function resolveAndValidateDetectorDag(
       throw new Error('GRD_DETECTOR_DAG_INVALID');
     }
     const detector = detectorsById.get(node.detectorId)!;
+    if (isEnforcementControl(node.detectorId) && node.runCondition !== 'ALWAYS') throw new Error('GRD_ENFORCEMENT_CONTROL_MUST_RUN');
     if (detector.required && node.failurePolicy !== 'FAIL_CLOSED') {
       throw new Error('GRD_DETECTOR_DAG_REQUIRED_NODE_NOT_FAIL_CLOSED');
     }
@@ -206,7 +212,7 @@ async function executeNode(input: {
         batchSize: 1 + (input.context.request.content.artifacts?.length ?? 0),
       });
       return { node: input.node, detector: input.detector, observations, status, attempts,
-        ...(['ERROR','TIMEOUT'].includes(status) ? {failureReason: `${input.detector.id}:unavailable`} : {}),
+        ...(['ERROR','TIMEOUT'].includes(status) || observations.some(o=>o.semanticCoverage==='INCOMPLETE'&&o.failMode==='DEGRADED') ? {failureReason: `${input.detector.id}:unavailable`} : {}),
       };
     } catch {
       lastStatus = nodeSignal.aborted ? 'TIMEOUT' : 'ERROR';
@@ -240,10 +246,10 @@ async function executeNode(input: {
 function shouldRun(
   node: DetectorNodeSpec,
   parentOutcomes: readonly NodeOutcome[],
-  blockThreshold: number,
+  terminal: (observation: Observation) => boolean,
 ): boolean {
   if (node.runCondition === 'ALWAYS') return true;
-  if (node.runCondition === 'WHEN_NO_MANDATORY_DENY') return !parentOutcomes.some(outcome => outcome.observations.some(o => o.status === 'MATCH' && o.reasonCode === 'MANDATORY_DENY'));
+  if (node.runCondition === 'WHEN_NO_MANDATORY_DENY') return !parentOutcomes.some(outcome => outcome.observations.some(o => isConfirmedObservation(o) && (o.reasonCode === 'MANDATORY_DENY' || o.decisionRole === 'HARD_DENY')));
   if (node.runCondition === 'WHEN_PARENT_MATCHES') {
     return parentOutcomes.some((outcome) => outcome.status === 'MATCH');
   }
@@ -253,10 +259,7 @@ function shouldRun(
     );
   }
   return !parentOutcomes.some((outcome) =>
-    outcome.observations.some((observation) =>
-      observation.status === 'MATCH' &&
-      (observation.reasonCode === 'MANDATORY_DENY' || observation.score >= blockThreshold),
-    ),
+    outcome.observations.some(terminal),
   );
 }
 
@@ -267,10 +270,15 @@ export async function executeDetectorDag(input: {
   readonly deadlineSignal: AbortSignal;
   readonly absoluteDeadlineEpochMs: number;
   readonly blockThreshold: number;
+  readonly policy?: GuardEnginePolicy;
   readonly now: () => number;
 }): Promise<DetectorDagResult> {
   const detectorsById = new Map(input.detectors.map((detector) => [detector.id, detector]));
   const outcomes = new Map<string, NodeOutcome>();
+  const { terminal } = createObservationPolicy(input.policy ?? {
+    id: 'compat-dag', bundleId: input.context.request.context.policyBundleId,
+    warnThreshold: 0.5, blockThreshold: input.blockThreshold, failClosedOnRequiredDetectorFailure: true,
+  }, input.context.request.context.direction);
   let reservedCostUnits = 0;
   while (outcomes.size < input.dag.nodes.length) {
     const ready = input.dag.nodes
@@ -278,13 +286,13 @@ export async function executeDetectorDag(input: {
         !outcomes.has(node.id) &&
         node.dependsOn.every((dependency) => outcomes.has(dependency)),
       )
-      .sort((left, right) => left.id.localeCompare(right.id));
+      .sort((left, right) => Number(right.failurePolicy==='FAIL_CLOSED')-Number(left.failurePolicy==='FAIL_CLOSED') || left.id.localeCompare(right.id));
     if (ready.length === 0) throw new Error('GRD_DETECTOR_DAG_CYCLE');
     const queuedAt = input.now();
     const pending = ready.map((node): Promise<NodeOutcome> => {
       const detector = detectorsById.get(node.detectorId)!;
       const parents = node.dependsOn.map((dependency) => outcomes.get(dependency)!);
-      if (!shouldRun(node, parents, input.blockThreshold)) {
+      if (!shouldRun(node, parents, terminal)) {
         observeGuardDetectorNode({
           detectorId: detector.id,
           tier: node.tier,
@@ -305,7 +313,8 @@ export async function executeDetectorDag(input: {
         });
       }
       const maximumNodeCost = node.costUnits * node.maxAttempts;
-      if (reservedCostUnits + maximumNodeCost > input.dag.maximumCostUnits) {
+      const requiredReserve = node.failurePolicy === 'DEGRADE' ? input.dag.nodes.filter(other=>other.id!==node.id && !outcomes.has(other.id) && !ready.slice(0,ready.indexOf(node)).some(prior=>prior.id===other.id) && other.failurePolicy==='FAIL_CLOSED').reduce((sum,other)=>sum+other.costUnits*other.maxAttempts,0) : 0;
+      if (reservedCostUnits + maximumNodeCost + requiredReserve > input.dag.maximumCostUnits) {
         const observations = [failureObservation(
           detector,
           node,
@@ -351,6 +360,7 @@ export async function executeDetectorDag(input: {
   const ordered = input.dag.nodes.map((node) => outcomes.get(node.id)!);
   const failed = ordered.filter((outcome) => outcome.failureReason !== undefined);
   return {
+    trace:ordered.map(outcome=>({nodeId:outcome.node.id,detectorId:outcome.detector.id,status:outcome.status,attempts:outcome.attempts,reason:outcome.failureReason??(outcome.status==='SKIPPED'&&outcome.attempts===0?'RUN_CONDITION_'+outcome.node.runCondition:'EXECUTED')})),
     observations: ordered.flatMap((outcome) => outcome.observations),
     degradationReasons: failed.map((outcome) => outcome.failureReason!).sort(),
     failClosedReasons: failed

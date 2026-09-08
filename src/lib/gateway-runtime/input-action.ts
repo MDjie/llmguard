@@ -1,3 +1,4 @@
+import { isConfirmedObservation } from '@/lib/guard-engine-v2/observation-role';
 import type { GuardDecision } from '@guardllm/contracts';
 import type { GatewayRequest, TransformPatch } from '../../../packages/contracts/generated/typescript/gateway-v2';
 import type { RuntimePolicyBundle } from '@/lib/policy-bundle/runtime';
@@ -9,7 +10,7 @@ import { GatewayError } from './protocol';
 export function prepareInputAction(body: GatewayRequest, decision: GuardDecision, projection: ReturnType<typeof legacyRequest>, bundle: RuntimePolicyBundle): { patches: TransformPatch[]; safeResponse?: string } {
   if (body.stage !== 'INPUT' || !['REWRITE','SAFE_RESPONSE'].includes(decision.action) || decision.transformedText !== undefined) return { patches: [] };
   const rewriteRisks = bundle.payload.thresholds.filter(item => item.autoRewrite).flatMap(item => bundle.payload.dimensions.filter(dimension => dimension.id === item.dimensionId).map(dimension => dimension.code));
-  const relevant = decision.observations.filter(item => item.status === 'MATCH' && (OUTPUT_ACTION_OVERRIDES[item.riskType] === decision.action || (decision.action === 'REWRITE' && rewriteRisks.some(risk => item.riskType === risk || item.riskType.startsWith(risk + '.')))));
+  const relevant = decision.observations.filter(item => isConfirmedObservation(item) && (OUTPUT_ACTION_OVERRIDES[item.riskType] === decision.action || (decision.action === 'REWRITE' && rewriteRisks.some(risk => item.riskType === risk || item.riskType.startsWith(risk + '.')))));
   const riskType = relevant[0]?.riskType;
   if (!riskType) throw new GatewayError('INPUT_TRANSFORM_EVIDENCE_MISSING', 503);
   const context = resolveOutputPolicyContext(projection.request);

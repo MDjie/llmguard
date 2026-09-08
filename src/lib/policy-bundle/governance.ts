@@ -554,6 +554,7 @@ export async function loadGovernedPolicyArtifacts(
         ...(sourceEntry.sourceIds ? {sourceIds:sourceEntry.sourceIds} : {}),
         ...(sourceEntry.actionHint ? {actionHint:sourceEntry.actionHint} : {}),
         ...(sourceEntry.sourceMatchMode ? {sourceMatchMode:sourceEntry.sourceMatchMode} : {}),
+        ...(sourceEntry.matchConstraints ? {matchConstraints:sourceEntry.matchConstraints} : {}),
         variantId: row.id,
         dictionaryReleaseId: row.releaseId,
         dictionaryVersion: row.releaseVersion,

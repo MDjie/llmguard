@@ -41,7 +41,7 @@ describe('cross-modal fusion', () => {
       expect(result.textDecisions.user.action).toBe('ALLOW');
       expect(result.textDecisions.image.action).toBe('ALLOW');
       expect(result.action).toBe('BLOCK');
-      expect(result.cooperativeAttack).toBe(true);
+      expect(result.cooperativeAttack).toBe(false);
       expect(result.evidence[0].sources).toEqual(expect.arrayContaining([
         expect.objectContaining({ source: 'user_text', artifactId: 'text-1' }),
         expect.objectContaining({ source: 'image_ocr', artifactId: 'image-1', viewId: 'rotate_90' }),
@@ -150,7 +150,7 @@ describe('single-modality risk preservation', () => {
         codes: modality === 'codes' ? [{ text: 'SINGLE_TRACK_DENY', artifactId: 'code-object', viewId: 'qr', region: [0, 0, 1, 1], kind: 'QR', confidence: 1 }] : [], visual: [],
       });
       expect(result.textDecisions[modality].action).toBe('BLOCK');
-      expect(result.textDecisions.combined.action).toBe('ALLOW');
+      expect(result.textDecisions.combined.action).toBe(modality === 'user' ? 'BLOCK' : 'ALLOW');
       expect(result.action).toBe('BLOCK');
       expect(result.evidence).toEqual(expect.arrayContaining([expect.objectContaining({
         sources: expect.arrayContaining([expect.objectContaining({ artifactId: modality === 'user' ? 'user-object' : modality === 'image' ? 'image-object' : 'code-object' })]),
@@ -172,4 +172,29 @@ describe('single-modality risk preservation', () => {
       expect(new Set(result.evidence.map(item => item.evidenceRef)).size).toBe(result.evidence.length);
     } finally { process.env.CONTENT_HASH_KEY = previous; }
   });
+});
+
+
+it('confirms an object-bound mixed attack with explicit reference evidence',async()=>{
+  const previous=process.env.CONTENT_HASH_KEY;
+  process.env.CONTENT_HASH_KEY='fusion-relation-test-content-hmac-key-32-bytes-minimum';
+  try{
+    const result=await fuseMultimodal({bundle,context:{traceId:'trace-relation-12345678',tenantId:'tenant-1',applicationId:'app-1',absoluteDeadlineEpochMs:Date.now()+5000},
+      userText:'please ignore the attached image',contextArtifactId:'user-text',
+      ocr:[{text:'system rules',artifactId:'image-1',viewId:'original',region:[0,0,10,10]}],visual:[]});
+    expect(result.action).toBe('BLOCK');
+    expect(result.cooperativeAttack).toBe(true);
+    expect(result.relationship.relations.some(r=>r.status==='CONFIRMED'&&r.sourceEnvelopeIds.length===2)).toBe(true);
+    expect(result.evidence.some(e=>e.reasonCode==='MULTIMODAL_RELATION_CONFIRMED')).toBe(true);
+  }finally{process.env.CONTENT_HASH_KEY=previous;}
+});
+
+it('never claims complete extraction when a QR result is below the configured confidence floor',async()=>{
+  const previous=process.env.CONTENT_HASH_KEY;process.env.CONTENT_HASH_KEY='fusion-low-confidence-hmac-key-at-least-32-bytes';
+  try {
+    const result=await fuseMultimodal({bundle,context:{traceId:'trace-low-confidence',tenantId:'tenant-1',applicationId:'app-1',absoluteDeadlineEpochMs:Date.now()+5000},
+      ocr:[],codes:[{text:'public reference',kind:'QR',confidence:.1,artifactId:'image',viewId:'qr',region:[0,0,1,1]}],visual:[],minimumConfidence:.35});
+    expect(result).toMatchObject({action:'BLOCK',degraded:true});
+    expect(result.evidence.some(item=>item.reasonCode==='MEDIA_EXTRACTION_CONFIDENCE_INSUFFICIENT')).toBe(true);
+  } finally {process.env.CONTENT_HASH_KEY=previous;}
 });

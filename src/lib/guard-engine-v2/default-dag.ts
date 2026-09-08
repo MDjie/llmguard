@@ -1,9 +1,10 @@
 import type { DetectorDagSpec, SemanticClassifierSpec } from './types';
 
 export const DEFAULT_DETECTOR_DAG: DetectorDagSpec = {
-  version: 'guard-default-dag-4',
-  maximumCostUnits: 17,
+  version: 'guard-default-dag-5',
+  maximumCostUnits: 19,
   nodes: [
+    { id:'l1-source-relations',detectorId:'source-risk-relations',tier:'L1',dependsOn:['l0-policy-rules'],runCondition:'ALWAYS',timeoutMs:1500,maxAttempts:1,costUnits:2,failurePolicy:'FAIL_CLOSED' },
     {
       id: 'l0-prompt-attack',
       detectorId: 'prompt-attack-baseline',

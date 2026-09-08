@@ -78,6 +78,7 @@ export async function processNextDocumentImageJob() {
       contextArtifactId: job.contextArtifactId ?? undefined,
       ocr: analysis.ocr.map((item) => ({
         text: item.text,
+        confidence: item.confidence,
         artifactId: artifact.id,
         artifactSha256: artifact.verifiedSha256 ?? undefined,
         viewId: item.viewId,
@@ -98,6 +99,7 @@ export async function processNextDocumentImageJob() {
       sourceTrust: 'UNTRUSTED',
       instructionCapability: 'FORBIDDEN',
       anomalyScore,
+      minimumConfidence: detectionPolicy.minimumConfidence,
       reviewThreshold: detectionPolicy.reviewThreshold,
       blockThreshold: detectionPolicy.blockThreshold,
     });

@@ -1,3 +1,8 @@
+import { assessRuleMatch } from '@/lib/guard-engine-v2/rule-constraints';
+import { classifyContextRole } from '@/lib/guard-engine-v2/intent-context';
+import { LexicalMatcher } from '@/lib/guard-engine-v2/lexical-matcher';
+import { buildNormalizedViews, mapViewRange } from '@/lib/guard-engine-v2/normalization';
+import { safeRegexMatches } from '@/lib/detection/safe-regex';
 import { createHash } from 'node:crypto';
 import type { z } from 'zod';
 import {
@@ -52,10 +57,24 @@ function normalizedPattern(entry: DictionaryEntry, variant: string): string {
     entry.industry,
     entry.direction,
     [...entry.contexts].sort().join(','),
+    JSON.stringify(entry.matchConstraints ?? {}),
   ].join('\u001f');
 }
 
 export function dictionaryEntryMatches(entry: DictionaryEntry, text: string): boolean {
+  if (entry.matchConstraints) {
+    return entry.variants.some((pattern,index) => {
+      const rule={...entry,id:String(index),pattern};
+      const matcher=new LexicalMatcher([rule]);
+      return buildNormalizedViews(text).some(view => {
+        const modes=entry.matchConstraints?.normalizationModes;
+        if (modes && !modes.includes((view.depth??0)===0?'original':(view.transforms?.at(-1)?.method??view.id))) return false;
+        const matches=entry.matchType==='regex'?safeRegexMatches(view.text,pattern,entry.caseSensitive):matcher.find(view).get(rule.id)??[];
+        return matches.some(match => assessRuleMatch(view.text,{start:match.index,end:match.index+match.raw.length},entry.matchConstraints,entry.caseSensitive).matched &&
+          (entry.matchConstraints?.contextPolicy!=='LOCAL_INTENT_V1'||!classifyContextRole(text,mapViewRange(view,match.index,match.index+match.raw.length)).suppressLexicalBlock));
+      });
+    });
+  }
   const source = entry.caseSensitive ? text : text.toLocaleLowerCase('und');
   return entry.variants.some((variant) => {
     if (entry.matchType === 'regex') return safeRegexTest(text, variant, entry.caseSensitive);

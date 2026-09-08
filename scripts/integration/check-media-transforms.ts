@@ -8,7 +8,7 @@ import type { CommandRunner } from '../../services/media-analyzer/src/command-ru
 import type { MediaTransformPlan } from '../../src/contracts/http/media-transform';
 
 async function main(){
- const directory=path.resolve('.artifact-build/v11-remaining-20260908/media-transforms');mkdirSync(directory,{recursive:true});
+ const directory=path.resolve(process.env.MEDIA_TRANSFORM_EVIDENCE_DIR ?? '.artifact-build/v11-remaining-20260908/media-transforms');mkdirSync(directory,{recursive:true});
  const image=execFileSync('docker',['image','inspect','--format','{{.Id}}','guardllm-r0-media-analyzer:latest'],{encoding:'utf8',windowsHide:true}).trim();assert.match(image,/^sha256:[a-f0-9]{64}$/);
  const tool=(program:string,args:readonly string[],workspace=directory)=>execFileSync('docker',['run','--rm','--network','none','--read-only','--cpus','2','--memory','512m','--pids-limit','128',
   '--cap-drop','ALL','--security-opt','no-new-privileges','--tmpfs','/tmp:rw,noexec,nosuid,size=32m','--mount','type=bind,source='+directory+',target=/fixtures',

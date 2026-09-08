@@ -6,7 +6,8 @@ import {
 } from '@/lib/context-trust';
 import { aggregateGuardDecision } from './aggregate';
 import { executeDetectorDag, resolveAndValidateDetectorDag } from './dag';
-import { buildNormalizedViews } from './normalization';
+import { normalizeWithBudget } from './normalization';
+import { isConfirmedObservation } from './observation-role';
 import { observeGuardDecision, observeSafetyAlert } from '@/lib/observability/metrics';
 import type {
   GuardDetector,
@@ -14,6 +15,7 @@ import type {
   GuardEngineDependencies,
   GuardEnginePolicy,
   GuardRequest,
+  Observation,
 } from './types';
 
 export function createGuardEngine(
@@ -48,10 +50,14 @@ export function createGuardEngine(
       }
       const envelopes = resolveContextEnvelopes(request, startedAt);
       validateActionIntent(request, envelopes, startedAt);
-      const views = buildNormalizedViews(
+      const normalization = normalizeWithBudget(
         request.content.text ?? '',
         dependencies.normalizationBudget,
+        undefined,
+        envelopes.map(envelope=>({id:envelope.envelopeId,start:envelope.contentStart,end:envelope.contentEnd})),
+        'partial',
       );
+      const views = normalization.views;
       const deadlineSignal = signal ? AbortSignal.any([signal, AbortSignal.timeout(remaining)]) : AbortSignal.timeout(remaining);
       const evidenceHmac = (content: string) =>
         createHmac('sha256', hmacKey).update(content, 'utf8').digest('hex');
@@ -68,21 +74,37 @@ export function createGuardEngine(
         deadlineSignal,
         absoluteDeadlineEpochMs: request.context.absoluteDeadlineEpochMs,
         blockThreshold: policy.blockThreshold,
+        policy,
         now,
       });
+      const normalizationObservations: readonly Observation[] = normalization.reasonCodes.map(reasonCode => ({
+        detectorId: 'normalization', detectorVersion: normalization.algorithmVersion,
+        riskType: 'detector_availability', status: 'SKIPPED', score: 0, severity: 'NONE',
+        evidence: [], reasonCode, failMode: 'FAIL_CLOSED', semanticCoverage: 'INCOMPLETE',
+      }));
       const observations = attachContextSources(
-        execution.observations,
+        [...execution.observations, ...normalizationObservations],
         envelopes,
       );
       const decision = aggregateGuardDecision({
         request,
-        policy,
+        policy: normalization.coverageState === 'PARTIAL'
+          ? { ...policy, failClosedOnRequiredDetectorFailure: true } : policy,
         observations,
-        requiredDetectorFailures: execution.failClosedReasons,
-        degradationReasons: execution.degradationReasons,
+        requiredDetectorFailures: [...execution.failClosedReasons, ...normalization.reasonCodes],
+        degradationReasons: [...execution.degradationReasons, ...normalization.reasonCodes],
         latencyMs: now() - startedAt,
       });
-      const matchedRisk = decision.observations.find((item) => item.status === 'MATCH')?.riskType;
+      if(dependencies.onEvaluationTrace){
+        const {views:_views,...normalizationSummary}=normalization;
+        try {
+          dependencies.onEvaluationTrace({requestId:request.context.requestId,normalization:{...normalizationSummary,viewCount:views.length,sourceCount:envelopes.length},nodes:execution.trace,aggregateAction:decision.action});
+        } catch {
+          // Instrumentation must not discard an already computed enforcement decision.
+          observeSafetyAlert('EVALUATION_TRACE_CALLBACK_FAILED');
+        }
+      }
+      const matchedRisk = decision.observations.find(isConfirmedObservation)?.riskType;
       const modalities = [...new Set([
         ...(request.content.text === undefined ? [] : ['TEXT']),
         ...(request.content.artifacts ?? []).map((artifact) => artifact.kind),
@@ -91,7 +113,7 @@ export function createGuardEngine(
         direction: request.context.direction,
         action: decision.action,
         latencyMs: decision.latencyMs,
-        detectorFailures: execution.degradationReasons.length,
+        detectorFailures: execution.degradationReasons.length + normalization.reasonCodes.length,
         riskCategory: matchedRisk,
         tenantId: request.context.tenantId,
         applicationId: request.context.applicationId,

@@ -276,3 +276,24 @@ describe('UWP-02 signed detector DAG execution', () => {
     })).toThrow('GRD_DETECTOR_DAG_INVALID');
   });
 });
+
+describe('terminal scheduling shares final action semantics', () => {
+  it.each(['candidate', 'mask'] as const)('runs required downstream checks after a high-score %s', async mode => {
+    let downstream = 0;
+    const detectors: readonly GuardDetector[] = [
+      detector('base', true, async () => [{ ...observation('base', .94),
+        ...(mode === 'candidate' ? { decisionRole: 'CANDIDATE' as const } : {}) }]),
+      detector('deep', true, async () => { downstream++; return []; }),
+    ];
+    const dag: DetectorDagSpec = { version: 'terminal-regression', maximumCostUnits: 2,
+      nodes: detectors.map((d,index) => ({ id: d.id, detectorId: d.id, tier: 'L0',
+        dependsOn: index ? ['base'] : [], runCondition: index ? 'WHEN_NO_BLOCKING_MATCH' : 'ALWAYS',
+        timeoutMs: 1000, maxAttempts: 1, costUnits: 1, failurePolicy: 'FAIL_CLOSED' })) };
+    const subject = createGuardEngine({ id: 'p', bundleId: 'bundle-1', warnThreshold: .5,
+      blockThreshold: .8, failClosedOnRequiredDetectorFailure: true, detectorDag: dag,
+      ...(mode === 'mask' ? { actionOverrides: { 'dag.test': 'MASK' as const } } : {}) }, detectors, { hmacKey });
+    const req = request();
+    await subject.evaluate({ ...req, context: { ...req.context, direction: 'OUTPUT_COMPLETE' } });
+    expect(downstream).toBe(1);
+  });
+});

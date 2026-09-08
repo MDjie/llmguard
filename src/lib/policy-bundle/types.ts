@@ -14,6 +14,7 @@ import type {
 } from './governance';
 
 export interface CompiledPolicyBundle {
+  readonly detectionCapabilities?:import('./detection-capabilities').DetectionCapabilities;
   readonly decisionPolicyVersion?: 1 | 2;
   readonly semanticDecisionMode?: 'coverage-v1';
   readonly semanticCoverage?: import('@/lib/guard-engine-v2/semantic-coverage').SemanticCoveragePolicy;

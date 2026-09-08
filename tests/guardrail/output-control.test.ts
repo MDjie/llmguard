@@ -1,9 +1,11 @@
 import { createHash } from 'node:crypto';
+import { resolveContextEnvelopes } from '../../src/lib/context-trust';
 import { describe, expect, it } from 'vitest';
 import type { GuardRequest } from '@guardllm/contracts';
 import { guardDecisionSchema } from '../../src/contracts/http/guard-v1';
 import { createEngineForPolicyBundle } from '../../src/lib/guard-engine-v2';
 import {
+  applyOutputIntervention,
   PLATFORM_FIXED_SAFE_RESPONSE,
   type OutputControlFailureInput,
 } from '../../src/lib/output-control';
@@ -190,5 +192,50 @@ describe('independent output compliance and intervention', () => {
     expect(events).toHaveLength(1);
     expect(events[0]).toMatchObject({ reasonCode: 'OUTPUT_RECHECK_REDLINE_MATCH' });
     expect(JSON.stringify(events)).not.toContain('abcdefghijklmnopqrstuvwxyz123456');
+  });
+});
+
+describe('explicit output source envelope regression', () => {
+  it('rechecks the derived output instead of retaining the original content hash and bounds', async () => {
+    const original = request('手机: 13812345678\n健康告知: 高血压复诊'.replace('\\n', '\n'));
+    const explicit = { ...original, content: { ...original.content,
+      envelopes: resolveContextEnvelopes(original, Date.now()) } };
+    const result = await engine().evaluate(explicit);
+    expect(result.action).toBe('MASK');
+    expect(result.reasonCodes).not.toContain('OUTPUT_RECHECK_FAILED');
+    expect(result.transformedText).not.toContain('13812345678');
+    expect(result.transformedText).not.toContain('高血压复诊');
+  });
+});
+
+describe('derived output recheck authorization and availability', () => {
+  it('retains authorization on original sources without rebinding an intent to transformed content', async () => {
+    const base=request('手机: 13812345678','tool-result-recheck');
+    const envelopes=resolveContextEnvelopes(base,Date.now());
+    const explicit:GuardRequest={...base,context:{...base.context,direction:'TOOL_RESULT'},
+      content:{...base.content,envelopes},actionIntent:{
+        intentId:'read-result',userGoal:'read customer record',toolName:'customer.read',
+        parametersDigest:'a'.repeat(64),targetResource:'customer:synthetic',sideEffect:'READ',
+        requiredPermissions:['customer:read'],supportingEnvelopeIds:[envelopes[0].envelopeId],
+        dataDestinations:[],riskBudget:0.1}};
+    const result=await engine().evaluate(explicit);
+    expect(result.action).toBe('MASK');
+    expect(result.degraded).toBe(false);
+    expect(result.transform?.recheckDecisionId).toBeTruthy();
+    await expect(engine().evaluate({...explicit,actionIntent:{...explicit.actionIntent!,supportingEnvelopeIds:['unknown']}}))
+      .rejects.toMatchObject({code:'GRD_ACTION_INTENT_SOURCE_UNKNOWN'});
+  });
+  it('blocks a degraded ALLOW recheck and reports availability failure instead of malicious content', async () => {
+    const source=request('手机: 13812345678','degraded-recheck');
+    const clean=await engine().evaluate(request('正常说明'));
+    const mask=await engine().evaluate(source);
+    const result=await applyOutputIntervention(source,mask,bundle(),{
+      evidenceHmacKey:hmacKey,tokenizationHmacKey:tokenizationKey,
+      evaluateRecheck:async()=>({...clean,degraded:true,failMode:'DEGRADED',degradationReasons:['TEST_TIMEOUT']})});
+    expect(result.action).toBe('BLOCK');
+    expect(result.reasonCodes).toContain('OUTPUT_RECHECK_UNAVAILABLE');
+    expect(result.reasonCodes).not.toContain('OUTPUT_RECHECK_REDLINE_MATCH');
+    expect(result.degradationReasons).toContain('recheck:TEST_TIMEOUT');
+    expect(result.evidenceComplete).toBe(false);
   });
 });

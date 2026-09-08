@@ -14,6 +14,7 @@ export function textEvidence(
   const transforms = normalizationTransformNames(view);
   return {
     viewId: view.id,
+    ...(view.sourceEnvelopeId ? { sourceEnvelopeIds:[view.sourceEnvelopeId] } : {}),
     start: original.start,
     end: original.end,
     normalizedStart,

@@ -1,3 +1,4 @@
+import { inspectDetectionCapabilities } from './detection-capabilities';
 import { and, desc, eq } from 'drizzle-orm';
 import { db } from '@/storage/database/shared/db';
 import {
@@ -12,6 +13,7 @@ import { loadVerifiedPolicyBundle } from './runtime';
 import { PolicyBundleRuntimeError } from './runtime-error';
 
 export interface PolicyReadinessReport {
+  readonly detectionCapabilities:ReturnType<typeof inspectDetectionCapabilities>;
   readonly ready: true;
   readonly service: 'guardllm';
   readonly bundleId: string;
@@ -151,6 +153,7 @@ export async function inspectPolicyReadiness(
 
   return {
     ready: true,
+    detectionCapabilities:inspectDetectionCapabilities(verified.payload),
     service: 'guardllm',
     bundleId: bundle.id,
     generation: binding.generation,

@@ -1,3 +1,4 @@
+import { combineActionConstraints } from '@/lib/guard-engine-v2/action-constraints';
 import { createHash } from 'node:crypto';
 import type {
   ContextEnvelope,
@@ -36,9 +37,7 @@ interface ContextSegment {
 }
 
 const MAX_CONTEXT_CHARS = 1_000_000;
-const RANK: Readonly<Record<GuardAction, number>> = {
-  ALLOW: 0, WARN: 1, MASK: 2, REWRITE: 2, REQUIRE_REVIEW: 3, SAFE_RESPONSE: 4, BLOCK: 5,
-};
+
 
 function allowed(
   candidate: RagCandidate,
@@ -163,7 +162,7 @@ async function mapWithConcurrency<T, R>(
 }
 
 function stronger(left: GuardAction, right: GuardAction): GuardAction {
-  return RANK[right] > RANK[left] ? right : left;
+  return combineActionConstraints([left,right]).action;
 }
 
 export async function guardRagFlow(input: {

@@ -77,6 +77,7 @@ export async function processNextAudioVideoJob() {
         ...analysis.transcript.map((item) => ({
           source: 'audio' as const,
           text: item.text,
+          confidence: item.confidence,
           startMs: item.startMs,
           endMs: item.endMs,
           viewId: item.sourceViewId,
@@ -100,6 +101,7 @@ export async function processNextAudioVideoJob() {
         ...analysis.frames.flatMap((frame) => frame.codes.map((code) => ({
           source: 'qr_code' as const,
           text: code.text,
+          confidence: code.confidence,
           startMs: frame.timeMs,
           endMs: frame.timeMs,
           frameIndex: frame.frameIndex,
@@ -117,6 +119,7 @@ export async function processNextAudioVideoJob() {
       instructionCapability: 'FORBIDDEN',
       anomalyScore,
       crossModalWindowMs: detectionPolicy.crossModalWindowMs,
+      minimumConfidence: detectionPolicy.minimumConfidence,
       reviewThreshold: detectionPolicy.reviewThreshold,
       blockThreshold: detectionPolicy.blockThreshold,
     });

@@ -1,3 +1,4 @@
+import { SourceRelationDetector } from './relation-detector';
 import { createHash } from 'node:crypto';
 import { BoundedCache } from '@/lib/resource-control/bounded-cache';
 import type { GuardAction } from '@guardllm/contracts';
@@ -35,6 +36,7 @@ import type { GuardDetector, GuardEngineDependencies } from './types';
 import { projectContextDecision } from './context-projection';
 
 export interface PolicyBundleEngineRuntimeOptions {
+  readonly onEvaluationTrace?:GuardEngineDependencies['onEvaluationTrace'];
   readonly dlpTokenizationHmacKey?: string | Buffer;
   readonly deferOutputRecheck?: boolean;
   readonly outputSecurityEventSink?: OutputControlSecurityEventSink;
@@ -70,6 +72,7 @@ function compilePolicyBundleEngine(bundle:RuntimePolicyBundle) {
     new PromptAttackDetector(),
     ...(protectedContextEnabled ? [new ProtectedContextLeakDetector()] : []),
     new ReasoningAttackDetector(),
+    new SourceRelationDetector(),
     new StructuredDlpDetector(),
     new ResourceAbuseDetector(),
     new InsuranceComplianceDetector(),
@@ -147,7 +150,7 @@ function buildEngineForPolicyBundle(
 ) {
   const {policy,detectors,bundle:immutableBundle}=preparePolicyBundleEngine(bundle);
   const outputSecurityEventSink=runtimeOptions.outputSecurityEventSink??(process.env.NODE_ENV==='production'?recordOutputControlFailure:undefined);
-  const baseEngine=createGuardEngine(policy,detectors,{hmacKey,protectedContextFingerprints});
+  const baseEngine=createGuardEngine(policy,detectors,{hmacKey,protectedContextFingerprints,onEvaluationTrace:runtimeOptions.onEvaluationTrace});
   return {
     ...(baseEngine.contextEvaluationMode?{contextEvaluationMode:baseEngine.contextEvaluationMode}:{}),
     async evaluateContextual(combined:Parameters<typeof baseEngine.evaluate>[0],current:Parameters<typeof baseEngine.evaluate>[0],signal?:AbortSignal){
@@ -184,7 +187,8 @@ export function createEngineForPolicyBundle(
     && protectedContextFingerprints.length === 0
     && runtimeOptions.deferOutputRecheck === undefined
     && runtimeOptions.dlpTokenizationHmacKey === undefined
-    && runtimeOptions.outputSecurityEventSink === undefined;
+    && runtimeOptions.outputSecurityEventSink === undefined
+    && runtimeOptions.onEvaluationTrace === undefined;
   if (!cacheable) {
     return buildEngineForPolicyBundle(bundle, hmacKey, protectedContextFingerprints, runtimeOptions);
   }

@@ -160,7 +160,7 @@ function partialMask(value: string, entityType: string): string {
   if (entityType === 'financial.bank_card' && compactDigits.length >= 16) {
     return `${compactDigits.slice(0, 4)}********${compactDigits.slice(-4)}`;
   }
-  if (entityType === 'pii.name') {
+  if (entityType === 'pii.name' || entityType === 'person.name') {
     return value.length <= 1 ? '*' : `${value[0]}${'*'.repeat(Math.min(6, value.length - 1))}`;
   }
   if (entityType === 'pii.address') {

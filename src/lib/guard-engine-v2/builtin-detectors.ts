@@ -1,6 +1,7 @@
 import { textEvidence } from './evidence';
 import { injectionPhraseMatches, isNegatedInjectionInstruction, isQuotedInjectionAnalysis, promptInjectionSignatures } from './prompt-injection-signatures';
-import { isDefensiveEducationalContext } from './intent-context';
+import { classifyContextRole } from './intent-context';
+import { mapViewRange } from './normalization';
 import type {
   GuardDetector,
   GuardDetectorContext,
@@ -10,6 +11,7 @@ import type {
 } from './types';
 
 interface MatchSpec {
+  readonly entityType?: string;
   readonly id: string;
   readonly riskType: string;
   readonly pattern: RegExp;
@@ -222,7 +224,7 @@ const CONTENT_SAFETY_INTENTS: readonly MatchSpec[] = [
   {
     id: 'MASS_SPAM_REQUEST',
     riskType: 'spam_detection',
-    pattern: /(?:(?:群发|批量发送|重复发送|转发|刷屏|mass send|send repeatedly|forward|spam)[\s\S]{0,88}(?:\d{2,}\s*(?:次|遍|times)|所有(?:联系人|群|用户)|all (?:contacts|users|groups)|邮箱列表|recipient list)|(?:\d{2,}\s*(?:次|遍|times)|所有(?:联系人|群|用户)|all (?:contacts|users|groups))[\s\S]{0,88}(?:重复|群发|批量发送|转发|刷屏|repeat|mass send|forward|spam))/giu,
+    pattern: /(?:(?:群发|批量发送|重复发送|转发|刷屏|mass send|send repeatedly|forward|spam)[\s\S]{0,88}(?:\d{2,}\s*(?:次|遍|times)|所有(?:联系人|群|用户)|all (?:contacts|users|groups)|邮箱列表|recipient list)|(?:\d{2,}\s*(?:次|遍|times)|所有(?:联系人|群|用户)|all (?:contacts|users|groups))[\s\S]{0,88}(?:重复发送|群发|批量发送|转发|刷屏|repeat sending|mass send|forward|spam))/giu,
     score: 0.91,
     severity: 'HIGH',
     suppressInDefensiveContext: true,
@@ -306,6 +308,7 @@ const CONTENT_SAFETY_INTENTS: readonly MatchSpec[] = [
 const STRUCTURED_DLP: readonly MatchSpec[] = [
   {
     id: 'PRC_IDENTITY',
+    entityType: 'pii.identity.prc',
     riskType: 'pii.identity.prc',
     pattern: /(?<!\d)\d{17}[0-9Xx](?!\d)/gu,
     score: 0.98,
@@ -314,6 +317,7 @@ const STRUCTURED_DLP: readonly MatchSpec[] = [
   },
   {
     id: 'BANK_CARD',
+    entityType: 'financial.bank_card',
     riskType: 'financial.bank_card',
     pattern: /(?<!\d)(?:\d[ -]?){15,18}\d(?!\d)/gu,
     score: 0.96,
@@ -322,6 +326,7 @@ const STRUCTURED_DLP: readonly MatchSpec[] = [
   },
   {
     id: 'UNIFIED_SOCIAL_CREDIT_CODE',
+    entityType: 'organization.unified_social_credit_code',
     riskType: 'organization.unified_social_credit_code',
     pattern: /(?<![0-9A-Z])[0-9A-HJ-NP-RTUWXY]{18}(?![0-9A-Z])/giu,
     score: 0.96,
@@ -330,6 +335,7 @@ const STRUCTURED_DLP: readonly MatchSpec[] = [
   },
   {
     id: 'VEHICLE_IDENTIFICATION_NUMBER',
+    entityType: 'vehicle.identification_number',
     riskType: 'vehicle.identification_number',
     pattern: /(?<![A-Z0-9])[A-HJ-NPR-Z0-9]{17}(?![A-Z0-9])/giu,
     score: 0.94,
@@ -338,6 +344,7 @@ const STRUCTURED_DLP: readonly MatchSpec[] = [
   },
   {
     id: 'MOBILE_PHONE',
+    entityType: 'pii.mobile',
     riskType: 'pii.mobile',
     pattern: /(?<!\d)1[3-9]\d{9}(?!\d)/gu,
     score: 0.86,
@@ -345,6 +352,7 @@ const STRUCTURED_DLP: readonly MatchSpec[] = [
   },
   {
     id: 'EMAIL',
+    entityType: 'pii.email',
     riskType: 'pii.email',
     pattern: /[A-Z0-9._%+-]{1,64}@[A-Z0-9.-]{1,190}\.[A-Z]{2,24}/giu,
     score: 0.78,
@@ -352,6 +360,7 @@ const STRUCTURED_DLP: readonly MatchSpec[] = [
   },
   {
     id: 'INSURANCE_POLICY',
+    entityType: 'insurance.policy_number',
     riskType: 'insurance.policy_number',
     pattern: /(?:保单号|保单编号|policy\s*(?:no|number))\s*[:：#-]?\s*[A-Z0-9][A-Z0-9-]{7,31}/giu,
     score: 0.9,
@@ -359,6 +368,7 @@ const STRUCTURED_DLP: readonly MatchSpec[] = [
   },
   {
     id: 'CUSTOMER_NUMBER',
+    entityType: 'customer.number',
     riskType: 'insurance.customer_number',
     pattern: /(?:客户号|客户编号|customer\s*(?:id|number))\s*[:：#-]?\s*[A-Z0-9][A-Z0-9-]{5,31}/giu,
     score: 0.88,
@@ -366,6 +376,7 @@ const STRUCTURED_DLP: readonly MatchSpec[] = [
   },
   {
     id: 'HEALTH_RECORD',
+    entityType: 'sensitive.health',
     riskType: 'sensitive.health',
     pattern: /(?:诊断结果|病历号|既往病史|用药记录|体检结论|diagnosis|medical\s*record)\s*[:：]\s*[^\r\n]{2,160}/giu,
     score: 0.9,
@@ -373,6 +384,7 @@ const STRUCTURED_DLP: readonly MatchSpec[] = [
   },
   {
     id: 'FINANCIAL_RECORD',
+    entityType: 'sensitive.financial',
     riskType: 'sensitive.financial',
     pattern: /(?:账户余额|年收入|征信记录|资产总额|account\s*balance|credit\s*record)\s*[:：]\s*[^\r\n]{1,120}/giu,
     score: 0.88,
@@ -380,6 +392,7 @@ const STRUCTURED_DLP: readonly MatchSpec[] = [
   },
   {
     id: 'BUSINESS_SECRET',
+    entityType: 'business.secret',
     riskType: 'business.secret',
     pattern: /(?:商业秘密|内部机密|未公开方案|内部定价|secret\s*pricing|confidential\s*plan)\s*[:：]\s*[^\r\n]{2,200}/giu,
     score: 0.9,
@@ -387,6 +400,7 @@ const STRUCTURED_DLP: readonly MatchSpec[] = [
   },
   {
     id: 'CREDENTIAL',
+    entityType: 'credential.secret',
     riskType: 'credential.secret',
     pattern: /(?:sk-[A-Z0-9_-]{20,}|AKIA[A-Z0-9]{16}|(?:api[_-]?key|secret|token)\s*[:=]\s*[A-Z0-9_./+=-]{16,})/giu,
     score: 0.99,
@@ -394,16 +408,13 @@ const STRUCTURED_DLP: readonly MatchSpec[] = [
   },
 ];
 
-function matches(view: NormalizedView, spec: MatchSpec): readonly RawMatch[] {
+function* matches(view: NormalizedView, spec: MatchSpec): Generator<RawMatch> {
   spec.pattern.lastIndex = 0;
-  const result: RawMatch[] = [];
   for (const match of view.text.matchAll(spec.pattern)) {
-    if (result.length >= 100) break;
     const value = match[0];
     if (spec.validate && !spec.validate(value)) continue;
-    result.push({ value, index: match.index ?? 0 });
+    yield { value, index: match.index ?? 0 };
   }
-  return result;
 }
 
 function observe(
@@ -413,15 +424,26 @@ function observe(
   specs: readonly MatchSpec[],
 ): readonly Observation[] {
   const observations: Observation[] = [];
-  const defensiveContext = isDefensiveEducationalContext(
-    context.request.content.text ?? '',
-  );
+  let suppressedCount = 0;
   for (const spec of specs) {
-    if (spec.suppressInDefensiveContext && defensiveContext) continue;
     const evidence = [];
     const seen = new Set<string>();
     for (const view of context.views) {
       for (const match of matches(view, spec)) {
+        if (spec.suppressInDefensiveContext) {
+          const origin = mapViewRange(view, match.index, match.index + match.value.length);
+          const scope = context.envelopes.find(e => e.contentStart <= origin.start && e.contentEnd >= origin.end);
+          const classification = classifyContextRole(context.request.content.text ?? '', origin,
+            scope ? { start: scope.contentStart, end: scope.contentEnd } : undefined);
+          if ((context.envelopes.length === 0 || scope) && classification.suppressLexicalBlock) {
+            if (suppressedCount++ < 128) observations.push({ detectorId, detectorVersion: version,
+              riskType: spec.riskType, ruleId: spec.id, status: 'SKIPPED', decisionRole: 'CLEARED',
+              score: 0, severity: 'NONE', contextRole: classification.role, scoreMeaning: 'POLICY',
+              reasonCode: 'CONTEXT_SUPPRESSED_OCCURRENCE',
+              evidence: [textEvidence(context,view,match.index,match.index+match.value.length,match.value,'[语境抑制]')] });
+            continue;
+          }
+        }
         const item = textEvidence(
           context,
           view,
@@ -451,6 +473,7 @@ function observe(
         detectorId,
         detectorVersion: version,
         riskType: spec.riskType,
+        ...(spec.entityType ? { category:spec.entityType,confidence:spec.score,scoreMeaning:'POLICY' as const,decisionRole:'CONFIRMED_RISK' as const } : {}),
         score: contextualReview ? 0.55 : spec.score,
         severity: contextualReview ? 'MEDIUM' : spec.severity,
         ...(contextualReview ? { decisionRole: 'CANDIDATE' as const, scoreMeaning: 'UNCALIBRATED' as const, contextRole: quotedAnalysis ? 'quotation' as const : 'mention' as const } : {}),

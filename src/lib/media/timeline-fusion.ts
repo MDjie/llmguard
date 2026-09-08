@@ -1,3 +1,5 @@
+import { fusionSourceContent, type FusionSourceSpan } from '@/lib/multimodal/source-content';
+import { inspectRiskRelations } from '@/lib/guard-engine-v2/risk-relations';
 import { makeEvidenceView } from '@/lib/evidence/media-views';
 import { validateEvidenceLocation } from '@/lib/evidence/location';
 import { createHash } from 'node:crypto';
@@ -13,6 +15,7 @@ export interface TimelineTextSegment {
   readonly artifactId?: string;
   readonly artifactSha256?: string;
   readonly source: TimelineSource;
+  readonly confidence?: number;
   readonly text: string;
   readonly startMs: number;
   readonly endMs: number;
@@ -77,6 +80,7 @@ async function decision(
     Partial<Pick<GuardRequest['context'], 'direction'>>,
   suffix: string,
   text: string,
+  spans: readonly FusionSourceSpan[],
 ): Promise<GuardDecision> {
   const requestId = `${context.traceId}-${suffix}`.slice(0, 128);
   // Absent optional tracks must not invoke detectors on synthetic business content.
@@ -96,7 +100,7 @@ async function decision(
       direction: context.direction ?? 'INPUT',
       policyBundleId: bundle.id,
     },
-    content: { text },
+    content: fusionSourceContent(text, spans, { ...context, requestId, direction: context.direction ?? 'INPUT', policyBundleId: bundle.id }),
   });
 }
 
@@ -197,6 +201,7 @@ export async function fuseMediaTimeline(input: {
   instructionCapability?: 'ALLOWED' | 'DATA_ONLY' | 'FORBIDDEN' | 'UNKNOWN';
   anomalyScore?: number;
   crossModalWindowMs?: number;
+  minimumConfidence?: number;
   reviewThreshold?: number;
   blockThreshold?: number;
 }) {
@@ -213,13 +218,13 @@ export async function fuseMediaTimeline(input: {
   const combinedDocuments = (windowPlan.windows.length ? windowPlan.windows.map(window => window.segments) : [[]])
     .map((cluster) => document([...userSegment, ...cluster]));
   const [userDecision, audioDecision, subtitleDecision, frameDecision, codeDecision, combinedCandidates] = await Promise.all([
-    decision(input.bundle, input.context, 'user', user.text),
-    decision(input.bundle, input.context, 'audio', audio.text),
-    decision(input.bundle, input.context, 'subtitles', subtitles.text),
-    decision(input.bundle, input.context, 'frames', frames.text),
-    decision(input.bundle, input.context, 'codes', codes.text),
+    decision(input.bundle, input.context, 'user', user.text, user.spans),
+    decision(input.bundle, input.context, 'audio', audio.text, audio.spans),
+    decision(input.bundle, input.context, 'subtitles', subtitles.text, subtitles.spans),
+    decision(input.bundle, input.context, 'frames', frames.text, frames.spans),
+    decision(input.bundle, input.context, 'codes', codes.text, codes.spans),
     Promise.all(combinedDocuments.map(async (item, index) => ({
-      value: await decision(input.bundle, input.context, `combined-${index}`, item.text),
+      value: await decision(input.bundle, input.context, `combined-${index}`, item.text, item.spans),
       spans: item.spans,
     }))),
   ]);
@@ -232,14 +237,34 @@ export async function fuseMediaTimeline(input: {
     ...(frames.text ? [frameDecision] : []),
     ...(codes.text ? [codeDecision] : []),
   ];
-  const cooperativeAttack = individual.length >= 2 &&
-    ACTION_PRIORITY[combinedDecision.action] > Math.max(...individual.map((item) => ACTION_PRIORITY[item.action]));
+  const relationSegments:readonly DocumentSegment[]=[...userSegment,...sorted];
+  const relationship=inspectRiskRelations(relationSegments.map((segment,index)=>({
+    id:'source-'+index,text:segment.text,sourceType:segment.source==='user_text'?'USER':'MEDIA',
+    instructionCapability:segment.source==='user_text'?'ALLOWED':'DATA_ONLY',objectRef:segment.artifactId,
+    startMs:segment.startMs,endMs:segment.endMs,
+  })));
+  const confirmedRelations=relationship.relations.filter(relation=>relation.status==='CONFIRMED'&&relation.sourceEnvelopeIds.length>1);
+  const cooperativeAttack=confirmedRelations.length>0;
+  const relationAction:GuardAction=cooperativeAttack?'BLOCK':relationship.coverage==='PARTIAL'?'REQUIRE_REVIEW':'ALLOW';
+  const relationEvidence=confirmedRelations.map(relation=>{
+    const base={riskType:'prompt_injection.relation',score:0.96,action:'BLOCK' as const,
+      reasonCode:'MULTIMODAL_RELATION_CONFIRMED',traceId:input.context.traceId,relation,
+      sources:relation.sourceEnvelopeIds.flatMap(id=>{
+        const segment=relationSegments[Number(id.slice('source-'.length))];
+        if(!segment)return [];
+        return [{source:segment.source,artifactId:segment.artifactId,viewId:segment.viewId}];
+      })};
+    return {...base,evidenceRef:evidenceIdentity(input.context.traceId,base)};
+  });
   const reviewThreshold = input.reviewThreshold ?? 0.65;
   const blockThreshold = input.blockThreshold ?? 0.8;
   const visualScore = Math.max(input.anomalyScore ?? 0, 0, ...input.visual.map((item) => item.score));
   const visualAction = actionForScore(visualScore, reviewThreshold, blockThreshold);
   const conflict = trackConflict(sorted, audioDecision, subtitleDecision);
-  const failures = input.analysisFailures ?? [];
+  const lowConfidence = input.segments.some(item => item.confidence !== undefined &&
+    (!Number.isFinite(item.confidence) || item.confidence < (input.minimumConfidence ?? 0.35) || item.confidence > 1));
+  const failures = [...(input.analysisFailures ?? []),
+    ...(lowConfidence ? [{ component: 'TEXT_EXTRACTION', required: true, code: 'MEDIA_EXTRACTION_CONFIDENCE_INSUFFICIENT' }] : [])];
   const failureAction: GuardAction = failures.some((item) => item.required)
     ? 'BLOCK'
     : failures.length > 0
@@ -258,7 +283,7 @@ export async function fuseMediaTimeline(input: {
   const { action } = combineActionConstraints([
     ...(!windowPlan.complete ? ['REQUIRE_REVIEW' as const] : []),
     ...individual.map((item) => item.action),
-    ...combinedCandidates.map((item) => item.value.action),
+    ...combinedCandidates.map((item) => item.value.action), relationAction,
     input.bundle.payload.semanticDecisionMode==='coverage-v1'&&!coverage.complete?'REQUIRE_REVIEW' as const:'ALLOW' as const,
     visualAction,
     conflict ? 'REQUIRE_REVIEW' as const : 'ALLOW' as const,
@@ -314,8 +339,9 @@ export async function fuseMediaTimeline(input: {
     coverage,
     windowCoverage: { ...windowPlan, windows: windowPlan.windows.map(({ startMs, endMs, segments }) => ({ startMs, endMs, segmentCount: segments.length })) },
     cooperativeAttack,
+    relationship: { ...relationship,evidence:relationship.evidence },
     evidenceConflict: conflict,
-    degraded: failures.length > 0 || !windowPlan.complete || (input.bundle.payload.semanticDecisionMode === 'coverage-v1' && !coverage.complete),
+    degraded: [...individual, ...combinedCandidates.map(item => item.value)].some(value => value.degraded || value.degradationReasons.length > 0) || relationship.coverage==='PARTIAL' || failures.length > 0 || !windowPlan.complete || (input.bundle.payload.semanticDecisionMode === 'coverage-v1' && !coverage.complete),
     decisions: {
       user: userDecision,
       audio: audioDecision,
@@ -325,6 +351,7 @@ export async function fuseMediaTimeline(input: {
       combined: combinedDecision,
     },
     evidence: [
+      ...relationEvidence,
       ...new Map(textEvidence.map((item) => [item.evidenceRef, item])).values(),
       ...visualEvidence,
       ...conflictEvidence,

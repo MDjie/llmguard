@@ -95,8 +95,9 @@ function observeOutput(
     for (const view of context.views) {
       for (const match of matches(view, spec)) {
         const origin = mapViewRange(view, match.index, match.index + match.value.length);
-        const classification = classifyContextRole(originalText, origin);
-        const contextual = Boolean(spec.contextAware && classification.suppressLexicalBlock);
+        const scope = context.envelopes.find(e => e.contentStart <= origin.start && e.contentEnd >= origin.end);
+        const classification = classifyContextRole(originalText, origin,scope ? { start: scope.contentStart, end: scope.contentEnd } : undefined);
+        const contextual = Boolean(spec.contextAware && (context.envelopes.length === 0 || scope) && classification.suppressLexicalBlock);
         const riskType = contextual
           ? spec.contextualRiskType ?? spec.riskType
           : spec.riskType;
@@ -283,7 +284,7 @@ const ILLEGAL_HARMFUL: readonly OutputMatchSpec[] = [
     id: 'VIOLENCE_HATE_INSTRUCTION',
     riskType: 'output.illegal.violence_hate',
     category: 'harmful.violence_hate',
-    pattern: /(?:(?:杀害|伤害|袭击|仇恨攻击).{0,36}(?:步骤|方法|目标|计划)|(?:kill|injure|attack|hate crime).{0,36}(?:steps?|method|target|plan))/giu,
+    pattern: /(?:(?:杀害|伤害|袭击|仇恨攻击).{0,36}(?:步骤|方法|目标|计划)|\b(?:kill|injure|attack|hate crime)\b.{0,36}\b(?:steps?|method|target|plan)\b)/giu,
     score: 0.98,
     severity: 'CRITICAL',
     contextAware: true,

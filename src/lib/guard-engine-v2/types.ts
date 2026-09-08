@@ -22,6 +22,7 @@ export interface NormalizationTransform {
 }
 
 export interface NormalizedView {
+  readonly sourceEnvelopeId?: string;
   readonly id: string;
   readonly text: string;
   readonly originSpans: readonly OriginSpan[];
@@ -150,7 +151,14 @@ export interface GuardEnginePolicy {
   readonly detectorDag?: DetectorDagSpec;
 }
 
+export interface GuardEvaluationTrace {
+  readonly requestId:string;
+  readonly normalization:Omit<import('./normalization').NormalizationResult,'views'> & {readonly viewCount:number;readonly sourceCount:number};
+  readonly nodes:readonly {readonly nodeId:string;readonly detectorId:string;readonly status:string;readonly attempts:number;readonly reason:string}[];
+  readonly aggregateAction:GuardAction;
+}
 export interface GuardEngineDependencies {
+  readonly onEvaluationTrace?: (trace:GuardEvaluationTrace)=>void;
   readonly now?: () => number;
   readonly hmacKey: string | Buffer;
   readonly protectedContextFingerprints?: readonly ProtectedContextFingerprint[];
@@ -173,6 +181,7 @@ export interface GuardEngine {
 }
 
 export interface RuleSpec {
+  readonly matchConstraints?: import('./rule-constraints').RuleMatchConstraints;
   readonly sourceIds?: readonly string[];
   readonly actionHint?: string;
   readonly sourceMatchMode?: string;

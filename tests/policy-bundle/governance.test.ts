@@ -262,3 +262,18 @@ describe('policy governance artifacts', () => {
     expect(verifyPolicyBundle(signed, publicKey)).toBe(true);
   });
 });
+
+
+it('keeps governed compound constraints inside the signed runtime payload',()=>{
+  const governance=governedArtifacts();
+  const constraints={boundary:'UNICODE_TOKEN' as const,contextPolicy:'LOCAL_INTENT_V1' as const,evidenceClass:'DETERMINISTIC_RISK' as const,
+    relation:{allOf:[{pattern:'act as',matchType:'contains' as const}],anyOf:[],maximumDistance:64,scope:'CLAUSE' as const}};
+  const payload=compilePolicyBundle(baseConfig,3,{governance:{...governance,keywordRules:[keywordRule({pattern:'DAN',mandatoryDeny:false,matchConstraints:constraints})]},compileTimeEpochMs:1750000000000});
+  const parsed=parseCompiledPolicyBundlePayload(payload);
+  expect(parsed.rules[0].matchConstraints).toEqual(constraints);
+  const {privateKey,publicKey}=generateKeyPairSync('ed25519');
+  const signed=signPolicyBundle(payload,{privateKey,signingKeyId:'test-key'});
+  expect(verifyPolicyBundle(signed,publicKey)).toBe(true);
+  const tampered={...parsed,rules:[{...parsed.rules[0],matchConstraints:{...constraints,boundary:'NONE' as const}}]};
+  expect(verifyPolicyBundle({...signed,payload:tampered},publicKey)).toBe(false);
+});
