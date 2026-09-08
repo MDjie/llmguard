@@ -87,6 +87,7 @@ export const guardRequestSchema = z.object({
     ]),
     absoluteDeadlineEpochMs: z.number().int().positive(),
     policyBundleId: id,
+    taskPurpose: z.string().min(1).max(4096).optional(),
     subjectId: z.string().min(1).max(256).optional(),
     authContextId: id.optional(),
     tokenizerId: z.string().min(1).max(256).optional(),

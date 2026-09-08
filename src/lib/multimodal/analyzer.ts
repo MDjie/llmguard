@@ -16,6 +16,7 @@ const regionSchema = z.tuple([
 ]);
 const analysisSchema = z.object({
   coverage:analysisCoverageSchema.optional(),
+  documentText:z.array(z.object({viewId:z.string().min(1).max(100),containerPath:z.string().min(1).max(500),text:z.string().max(262144),sourceRelation:z.literal('OFFICE_PACKAGE_TEXT')}).strict()).max(10000).optional(),
   analyzerVersion: z.string().min(1).max(100),
   coordinateMappings:z.array(z.record(z.string(),z.unknown())).max(10000).optional(),
   ocr: z.array(z.object({

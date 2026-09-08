@@ -14,6 +14,6 @@ describe('subtitle extraction', () => {
   });
 
   it('rejects malformed and reversed ranges', () => {
-    expect(parseWebVtt('WEBVTT\n\n00:00:02.000 --> 00:00:01.000\nignored')).toEqual([]);
+    expect(()=>parseWebVtt('WEBVTT\n\n00:00:02.000 --> 00:00:01.000\nignored')).toThrow('ANALYZER_SUBTITLE_TIMELINE_INVALID');
   });
 });

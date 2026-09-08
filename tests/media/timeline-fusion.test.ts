@@ -172,7 +172,7 @@ describe('audio/video timeline fusion', () => {
         segments: [], visual: [],
         analysisFailures: [{ component: 'ASR', required: true, code: 'ANALYZER_ASR_TIMEOUT' }],
       });
-      expect(failed).toMatchObject({ action: 'BLOCK', degraded: true });
+      expect(failed).toMatchObject({ action: 'REQUIRE_REVIEW', degraded: true });
     } finally {
       process.env.CONTENT_HASH_KEY = previous;
     }

@@ -6,10 +6,12 @@ export const createGuardJobSchema = z.object({
   artifactId: id,
   contextArtifactId: id.optional(),
   bundleId: id,
+  sourceArtifactIds: z.array(id).min(1).max(8).optional(),
+  taskPurpose: z.string().max(4096).optional(),
   nativeArtifactIds: z.array(id).min(1).max(8).optional(),
   direction: z.enum(['INPUT','OUTPUT_COMPLETE','OUTPUT_CHUNK','TOOL_RESULT']).optional(),
   jobType: z.enum([
-    'auto', 'native_joint', 'document_image', 'audio_video', 'rag_ingest', 'tool_result', 'content_mark', 'code_scan',
+    'auto', 'intake', 'native_joint', 'document_image', 'audio_video', 'rag_ingest', 'tool_result', 'content_mark', 'code_scan',
   ]).default('auto'),
   idempotencyKey: z.string().min(8).max(128).regex(/^[a-zA-Z0-9._:-]+$/),
   maxAttempts: z.number().int().min(1).max(10).default(3),

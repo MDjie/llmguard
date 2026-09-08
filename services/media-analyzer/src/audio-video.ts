@@ -1,3 +1,4 @@
+import {pcmInputArguments, type PcmParameters} from '../../../src/lib/media/formats/pcm';
 import { readdir, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { z } from 'zod';
@@ -15,7 +16,7 @@ import type {
 import {
   classifyAudioAnomalies,
   classifyImage,
-  transcribeAudio,
+  transcribeAudioWindowed,
 } from './model-adapters';
 import { runOcr } from './ocr';
 import { mapInBatches } from './batching';
@@ -30,6 +31,7 @@ const probeSchema = z.object({
   }).passthrough(),
   streams: z.array(z.object({
     codec_type: z.string(),
+    channels:z.number().int().positive().max(64).optional(),
     duration: z.string().optional(),
   }).passthrough()).max(100),
 }).passthrough();
@@ -84,10 +86,11 @@ async function probe(
   workspace: string,
   timeoutMs: number,
   signal?: AbortSignal,
+  pcm?: PcmParameters,
 ) {
   const result = await runner.run(process.env.ANALYZER_FFPROBE_COMMAND ?? 'ffprobe', [
     '-v', 'error', '-show_format', '-show_streams', '-of', 'json',
-    '-protocol_whitelist', 'file,pipe', inputPath,
+    '-protocol_whitelist', 'file,pipe', ...pcmInputArguments(pcm), inputPath,
   ], {
     cwd: workspace,
     timeoutMs,
@@ -101,15 +104,16 @@ async function probe(
     throw new Error('ANALYZER_FFPROBE_JSON_INVALID');
   }
   const parsed = probeSchema.parse(value);
-  const seconds = Number(parsed.format.duration ??
-    parsed.streams.map((stream) => Number(stream.duration ?? 0)).find((item) => item > 0) ?? 0);
+  const durations=[parsed.format.duration,...parsed.streams.map(stream=>stream.duration)]
+    .filter((value):value is string=>value!==undefined&&value!=='N/A').map(Number);
+  if(!durations.length||durations.some(value=>!Number.isFinite(value)||value<0))throw new Error('ANALYZER_MEDIA_DURATION_UNKNOWN');
+  const durationMs=Math.round(Math.max(...durations)*1000);
+  if(!Number.isSafeInteger(durationMs)||durationMs<=0||durationMs>7*24*60*60*1000)throw new Error('ANALYZER_MEDIA_DURATION_INVALID');
   return {
     format: parsed.format.format_name.slice(0, 100),
-    durationMs: Math.max(0, Math.min(
-      7 * 24 * 60 * 60 * 1_000,
-      Math.round((Number.isFinite(seconds) ? seconds : 0) * 1_000),
-    )),
+    durationMs,
     audioTrackCount: parsed.streams.filter(stream => stream.codec_type === 'audio').length,
+    audioUnits:parsed.streams.filter(stream=>stream.codec_type==='audio').flatMap((stream,track)=>{if(!stream.channels)throw new Error('ANALYZER_AUDIO_CHANNELS_UNKNOWN');return Array.from({length:stream.channels},(_,channel)=>({track,channel}));}),
     subtitleTrackCount: parsed.streams.filter(stream => stream.codec_type === 'subtitle').length,
     hasAudio: parsed.streams.some((stream) => stream.codec_type === 'audio'),
     hasVideo: parsed.streams.some((stream) => stream.codec_type === 'video'),
@@ -146,17 +150,18 @@ async function decodedBytes(paths: readonly string[]): Promise<number> {
   return total;
 }
 
-async function extractAudio(
+export async function extractAudio(
   runner: CommandRunner,
   inputPath: string,
   outputPath: string,
   workspace: string,
   timeoutMs: number,
   signal?: AbortSignal,
+  track=0,channel=0,pcm?: PcmParameters,
 ) {
   await runner.run(process.env.ANALYZER_FFMPEG_COMMAND ?? 'ffmpeg', [
     '-nostdin', '-v', 'error', '-protocol_whitelist', 'file,pipe',
-    '-i', inputPath, '-map', '0:a:0', '-vn', '-ac', '1', '-ar', '16000',
+    ...pcmInputArguments(pcm), '-i', inputPath, '-map', '0:a:'+track, '-vn', '-af',`pan=mono|c0=c${channel}`, '-ac', '1', '-ar', '16000',
     '-c:a', 'pcm_s16le', '-y', outputPath,
   ], {
     cwd: workspace,
@@ -189,6 +194,7 @@ async function materializeAudioViews(input: {
   readonly originalPath: string;
   readonly workspace: string;
   readonly durationMs: number;
+  readonly prefix?:string;
   readonly signal?: AbortSignal;
 }): Promise<AudioView[]> {
   const unique = [...new Set(input.request.audioViews)];
@@ -196,7 +202,7 @@ async function materializeAudioViews(input: {
     if (viewId === 'original') {
       return { id: viewId, path: input.originalPath, timeScale: 1 };
     }
-    const target = join(input.workspace, `audio-${viewId}.wav`);
+    const target = join(input.workspace, `${input.prefix??'audio'}-${viewId}.wav`);
     const reverseDurationMs = viewId === 'reverse_probe'
       ? Math.min(input.durationMs, 60_000)
       : undefined;
@@ -248,7 +254,7 @@ export function mergeTranscriptSegments(
   for (const segment of segments) {
     const normalizedText = segment.text.normalize('NFKC').trim().toLowerCase();
     if (!normalizedText) continue;
-    const key = `${Math.round(segment.startMs / 250)}:${Math.round(segment.endMs / 250)}:${normalizedText}`;
+    const key = `${segment.channel??0}:${Math.round(segment.startMs / 250)}:${Math.round(segment.endMs / 250)}:${normalizedText}`;
     const previous = selected.get(key);
     if (!previous || segment.confidence > previous.confidence) selected.set(key, segment);
   }
@@ -485,11 +491,12 @@ export async function analyzeAudioVideo(
   if (request.artifact.sizeBytes > maximum) throw new Error('ANALYZER_ARTIFACT_TOO_LARGE');
   return withLoadedArtifact(request.artifact, async (inputPath, workspace) => {
     const metadata = await probe(
-      runner, inputPath, workspace, request.sandbox.ffprobeTimeoutMs, signal);
+      runner, inputPath, workspace, request.sandbox.ffprobeTimeoutMs, signal, request.artifact.pcm);
+    if(metadata.audioUnits.length>16)throw new Error('ANALYZER_AUDIO_TRACK_BUDGET_EXCEEDED');
     assertMediaResourceBudget({
       durationMs: metadata.durationMs,
       maxDurationMs: request.sampling.maxDurationMs,
-      decodedBytes: metadata.hasAudio ? metadata.durationMs * 32 : 0,
+      decodedBytes: metadata.hasAudio ? metadata.durationMs * 32 * metadata.audioUnits.length * Math.max(1,request.audioViews.length) : 0,
       maxDecodedBytes: request.sandbox.maxDecodedBytes,
     });
     if (request.artifact.kind === 'AUDIO' && !metadata.hasAudio) {
@@ -503,18 +510,19 @@ export async function analyzeAudioVideo(
     const generatedPaths: string[] = [];
     const coordinateMappings:Record<string,unknown>[]=[];
     let transcript: TranscriptSegment[] = [];
-    let subtitles: SubtitleSegment[] = [];
-    let anomalies: Awaited<ReturnType<typeof classifyAudioAnomalies>>['anomalies'] = [];
-    if (metadata.hasAudio) {
-      const audioPath = join(workspace, 'audio.wav');
+    const subtitles: SubtitleSegment[] = [];
+    const anomalies: Awaited<ReturnType<typeof classifyAudioAnomalies>>['anomalies'] = [];
+    for (const [unitIndex,unit] of metadata.audioUnits.entries()) {
+      const prefix=`track${unit.track}-ch${unit.channel}`;
+      const audioPath = join(workspace, prefix+'.wav');
       await extractAudio(
-        runner, inputPath, audioPath, workspace, request.sandbox.ffmpegTimeoutMs, signal);
+        runner, inputPath, audioPath, workspace, request.sandbox.ffmpegTimeoutMs, signal,unit.track,unit.channel,request.artifact.pcm);
       generatedPaths.push(audioPath);
       const audioViews = await materializeAudioViews({
         request,
         runner,
         originalPath: audioPath,
-        workspace,
+        prefix,workspace,
         durationMs: metadata.durationMs,
         signal,
       });
@@ -534,21 +542,22 @@ export async function analyzeAudioVideo(
             signal: attemptSignal,
           }), signal);
         versions.add(audioRisks.modelVersion);
-        anomalies = audioRisks.anomalies.filter(
+        anomalies.push(...audioRisks.anomalies.filter(
           (item) => item.score >= request.sampling.minimumConfidence,
-        );
+        ));
       } catch (error) {
         failures.push(failure('AUDIO_CLASSIFIER', true, error));
       }
-      coordinateMappings.push(...audioViews.map(view=>({viewId:view.id,mappingVersion:'audio-time-to-source-1',basis:'SOURCE_TIME_MS',timeScale:view.timeScale,reverseDurationMs:view.reverseDurationMs??null,sourceDurationMs:metadata.durationMs})));
+      coordinateMappings.push(...audioViews.map(view=>({viewId:prefix+'-'+view.id,track:unit.track,channel:unit.channel,mappingVersion:'audio-time-to-source-1',basis:'SOURCE_TIME_MS',timeScale:view.timeScale,reverseDurationMs:view.reverseDurationMs??null,sourceDurationMs:metadata.durationMs})));
       const asrViews = await mapInBatches(
         audioViews,
         request.sampling.batchSize,
         async (view) => {
           try {
-            const result = await asrGuard.execute((attemptSignal) => transcribeAudio({
+            const result = await asrGuard.execute((attemptSignal) => transcribeAudioWindowed({
               runner,
               audioPath: view.path,
+              durationMs:Math.round(view.reverseDurationMs??metadata.durationMs/view.timeScale),
               workspace,
               signal: attemptSignal,
             }), signal);
@@ -563,26 +572,30 @@ export async function analyzeAudioVideo(
       for (const item of asrViews) {
         if (!item) continue;
         versions.add(item.result.modelVersion);
+        if(item.result.segments.some(segment=>segment.confidence<request.sampling.minimumConfidence))failures.push({component:'ASR',required:true,code:'ANALYZER_ASR_LOW_CONFIDENCE_REGIONS'});
       }
-      transcript = mergeTranscriptSegments(asrViews.flatMap((item) => item
+      transcript = mergeTranscriptSegments([...transcript,...asrViews.flatMap((item) => item
         ? item.result.segments
             .filter((segment) => segment.confidence >= request.sampling.minimumConfidence)
             .map((segment) => remapAudioViewSegment({
               ...segment,
               source: 'asr',
-              sourceViewId: item.view.id,
+              sourceViewId:prefix+'-'+item.view.id,channel:unitIndex,
             }, item.view))
-        : []));
+        : [])]);
     }
-    if (metadata.hasSubtitles) {
+    if(metadata.subtitleTrackCount>16)throw new Error('ANALYZER_SUBTITLE_TRACK_BUDGET_EXCEEDED');
+    for(let subtitleTrack=0;subtitleTrack<metadata.subtitleTrackCount;subtitleTrack++){
       try {
-        subtitles = await subtitleGuard.execute((attemptSignal) => extractSubtitles({
+        subtitles.push(...await subtitleGuard.execute((attemptSignal) => extractSubtitles({
           runner,
           inputPath,
+          trackIndex:subtitleTrack,
           workspace,
           timeoutMs: request.sandbox.ffmpegTimeoutMs,
           signal: attemptSignal,
-        }), signal);
+        }), signal));
+        coordinateMappings.push({viewId:'subtitle-track-'+subtitleTrack,track:subtitleTrack,mappingVersion:'subtitle-track-time-1',basis:'SOURCE_TIME_MS'});
       } catch (error) {
         failures.push(failure('SUBTITLE', true, error));
       }
@@ -683,8 +696,8 @@ export async function analyzeAudioVideo(
         state:analysisFailures.length?'INCOMPLETE' as const:'SAMPLED' as const,
         unit:'MILLISECOND' as const,expectedUnits:Math.max(1,metadata.durationMs),processedUnits:processedIntervals.reduce((total, interval) => total + interval.endMs - interval.startMs, 0),
         processingCoverage: [
-          { unit: 'AUDIO_TRACK' as const, expected: metadata.audioTrackCount, processed: metadata.hasAudio && !audioFailed ? 1 : 0, failed: metadata.hasAudio && audioFailed ? 1 : 0, skipped: Math.max(0, metadata.audioTrackCount - 1) },
-          { unit: 'SUBTITLE_TRACK' as const, expected: metadata.subtitleTrackCount, processed: metadata.hasSubtitles && !subtitleFailed ? 1 : 0, failed: metadata.hasSubtitles && subtitleFailed ? 1 : 0, skipped: Math.max(0, metadata.subtitleTrackCount - 1) },
+          { unit: 'AUDIO_TRACK' as const, expected: metadata.audioTrackCount, processed: !audioFailed ? metadata.audioTrackCount : 0, failed: audioFailed ? metadata.audioTrackCount : 0, skipped: 0 },
+          { unit: 'SUBTITLE_TRACK' as const, expected: metadata.subtitleTrackCount, processed: !subtitleFailed ? metadata.subtitleTrackCount : 0, failed: subtitleFailed ? metadata.subtitleTrackCount : 0, skipped: 0 },
         ],
         temporalCoverage: { durationMs: metadata.durationMs, processedIntervals, sampledAtMs, maximumGapMs, enumerationComplete: false },
         analyzerVersion:analyzerVersion(versions,analysisFailures.length>0),

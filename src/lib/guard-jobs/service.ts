@@ -35,6 +35,7 @@ function configured(value: string | undefined): string[] {
 
 function automaticJobType(kind: string): string {
   if (kind === 'AUDIO' || kind === 'VIDEO') return 'audio_video';
+  if (kind === 'TEXT') return 'intake';
   if (kind === 'RAG_CHUNK') return 'rag_ingest';
   if (kind === 'TOOL_RESULT') return 'tool_result';
   return 'document_image';
@@ -55,6 +56,8 @@ export async function submitGuardJob(input: {
   artifactId: string;
   contextArtifactId?: string;
   nativeArtifactIds?: string[];
+  sourceArtifactIds?: string[];
+  taskPurpose?: string;
   direction?: 'INPUT'|'OUTPUT_COMPLETE'|'OUTPUT_CHUNK'|'TOOL_RESULT';
   bundleId: string;
   jobType: string;
@@ -68,7 +71,7 @@ export async function submitGuardJob(input: {
     eq(artifacts.state, 'accepted'),
     scopePredicate(artifacts, input.scope),
   )).limit(1);
-  if (!artifact) throw new GuardJobError('GRD_ARTIFACT_NOT_ACCEPTED', 'Artifact is not accepted or not owned by this principal');
+  if (!artifact || artifact.contentExpiresAt.getTime() <= Date.now()) throw new GuardJobError('GRD_ARTIFACT_NOT_ACCEPTED', 'Artifact is not accepted or not owned by this principal');
   let contextArtifactHash: string | undefined;
   if (input.contextArtifactId) {
     const [contextArtifact] = await db.select().from(artifacts).where(and(
@@ -102,18 +105,26 @@ export async function submitGuardJob(input: {
   if (jobType !== 'native_joint' && (input.nativeArtifactIds || input.direction)) throw new GuardJobError('GRD_NATIVE_JOB_OPTIONS_INVALID', 'Native options require a native_joint job');
   if (jobType === 'native_joint' && (!input.contextArtifactId || !input.nativeArtifactIds || input.nativeArtifactIds[0] !== input.artifactId)) throw new GuardJobError('GRD_NATIVE_JOB_CONTEXT_REQUIRED', 'Native jobs require an ordered source list beginning with the primary artifact and an owned context artifact');
   let executionBinding: Record<string, unknown> | undefined;
-  if (jobType === 'native_joint') {
+  if (jobType !== 'intake' && (input.sourceArtifactIds || input.taskPurpose)) throw new GuardJobError('GRD_INTAKE_OPTIONS_INVALID', 'Intake options require an intake job');
+  if (jobType === 'intake') {
+    const ids=input.sourceArtifactIds ?? [input.artifactId];
+    if(ids[0]!==input.artifactId)throw new GuardJobError('GRD_INTAKE_SOURCE_INVALID','The first source must be the primary artifact');
+    try{executionBinding=(await (await import('./intake-binding')).captureIntakeBinding(input.scope,input.ownerId,ids,input.taskPurpose)).binding;}
+    catch{throw new GuardJobError('GRD_INTAKE_SOURCE_INVALID','Sources must be accepted, current and owned');}
+  } else if (jobType === 'native_joint') {
     try { executionBinding = (await (await import('./native-binding')).captureNativeJobBinding(input.scope, input.ownerId, input.nativeArtifactIds!, input.contextArtifactId!, input.direction)).binding; }
     catch { throw new GuardJobError('GRD_NATIVE_JOB_SOURCE_INVALID', 'Native sources must be accepted, current, uniquely ordered and owned by this principal'); }
   } else if (jobType === 'code_scan') executionBinding = await (await import('@/lib/connectors/code-sentinel-config')).captureCodeScanBinding(input.scope, input.ownerId, input.artifactId);
   const requestHash = createHash('sha256').update(canonicalJson({
+    ownerId: input.ownerId,
+    maxAttempts: input.maxAttempts,
     ...(executionBinding ? { executionBinding } : {}),
     artifactId: input.artifactId,
     artifactHash: artifact.verifiedSha256,
     ...(input.contextArtifactId ? { contextArtifactId: input.contextArtifactId, contextArtifactHash } : {}),
     bundleId: input.bundleId,
     jobType,
-    ...(input.callback ? { callbackUrl: input.callback.url } : {}),
+    ...(input.callback ? { callbackUrl: input.callback.url, callbackSecretRef: input.callback.secretRef } : {}),
   })).digest('hex');
   const submission = await db.transaction(async (transaction) => {
     await transaction.execute(sql`select pg_advisory_xact_lock(hashtext(${`${input.scope.tenantId}:${input.scope.applicationId}:${input.idempotencyKey}`}))`);
@@ -122,7 +133,7 @@ export async function submitGuardJob(input: {
       eq(guardJobs.idempotencyKey, input.idempotencyKey),
     )).limit(1);
     if (existing) {
-      if (existing.requestHash !== requestHash) {
+      if (existing.ownerId !== input.ownerId || existing.requestHash !== requestHash) {
         throw new GuardJobError('GRD_IDEMPOTENCY_CONFLICT', 'Idempotency key was used for another job');
       }
       return { job: existing, reused: true };
@@ -241,17 +252,18 @@ export function monitorGuardJobCancellation(
   const poll = async (): Promise<void> => {
     if (stopped || controller.signal.aborted) return;
     try {
-      const current = await db.select({ status: guardJobs.status }).from(guardJobs).where(and(
+      const current = await db.select({ status: guardJobs.status, attempt: guardJobs.attempt }).from(guardJobs).where(and(
         eq(guardJobs.id, job.id),
         scopePredicate(guardJobs, scope),
       )).limit(1).then((rows) => rows[0]);
-      if (!current || current.status === 'cancelled') {
+      if (!current || current.status !== 'running' || current.attempt !== job.attempt) {
         controller.abort(new GuardJobError(
           'GRD_JOB_CANCELLED_OR_TERMINAL',
           'The guard job was cancelled or became terminal',
         ));
         return;
       }
+      await db.update(guardJobs).set({heartbeatAt:new Date()}).where(and(eq(guardJobs.id,job.id),eq(guardJobs.status,'running'),eq(guardJobs.attempt,job.attempt),scopePredicate(guardJobs,scope)));
     } catch {
       // A transient status-read failure must not manufacture a cancellation.
     }
@@ -285,6 +297,7 @@ export async function updateGuardJobProgress(
       heartbeatAt: new Date(),
     }).where(and(
       eq(guardJobs.id, job.id),
+      eq(guardJobs.attempt, job.attempt),
       eq(guardJobs.status, 'running'),
       scopePredicate(guardJobs, scope),
     )).returning({ id: guardJobs.id });
@@ -315,6 +328,7 @@ export async function completeGuardJob(
       heartbeatAt: new Date(), completedAt: new Date(),
     }).where(and(
       eq(guardJobs.id, job.id),
+      eq(guardJobs.attempt, job.attempt),
       eq(guardJobs.status, 'running'),
       scopePredicate(guardJobs, scope),
     )).returning({ id: guardJobs.id });
@@ -335,8 +349,8 @@ export async function failGuardJob(job: typeof guardJobs.$inferSelect, error: un
   const history = [...(job.failureHistory ?? []), {
     attempt: job.attempt,
     at: new Date().toISOString(),
-    code: 'GRD_JOB_EXECUTION_FAILED',
-    message: (error instanceof Error ? error.message : 'Unknown job failure').slice(0, 500),
+    code: error instanceof Error && /^[A-Z][A-Z0-9_:.-]{1,159}$/.test(error.message) ? error.message : 'GRD_JOB_EXECUTION_FAILED',
+    message: error instanceof Error && /^[A-Z][A-Z0-9_:.-]{1,159}$/.test(error.message) ? error.message : '任务执行失败，请根据请求标识检查服务状态',
   }];
   const terminal = job.attempt >= job.maxAttempts;
   await db.transaction(async (transaction) => {
@@ -348,6 +362,7 @@ export async function failGuardJob(job: typeof guardJobs.$inferSelect, error: un
       completedAt: terminal ? new Date() : null,
     }).where(and(
       eq(guardJobs.id, job.id),
+      eq(guardJobs.attempt, job.attempt),
       eq(guardJobs.status, 'running'),
       scopePredicate(guardJobs, scope),
     )).returning({ id: guardJobs.id });

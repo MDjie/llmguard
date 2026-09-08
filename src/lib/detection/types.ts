@@ -124,6 +124,7 @@ export interface CachedPolicyConfig {
 }
 
 export interface DetectionFinding {
+  scoreMeaning?: 'PROBABILITY' | 'POLICY' | 'UNCALIBRATED';
   dimension: string;
   dimensionName: string;
   dimensionId?: string;
@@ -147,6 +148,9 @@ export interface DetectionFinding {
 }
 
 export interface DetectionResult {
+  rawAction?: import('@guardllm/contracts').GuardAction;
+  confidenceMeaning?: 'PROBABILITY' | 'UNCALIBRATED';
+  operationalOutcome?: 'COMPLETE' | 'INCOMPLETE' | 'REQUIRES_REVIEW';
   overallScore: number;
   confidence: number;
   action: 'allow' | 'warn' | 'block' | 'mask' | 'rewrite';

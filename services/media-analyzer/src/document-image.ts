@@ -1,5 +1,6 @@
+import {officeToPdf,officePackageText} from './office';
 import { mapRegion, inverseRotation, tileMapping, type Affine } from '../../../src/lib/evidence/coordinate-mapping';
-import { copyFile, readdir, stat } from 'node:fs/promises';
+import { copyFile, readdir, stat, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { z } from 'zod';
 import { withLoadedArtifact } from './artifact-loader';
@@ -93,19 +94,54 @@ export function parsePdfPageCount(stdout:string,maximum:number):number{
   if(!Number.isSafeInteger(count)||count<1||count>maximum)throw new Error('ANALYZER_DOCUMENT_PAGE_LIMIT');
   return count;
 }
-async function sourcePages(
+export async function sourcePages(
   request: DocumentImageRequest,
   inputPath: string,
   workspace: string,
   runner: CommandRunner,
   signal?: AbortSignal,
 ): Promise<string[]> {
+  if (request.artifact.kind === 'IMAGE' && ['image/heif','image/heic'].includes(request.artifact.mediaType)) {
+    const info=await runner.run(process.env.ANALYZER_HEIF_INFO_COMMAND??'heif-info',[inputPath],{cwd:workspace,timeoutMs:request.limits.maxDecodeSeconds*1000,maxOutputBytes:262144,signal});
+    const dimensions=[...info.stdout.matchAll(/^image: (\d+)x(\d+) /gmu)];
+    if(!dimensions.length||/image sequence|main brand: (?:msf1|hevs|hevx)/iu.test(info.stdout))throw new Error('ANALYZER_HEIF_SEQUENCE_PROFILE_UNAVAILABLE');
+    if(dimensions.length>request.limits.maxPages||dimensions.length*request.views.length>request.limits.maxFrames||dimensions.reduce((sum,match)=>sum+Number(match[1])*Number(match[2]),0)>request.limits.maxPixels)throw new Error('ANALYZER_IMAGE_RESOURCE_LIMIT');
+    await runner.run(process.env.ANALYZER_HEIF_CONVERT_COMMAND??'heif-convert',['--quiet','--with-aux','--no-colons','--codec-threads','2','--tile-threads','2',inputPath,join(workspace,'heif.png')],{cwd:workspace,timeoutMs:request.limits.maxDecodeSeconds*1000,maxOutputBytes:65536,signal});
+    const pages=(await readdir(workspace)).filter(name=>/^heif(?:[-_][A-Za-z0-9._-]+)?\.png$/u.test(name)).sort().map(name=>join(workspace,name));
+    if(pages.length<dimensions.length||pages.length>request.limits.maxPages||pages.length*request.views.length>request.limits.maxFrames)throw new Error('ANALYZER_HEIF_IMAGE_COVERAGE_INCOMPLETE');
+    return pages;
+  }
+  if (request.artifact.kind === 'IMAGE' && request.artifact.mediaType === 'image/tiff') {
+    const info = await runner.run(process.env.ANALYZER_TIFFINFO_COMMAND ?? 'tiffinfo', [inputPath], {cwd:workspace, timeoutMs:request.limits.maxDecodeSeconds*1000, maxOutputBytes:262144,signal});
+    const directories=[...info.stdout.matchAll(/^=== TIFF directory (\d+) ===$/gmu)];
+    const dimensions=[...info.stdout.matchAll(/Image Width: (\d+) Image Length: (\d+)/gu)];
+    if (!directories.length || directories.length !== dimensions.length || /SubIFD|ExifIFD|GPSIFD/iu.test(info.stdout)) throw new Error('ANALYZER_TIFF_DIRECTORY_COVERAGE_UNSUPPORTED');
+    const pixels=dimensions.reduce((sum,match)=>sum+Number(match[1])*Number(match[2]),0);
+    if (directories.length>request.limits.maxPages || directories.length*request.views.length>request.limits.maxFrames || pixels>request.limits.maxPixels) throw new Error('ANALYZER_IMAGE_RESOURCE_LIMIT');
+    await runner.run(process.env.ANALYZER_TIFFSPLIT_COMMAND ?? 'tiffsplit',[inputPath,join(workspace,'split-')],{cwd:workspace,timeoutMs:request.limits.maxDecodeSeconds*1000,signal});
+    const split=(await readdir(workspace)).filter(name=>/^split-[a-z]+\.tif$/u.test(name)).sort();
+    if(split.length!==directories.length)throw new Error('ANALYZER_TIFF_PAGE_COVERAGE_INCOMPLETE');
+    const pages:string[]=[];
+    for(const [index,name] of split.entries()) {
+      const target=join(workspace,`page-${String(index+1).padStart(6,'0')}.png`);
+      await runner.run(process.env.ANALYZER_FFMPEG_COMMAND??'ffmpeg',['-nostdin','-v','error','-protocol_whitelist','file,pipe','-i',join(workspace,name),'-frames:v','1','-y',target],{cwd:workspace,timeoutMs:request.limits.maxDecodeSeconds*1000,signal});pages.push(target);
+    }
+    return pages;
+  }
   if (request.artifact.kind === 'IMAGE') {
-    const probe=await runner.run(process.env.ANALYZER_FFPROBE_COMMAND??'ffprobe',['-v','error','-count_frames','-select_streams','v:0','-show_entries','stream=nb_read_frames','-of','json',inputPath],
+    const probe=await runner.run(process.env.ANALYZER_FFPROBE_COMMAND??'ffprobe',['-v','error','-count_frames','-select_streams','v:0','-show_entries','stream=nb_read_frames,width,height','-of','json',inputPath],
       {cwd:workspace,timeoutMs:request.limits.maxDecodeSeconds*1000,maxOutputBytes:65536,signal});
-    const countSchema=z.object({streams:z.array(z.object({nb_read_frames:z.string()})).length(1)});
-    const frames=countSchema.parse(JSON.parse(probe.stdout)).streams[0].nb_read_frames;
-    if(frames!=='1')throw new Error('ANALYZER_ANIMATED_IMAGE_REQUIRES_VIDEO_PIPELINE');
+    const countSchema=z.object({streams:z.array(z.object({nb_read_frames:z.string(),width:z.number().int().positive(),height:z.number().int().positive()})).length(1)});
+    const stream=countSchema.parse(JSON.parse(probe.stdout)).streams[0],frames=stream.nb_read_frames;
+    const frameCount=Number(frames);
+    if(!Number.isSafeInteger(frameCount)||frameCount<1||frameCount>Math.min(request.limits.maxPages,request.limits.maxFrames))throw new Error('ANALYZER_IMAGE_FRAME_LIMIT');
+    if(frameCount*request.views.length>request.limits.maxFrames||stream.width*stream.height*frameCount>request.limits.maxPixels)throw new Error('ANALYZER_IMAGE_RESOURCE_LIMIT');
+    if(frameCount>1){
+      await runner.run(process.env.ANALYZER_FFMPEG_COMMAND??'ffmpeg',['-nostdin','-v','error','-protocol_whitelist','file,pipe','-i',inputPath,'-vsync','0','-frames:v',String(frameCount),'-y',join(workspace,'page-%06d.png')],{cwd:workspace,timeoutMs:request.limits.maxDecodeSeconds*1000,signal});
+      const pages=(await readdir(workspace)).filter(name=>/^page-\d+\.png$/u.test(name)).sort().map(name=>join(workspace,name));
+      if(pages.length!==frameCount)throw new Error('ANALYZER_IMAGE_FRAME_COVERAGE_INCOMPLETE');
+      return pages;
+    }
     const target = join(workspace, 'page-0001.png');
     await runner.run(process.env.ANALYZER_FFMPEG_COMMAND ?? 'ffmpeg', [
       '-nostdin', '-v', 'error', '-protocol_whitelist', 'file,pipe',
@@ -116,10 +152,11 @@ async function sourcePages(
     return [target];
   }
   if (request.artifact.mediaType !== 'application/pdf') {
-    throw new Error('ANALYZER_DOCUMENT_FORMAT_UNSUPPORTED');
+    inputPath=await officeToPdf(inputPath,request.artifact.fileName??'',workspace,runner,request.limits.maxDecodeSeconds*1000,signal);
   }
   const info=await runner.run(process.env.ANALYZER_PDFINFO_COMMAND??'pdfinfo',[inputPath],{cwd:workspace,timeoutMs:request.limits.maxDecodeSeconds*1000,maxOutputBytes:65536,signal});
   const expectedPages=parsePdfPageCount(info.stdout,request.limits.maxPages);
+  if(expectedPages*request.views.length>request.limits.maxFrames)throw new Error('ANALYZER_DERIVED_VIEW_LIMIT');
   await runner.run(process.env.ANALYZER_PDFTOPPM_COMMAND ?? 'pdftoppm', [
     '-png', '-r', '150', '-f', '1', '-l', String(request.limits.maxPages),
     inputPath, join(workspace, 'page'),
@@ -313,6 +350,7 @@ export async function analyzeDocumentImage(
     ? 100 * 1_024 * 1_024 : 500 * 1_024 * 1_024;
   if (request.artifact.sizeBytes > maxBytes) throw new Error('ANALYZER_ARTIFACT_TOO_LARGE');
   return withLoadedArtifact(request.artifact, async (inputPath, workspace) => {
+    const documentText=request.artifact.kind==='DOCUMENT'&&request.artifact.mediaType!=='application/pdf'?officePackageText(await readFile(inputPath),(request.artifact.fileName??'').split('.').at(-1)?.toLowerCase()??''):[];
     const pages = await sourcePages(request, inputPath, workspace, runner, signal);
     const views = await materializeViews(request, pages, workspace, runner, signal);
     await assertDecodeBudgets(request, pages, views, runner, workspace, signal);
@@ -406,7 +444,8 @@ export async function analyzeDocumentImage(
         processingCoverage:[{unit:'PAGE_VIEW' as const,expected:pages.length*request.views.length,processed:views.length,failed:0,skipped:Math.max(0,pages.length*request.views.length-views.length)}],
         analyzerVersion:`media-analyzer/1.1+${[...versions].sort().join(',') || 'degraded'}`,
         reasonCodes:[...analysisFailures.map(f=>f.code),...(lowConfidenceOcr?['OCR_LOW_CONFIDENCE_REGIONS']:[])]},
-      coordinateMappings:views.map(view=>view.mapping),
+      coordinateMappings:[...views.map(view=>view.mapping),...documentText.map(part=>({viewId:part.viewId,containerPath:part.containerPath,sourceRelation:part.sourceRelation,mappingVersion:'office-package-text-1',offsetEncoding:'UTF16'}))],
+      documentText,
       ocr,
       codes,
       labels,

@@ -126,9 +126,9 @@ describe('cross-modal fusion', () => {
         ocr: [], visual: [],
         analysisFailures: [{ component: 'OCR', required: true, code: 'ANALYZER_OCR_TIMEOUT' }],
       });
-      expect(result).toMatchObject({ action: 'BLOCK', degraded: true });
+      expect(result).toMatchObject({ action: 'REQUIRE_REVIEW', degraded: true });
       expect(result.evidence).toEqual(expect.arrayContaining([
-        expect.objectContaining({ reasonCode: 'ANALYZER_OCR_TIMEOUT', action: 'BLOCK' }),
+        expect.objectContaining({ reasonCode: 'ANALYZER_OCR_TIMEOUT', action: 'REQUIRE_REVIEW',status:'UNKNOWN',score:0 }),
       ]));
     } finally {
       process.env.CONTENT_HASH_KEY = previous;
@@ -194,7 +194,7 @@ it('never claims complete extraction when a QR result is below the configured co
   try {
     const result=await fuseMultimodal({bundle,context:{traceId:'trace-low-confidence',tenantId:'tenant-1',applicationId:'app-1',absoluteDeadlineEpochMs:Date.now()+5000},
       ocr:[],codes:[{text:'public reference',kind:'QR',confidence:.1,artifactId:'image',viewId:'qr',region:[0,0,1,1]}],visual:[],minimumConfidence:.35});
-    expect(result).toMatchObject({action:'BLOCK',degraded:true});
+    expect(result).toMatchObject({action:'REQUIRE_REVIEW',degraded:true});
     expect(result.evidence.some(item=>item.reasonCode==='MEDIA_EXTRACTION_CONFIDENCE_INSUFFICIENT')).toBe(true);
   } finally {process.env.CONTENT_HASH_KEY=previous;}
 });

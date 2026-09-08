@@ -19,3 +19,11 @@
 /输出/测试报告/2026-09-08/detection-repair-*/** -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
 # Raw tool logs retain their original whitespace for checksum verification.
 /输出/测试报告/2026-09-08/detection-repair-*/工程验收证据/*.log -whitespace
+
+# Byte-hashed synthetic media and delivery evidence must survive Windows checkouts.
+/tests/fixtures/multiformat/* -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+/tests/fixtures/multiformat/*.md text eol=lf
+/tests/fixtures/multiformat/*.json text eol=lf
+/输出/代码分析与升级/30_误报与格式接入证据_2026-09-08/** -text
+/输出/代码分析与升级/31_实施证据_2026-09-08/** -text
+/输出/代码分析与升级/31_实施证据_2026-09-08/*.log -whitespace

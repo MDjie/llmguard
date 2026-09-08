@@ -1,4 +1,6 @@
 'use client';
+import {MediaUploadPanel} from '@/components/media/media-upload-panel';
+import {mediaJson,waitWithSignal,type UploadedMedia} from '@/lib/media/upload-client';
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
@@ -14,12 +16,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { csrfHeaders } from '@/lib/auth/csrf-client';
-import { gatewayChatProvidersSchema, gatewayChatResponseSchema, type GatewayChatResult } from '@/contracts/http/gateway-chat';
+import { chatArtifactReferencesSchema,gatewayChatProvidersSchema, gatewayChatResponseSchema, type GatewayChatResult } from '@/contracts/http/gateway-chat';
 
 type Message = { id: string; role: 'user' | 'assistant'; content: string; approved: boolean; receipt?: GatewayChatResult };
 const actions = { ALLOW: '允许', WARN: '告警放行', BLOCK: '阻断', MASK: '脱敏', REWRITE: '改写', SAFE_RESPONSE: '安全代答', REQUIRE_REVIEW: '人工审核' };
 
 export function GatewayChat() {
+  const [attachments,setAttachments]=useState<UploadedMedia[]>([]),[uploadBusy,setUploadBusy]=useState(false),[uploadGeneration,setUploadGeneration]=useState(0),[attachmentJob,setAttachmentJob]=useState('');
   const [providers, setProviders] = useState<z.infer<typeof gatewayChatProvidersSchema>['data']>([]);
   const [providerId, setProviderId] = useState(''), [sessionId, setSessionId] = useState(''), [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([]), [last, setLast] = useState<GatewayChatResult | null>(null);
@@ -37,15 +40,35 @@ export function GatewayChat() {
   }, []);
   useEffect(() => { end.current?.scrollIntoView({ block: 'nearest' }); }, [messages, pending]);
   async function send() {
-    if (active.current || !input.trim() || !providerId || !sessionId) return;
+    if (active.current || uploadBusy || (!input.trim()&&!attachments.length) || !providerId || !sessionId) return;
     const requestId = crypto.randomUUID(), controller = new AbortController(); active.current = controller;
-    const user: Message = { id: requestId, role: 'user', content: input.trim(), approved: false };
+    const user: Message = { id: requestId, role: 'user', content: input.trim()||'请分析本次上传的附件。', approved: false };
     const history = messages.filter(item => item.approved).map(({ role, content }) => ({ role, content }));
     setMessages(previous => [...previous, user]); setInput(''); setError(''); setPending(true);
     try {
-      const response = await fetch('/api/chat', { method: 'POST', signal: controller.signal,
+      const currentMessages=[...history,{role:user.role,content:user.content}];
+      let references:z.infer<typeof chatArtifactReferencesSchema>|undefined;
+      if(attachments.length){
+        const prepared=z.object({data:z.object({mode:z.enum(['TEXT','NATIVE','INSPECTION']),jobId:z.string().uuid().optional(),references:chatArtifactReferencesSchema})}).parse(await mediaJson('/api/chat/attachments',{method:'POST',signal:controller.signal,headers:{'content-type':'application/json'},body:JSON.stringify({providerId,messages:currentMessages,artifactIds:attachments.map(item=>item.artifactId),idempotencyKey:requestId+'-attachments'})})).data;
+        references=prepared.references;
+        if(prepared.jobId){
+          setAttachmentJob(prepared.jobId);let completed=false;
+          try{for(let attempt=0;attempt<360;attempt++){
+            const job=z.object({data:z.object({status:z.string(),result:z.object({action:z.string().optional(),releaseEligibility:z.object({eligible:z.boolean()}).optional()}).nullable().optional()})}).parse(await mediaJson('/api/v1/guard/jobs/'+prepared.jobId,{signal:controller.signal})).data;
+            if(['failed','cancelled'].includes(job.status))throw new Error('附件检测未完成，请查看检测任务 '+prepared.jobId);
+            if(job.status==='completed'){
+              if(prepared.mode==='INSPECTION')throw new Error('附件检测已完成。当前目标模型尚未配置文档或文本混合附件的受控转换路由，请在文档检测中查看结果。任务 '+prepared.jobId);
+              if(!job.result?.releaseEligibility?.eligible||!['ALLOW','WARN'].includes(job.result.action??''))throw new Error('附件未获准进入模型，请查看检测任务 '+prepared.jobId);
+              completed=true;break;
+            }
+            await waitWithSignal(5000,controller.signal);
+          }}catch(error){if(controller.signal.aborted)void mediaJson('/api/v1/guard/jobs/'+prepared.jobId,{method:'DELETE'}).catch(()=>undefined);throw error;}
+          if(!completed)throw new Error('附件检测仍在处理中，任务 '+prepared.jobId);
+        }
+      }
+      const response = await fetch('/api/chat' , { method: 'POST', signal: controller.signal,
         headers: { 'content-type': 'application/json', 'idempotency-key': requestId, ...csrfHeaders() },
-        body: JSON.stringify({ providerId, sessionId, messages: [...history, { role: user.role, content: user.content }] }) });
+        body: JSON.stringify({ providerId, sessionId, messages: currentMessages,...(references?{artifacts:references}:{}) }) });
       const value: unknown = await response.json();
       if (!response.ok) {
         const problem = z.object({ code: z.string().optional(), detail: z.string().optional() }).safeParse(value);
@@ -54,13 +77,13 @@ export function GatewayChat() {
       const result = gatewayChatResponseSchema.parse(value).data;
       if (['BLOCK','REQUIRE_REVIEW'].includes(result.gateway.inputAction) || ['BLOCK','REQUIRE_REVIEW'].includes(result.gateway.outputAction)) throw new Error('网关响应与执行动作不一致，内容未展示。');
       if (controller.signal.aborted) return;
-      setLast(result);
+      setLast(result);setAttachments([]);setUploadGeneration(value=>value+1);
       setMessages(previous => [...previous.map(item => item.id === requestId ? { ...item, approved: true, receipt: result } : item), { id: requestId + '-reply', role: 'assistant', content: result.response, approved: true, receipt: result }]);
     } catch (error: unknown) {
       if (active.current === controller) setError(controller.signal.aborted ? '本次等待已取消。请在执行记录中核实请求状态；系统不会自动重复调用。' : error instanceof Error ? error.message : '网关执行失败');
     } finally { if (active.current === controller) { active.current = null; setPending(false); } }
   }
-  function newSession() { if (pending) return; setMessages([]); setLast(null); setError(''); setSessionId(crypto.randomUUID()); }
+  function newSession() { if (pending) return; setMessages([]); setLast(null); setError(''); setSessionId(crypto.randomUUID());setAttachments([]);setAttachmentJob('');setUploadGeneration(value=>value+1); }
   return <div className="space-y-5">
     <PageHeader title="安全对话工作台" description="输入审核、模型调用与输出处置统一经过安全网关" actions={<><Button asChild variant="outline"><Link href="/applications">应用接入</Link></Button><Button variant="outline" disabled={pending} onClick={newSession}><RotateCcw className="size-4"/>新建会话</Button></>}/>
     <div className="grid gap-3 sm:grid-cols-3"><MetricCard label="当前模型" value={providers.find(item => item.id === providerId)?.displayName ?? '—'} icon={Bot} hint="按应用允许的模型路由调用"/><MetricCard label="最近输出处置" value={last ? actions[last.gateway.outputAction] : '—'} icon={ShieldCheck} tone="green" hint="使用网关实际返回的执行结果"/><MetricCard label="最近请求耗时" value={last?.latencyMs ?? '—'} unit="ms" icon={Clock3} hint="包含输入审核、模型调用和输出审核"/></div>
@@ -71,7 +94,7 @@ export function GatewayChat() {
           {!messages.length && <EmptyState title={loading ? '正在准备模型…' : providers.length ? '开始一次受保护的对话' : '当前应用尚无可用模型'} description="策略由应用的已发布版本确定，每次请求保留输入与输出的执行证据。"/>}
           {messages.map(message => <article key={message.id} className="flex items-start gap-3"><span className={'flex size-8 shrink-0 items-center justify-center rounded-md ' + (message.role === 'user' ? 'bg-slate-100 text-slate-600' : 'bg-blue-50 text-primary')}>{message.role === 'user' ? <User className="size-4"/> : <Bot className="size-4"/>}</span><div className="min-w-0 flex-1"><p className="mb-1 text-xs font-medium">{message.role === 'user' ? '我的输入' : '模型答复'}</p><p className="whitespace-pre-wrap break-words text-sm leading-7">{message.content}</p>{message.receipt && <div className="mt-2 flex flex-wrap items-center gap-2"><Badge variant="outline">{message.role === 'user' ? '输入：' + actions[message.receipt.gateway.inputAction] : '输出：' + actions[message.receipt.gateway.outputAction]}</Badge><Link href={'/gateway-requests?request=' + encodeURIComponent(message.receipt.gateway.requestId)} className="text-[11px] text-primary hover:underline">查看执行记录</Link></div>}</div></article>)}
           {pending && <p className="flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="size-4 animate-spin"/>网关正在处理请求…</p>}<div ref={end}/>
-        </div><div className="space-y-3 border-t p-4"><Label htmlFor="gateway-prompt">输入消息</Label><Textarea id="gateway-prompt" value={input} onChange={event => setInput(event.target.value)} disabled={pending} maxLength={32768} className="min-h-24" placeholder="请输入业务问题…" onKeyDown={event => { if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') { event.preventDefault(); void send(); } }}/><div className="flex flex-wrap items-center justify-between gap-2"><p className="text-[11px] text-muted-foreground">Ctrl / ⌘ + Enter 发送 · 内容由服务端审核和处置</p>{pending ? <Button variant="outline" onClick={() => active.current?.abort()}><CircleStop className="size-4"/>取消等待</Button> : <Button disabled={!input.trim() || !providerId || !sessionId} onClick={() => void send()}><Send className="size-4"/>发送消息</Button>}</div></div></CardContent>
+        </div><div className="space-y-3 border-t p-4"><MediaUploadPanel key={uploadGeneration} onChange={setAttachments} onBusyChange={setUploadBusy} disabled={pending} recordAudio/>{attachmentJob&&<p className="break-all text-xs text-muted-foreground">附件任务：{attachmentJob} · <Link href="/document-scan">查看检测记录</Link></p>}<Label htmlFor="gateway-prompt">输入消息</Label><Textarea id="gateway-prompt" value={input} onChange={event => setInput(event.target.value)} disabled={pending} maxLength={32768} className="min-h-24" placeholder="请输入业务问题…" onKeyDown={event => { if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') { event.preventDefault(); void send(); } }}/><div className="flex flex-wrap items-center justify-between gap-2"><p className="text-[11px] text-muted-foreground">Ctrl / ⌘ + Enter 发送 · 内容由服务端审核和处置</p>{pending ? <Button variant="outline" onClick={() => active.current?.abort()}><CircleStop className="size-4"/>取消等待</Button> : <Button disabled={uploadBusy || (!input.trim()&&!attachments.length) || !providerId || !sessionId} onClick={() => void send()}><Send className="size-4"/>发送消息</Button>}</div></div></CardContent>
       </Card>
       <div className="min-w-0 space-y-4"><Card><CardHeader><CardTitle className="flex items-center gap-2"><Layers className="size-4 text-primary"/>执行依据</CardTitle></CardHeader><CardContent className="space-y-4 text-xs">{last ? <><div><p className="text-muted-foreground">请求 ID</p><p className="mt-1 break-all font-mono">{last.gateway.requestId}</p></div><div><p className="text-muted-foreground">固定策略快照</p><p className="mt-1 break-all font-mono">{last.gateway.snapshotId}</p></div><div><p className="text-muted-foreground">最终决策</p><p className="mt-1 break-all font-mono">{last.gateway.decisionId}</p></div><Button asChild variant="outline" className="w-full"><Link href={'/gateway-requests?request=' + encodeURIComponent(last.gateway.requestId)}>查看完整执行时间线</Link></Button></> : <p className="leading-6 text-muted-foreground">完成调用后，将展示网关返回的请求、快照与决策标识。</p>}</CardContent></Card><Card><CardHeader><CardTitle>当前会话</CardTitle></CardHeader><CardContent className="space-y-3"><p className="break-all font-mono text-xs text-muted-foreground">{sessionId || '正在初始化…'}</p><p className="text-xs leading-6 text-muted-foreground">同一会话按顺序处理请求。服务端保存执行状态，并在请求结束后提交会话记忆。</p><p className="text-xs leading-6 text-muted-foreground">检测详情、风险证据和人工处置可在请求执行记录中查看。</p></CardContent></Card></div>
     </div>

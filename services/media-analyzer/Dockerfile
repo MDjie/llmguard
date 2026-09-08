@@ -6,6 +6,7 @@ COPY scripts/enforce-pnpm.mjs ./scripts/enforce-pnpm.mjs
 RUN pnpm install --frozen-lockfile
 COPY services/media-analyzer services/media-analyzer
 COPY tsconfig.json ./tsconfig.json
+COPY src/lib/media/formats/pcm.ts src/lib/media/formats/pcm.ts
 COPY src/lib/evidence/coordinate-mapping.ts src/lib/evidence/coordinate-mapping.ts
 COPY src/contracts/http/native-multimodal.ts src/contracts/http/native-multimodal.ts
 COPY src/contracts/http/media-transform.ts src/contracts/http/media-transform.ts
@@ -17,7 +18,7 @@ COPY src/lib/gateway-runtime/completion-fields.ts src/lib/gateway-runtime/comple
 RUN pnpm analyzer:build
 
 FROM node:24.20.0-alpine
-RUN apk add --no-cache ca-certificates ffmpeg font-noto-cjk poppler-utils tesseract-ocr tesseract-ocr-data-eng tesseract-ocr-data-chi_sim zbar
+RUN apk add --no-cache ca-certificates ffmpeg font-noto-cjk poppler-utils libreoffice libheif-tools tiff-tools tesseract-ocr tesseract-ocr-data-eng tesseract-ocr-data-chi_sim zbar
 RUN addgroup -S analyzer
 RUN adduser -S -G analyzer -u 10002 analyzer
 WORKDIR /app
@@ -28,6 +29,7 @@ ENV ANALYZER_PORT=8090
 ENV ANALYZER_FFMPEG_COMMAND=ffmpeg
 ENV ANALYZER_FFPROBE_COMMAND=ffprobe
 ENV ANALYZER_PDFTOPPM_COMMAND=pdftoppm
+ENV ANALYZER_OFFICE_COMMAND=libreoffice
 ENV ANALYZER_TESSERACT_COMMAND=tesseract
 ENV ANALYZER_CODE_READER_COMMAND=zbarimg
 USER analyzer

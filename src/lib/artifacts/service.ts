@@ -1,3 +1,6 @@
+import {pcmFromMetadata} from '@/lib/media/formats/pcm';
+import {textEncodingFromMetadata} from '@/lib/media/formats/text-decoder';
+import {validateMediaFileMetadata, MEDIA_LIMITS} from '@/lib/media/formats/registry';
 import { createHash, randomUUID } from 'node:crypto';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import { canonicalJson } from '@/lib/policy-bundle';
@@ -9,11 +12,11 @@ import { artifactParts, artifacts } from '@/storage/database/shared/schema';
 const PART_SIZE = 16 * 1_024 * 1_024;
 const TENANT_QUOTA_BYTES = 10 * 1024 * 1024 * 1024;
 const LIMITS: Readonly<Record<string, number>> = {
-  TEXT: 100 * 1024 * 1024,
-  IMAGE: 100 * 1024 * 1024,
-  AUDIO: 500 * 1024 * 1024,
-  VIDEO: 3 * 1024 * 1024 * 1024,
-  DOCUMENT: 500 * 1024 * 1024,
+  TEXT: MEDIA_LIMITS.text,
+  IMAGE: MEDIA_LIMITS.image,
+  AUDIO: MEDIA_LIMITS.audio,
+  VIDEO: MEDIA_LIMITS.video,
+  DOCUMENT: MEDIA_LIMITS.document,
   TOOL_RESULT: 100 * 1024 * 1024,
   RAG_CHUNK: 100 * 1024 * 1024,
 };
@@ -45,10 +48,20 @@ export async function createArtifactUpload(input: {
   retentionDays: number;
   metadata: Record<string, unknown>;
 }) {
-  if (input.sizeBytes > (LIMITS[input.kind] ?? 0)) {
+  if (!Number.isSafeInteger(input.sizeBytes) || input.sizeBytes < 1 || input.sizeBytes > (LIMITS[input.kind] ?? 0)) {
     throw new ArtifactError('GRD_ARTIFACT_TOO_LARGE', 'Artifact exceeds the configured kind limit');
   }
+  if (!['TOOL_RESULT','RAG_CHUNK'].includes(input.kind)) {
+    try {
+      const selected = validateMediaFileMetadata({name: input.fileName, type: input.mediaType, size: input.sizeBytes});
+      if (selected.category.toUpperCase() !== input.kind) throw new Error('FILE_KIND_MISMATCH');
+      pcmFromMetadata(input.fileName, input.metadata, input.sizeBytes);
+      if (selected.category === 'text') textEncodingFromMetadata(input.metadata);
+    } catch (error) { throw new ArtifactError('GRD_ARTIFACT_FORMAT_INVALID', error instanceof Error ? error.message : 'Invalid media metadata'); }
+  }
   const requestHash = hash({
+    ownerId: input.ownerId,
+    retentionDays: input.retentionDays,
     kind: input.kind,
     fileName: input.fileName,
     mediaType: input.mediaType,
@@ -57,13 +70,13 @@ export async function createArtifactUpload(input: {
     metadata: input.metadata,
   });
   return db.transaction(async (transaction) => {
-    await transaction.execute(sql`select pg_advisory_xact_lock(hashtext(${`${input.scope.tenantId}:${input.scope.applicationId}:artifacts`}))`);
+    await transaction.execute(sql`select pg_advisory_xact_lock(hashtext(${`${input.scope.tenantId}:artifacts`}))`);
     const [existing] = await transaction.select().from(artifacts).where(and(
       scopePredicate(artifacts, input.scope),
       eq(artifacts.idempotencyKey, input.idempotencyKey),
     )).limit(1);
     if (existing) {
-      if (existing.requestHash !== requestHash) {
+      if (existing.ownerId !== input.ownerId || existing.requestHash !== requestHash) {
         throw new ArtifactError('GRD_IDEMPOTENCY_CONFLICT', 'Idempotency key was used for another artifact');
       }
       return { artifact: existing, reused: true };
@@ -72,7 +85,7 @@ export async function createArtifactUpload(input: {
       bytes: sql<string>`coalesce(sum(${artifacts.declaredSize}), 0)`,
     }).from(artifacts).where(and(
       eq(artifacts.tenantId, input.scope.tenantId),
-      inArray(artifacts.state, ['uploading', 'verifying', 'accepted']),
+      inArray(artifacts.state, ['uploading', 'verifying', 'verification_running', 'accepted', 'failed', 'quarantined', 'deleted']),
     ));
     if (Number(usage?.bytes ?? 0) + input.sizeBytes > TENANT_QUOTA_BYTES) {
       throw new ArtifactError('GRD_TENANT_ARTIFACT_QUOTA_EXCEEDED', 'Tenant artifact quota exceeded');
@@ -115,7 +128,7 @@ export async function signArtifactPart(
   if (!artifact) throw new ArtifactError('GRD_ARTIFACT_NOT_UPLOADABLE', 'Artifact upload is unavailable');
   if (partNumber > artifact.partCount) throw new ArtifactError('GRD_ARTIFACT_PART_INVALID', 'Part number exceeds manifest');
   const signer = new S3Presigner(objectStoreConfig());
-  return signer.presign('PUT', artifactPartKey(artifact.objectPrefix, partNumber), { expiresSeconds: 900 });
+  return signer.presign('PUT', artifactPartKey(artifact.objectPrefix, partNumber), { expiresSeconds: 60, ifNoneMatch: true });
 }
 
 export async function completeArtifactUpload(

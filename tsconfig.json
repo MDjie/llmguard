@@ -47,6 +47,7 @@
     "node_modules",
     "dist",
     ".artifact-build",
-    "输出"
+    "输出",
+    "tests/fixtures/multiformat"
   ]
 }

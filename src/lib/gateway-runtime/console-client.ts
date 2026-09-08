@@ -1,3 +1,4 @@
+import type {ChatArtifactReference} from '@/contracts/http/gateway-chat';
 import { request as httpsRequest } from 'node:https';
 import { request as httpRequest } from 'node:http';
 import { readFileSync } from 'node:fs';
@@ -8,7 +9,7 @@ import { canonicalJson, GatewayError, sha256 } from './protocol';
 import { issueConsoleAssertion } from './security';
 
 const replySchema = z.object({ choices: z.array(z.object({ message: z.object({ content: z.string() }) })).min(1) });
-export async function callGatewayConsole(principal: AuthenticatedPrincipal, modelRoute: string, messages: readonly { role: string; content: string }[], signal: AbortSignal, sessionId?: string, idempotencyKey?: string) {
+export async function callGatewayConsole(principal: AuthenticatedPrincipal, modelRoute: string, messages: readonly { role: string; content: string }[], signal: AbortSignal, sessionId?: string, idempotencyKey?: string, artifacts?:readonly ChatArtifactReference[]) {
   const configured = process.env.GATEWAY_PROXY_URL;
   if (!configured) throw new GatewayError('GATEWAY_PROXY_NOT_CONFIGURED', 503);
   const url = new URL('/v1/chat/completions', configured);
@@ -18,7 +19,7 @@ export async function callGatewayConsole(principal: AuthenticatedPrincipal, mode
   const cert = process.env.GATEWAY_CONSOLE_TLS_CERT, key = process.env.GATEWAY_CONSOLE_TLS_KEY, ca = process.env.GATEWAY_CONSOLE_TLS_CA;
   if (!insecure && (!cert || !key || !ca)) throw new GatewayError('GATEWAY_CONSOLE_MTLS_REQUIRED', 503);
   const started = Date.now();
-  const body = { model: modelRoute, messages, stream: false };
+  const body = { model: modelRoute, messages, stream: false, ...(artifacts?.length?{guard_artifacts:artifacts}:{}) };
   const raw = JSON.stringify(body);
   const assertion = issueConsoleAssertion(principal, sha256(canonicalJson(body)));
   const requestId = randomUUID();

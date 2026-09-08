@@ -1,3 +1,4 @@
+import {pcmSchema} from '../../../src/lib/media/formats/pcm';
 import { z } from 'zod';
 
 const id = z.string().min(1).max(128);
@@ -54,7 +55,7 @@ export const documentImageRequestSchema = z.object({
 export const mediaRequestSchema = z.object({
   contractVersion: z.literal('1.0'),
   context,
-  artifact: artifact.extend({ kind: z.enum(['AUDIO', 'VIDEO']) }).strict(),
+  artifact: artifact.extend({ kind: z.enum(['AUDIO', 'VIDEO']), pcm: pcmSchema.optional() }).strict().refine(value => !['audio/pcm','audio/l16'].includes(value.mediaType.toLowerCase()) || (value.kind === 'AUDIO' && value.pcm !== undefined), {message:'PCM_METADATA_REQUIRED'}),
   sandbox: z.object({
     ffprobeTimeoutMs: z.number().int().positive().max(120_000),
     ffmpegTimeoutMs: z.number().int().positive().max(30 * 60_000),

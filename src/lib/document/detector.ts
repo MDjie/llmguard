@@ -18,6 +18,7 @@ import { scopePredicate, type TenantScope } from '@/lib/tenancy';
 
 export interface DocumentDetectionOptions {
   taskId: string;
+  taskPurpose?: string;
   chunks: DocumentChunk[];
   policyId: string;
   fileName: string;
@@ -26,6 +27,8 @@ export interface DocumentDetectionOptions {
 }
 
 export interface DocumentDetectionResult {
+  status: 'completed' | 'failed';
+  coverage: { complete: boolean; failedChunks: number[] };
   taskId: string;
   overallScore: number;
   finalAction: 'allow' | 'warn' | 'block';
@@ -120,6 +123,9 @@ export async function detectDocument(
   const { taskId, chunks, policyId, fileName, plainLines = [], scope } = options;
 
   const allFindings: DocumentFinding[] = [];
+  const seenFindings = new Set<string>();
+  const failedChunks: number[] = [];
+  if (!chunks.length) throw new Error('DOCUMENT_TEXT_EMPTY');
   let maxScore = 0;
   let finalAction: 'allow' | 'warn' | 'block' = 'allow';
   let globalWhitelistMatched: WhitelistMatched | undefined;
@@ -146,11 +152,13 @@ export async function detectDocument(
         scope,
         'input',
         {
+          taskPurpose: options.taskPurpose,
           sourceType: 'FILE',
           sourceId: fileName + ':' + i,
         },
       );
 
+      if (result.operationalOutcome === 'INCOMPLETE' || result.degradationReasons?.length) failedChunks.push(i);
       // 处理检测结果
       if (result.findings && result.findings.length > 0) {
         for (const finding of result.findings) {
@@ -214,7 +222,8 @@ export async function detectDocument(
             skippedDimensions: finding.skippedDimensions,
           };
 
-          allFindings.push(docFinding);
+          const identity = JSON.stringify([docFinding.dimensionCode, docFinding.ruleId, docFinding.startOffset, docFinding.endOffset, docFinding.locationStatus === 'not_found' ? i : null, docFinding.evidence]);
+          if (!seenFindings.has(identity)) { seenFindings.add(identity); allFindings.push(docFinding); }
 
           // 更新最高分数
           if (finding.score > maxScore) {
@@ -248,18 +257,22 @@ export async function detectDocument(
       }
 
     } catch (error) {
-      console.error(`分片 ${i} 检测失败:`, error);
+      failedChunks.push(i);
+      console.error('DOCUMENT_CHUNK_DETECTION_FAILED', {chunkIndex: i, errorType: error instanceof Error ? error.name : 'UnknownError'});
     }
   }
 
+  const complete = failedChunks.length === 0;
+  if (!complete) finalAction = 'block'; // Withhold release, without inventing a risk finding.
   // 保存检测结果到数据库
   await saveFindings(taskId, allFindings, scope);
 
   // 更新任务状态
   await db.update(documentScanTasks)
     .set({
-      status: 'completed',
-      statusMessage: '检测完成',
+      status: complete ? 'completed' : 'failed',
+      statusMessage: complete ? '检测完成' : '检测未完成，内容暂不可释放',
+      errorMessage: complete ? null : 'DOCUMENT_COVERAGE_INCOMPLETE: ' + [...new Set(failedChunks)].join(','),
       overallScore: maxScore,
       finalAction,
       findingsCount: allFindings.length,
@@ -271,6 +284,8 @@ export async function detectDocument(
     .where(and(eq(documentScanTasks.id, taskId), scopePredicate(documentScanTasks, scope)));
 
   return {
+    status: complete ? 'completed' : 'failed',
+    coverage: {complete, failedChunks: [...new Set(failedChunks)]},
     taskId,
     overallScore: maxScore,
     finalAction,

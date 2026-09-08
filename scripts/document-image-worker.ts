@@ -1,3 +1,4 @@
+import { processNextIntakeJob } from '../src/lib/media/intake-worker';
 import { processNextDocumentImageJob } from '../src/lib/multimodal';
 
 let stopping = false;
@@ -7,8 +8,13 @@ const once = process.env.MULTIMODAL_WORKER_ONCE === 'true';
 const idleMs = Math.max(250, Number(process.env.MULTIMODAL_WORKER_IDLE_MS ?? 2_000));
 
 async function main() {
+  let preferIntake = true;
   do {
-    const result = await processNextDocumentImageJob();
+    // Alternate queues so sustained uploads cannot starve legacy document jobs.
+    const result = preferIntake
+      ? await processNextIntakeJob() ?? await processNextDocumentImageJob()
+      : await processNextDocumentImageJob() ?? await processNextIntakeJob();
+    preferIntake = !preferIntake;
     if (result) console.log(JSON.stringify({ event: 'multimodal.document-image.processed', ...result }));
     else if (!once && !stopping) await new Promise((resolve) => setTimeout(resolve, idleMs));
   } while (!once && !stopping);

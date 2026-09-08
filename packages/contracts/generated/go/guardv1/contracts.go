@@ -1,9 +1,9 @@
 // Code generated from model/guard-v1.schema.json. DO NOT EDIT.
-// Source SHA-256: 44b9580b162406dfe22418cf70f016c246763510e54d36c1ee3658f2b3a62cf9
+// Source SHA-256: aaeb5fbfa00c54ddc3b2f95bc7a3896e7602f1b9391c66774516d58ef070d8f1
 package guardv1
 
 const GuardContractVersion = "1.0"
-const GuardContractSourceSHA256 = "44b9580b162406dfe22418cf70f016c246763510e54d36c1ee3658f2b3a62cf9"
+const GuardContractSourceSHA256 = "aaeb5fbfa00c54ddc3b2f95bc7a3896e7602f1b9391c66774516d58ef070d8f1"
 
 type Direction string
 
@@ -201,6 +201,7 @@ type RequestContext struct {
 	Stage *ProcessingStage `json:"stage,omitempty"`
 	BusinessLine *string `json:"businessLine,omitempty"`
 	LegalDisclaimerVersion *string `json:"legalDisclaimerVersion,omitempty"`
+	TaskPurpose *string `json:"taskPurpose,omitempty"`
 }
 
 type ArtifactRef struct {

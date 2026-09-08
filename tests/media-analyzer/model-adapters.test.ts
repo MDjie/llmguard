@@ -3,7 +3,7 @@ import type { CommandRunner } from '../../services/media-analyzer/src/command-ru
 import {
   classifyAudioAnomalies,
   classifyImage,
-  transcribeAudio,
+  transcribeAudio,planAsrWindows,transcribeAudioWindowed,
 } from '../../services/media-analyzer/src/model-adapters';
 
 const runner: CommandRunner = {
@@ -61,4 +61,12 @@ describe('media analyzer model adapters', () => {
       runner, audioPath: 'audio.wav', workspace: '.',
     })).rejects.toThrow('ANALYZER_AUDIO_CLASSIFIER_COMMAND_REQUIRED');
   });
+});
+
+describe('ASR provider windows',()=>{
+ it('covers 30-second boundaries without gaps and bounds each request',()=>{const windows=planAsrWindows(61000);expect(windows).toEqual([{startMs:0,endMs:30000},{startMs:29000,endMs:59000},{startMs:58000,endMs:61000}]);expect(windows.every(window=>window.endMs-window.startMs<=30000)).toBe(true);expect(()=>planAsrWindows(0)).toThrow();});
+ it('rejects provider timestamps outside a clip rather than clipping them',async()=>{
+  process.env.ANALYZER_ASR_COMMAND='test-adapter';const mock:CommandRunner={async run(_program,args){return {stdout:args.includes('--input')?JSON.stringify({modelVersion:'m',segments:[{text:'x',startMs:0,endMs:31000,confidence:.9}]}):'',stderr:'',exitCode:0};}};
+  try{await expect(transcribeAudioWindowed({runner:mock,audioPath:'audio.wav',workspace:'.',durationMs:60000})).rejects.toThrow('TIMELINE_OUT_OF_BOUNDS');}finally{delete process.env.ANALYZER_ASR_COMMAND;}
+ });
 });

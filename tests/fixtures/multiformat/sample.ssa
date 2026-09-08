@@ -1,0 +1,5 @@
+[Script Info]
+ScriptType: v4.00
+[Events]
+Format: Marked, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: Marked=0,0:00:01.00,0:00:03.00,Default,,0,0,0,,欢迎参加产品培训。

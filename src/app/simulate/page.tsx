@@ -1,5 +1,6 @@
 'use client';
 
+import { MediaInspectionWorkbench } from '@/components/media/media-inspection-workbench';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -53,6 +54,7 @@ interface StepResult {
 }
 
 interface GuardDetectionResult extends DetectionResultForRecord {
+  confidenceMeaning?: 'PROBABILITY'|'UNCALIBRATED';
   judgeModelResult?: JudgeModelResultData;
   decisionTrace?: DecisionTraceData;
   dimensionResults?: JudgeDimensionResultItem[];
@@ -372,6 +374,7 @@ export default function SimulatePage() {
       )}
 
       <div className="space-y-6 pt-12">
+        <MediaInspectionWorkbench title="文件与音视频攻防模拟"/>
         <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
           开发实验功能：包含模拟模型与测试数据，仅用于研发验证，不得作为生产检测结果或客户交付证据。
         </div>
@@ -547,7 +550,7 @@ export default function SimulatePage() {
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-500">置信度</span>
                     <span className="text-sm font-medium">
-                      {((finalResult.inputResult.confidence || 0) * 100).toFixed(0)}%
+                      {finalResult.inputResult.confidenceMeaning === 'PROBABILITY' ? ((finalResult.inputResult.confidence || 0) * 100).toFixed(0)+'%' : '未校准'}
                     </span>
                   </div>
                   
@@ -748,7 +751,7 @@ export default function SimulatePage() {
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-500">置信度</span>
                     <span className="text-sm font-medium">
-                      {((finalResult.outputResult.confidence || 0) * 100).toFixed(0)}%
+                      {finalResult.outputResult.confidenceMeaning === 'PROBABILITY' ? ((finalResult.outputResult.confidence || 0) * 100).toFixed(0)+'%' : '未校准'}
                     </span>
                   </div>
                   

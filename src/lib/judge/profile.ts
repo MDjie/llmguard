@@ -18,6 +18,7 @@ export const judgeProfileSchema = z.object({
   backendKind: z.enum(['chat_judge','safety_classifier']).default('chat_judge'),
   role: z.enum(['base','refiner','grounding']).optional(),
   contextScope: z.enum(['full','window']).optional(),
+  adjudicationMode: z.literal('scoped-refinement-v1').optional(),
   windowing: z.object({maxWindows:z.number().int().min(1).max(32),overlapChars:z.number().int().min(0).max(4096)}).strict().optional(),
   baseUrl: z.url().max(500),
   path: z.string().min(1).max(128).default('chat/completions'),
@@ -42,17 +43,19 @@ export const judgeProfileSchema = z.object({
   totalTimeoutMs: z.number().int().min(50).max(60000).default(8000),
   maxInputChars: z.number().int().min(128).max(100000).default(16000),
   maxOutputTokens: z.number().int().min(128).max(4096).default(1024),
+  maxRequestsPerMinute: z.number().int().min(1).max(100000).optional(),
   maxConcurrent: z.number().int().min(1).max(128).default(4),
   structuredOutputMode: z.enum(['json_object','json_schema','strict_text_json']).default('json_object'),
   temperature: z.number().min(0).max(2).nullable().default(null),
   thinkingMode: z.enum(['omit','enabled','disabled']).default('omit'),
   reasoningEffort: z.enum(['low','high','max']).optional(),
-  promptTemplateVersion: z.literal('guard-judge-2.0'),
+  promptTemplateVersion: z.enum(['guard-judge-2.0','guard-judge-3.0']),
   adapterVersion: z.literal('guard-chat-adapter-2.0'),
   qualityEvidenceId: id.optional(),
   qualityValidUntil: z.iso.datetime().optional(),
 }).strict().superRefine((p, ctx) => {
   const url = new URL(p.baseUrl);
+  if (p.adjudicationMode && (p.promptTemplateVersion !== 'guard-judge-3.0' || p.backendKind !== 'chat_judge' || p.windowing || p.contextScope !== 'full')) ctx.addIssue({code:'custom',message:'SCOPED_REFINEMENT_REQUIRES_FULL_V3_CONTEXT'});
   if (url.username || url.password || url.hash || url.search || !['http:','https:'].includes(url.protocol)) ctx.addIssue({ code:'custom', message:'ENDPOINT_COMPONENT_INVALID', path:['baseUrl'] });
   if (p.deploymentMode === 'cloud' && (url.protocol !== 'https:' || p.authMode === 'none')) ctx.addIssue({code:'custom',message:'CLOUD_REQUIRES_HTTPS_AND_AUTH'});
   if (p.authMode === 'bearer' && !p.secretRef) ctx.addIssue({code:'custom',message:'SECRET_REF_REQUIRED',path:['secretRef']});

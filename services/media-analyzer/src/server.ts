@@ -1,3 +1,4 @@
+import {analyzerCapabilities} from './capabilities';
 import { analyzeNativeJoint } from './native-joint';
 import { transformMedia } from './media-transform';
 import { timingSafeEqual } from 'node:crypto';
@@ -70,6 +71,7 @@ async function route(request: IncomingMessage, response: ServerResponse) {
     return;
   }
   if (request.method !== 'POST' || ![
+    '/v1/capabilities',
     '/v1/analyze/document-image',
     '/v1/analyze/audio-video',
     '/v1/mark/media',
@@ -83,6 +85,7 @@ async function route(request: IncomingMessage, response: ServerResponse) {
     respond(response, 401, { code: 'ANALYZER_UNAUTHORIZED' });
     return;
   }
+  if(request.url==='/v1/capabilities'){respond(response,200,await analyzerCapabilities());return;}
   if (inFlight >= maximumInFlight) {
     respond(response, 429, { code: 'ANALYZER_CAPACITY_EXHAUSTED' });
     return;

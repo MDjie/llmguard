@@ -1,3 +1,4 @@
+import {reserveJudgeCapacity} from '@/lib/judge/admission';
 import { z } from 'zod';
 import { evidenceViewSchema, type EvidenceView } from '@/contracts/http/media-evidence';
 import { nativeBindingSchema, type NativeBinding } from '@/contracts/http/native-multimodal';
@@ -7,14 +8,13 @@ import { invokeConfiguredJudge, runJudge, type JudgeInvoker } from '@/lib/judge/
 import { canonicalJson, sha256 } from '@/lib/gateway-runtime/protocol';
 import { nativeBindingDigest } from './native-gate';
 
-export const GLM_JOINT_MODEL = 'glm-5.3';
-export const JOINT_EVIDENCE_VERSION = 'joint-evidence-glm-1';
+export const GLM_JOINT_MODEL = 'glm-5.3-flash';
+export const JOINT_EVIDENCE_VERSION = 'joint-evidence-profile-2';
 const hash = z.string().regex(/^[a-f0-9]{64}$/);
 export const jointEvidenceProfileSchema = judgeProfileSchema.refine(profile =>
-  ['glm-5.3', 'zai-org/GLM-5.3'].includes(profile.modelId) &&
   profile.backendKind === 'chat_judge' && (profile.role ?? 'base') === 'base' && !profile.fallbackProfileIds.length &&
   (profile.contextScope ?? 'full') === 'full' && !profile.windowing,
-  'Joint evidence judge requires GLM-5.3, full context and no fallback');
+  'Joint evidence judge requires a qualified chat profile, full context and no fallback');
 const qualificationSchema = z.object({
   tenantId: z.string().min(1), applicationId: z.string().min(1), bundleDigest: hash,
   profileBindingDigest: hash, promptVersion: z.literal(JOINT_EVIDENCE_VERSION),
@@ -45,7 +45,7 @@ export function assertCurrentJointEvidence(binding: NativeBinding, raw: unknown,
 
 interface Span { start: number; end: number; view: EvidenceView }
 export interface JointEvidenceFinding {
-  riskType: string; score: number; reasonCode: string; action: 'BLOCK';
+  riskType: string; score: number; scoreMeaning: 'POLICY'; reasonCode: string; action: 'BLOCK';
   decisionRole: 'CONFIRMED_RISK' | 'CANDIDATE'; detectorId: string; ruleVersion: string;
   evidenceRef: string; locations: Omit<EvidenceView, 'text' | 'source'>[]; locationState: 'VERIFIED';
 }
@@ -109,7 +109,7 @@ export async function runGlmJointEvidence(input: {
     result.bindingDigest = envelope.bindingDigest;
     result.sourceBindingDigest = nativeBindingDigest(input.binding);
     const outcome = await runJudge([profile], { ...input.binding, assessmentId: envelope.bindingDigest, text: envelope.text,
-      privateOnly: input.privateOnly, absoluteDeadlineEpochMs: input.absoluteDeadlineEpochMs, signal: input.signal }, { ...dependencies, invoke: async (selected, request, signal) => {
+      privateOnly: input.privateOnly, absoluteDeadlineEpochMs: input.absoluteDeadlineEpochMs, signal: input.signal }, { ...dependencies, ...(!dependencies.invoke ? {reserveCapacity:reserveJudgeCapacity} : {}), invoke: async (selected, request, signal) => {
         const response = await (dependencies.invoke ?? invokeConfiguredJudge)(selected, request, signal);
         if (response.finishReason !== 'stop') throw new Error('JUDGE_OUTPUT_INCOMPLETE');
         return response;
@@ -126,7 +126,7 @@ export async function runGlmJointEvidence(input: {
         void _text; void _source;
         return { ...location, textStart: range.start - span.start, textEnd: range.end - span.start };
       });
-      result.evidence.push({ riskType: assessment.riskId, score: 1, reasonCode: 'JOINT_DERIVED_EVIDENCE_UNSAFE', action: 'BLOCK',
+      result.evidence.push({ riskType: assessment.riskId, score: 1, scoreMeaning: 'POLICY', reasonCode: 'JOINT_DERIVED_EVIDENCE_UNSAFE', action: 'BLOCK',
         decisionRole: profile.mode === 'ENFORCE' ? 'CONFIRMED_RISK' : 'CANDIDATE', detectorId: 'glm-joint-evidence', ruleVersion: JOINT_EVIDENCE_VERSION,
         evidenceRef: sha256(canonicalJson([envelope.bindingDigest, assessment.riskId, locations])), locations, locationState: 'VERIFIED' });
     }

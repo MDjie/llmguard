@@ -77,8 +77,9 @@ export async function materializeArtifactRequest(input: Context & {
       } finally { raw.fill(0); }
     } else {
       const text = await readAcceptedTextArtifact(input, reference.artifactId, 1048576, ['TEXT'], input.signal);
-      if (sha256(text) !== reference.sha256) throw new GatewayError('ARTIFACT_REFERENCE_CHANGED', 403);
-      archiveData = { artifactId: reference.artifactId, sha256: reference.sha256, text };
+      // The reader verifies the raw-byte hash; decoding can change the UTF-8 serialization (BOM/UTF-16/GB18030).
+      const decodedSha256=sha256(text);
+      archiveData = { artifactId: reference.artifactId, sha256: reference.sha256, decodedSha256, text };
       contents.push({ role: 'user', content: JSON.stringify({ kind: 'untrusted_file_reference', artifactId: reference.artifactId, sha256: reference.sha256, instructionCapability: 'FORBIDDEN', text }) });
     }
     const after = await ownedBinding(input, reference.artifactId, native);

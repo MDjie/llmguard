@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { findCompatibilityViolations } from '../../packages/contracts/scripts/check-compatibility.mjs';
 
-const sourceText = readFileSync('packages/contracts/model/guard-v1.schema.json', 'utf8');
+const sourceText = readFileSync('packages/contracts/model/guard-v1.schema.json', 'utf8').replace(/\r\n/g, '\n');
 const source = JSON.parse(sourceText);
 const baseline = JSON.parse(
   readFileSync('packages/contracts/baseline/guard-v1.compatibility.json', 'utf8'),

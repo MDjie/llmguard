@@ -240,7 +240,7 @@ export async function fuseMediaTimeline(input: {
   const relationSegments:readonly DocumentSegment[]=[...userSegment,...sorted];
   const relationship=inspectRiskRelations(relationSegments.map((segment,index)=>({
     id:'source-'+index,text:segment.text,sourceType:segment.source==='user_text'?'USER':'MEDIA',
-    instructionCapability:segment.source==='user_text'?'ALLOWED':'DATA_ONLY',objectRef:segment.artifactId,
+    instructionCapability:segment.source==='user_text'?'ALLOWED':'FORBIDDEN',objectRef:segment.artifactId,
     startMs:segment.startMs,endMs:segment.endMs,
   })));
   const confirmedRelations=relationship.relations.filter(relation=>relation.status==='CONFIRMED'&&relation.sourceEnvelopeIds.length>1);
@@ -258,15 +258,17 @@ export async function fuseMediaTimeline(input: {
   });
   const reviewThreshold = input.reviewThreshold ?? 0.65;
   const blockThreshold = input.blockThreshold ?? 0.8;
-  const visualScore = Math.max(input.anomalyScore ?? 0, 0, ...input.visual.map((item) => item.score));
+  const visualScore = Math.max(0, ...input.visual.map((item) => item.score));
   const visualAction = actionForScore(visualScore, reviewThreshold, blockThreshold);
+  // Rotation, noise and decoder disagreement are investigation signals, not confirmed harmful content.
+  const anomalyAction:GuardAction=(input.anomalyScore??0)>=reviewThreshold?'REQUIRE_REVIEW':'ALLOW';
   const conflict = trackConflict(sorted, audioDecision, subtitleDecision);
   const lowConfidence = input.segments.some(item => item.confidence !== undefined &&
     (!Number.isFinite(item.confidence) || item.confidence < (input.minimumConfidence ?? 0.35) || item.confidence > 1));
   const failures = [...(input.analysisFailures ?? []),
     ...(lowConfidence ? [{ component: 'TEXT_EXTRACTION', required: true, code: 'MEDIA_EXTRACTION_CONFIDENCE_INSUFFICIENT' }] : [])];
   const failureAction: GuardAction = failures.some((item) => item.required)
-    ? 'BLOCK'
+    ? 'REQUIRE_REVIEW'
     : failures.length > 0
       ? 'WARN'
       : 'ALLOW';
@@ -286,6 +288,7 @@ export async function fuseMediaTimeline(input: {
     ...combinedCandidates.map((item) => item.value.action), relationAction,
     input.bundle.payload.semanticDecisionMode==='coverage-v1'&&!coverage.complete?'REQUIRE_REVIEW' as const:'ALLOW' as const,
     visualAction,
+    anomalyAction,
     conflict ? 'REQUIRE_REVIEW' as const : 'ALLOW' as const,
     failureAction,
     trustAction,
@@ -308,8 +311,8 @@ export async function fuseMediaTimeline(input: {
   const failureEvidence = failures.map((item) => {
     const base = {
       riskType: 'system.multimodal_analysis_failure',
-      score: item.required ? 1 : 0.5,
-      action: item.required ? 'BLOCK' as const : 'WARN' as const,
+      score: 0, scoreMeaning:'UNCALIBRATED' as const,status:'UNKNOWN' as const,decisionRole:'CANDIDATE' as const,
+      action: item.required ? 'REQUIRE_REVIEW' as const : 'WARN' as const,
       source: 'analysis_component' as const,
       reasonCode: item.code,
       traceId: input.context.traceId,

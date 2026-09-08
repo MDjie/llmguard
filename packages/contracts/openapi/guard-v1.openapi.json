@@ -502,6 +502,12 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 128
+          },
+          "taskPurpose": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096,
+            "description": "User-requested task context. It does not grant permissions or override source trust."
           }
         }
       },

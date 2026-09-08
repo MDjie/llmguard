@@ -1,0 +1,282 @@
+{
+  "version": "synthetic-multiformat-fixtures-1",
+  "purpose": "CODEC_AND_UPLOAD_ENGINEERING_ONLY",
+  "independentQualityHoldout": false,
+  "pcm": {
+    "sampleRate": 16000,
+    "channels": 2,
+    "sampleFormat": "s16le"
+  },
+  "files": [
+    {
+      "file": "audio.aac",
+      "bytes": 7109,
+      "sha256": "71dbc7d18671bda811636a7bc35b75ae59765218b11cd972317797dee376d12d",
+      "observedMediaType": "audio/aac"
+    },
+    {
+      "file": "audio.aiff",
+      "bytes": 32054,
+      "sha256": "bd077919bef07a70bef489f1cd306ded10e9ad16abc8ffa70bf900d590f90055",
+      "observedMediaType": "audio/aiff"
+    },
+    {
+      "file": "audio.flac",
+      "bytes": 14458,
+      "sha256": "1758671c3d36384510a3853e77c3f49309e124f810a8acbb9dae2038743ca66a",
+      "observedMediaType": "audio/flac"
+    },
+    {
+      "file": "audio.m4a",
+      "bytes": 7865,
+      "sha256": "9abe75c6cd7229522ac7996a8b478d4629d279009e1cf7051b74fbd3e676f017",
+      "observedMediaType": "audio/mp4"
+    },
+    {
+      "file": "audio.mp3",
+      "bytes": 3465,
+      "sha256": "391f3090da08adf2734213da6027d842fbbdf5731f3082596d966f6772361ac4",
+      "observedMediaType": "audio/mpeg"
+    },
+    {
+      "file": "audio.ogg",
+      "bytes": 4487,
+      "sha256": "ec8dfa3edb2ec00dcb9a5eaae6b0f6e2d1158de7ea14f64e6d106fc88fda29a7",
+      "observedMediaType": "audio/ogg"
+    },
+    {
+      "file": "audio.opus",
+      "bytes": 8723,
+      "sha256": "b7936663200a5ccf305ee3b7be35ecbb1ed48e392ba7418b3a1d1a4bbf1504f3",
+      "observedMediaType": "audio/ogg"
+    },
+    {
+      "file": "audio.pcm",
+      "bytes": 64000,
+      "sha256": "b1b2acea9d09ad5ab0dc208ea3384f530de0ce5a0adce32dc4b88b7f5614acd5",
+      "observedMediaType": "audio/pcm"
+    },
+    {
+      "file": "audio.wav",
+      "bytes": 32078,
+      "sha256": "25546b9b5994c92d1a8e0cdcde8935a3507462b64ff2d012b3c22274fc4a3b6a",
+      "observedMediaType": "audio/wav"
+    },
+    {
+      "file": "audio.wma",
+      "bytes": 19744,
+      "sha256": "597083a1b3b945bb1284d02a7d408ec7bf7899d5b6c92e9820d16359e6bd68e4",
+      "observedMediaType": "video/x-ms-wmv"
+    },
+    {
+      "file": "bom-utf16.txt",
+      "bytes": 24,
+      "sha256": "69a32943a83802fcc407b9d8334b3e5083d578b68c23b15a8cf4cfea7be8516d",
+      "observedMediaType": "text/plain"
+    },
+    {
+      "file": "legacy-gb18030.txt",
+      "bytes": 32,
+      "sha256": "5a8b28e268420e41dcb00b99b9209cfc8d69ea4dd6c5626b5ae906278fc2481a",
+      "observedMediaType": "text/plain"
+    },
+    {
+      "file": "sample.ass",
+      "bytes": 200,
+      "sha256": "883caf8243de4e08b4636a542c2248e481c937b1346e88c9ced7c9fa5b72e788",
+      "observedMediaType": "text/plain"
+    },
+    {
+      "file": "sample.avif",
+      "bytes": 1116,
+      "sha256": "f5ea0c4b689383b02fef07386ca5a1d959cb9b074de2c79204a2434bb05147da",
+      "observedMediaType": "image/avif"
+    },
+    {
+      "file": "sample.bmp",
+      "bytes": 460854,
+      "sha256": "f3d79641f2cf192500a19177d327104e4127057305228341042f738ac79c068d",
+      "observedMediaType": "image/bmp"
+    },
+    {
+      "file": "sample.doc",
+      "bytes": 18432,
+      "sha256": "404baccb49fc42124bb154538a1a42053370e50fd1c05ac632563c8664e52691",
+      "observedMediaType": "application/x-ole-storage"
+    },
+    {
+      "file": "sample.docx",
+      "bytes": 35435,
+      "sha256": "06be2a78bf9fc2e5ee9d3b89c8c58b625df8312df8f568bde132b283d2abdde7",
+      "observedMediaType": "application/zip"
+    },
+    {
+      "file": "sample.gif",
+      "bytes": 4217,
+      "sha256": "fd5e0783e979dce25262b6458cfd4c1259e109c1807ab4b1171f1a4bccde0299",
+      "observedMediaType": "image/gif"
+    },
+    {
+      "file": "sample.heic",
+      "bytes": 1580,
+      "sha256": "534e9ead7e1fc1c155f00c3f428315c4bc517c40cb64756f8aa7ebf5959a142a",
+      "observedMediaType": "image/heif"
+    },
+    {
+      "file": "sample.jpg",
+      "bytes": 4100,
+      "sha256": "514042984bcfcd9a73c620c1d8b5adf6cd9070103a6d0c350df52860b918a322",
+      "observedMediaType": "image/jpeg"
+    },
+    {
+      "file": "sample.odp",
+      "bytes": 22085,
+      "sha256": "618fe5b94939ee7ed0495913befe3c319ce1f8387bfb4a06f202de600f9580cc",
+      "observedMediaType": "application/zip"
+    },
+    {
+      "file": "sample.ods",
+      "bytes": 9189,
+      "sha256": "c5ac08885f92fe0b6239b86ac2a51d64e163e48cb149ea214e0fc552081e7058",
+      "observedMediaType": "application/zip"
+    },
+    {
+      "file": "sample.odt",
+      "bytes": 12734,
+      "sha256": "012be8d6382fa5df6420fa2231344a3f87df5fc15f380f8baba174c7d54426ef",
+      "observedMediaType": "application/zip"
+    },
+    {
+      "file": "sample.pdf",
+      "bytes": 9522,
+      "sha256": "208ada48eb825974da3816d58fdd3cb450aad59d7456fb4aa17cdea49e60bd0a",
+      "observedMediaType": "application/pdf"
+    },
+    {
+      "file": "sample.png",
+      "bytes": 2383,
+      "sha256": "bb8384473138dce313114366167132d831846c54500c7830eb968fa3981b0c47",
+      "observedMediaType": "image/png"
+    },
+    {
+      "file": "sample.ppt",
+      "bytes": 648192,
+      "sha256": "950f3e0cddd5215fc6c9a64e8fadc1c58214f69e89daa6fd1fb0138294d50933",
+      "observedMediaType": "application/x-ole-storage"
+    },
+    {
+      "file": "sample.pptx",
+      "bytes": 33017,
+      "sha256": "65b369d08c15c3858d7422995e970199577beee60b7dd16fda58aa179689fe32",
+      "observedMediaType": "application/zip"
+    },
+    {
+      "file": "sample.rtf",
+      "bytes": 36,
+      "sha256": "9e41b3f3e209eca2715748c54b9da28b8f90a98782aaa391f0f800462ed9206e",
+      "observedMediaType": "application/rtf"
+    },
+    {
+      "file": "sample.srt",
+      "bytes": 128,
+      "sha256": "6fa05dda2cf5f9ac9daa6849e3462062106642be16cad50bd25b1af4769b8f40",
+      "observedMediaType": "text/plain"
+    },
+    {
+      "file": "sample.ssa",
+      "bytes": 207,
+      "sha256": "20b8734717ab22a93c510764b4090ef579e07581938acf9903f346555d76bfe4",
+      "observedMediaType": "text/plain"
+    },
+    {
+      "file": "sample.tiff",
+      "bytes": 921888,
+      "sha256": "79e537b39e6ae0d860d4af4202c2127546b4b7ea1289cf4e582e549bf58f03a9",
+      "observedMediaType": "image/tiff"
+    },
+    {
+      "file": "sample.vtt",
+      "bytes": 113,
+      "sha256": "5a42a6678d63d275f9b498a0a296ad19118cc7ae7aad1825e94d9a76bf58acbc",
+      "observedMediaType": "text/plain"
+    },
+    {
+      "file": "sample.webp",
+      "bytes": 1026,
+      "sha256": "e86144b7c3105f71d2d96cea7b97de459f24cb1a80ab18b0136f480ca5d7c9ed",
+      "observedMediaType": "image/webp"
+    },
+    {
+      "file": "sample.xls",
+      "bytes": 6144,
+      "sha256": "a075eb9f92c7a7cba58435776e9afa3e1284c6cab041fe588fe9526525166039",
+      "observedMediaType": "application/x-ole-storage"
+    },
+    {
+      "file": "sample.xlsx",
+      "bytes": 5335,
+      "sha256": "92cde29b09ae382aa31ce3b3294fcebec5a72b96bfb84ccd200b78628ab53b51",
+      "observedMediaType": "application/zip"
+    },
+    {
+      "file": "video.3gp",
+      "bytes": 10895,
+      "sha256": "b35dabb9b5687752b9fa1646959f85c55735a9a0995aaf8cebd87f01761547d7",
+      "observedMediaType": "video/3gpp"
+    },
+    {
+      "file": "video.avi",
+      "bytes": 19862,
+      "sha256": "0ceb031981804dd65f658bb4f51414ea590be28fdc4695fefff9ecf2e29e1b05",
+      "observedMediaType": "video/x-msvideo"
+    },
+    {
+      "file": "video.flv",
+      "bytes": 10551,
+      "sha256": "67f5cdead80cdafbdd75fb818464e0c18efb0799e8614e118e192ce39e1f94d9",
+      "observedMediaType": "video/x-flv"
+    },
+    {
+      "file": "video.mkv",
+      "bytes": 10441,
+      "sha256": "f51c2d6edb929e73ffe2b632ec13d3edf33c3668d58402e13f99d58fe6830783",
+      "observedMediaType": "video/x-matroska"
+    },
+    {
+      "file": "video.mov",
+      "bytes": 11088,
+      "sha256": "145bef67c85f36ea4c6103239abd66f6dad46b285bc173c0b69d0d34cc80c6c8",
+      "observedMediaType": "video/quicktime"
+    },
+    {
+      "file": "video.mp4",
+      "bytes": 11033,
+      "sha256": "2c4f14effdc6513a524b3dc4c4999f40641a640cb9cf8ad61622a64f4bf9321f",
+      "observedMediaType": "video/mp4"
+    },
+    {
+      "file": "video.mpg",
+      "bytes": 53248,
+      "sha256": "2ce7fa5c3c8b6748860cbff5da69bf3b70937deb86e78168faf363afdc045490",
+      "observedMediaType": "video/mpeg"
+    },
+    {
+      "file": "video.ts",
+      "bytes": 56776,
+      "sha256": "3c191e22746e8bc9a5e25e7fa9f463a3644941a80d7d253c0f9b74fa1999dc8e",
+      "observedMediaType": "video/mp2t"
+    },
+    {
+      "file": "video.webm",
+      "bytes": 10472,
+      "sha256": "2f57cad341738950369f824c0f76befb1db0a40af7cc48602e58da24686a994d",
+      "observedMediaType": "video/webm"
+    },
+    {
+      "file": "video.wmv",
+      "bytes": 20101,
+      "sha256": "24bad6a51f220954c2c7dc35f3fc9768af20896abf994c98f9c4c664e6e4be94",
+      "observedMediaType": "video/x-ms-wmv"
+    }
+  ]
+}

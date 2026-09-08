@@ -8,7 +8,7 @@ describe('artifact magic detection', () => {
     [Buffer.from('ID3\u0004\u0000'), 'audio/mpeg', 'AUDIO'],
     [Buffer.from([0xff, 0xf1, 0x50, 0x80]), 'audio/aac', 'AUDIO'],
     [Buffer.from('RIFFxxxxWAVE'), 'audio/wav', 'AUDIO'],
-    [Buffer.from('xxxxftypisom'), 'video/mp4', 'VIDEO'],
+    [Buffer.from('000000146674797069736f6d0000000069736f6d','hex'), 'video/mp4', 'VIDEO'],
   ])('recognizes %s as %s', (bytes, mediaType, kind) => {
     const detected = detectMagic(bytes);
     expect(detected.mediaType).toBe(mediaType);

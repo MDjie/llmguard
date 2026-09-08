@@ -40,7 +40,7 @@ export interface MultimodalAnalysisFailure {
   readonly code: string;
 }
 
-type SegmentSource = 'user_text' | 'image_ocr' | 'qr_code';
+type SegmentSource = 'user_text' | 'image_ocr' | 'qr_code' | 'file_text';
 interface SegmentSpan {
   readonly start: number;
   readonly end: number;
@@ -166,6 +166,7 @@ export async function fuseMultimodal(input: {
   readonly userText?: string;
   readonly contextArtifactId?: string;
   readonly ocr: readonly OcrFusionRegion[];
+  readonly documentText?:readonly {text:string;viewId:string;artifactId:string;artifactSha256?:string}[];
   readonly codes?: readonly CodeFusionRegion[];
   readonly visual: readonly VisualFusionFinding[];
   readonly analysisFailures?: readonly MultimodalAnalysisFailure[];
@@ -200,6 +201,7 @@ export async function fuseMultimodal(input: {
     page: region.page,
   }));
   const user = buildText(userSegments);
+  ocrSegments.push(...(input.documentText??[]).map(part=>({...part,source:'file_text' as const})));
   const image = buildText(ocrSegments);
   const codes = buildText(codeSegments);
   const combined = buildText([...userSegments, ...ocrSegments, ...codeSegments]);
@@ -211,8 +213,8 @@ export async function fuseMultimodal(input: {
   ]);
   const relationSegments=[...userSegments,...ocrSegments,...codeSegments];
   const relationship=inspectRiskRelations(relationSegments.map((segment,index)=>({
-    id:'source-'+index,text:segment.text,sourceType:segment.source==='user_text'?'USER':'MEDIA',
-    instructionCapability:segment.source==='user_text'?'ALLOWED':'DATA_ONLY',objectRef:segment.artifactId,
+    id:'source-'+index,text:segment.text,sourceType:segment.source==='user_text'?'USER':segment.source==='file_text'?'FILE':'MEDIA',
+    instructionCapability:segment.source==='user_text'?'ALLOWED':'FORBIDDEN',objectRef:segment.artifactId,
   })));
   const confirmedRelations=relationship.relations.filter(relation=>relation.status==='CONFIRMED'&&relation.sourceEnvelopeIds.length>1);
   const cooperativeAttack=confirmedRelations.length>0;
@@ -229,14 +231,16 @@ export async function fuseMultimodal(input: {
   });
   const reviewThreshold = input.reviewThreshold ?? 0.65;
   const blockThreshold = input.blockThreshold ?? 0.8;
-  const visualScore = Math.max(input.anomalyScore ?? 0, 0, ...input.visual.map((item) => item.score));
+  const visualScore = Math.max(0, ...input.visual.map((item) => item.score));
   const visualAction = actionForScore(visualScore, reviewThreshold, blockThreshold);
+  // Rotation, noise and decoder disagreement are investigation signals, not confirmed harmful content.
+  const anomalyAction:GuardAction=(input.anomalyScore??0)>=reviewThreshold?'REQUIRE_REVIEW':'ALLOW';
   const lowConfidence = [...input.ocr, ...(input.codes ?? [])].some(item => item.confidence !== undefined &&
     (!Number.isFinite(item.confidence) || item.confidence < (input.minimumConfidence ?? 0.35) || item.confidence > 1));
   const failures = [...(input.analysisFailures ?? []),
     ...(lowConfidence ? [{ component: 'TEXT_EXTRACTION', required: true, code: 'MEDIA_EXTRACTION_CONFIDENCE_INSUFFICIENT' }] : [])];
   const failureAction: GuardAction = failures.some((item) => item.required)
-    ? 'BLOCK'
+    ? 'REQUIRE_REVIEW'
     : failures.length > 0
       ? 'WARN'
       : 'ALLOW';
@@ -256,7 +260,7 @@ export async function fuseMultimodal(input: {
     ...(codes.text ? [codeDecision.action] : []),
   ];
   const { action } = combineActionConstraints([
-    ...individual, combinedDecision.action, relationAction, visualAction, failureAction, trustAction, coverageAction,
+    ...individual, combinedDecision.action, relationAction, visualAction, anomalyAction, failureAction, trustAction, coverageAction,
   ]);
   const visualEvidence = input.visual.map((item) => {
     const position = validateEvidenceLocation({ artifactId: item.artifactId, sourceDigest: item.artifactSha256, contentVersion: item.artifactSha256,
@@ -280,8 +284,8 @@ export async function fuseMultimodal(input: {
   const failureEvidence = failures.map((item) => {
     const base = {
       riskType: 'system.multimodal_analysis_failure',
-      score: item.required ? 1 : 0.5,
-      action: item.required ? 'BLOCK' as const : 'WARN' as const,
+      score: 0, scoreMeaning:'UNCALIBRATED' as const,status:'UNKNOWN' as const,decisionRole:'CANDIDATE' as const,
+      action: item.required ? 'REQUIRE_REVIEW' as const : 'WARN' as const,
       reasonCode: item.code,
       sources: [{ source: 'analysis_component' as const, component: item.component }],
       traceId: input.context.traceId,

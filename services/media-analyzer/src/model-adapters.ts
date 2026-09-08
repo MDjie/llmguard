@@ -1,3 +1,5 @@
+import {join,basename} from 'node:path';
+import {unlink} from 'node:fs/promises';
 import { z } from 'zod';
 import type { CommandRunner } from './command-runner';
 import type { TranscriptSegment, VisualLabel, VisualRisk } from './contracts';
@@ -58,7 +60,7 @@ async function jsonCommand<T>(
   schema: z.ZodType<T>,
   signal?: AbortSignal,
 ): Promise<T> {
-  if (!program) throw new Error(requiredCode);
+  if (!program?.trim()||program.includes('${')) throw new Error(requiredCode);
   const result = await runner.run(program, args, {
     cwd: workspace,
     timeoutMs,
@@ -141,4 +143,35 @@ export async function classifyAudioAnomalies(input: {
     audioAnomalySchema,
     input.signal,
   );
+}
+
+export function planAsrWindows(durationMs:number):Array<{startMs:number;endMs:number}>{
+ if(!Number.isSafeInteger(durationMs)||durationMs<1||durationMs>24*60*60*1000)throw new Error('ANALYZER_ASR_DURATION_INVALID');
+ const windows:Array<{startMs:number;endMs:number}>=[];
+ for(let startMs=0;startMs<durationMs;startMs+=29000){windows.push({startMs,endMs:Math.min(startMs+30000,durationMs)});if(startMs+30000>=durationMs)break;}
+ return windows;
+}
+/** All providers see bounded mono PCM clips; preserve actual timing, never synthesize token confidence. */
+export async function transcribeAudioWindowed(input:Parameters<typeof transcribeAudio>[0]&{durationMs:number}):Promise<Awaited<ReturnType<typeof transcribeAudio>>>{
+ const segments:TranscriptSegment[]=[];let version:string|undefined;
+ for(const [index,window] of planAsrWindows(input.durationMs).entries()){
+  input.signal?.throwIfAborted();
+  const output=join(input.workspace,basename(input.audioPath)+'.asr-'+index+'.wav');
+  try {
+  await input.runner.run(process.env.ANALYZER_FFMPEG_COMMAND??'ffmpeg',['-nostdin','-v','error','-protocol_whitelist','file,pipe','-ss',String(window.startMs/1000),'-i',input.audioPath,'-t',String((window.endMs-window.startMs)/1000),'-ac','1','-ar','16000','-c:a','pcm_s16le','-y',output],{cwd:input.workspace,timeoutMs:60000,signal:input.signal});
+  const result=await transcribeAudio({...input,audioPath:output});
+  if(version&&version!==result.modelVersion)throw new Error('ANALYZER_ASR_MODEL_CHANGED');version=result.modelVersion;
+  for(const segment of result.segments){
+   if(segment.endMs>window.endMs-window.startMs)throw new Error('ANALYZER_ASR_TIMELINE_OUT_OF_BOUNDS');
+   segments.push({...segment,startMs:window.startMs+segment.startMs,endMs:window.startMs+segment.endMs});
+   if(segments.length>100000)throw new Error('ANALYZER_ASR_SEGMENT_LIMIT');
+  }
+  } finally {
+   // Keep at most one bounded provider clip on disk, including failure/cancellation.
+   await unlink(output).catch((error: unknown) => {
+    if (!(error instanceof Error && 'code' in error && error.code === 'ENOENT')) throw error;
+   });
+  }
+ }
+ if(!version)throw new Error('ANALYZER_ASR_EMPTY_EXECUTION');return {modelVersion:version,segments};
 }

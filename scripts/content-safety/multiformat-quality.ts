@@ -1,0 +1,12 @@
+import {z} from 'zod';
+import {readFile,writeFile,mkdir} from 'node:fs/promises';
+import {dirname} from 'node:path';
+import {createHash} from 'node:crypto';
+import {evaluateMultiformatQuality} from '../../src/lib/evaluation/multiformat-quality';
+async function main(){const [input,output,developmentManifest]=process.argv.slice(2);if(!input||!output)throw new Error('Usage: pnpm detection:multiformat-quality <cases.jsonl> <new-report.json> [development-manifest.json]');
+ const bytes=await readFile(input),rows=bytes.toString('utf8').split(/\r?\n/u).filter(Boolean).map(line=>JSON.parse(line) as unknown);
+ const manifestSchema=z.object({sourceSha256:z.array(z.string().regex(/^[a-f0-9]{64}$/)),lineageSha256:z.array(z.string().regex(/^[a-f0-9]{64}$/))}).strict();
+ const development=developmentManifest?manifestSchema.parse(JSON.parse(await readFile(developmentManifest,'utf8'))):undefined;
+ const result=evaluateMultiformatQuality(rows,development?.sourceSha256,development?.lineageSha256);await mkdir(dirname(output),{recursive:true});await writeFile(output,JSON.stringify({...result,sourceSha256:createHash('sha256').update(bytes).digest('hex'),developmentManifestProvided:Boolean(developmentManifest),generatedAt:new Date().toISOString()},null,2)+'\n',{flag:'wx'});
+ console.log(JSON.stringify({status:result.status,reasons:result.reasons,output}));if(result.status!=='PASS')process.exitCode=2;
+}main().catch((error:unknown)=>{console.error(error instanceof Error?error.message:'QUALITY_REPORT_FAILED');process.exitCode=1;});

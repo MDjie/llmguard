@@ -57,6 +57,7 @@ const eslintConfig = defineConfig([
     '.artifact-build/**',
     '输出/**',
     'eval-data/**',
+    'tests/fixtures/multiformat/**',
     '文档/**',
     // Script files (CommonJS):
     'scripts/**/*.js',

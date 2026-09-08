@@ -1,3 +1,4 @@
+import {pcmSchema} from '@/lib/media/formats/pcm';
 import { z } from 'zod';
 
 const boundedId = z.string().min(1).max(128);
@@ -11,8 +12,9 @@ export const createArtifactUploadSchema = z.object({
   sha256,
   idempotencyKey: z.string().min(8).max(128).regex(/^[a-zA-Z0-9._:-]+$/),
   retentionDays: z.number().int().min(1).max(365).default(7),
-  metadata: z.record(z.string().max(100), z.union([z.string().max(1_000), z.number(), z.boolean(), z.null()]))
+  metadata: z.record(z.string().max(100), z.union([z.string().max(1_000), z.number(), z.boolean(), z.null(), pcmSchema]))
     .refine((value) => Object.keys(value).length <= 50, 'metadata has too many entries')
+    .refine(value => Object.entries(value).every(([key,item]) => item === null || typeof item !== 'object' || key === 'pcm'), 'Only pcm may contain structured metadata')
     .default({}),
 }).strict();
 

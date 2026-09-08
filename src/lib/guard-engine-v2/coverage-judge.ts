@@ -1,3 +1,4 @@
+import {judgeTaskContext, validateScopedRefutation, adjudicationDigest, type RefinementProposal} from '@/lib/judge/harness';
 import { selectJudgeProfile, type JudgeProfile } from '@/lib/judge/profile';
 import { runJudge, type JudgeInvoker } from '@/lib/judge/router';
 import { textEvidence } from './evidence';
@@ -21,13 +22,18 @@ export async function evaluateCoverageJudge(profiles:readonly JudgeProfile[],con
     context.envelopes.some(e=>e.sensitivityLabels.some(l=>/secret|credential|pii|confidential|personal|health|classification:[1-9]/iu.test(l)))||
     (context.previousObservations??[]).some(o=>o.status==='MATCH'&&/^(pii|credential|business.secret|sensitive|PRIVACY)/iu.test(o.riskType));
   const observations:Observation[]=[];
+  const proposals:RefinementProposal[]=[];
+  const refuted=new Map<string,string>();
   const prior=context.previousObservations??[];
   const assess=async(profile:JudgeProfile,role:'base'|'refiner')=>{
-    const plan=planTextWindows(text,profile.maxInputChars,profile.windowing?.maxWindows??1,profile.windowing?.overlapChars??0);
+    const inputBudget=profile.promptTemplateVersion==='guard-judge-3.0'?Math.max(128,profile.maxInputChars-8192):profile.maxInputChars;
+    const plan=planTextWindows(text,inputBudget,profile.windowing?.maxWindows??1,profile.windowing?.overlapChars??0);
     const byRisk=new Map<string,Observation[]>();let completed=0;
     for(const [index,window] of plan.windows.entries()){
       if(context.signal.aborted||Date.now()>=deadline)break;
-      const outcome=await runJudge(profiles,{...context.request.context,role,text:window.text,privateOnly,
+      const taskContext=judgeTaskContext(context,window);
+      const scopedProposals=proposals.filter(item=>item.contextDigest===taskContext.sourceDigest&&item.evidence.every(e=>e.start>=window.start&&e.end<=window.end)).map(item=>({...item,evidence:item.evidence.map(e=>({start:e.start-window.start,end:e.end-window.start}))}));
+      const outcome=await runJudge(profiles,{...context.request.context,role,text:window.text,privateOnly,taskContext,proposals:role==='refiner'?scopedProposals:undefined,
         assessmentId:context.request.context.requestId.slice(0,90)+'-'+role+'-'+index,
         absoluteDeadlineEpochMs:deadline,signal:context.signal},dependencies);
       if(outcome.status!=='COMPLETE'||!outcome.response||!outcome.profile){
@@ -41,15 +47,24 @@ export async function evaluateCoverageJudge(profiles:readonly JudgeProfile[],con
       for(const assessment of outcome.response.assessments){
         const unsafe=assessment.verdict==='UNSAFE';
         const enforced=outcome.profile.mode==='ENFORCE';
+        const relevant=scopedProposals.filter(proposal=>proposal.riskId===assessment.riskId);
+        const allRelevant=proposals.filter(proposal=>proposal.riskId===assessment.riskId);
+        const mayClear=role!=='refiner'||allRelevant.length===0||Boolean(outcome.profile.adjudicationMode&&relevant.length===allRelevant.length&&relevant.every(proposal=>validateScopedRefutation(window.text,proposal,assessment.counterEvidence??[],assessment.reasonCode)));
         const item:Observation={
           detectorId:'configurable-judge',detectorVersion:'2.1.0',riskType:assessment.riskId,score:unsafe?1:0,scoreMeaning:'POLICY',
           severity:unsafe?'HIGH':'NONE',status:unsafe&&enforced?'MATCH':'NO_MATCH',
-          ...(enforced?{decisionRole:unsafe?'CONFIRMED_RISK' as const:'CLEARED' as const}:{}),
+          ...(enforced?{decisionRole:unsafe?(role==='base'&&outcome.profile.adjudicationMode?'CANDIDATE' as const:'CONFIRMED_RISK' as const):mayClear?'CLEARED' as const:'UNKNOWN' as const}:{}),
           semanticCoverage:'INCOMPLETE',assessmentId:outcome.response.assessmentId,
           modelVersion:(outcome.reportedModel??outcome.profile.modelId).slice(0,256),configurationDigest:outcome.profileDigest,
-          reasonCode:'SEMANTIC_'+role.toUpperCase()+'_'+outcome.profile.mode+'_'+assessment.verdict,
+          reasonCode:!unsafe&&!mayClear?'SEMANTIC_REFINER_REFUTATION_INVALID':'SEMANTIC_'+role.toUpperCase()+'_'+outcome.profile.mode+'_'+assessment.verdict,
           evidence:assessment.evidence.map(e=>textEvidence(context,view,window.start+e.start,window.start+e.end,text.slice(window.start+e.start,window.start+e.end),'[redacted]')),
         };
+        if(enforced&&unsafe&&role==='base'&&outcome.profile.adjudicationMode) proposals.push({riskId:assessment.riskId,contextDigest:taskContext.sourceDigest,evidence:assessment.evidence.map(e=>({start:e.start+window.start,end:e.end+window.start}))});
+        if(enforced&&!unsafe&&mayClear&&role==='refiner'&&outcome.profile.adjudicationMode){
+          for(const proposal of scopedProposals.filter(p=>p.riskId===assessment.riskId)){
+            if(validateScopedRefutation(window.text,proposal,assessment.counterEvidence??[],assessment.reasonCode)) refuted.set(proposal.riskId,adjudicationDigest(proposal,assessment.counterEvidence??[],outcome.profileDigest??''));
+          }
+        }
         byRisk.set(assessment.riskId,[...(byRisk.get(assessment.riskId)??[]),item]);
       }
     }
@@ -66,7 +81,11 @@ export async function evaluateCoverageJudge(profiles:readonly JudgeProfile[],con
   if(primary&&!primary.riskIds.every(risk=>hasCompleteCoverage(prior,risk)))await assess(primary,'base');
   const combined=[...prior,...observations];
   const conflict=(risk:string)=>combined.some(o=>o.riskType===risk&&o.decisionRole==='CLEARED')&&combined.some(o=>o.riskType===risk&&o.decisionRole==='CONFIRMED_RISK');
-  if(refiner&&refiner.riskIds.some(risk=>!hasCompleteCoverage(combined,risk)||conflict(risk)))await assess(refiner,'refiner');
-  // Confirmed risk is monotone: later clearance never erases mandatory/confirmed findings.
-  return observations;
+  if(refiner&&refiner.riskIds.some(risk=>!hasCompleteCoverage(combined,risk)||conflict(risk)||proposals.some(p=>p.riskId===risk)))await assess(refiner,'refiner');
+  // Only this invocation's unconfirmed base proposals can be refuted. Prior/mandatory risk remains monotone.
+  return observations.map(observation=>{
+    const receipt=refuted.get(observation.riskType);
+    if(receipt&&observation.decisionRole==='CANDIDATE'&&observation.reasonCode==='SEMANTIC_BASE_ENFORCE_UNSAFE') return {...observation,status:'NO_MATCH' as const,decisionRole:'CLEARED' as const,score:0,reasonCode:'SCOPED_REFUTATION_'+receipt};
+    return observation;
+  });
 }

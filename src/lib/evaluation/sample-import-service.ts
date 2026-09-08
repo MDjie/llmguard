@@ -7,7 +7,7 @@ import { importSamplesSchema, parseSampleImport, sampleIdentity } from '@/lib/ev
 import type { z } from 'zod';
 
 export async function importSampleFile(scope:TenantContext,body:z.infer<typeof importSamplesSchema>):Promise<Response> {
-  const parsed=parseSampleImport(body.fileName,body.content);
+  const parsed=parseSampleImport(body.fileName,body.content,body.textDefaults);
   if(parsed.errors.length)return Response.json({success:false,detail:'文件校验失败，未写入任何样本',data:{errors:parsed.errors,validCount:parsed.rows.length,duplicates:parsed.duplicates,imported:0}},{status:400});
   return db.transaction(async tx=>{
     // Serialize imports in one tenant/application; concurrent retries cannot insert duplicates.

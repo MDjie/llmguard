@@ -1,3 +1,4 @@
+import {decodeText,textEncodingFromMetadata} from '@/lib/media/formats/text-decoder';
 import { createHash } from 'node:crypto';
 import { and, asc, eq } from 'drizzle-orm';
 import { objectStoreConfig, S3Presigner } from '@/lib/object-store';
@@ -31,11 +32,11 @@ export async function readAcceptedTextArtifact(
     throw new Error('Text context manifest is incomplete');
   }
   const signer = new S3Presigner(objectStoreConfig());
-  const decoder = new TextDecoder('utf-8', { fatal: true });
+  const textBytes:Uint8Array[]=[];
   const contentHash = createHash('sha256');
   const timeout = AbortSignal.timeout(30000);
   const signal = parentSignal ? AbortSignal.any([parentSignal,timeout]) : timeout;
-  let result = '', bytes = 0;
+  let bytes = 0;
   for (const part of parts) {
     signal.throwIfAborted();
     const signed = await signer.presign('GET', part.objectKey, { expiresSeconds: 60 });
@@ -50,12 +51,12 @@ export async function readAcceptedTextArtifact(
         bytes+=item.value.byteLength;partBytes+=item.value.byteLength;
         if (bytes>maximumBytes || partBytes>part.sizeBytes) throw new Error('Text context exceeded its declared limit');
         contentHash.update(item.value);partHash.update(item.value);
-        result+=decoder.decode(item.value,{stream:true});
+        textBytes.push(item.value);
       }
     } finally { if (!finished) await reader.cancel().catch(()=>undefined);reader.releaseLock(); }
     if (partBytes!==part.sizeBytes || partHash.digest('hex')!==part.sha256) throw new Error('Text context part integrity changed');
   }
-  result+=decoder.decode();
+  const result=decodeText(Buffer.concat(textBytes),textEncodingFromMetadata(artifact.metadata)).text;
   if (bytes!==artifact.verifiedSize || contentHash.digest('hex')!==artifact.verifiedSha256) throw new Error('Text context integrity changed');
   return result;
 }

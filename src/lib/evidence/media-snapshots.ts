@@ -1,3 +1,4 @@
+import {intakeBindingSchema} from '@/lib/guard-jobs/intake-binding';
 import { nativeJobBindingSchema } from '@/lib/guard-jobs/native-binding';
 import { enqueueDecisionRecord } from '@/lib/security-alerts/service';
 import { createHash } from 'node:crypto';
@@ -26,6 +27,7 @@ export async function enqueueMediaEvidenceSnapshot(tx:Transaction,job:typeof gua
  const payload=evidenceSnapshotSchema.parse({version:'media-evidence-1',jobId:job.id,bundleId:job.bundleId,views:uniqueEvidenceViews(input.views),mappings:input.mappings??[]});
  const allowedSources=new Map<string,string|null>([[job.artifactId,null],...(job.contextArtifactId?[[job.contextArtifactId,null] as [string,null]]:[])]);
  if(job.jobType==='native_joint'){const binding=nativeJobBindingSchema.parse(job.executionBinding);allowedSources.clear();allowedSources.set(binding.contextArtifactId,binding.contextSha256);for(const source of binding.artifacts)allowedSources.set(source.id,source.sha256);}
+ if(job.jobType==='intake'){const binding=intakeBindingSchema.parse(job.executionBinding);allowedSources.clear();for(const source of binding.artifacts)allowedSources.set(source.id,source.sha256);}
  const sourceDigests=new Map<string,string>();
  for(const view of payload.views){if(!allowedSources.has(view.artifactId)||allowedSources.get(view.artifactId)&&allowedSources.get(view.artifactId)!==view.sourceDigest)fail('MEDIA_EVIDENCE_SOURCE_NOT_IN_JOB');if(textVersion(view.text)!==view.contentVersion)fail('MEDIA_EVIDENCE_TEXT_VERSION_CHANGED');const prior=sourceDigests.get(view.artifactId);if(prior&&prior!==view.sourceDigest)fail('MEDIA_EVIDENCE_SOURCE_CONFLICT');sourceDigests.set(view.artifactId,view.sourceDigest);}
  if(sourceDigests.size>9)fail('MEDIA_EVIDENCE_SOURCE_BUDGET');

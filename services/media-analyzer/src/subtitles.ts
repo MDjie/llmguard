@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises';
+import { readFile,stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { CommandRunner } from './command-runner';
 import type { SubtitleSegment } from './contracts';
@@ -30,11 +30,12 @@ export function parseWebVtt(value: string): SubtitleSegment[] {
       .join(' ')
       .replace(/<[^>]{1,256}>/gu, '')
       .normalize('NFKC')
-      .trim()
-      .slice(0, 100_000);
-    if (startMs === undefined || endMs === undefined || endMs < startMs || !text) continue;
+      .trim();
+    if(text.length>100000)throw new Error('ANALYZER_SUBTITLE_TEXT_LIMIT');
+    if (startMs === undefined || endMs === undefined || endMs < startMs) throw new Error('ANALYZER_SUBTITLE_TIMELINE_INVALID');
+    if(!text)continue;
     segments.push({ text, startMs, endMs, confidence: 1, source: 'subtitle' });
-    if (segments.length >= 100_000) break;
+    if (segments.length > 100_000) throw new Error('ANALYZER_SUBTITLE_SEGMENT_LIMIT');
   }
   return segments;
 }
@@ -45,16 +46,18 @@ export async function extractSubtitles(input: {
   readonly workspace: string;
   readonly timeoutMs: number;
   readonly signal?: AbortSignal;
+  readonly trackIndex?:number;
 }): Promise<SubtitleSegment[]> {
-  const outputPath = join(input.workspace, 'subtitles.vtt');
+  const outputPath = join(input.workspace, 'subtitles-'+(input.trackIndex??0)+'.vtt');
   await input.runner.run(process.env.ANALYZER_FFMPEG_COMMAND ?? 'ffmpeg', [
     '-nostdin', '-v', 'error', '-protocol_whitelist', 'file,pipe',
-    '-i', input.inputPath, '-map', '0:s:0', '-f', 'webvtt', '-y', outputPath,
+    '-i', input.inputPath, '-map', '0:s:'+(input.trackIndex??0), '-f', 'webvtt', '-y', outputPath,
   ], {
     cwd: input.workspace,
     timeoutMs: input.timeoutMs,
     maxOutputBytes: 1 * 1_024 * 1_024,
     signal: input.signal,
   });
-  return parseWebVtt(await readFile(outputPath, 'utf8'));
+  if((await stat(outputPath)).size>16*1024*1024)throw new Error('ANALYZER_SUBTITLE_TEXT_LIMIT');
+  return parseWebVtt(await readFile(outputPath, 'utf8')).map(segment=>({...segment,sourceViewId:'subtitle-track-'+(input.trackIndex??0),channel:input.trackIndex??0}));
 }

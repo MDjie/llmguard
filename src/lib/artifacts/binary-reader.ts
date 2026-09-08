@@ -5,7 +5,7 @@ import { scopePredicate, type TenantScope } from '@/lib/tenancy';
 import { db } from '@/storage/database/shared/db';
 import { artifactParts, artifacts } from '@/storage/database/shared/schema';
 
-export type BinaryArtifactKind = 'IMAGE' | 'AUDIO' | 'VIDEO';
+export type BinaryArtifactKind = 'TEXT' | 'DOCUMENT' | 'IMAGE' | 'AUDIO' | 'VIDEO';
 
 export async function readAcceptedArtifactBytes(
   scope: TenantScope,

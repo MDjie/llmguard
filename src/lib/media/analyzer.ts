@@ -1,3 +1,4 @@
+import {pcmFromMetadata} from '@/lib/media/formats/pcm';
 import { z } from 'zod';
 import { analysisCoverageSchema } from '@/lib/multimodal/coverage';
 import { ProviderEndpointPolicy, safeFetchJson } from '@/lib/egress';
@@ -29,6 +30,7 @@ const mediaAnalysisSchema = z.object({
     text: z.string().max(100_000), startMs: z.number().int().nonnegative(),
     endMs: z.number().int().nonnegative(), confidence: z.number().min(0).max(1),
     source: z.literal('subtitle'),
+    sourceViewId:z.string().max(128).optional(),channel:z.number().int().nonnegative().max(64).optional(),
   }).strict().refine((item) => item.endMs >= item.startMs)).max(100_000),
   frames: z.array(z.object({
     frameIndex: z.number().int().nonnegative(), timeMs: z.number().int().nonnegative(),
@@ -99,6 +101,7 @@ export async function analyzeAudioVideo(input: {
       artifact: {
         id: input.artifact.id, kind: input.artifact.kind, mediaType: input.artifact.detectedMediaType,
         sizeBytes: input.artifact.verifiedSize, sha256: input.artifact.verifiedSha256, parts: signedParts,
+        fileName: input.artifact.fileName, pcm: pcmFromMetadata(input.artifact.fileName, input.artifact.metadata, input.artifact.verifiedSize ?? 0),
       },
       sandbox: {
         ffprobeTimeoutMs: 30_000, ffmpegTimeoutMs: 300_000,

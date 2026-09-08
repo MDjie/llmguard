@@ -11,7 +11,7 @@ export interface ObjectStoreConfig {
 
 function required(environment: NodeJS.ProcessEnv, name: string): string {
   const value = environment[name];
-  if (!value) throw new Error(`${name} is required`);
+  if (!value?.trim() || value.includes('${')) throw new Error(`${name} is required and must not contain unresolved placeholders`);
   return value;
 }
 

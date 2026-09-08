@@ -1,9 +1,9 @@
 # Generated from model/guard-v1.schema.json. Do not edit.
-# Source SHA-256: 44b9580b162406dfe22418cf70f016c246763510e54d36c1ee3658f2b3a62cf9
+# Source SHA-256: aaeb5fbfa00c54ddc3b2f95bc7a3896e7602f1b9391c66774516d58ef070d8f1
 from typing import Literal, NotRequired, TypedDict
 
 GUARD_CONTRACT_VERSION = '1.0'
-GUARD_CONTRACT_SOURCE_SHA256 = '44b9580b162406dfe22418cf70f016c246763510e54d36c1ee3658f2b3a62cf9'
+GUARD_CONTRACT_SOURCE_SHA256 = 'aaeb5fbfa00c54ddc3b2f95bc7a3896e7602f1b9391c66774516d58ef070d8f1'
 
 Direction = Literal["INPUT", "OUTPUT_COMPLETE", "OUTPUT_CHUNK", "RAG_INGEST", "RAG_CONTEXT", "TOOL_REQUEST", "TOOL_RESULT"]
 
@@ -86,6 +86,7 @@ class RequestContext(TypedDict):
     stage: NotRequired[ProcessingStage]
     businessLine: NotRequired[str]
     legalDisclaimerVersion: NotRequired[str]
+    taskPurpose: NotRequired[str]
 
 class ArtifactRef(TypedDict):
     artifactId: str

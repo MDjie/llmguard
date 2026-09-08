@@ -23,13 +23,13 @@ export function fusionSourceContent(
     const start = cursor;
     cursor = span.end;
     const userInput = span.source === 'user_text' && context.direction === 'INPUT';
-    const sourceType = span.source === 'user_text' ? (userInput ? 'USER' : 'AGENT') : 'MEDIA';
+    const sourceType = span.source === 'user_text' ? (userInput ? 'USER' : 'AGENT') : span.source === 'file_text' ? 'FILE' : 'MEDIA';
     return {
       envelopeId: 'fusion_' + index, tenantId: context.tenantId, applicationId: context.applicationId,
       sessionId: context.sessionId, sourceType,
       sourceId: span.artifactId ?? context.requestId + ':' + index,
       trustLevel: sourceType === 'AGENT' ? 'CONTROLLED' : 'UNTRUSTED',
-      instructionCapability: userInput ? 'ALLOWED' : 'DATA_ONLY',
+      instructionCapability: userInput ? 'ALLOWED' : 'FORBIDDEN',
       sensitivityLabels: [], parentEnvelopeIds: [], policyVersion: context.policyBundleId,
       eventSeq: index, contentStart: start, contentEnd: span.end,
       contentHash: createHash('sha256').update(text.slice(start, span.end)).digest('hex'),

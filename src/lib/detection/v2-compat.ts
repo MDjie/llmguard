@@ -18,6 +18,7 @@ import { isConfirmedObservation } from '@/lib/guard-engine-v2/observation-role';
 import type { DetectionFinding, DetectionResult } from './types';
 
 export interface GuardEngineV2DetectionOptions {
+  readonly taskPurpose?: string;
   readonly requestId?: string;
   readonly locale?: string;
   readonly industry?: string;
@@ -151,7 +152,8 @@ function observationFinding(
       (dimension) => dimension.code === dimensionCode,
     )?.id,
     score: Math.round(observation.score * 100),
-    confidence: observation.score,
+    scoreMeaning: observation.scoreMeaning ?? 'UNCALIBRATED',
+    ...(observation.scoreMeaning === 'PROBABILITY' ? {confidence: observation.score} : {}),
     severity: observation.severity === 'CRITICAL'
       ? 'critical'
       : observation.severity === 'HIGH'
@@ -192,7 +194,10 @@ export function adaptGuardDecisionToDetectionResult(
   const spans = evidenceSpans(decision, text.length);
   const result: DetectionResult = {
     overallScore: Math.round(maximumScore * 100),
-    confidence: Number(maximumScore.toFixed(3)),
+    confidence: Math.max(0, ...matched.filter(item => item.scoreMeaning === 'PROBABILITY').map(item => item.score)),
+    confidenceMeaning: matched.length > 0 && matched.every(item => item.scoreMeaning === 'PROBABILITY') ? 'PROBABILITY' : 'UNCALIBRATED',
+    rawAction: decision.action,
+    operationalOutcome: decision.degradationReasons.length ? 'INCOMPLETE' : decision.action === 'REQUIRE_REVIEW' ? 'REQUIRES_REVIEW' : 'COMPLETE',
     action,
     findings,
     summary: findings.length === 0
@@ -256,6 +261,7 @@ export async function detectWithGuardEngineV2(
       requestId,
       tenantId: scope.tenantId,
       applicationId: scope.applicationId,
+      ...(options.taskPurpose ? {taskPurpose: options.taskPurpose.slice(0,4096)} : {}),
       ...(options.locale ? {locale:options.locale} : {}),
       ...(options.industry ? {industry:options.industry} : {}),
       ...(options.sessionId ? { sessionId: options.sessionId } : {}),

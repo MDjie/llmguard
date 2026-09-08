@@ -9,7 +9,7 @@ import type { GuardRequest } from '@guardllm/contracts';
 describe('text sample import and incident evidence',()=>{
   const sample={title:'攻击验证',inputText:'marker',category:'prompt_injection',expectedAction:'block'};
   it('reads UTF8 BOM and reports duplicates and source line errors',()=>{
-    expect(parseSampleImport('a.txt','\uFEFFhello\r\n\r\nhello')).toMatchObject({duplicates:1,errors:[]});
+    expect(parseSampleImport('a.txt','\uFEFFhello\r\n\r\nhello',{expectedAction:'allow',category:'normal_qa'})).toMatchObject({duplicates:1,errors:[]});
     const parsed=parseSampleImport('a.jsonl',JSON.stringify(sample)+'\ninvalid\n'+JSON.stringify(sample));
     expect(parsed.rows).toHaveLength(1);expect(parsed.duplicates).toBe(1);expect(parsed.errors[0].line).toBe(2);
   });

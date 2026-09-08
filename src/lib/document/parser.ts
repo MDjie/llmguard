@@ -1,3 +1,5 @@
+import {extensionsFor, formatForFile, type MediaCategory} from '@/lib/media/formats/registry';
+import {decodeText} from '@/lib/media/formats/text-decoder';
 /**
  * 文档解析服务
  * 支持 PDF、DOCX、TXT 等格式的解析
@@ -56,17 +58,8 @@ export interface OcrResult {
 }
 
 // 支持的文件类型
-export const SUPPORTED_FILE_TYPES = {
-  text: ['txt', 'md', 'json', 'csv', 'xml', 'html', 'css', 'js', 'ts'],
-  document: ['pdf', 'docx', 'doc', 'wps', 'ofd', 'odt', 'rtf'],
-  image: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp'],
-} as const;
-
-export const ALL_SUPPORTED_TYPES = [
-  ...SUPPORTED_FILE_TYPES.text,
-  ...SUPPORTED_FILE_TYPES.document,
-  ...SUPPORTED_FILE_TYPES.image,
-];
+export const SUPPORTED_FILE_TYPES = {text: extensionsFor('text'), document: extensionsFor('document'), image: extensionsFor('image'), audio: extensionsFor('audio'), video: extensionsFor('video')};
+export const ALL_SUPPORTED_TYPES = [...new Set(Object.values(SUPPORTED_FILE_TYPES).flat())];
 
 /**
  * 判断文件类型是否需要 OCR
@@ -85,12 +78,8 @@ export function isSupported(fileType: string): boolean {
 /**
  * 获取文件类型分类
  */
-export function getFileCategory(fileType: string): 'text' | 'document' | 'image' | 'unknown' {
-  const type = fileType.toLowerCase();
-  if ((SUPPORTED_FILE_TYPES.text as readonly string[]).includes(type)) return 'text';
-  if ((SUPPORTED_FILE_TYPES.document as readonly string[]).includes(type)) return 'document';
-  if ((SUPPORTED_FILE_TYPES.image as readonly string[]).includes(type)) return 'image';
-  return 'unknown';
+export function getFileCategory(fileType: string): MediaCategory | 'unknown' {
+  return formatForFile('input.'+fileType)?.category ?? 'unknown';
 }
 
 /**
@@ -152,8 +141,8 @@ function buildPlainLines(text: string): PlainLine[] {
  */
 function buildBlocksFromText(text: string): DocumentBlock[] {
   const blocks: DocumentBlock[] = [];
-  const paragraphs = text.split(/\n\n+/);
-  let currentOffset = 0;
+  // Keep exact separator lengths so evidence offsets survive blank-line runs.
+  const paragraphs = [...text.matchAll(/[^\n]+(?:\n(?!\n)[^\n]+)*/gu)];
   const lines = text.split('\n');
   const lineOffsets: number[] = [];
   let offset = 0;
@@ -172,10 +161,11 @@ function buildBlocksFromText(text: string): DocumentBlock[] {
     return 1;
   };
 
-  paragraphs.forEach((paragraph, index) => {
+  paragraphs.forEach((match, index) => {
+    const paragraph = match[0];
     if (paragraph.trim()) {
-      const startOffset = currentOffset;
-      const endOffset = currentOffset + paragraph.length;
+      const startOffset = match.index;
+      const endOffset = startOffset + paragraph.length;
       blocks.push({
         blockIndex: index,
         type: 'paragraph',
@@ -186,7 +176,6 @@ function buildBlocksFromText(text: string): DocumentBlock[] {
         endOffset,
       });
     }
-    currentOffset += paragraph.length + 2; // +2 for paragraph break
   });
 
   return blocks;
@@ -196,7 +185,7 @@ function buildBlocksFromText(text: string): DocumentBlock[] {
  * 解析 TXT 文件
  */
 async function parseTxt(buffer: Buffer): Promise<ParsedDocument> {
-  const text = buffer.toString('utf-8');
+  const text = decodeText(buffer).text;
   const plainLines = buildPlainLines(text);
   const blocks = buildBlocksFromText(text);
 
@@ -219,7 +208,7 @@ async function parseTxt(buffer: Buffer): Promise<ParsedDocument> {
  * 解析 Markdown 文件
  */
 async function parseMarkdown(buffer: Buffer): Promise<ParsedDocument> {
-  const text = buffer.toString('utf-8');
+  const text = decodeText(buffer).text;
   const plainLines = buildPlainLines(text);
   const blocks = buildBlocksFromText(text);
 
@@ -374,6 +363,7 @@ export async function parseDocument(
   fileType: string,
 ): Promise<ParsedDocument> {
   const type = fileType.toLowerCase();
+  if (getFileCategory(type) === 'text' && type !== 'md') return parseTxt(buffer);
 
   switch (type) {
     case 'txt':
@@ -399,15 +389,16 @@ export async function parseDocument(
     case 'ofd':
     case 'odt':
     case 'rtf':
+    case 'xlsx':
+    case 'xls':
+    case 'pptx':
+    case 'ppt':
+    case 'ods':
+    case 'odp':
       return parseConvertedDocument(buffer, type);
 
     default:
-      // 尝试作为文本解析
-      try {
-        return parseTxt(buffer);
-      } catch {
-        throw new Error(`不支持的文件类型: ${type}`);
-      }
+      throw new Error('DOCUMENT_REQUIRES_MEDIA_PIPELINE');
   }
 }
 
@@ -424,10 +415,10 @@ export function createChunks(
   const { maxChunkSize = 1000, overlapSize = 100 } = options;
   const chunks: DocumentChunk[] = [];
 
-  if (maxChunkSize <= 0) {
+  if (!Number.isSafeInteger(maxChunkSize) || maxChunkSize <= 0) {
     throw new RangeError('maxChunkSize must be greater than zero');
   }
-  if (overlapSize < 0 || overlapSize >= maxChunkSize) {
+  if (!Number.isSafeInteger(overlapSize) || overlapSize < 0 || overlapSize >= maxChunkSize) {
     throw new RangeError('overlapSize must be between zero and maxChunkSize');
   }
   if (text.length === 0) return chunks;
@@ -475,6 +466,11 @@ export function createChunks(
       }
     }
 
+    // Offsets use UTF-16, but boundaries must never split a Unicode scalar.
+    const splitsPair = (at: number) => at > 0 && at < text.length &&
+      /[\uD800-\uDBFF]/u.test(text[at - 1]) && /[\uDC00-\uDFFF]/u.test(text[at]);
+    if (splitsPair(endOffset)) endOffset--;
+    if (endOffset <= startOffset) throw new RangeError('maxChunkSize cannot contain the next Unicode scalar');
     const content = text.slice(startOffset, endOffset);
     chunks.push({
       index: chunks.length,
@@ -486,7 +482,9 @@ export function createChunks(
     });
 
     if (endOffset >= text.length) break;
-    startOffset = endOffset - overlapSize;
+    let nextOffset = Math.max(startOffset + 1, endOffset - overlapSize);
+    if (splitsPair(nextOffset)) nextOffset++;
+    startOffset = nextOffset;
   }
 
   return chunks;

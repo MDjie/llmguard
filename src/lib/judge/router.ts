@@ -1,3 +1,5 @@
+import {reserveJudgeCapacity} from './admission';
+import type {JudgeTaskContext, RefinementProposal} from './harness';
 import { createHash } from 'node:crypto';
 import { callProviderChat, providerAuthHeaders, type ProviderChatResult } from '@/lib/providers/chat';
 import { safeFetchJson, EgressRequestError } from '@/lib/egress';
@@ -5,9 +7,11 @@ import { getSecretProvider } from '@/lib/secrets';
 import { riskDefinition } from '@/lib/guard-engine-v2/risk-registry';
 import { assertJudgeEndpoint, assertJudgeQuality, profileDigest } from './profile-registry';
 import { type JudgeProfile, validateJudgeProfileSet, type JudgeScenario, selectJudgeProfile } from './profile';
-import { parseJudgeResponse, JUDGE_SYSTEM_PROMPT,judgeWireSchema, type JudgeAssessmentResponse } from './response-schema';
+import { parseJudgeResponse, JUDGE_SYSTEM_PROMPT, JUDGE_SYSTEM_PROMPT_V3,judgeWireSchema, type JudgeAssessmentResponse } from './response-schema';
 
 export interface JudgeRequest extends JudgeScenario {
+  readonly taskContext?: JudgeTaskContext;
+  readonly proposals?: readonly RefinementProposal[];
   readonly assessmentId: string; readonly text: string; readonly privateOnly: boolean;
   readonly absoluteDeadlineEpochMs: number; readonly signal: AbortSignal;
   readonly role?: 'base' | 'refiner' | 'grounding';
@@ -22,7 +26,8 @@ export type JudgeInvoker = (profile: JudgeProfile, request: JudgeRequest, signal
 const inFlight = new Map<string,number>();
 export const invokeConfiguredJudge: JudgeInvoker = async (profile, request, signal) => {
   const definitions = Object.fromEntries(profile.riskIds.map(id => [id, riskDefinition(id, profile.riskDefinitions)]));
-  const envelope = { schemaVersion:'2.0', assessmentId:request.assessmentId, direction:request.direction, text:request.text, trust:'UNTRUSTED', riskDefinitions:definitions };
+  const envelope = { schemaVersion:'2.0', assessmentId:request.assessmentId, direction:request.direction, text:request.text, trust:'UNTRUSTED', riskDefinitions:definitions, ...(profile.promptTemplateVersion === 'guard-judge-3.0' ? {taskContext:request.taskContext,proposals:request.proposals??[]} : {}) };
+  if (profile.promptTemplateVersion === 'guard-judge-3.0' && JSON.stringify(envelope).length > profile.maxInputChars) throw new Error('JUDGE_INPUT_INCOMPLETE');
   if (profile.backendKind === 'safety_classifier') {
     const secret = profile.secretRef ? await getSecretProvider(profile).get(profile.secretRef) : undefined;
     const data = await safeFetchJson({ baseUrl:profile.baseUrl, path:profile.path, providerType:profile.providerType,
@@ -32,10 +37,10 @@ export const invokeConfiguredJudge: JudgeInvoker = async (profile, request, sign
     return { id:request.assessmentId, content:JSON.stringify(data), latencyMs:0 };
   }
   return callProviderChat({ ...profile, defaultModel:profile.modelId, apiKeyEncrypted:null, secretRef:profile.secretRef ?? null },
-    [{role:'system',content:JUDGE_SYSTEM_PROMPT},{role:'user',content:JSON.stringify(envelope)}],
+    [{role:'system',content:profile.promptTemplateVersion === 'guard-judge-3.0' ? JUDGE_SYSTEM_PROMPT_V3 : JUDGE_SYSTEM_PROMPT},{role:'user',content:JSON.stringify(envelope)}],
     { model:profile.modelId, path:profile.path, authMode:profile.authMode, authHeaderName:profile.authHeaderName, temperature:profile.temperature,
       maxTokens:profile.maxOutputTokens, responseFormat:profile.structuredOutputMode === 'strict_text_json' ? undefined : profile.structuredOutputMode,
-      ...(profile.structuredOutputMode==='json_schema'?{responseSchema:judgeWireSchema(request.assessmentId,profile.riskIds,request.text.length)}:{}),
+      ...(profile.structuredOutputMode==='json_schema'?{responseSchema:judgeWireSchema(request.assessmentId,profile.riskIds,request.text.length, profile.promptTemplateVersion === 'guard-judge-3.0')}:{}),
       thinkingMode:profile.thinkingMode === 'omit' ? undefined : profile.thinkingMode,
       reasoningEffort:profile.reasoningEffort,
       signal, timeoutMs:profile.perAttemptTimeoutMs });
@@ -49,6 +54,7 @@ async function bounded<T>(run: () => Promise<T>, signal: AbortSignal): Promise<T
   });
 }
 export async function runJudge(profiles: readonly JudgeProfile[], request: JudgeRequest, dependencies: {
+  readonly reserveCapacity?: typeof reserveJudgeCapacity;
   readonly invoke?: JudgeInvoker; readonly checkEndpoint?: (profile:JudgeProfile) => Promise<void>;
 } = {}): Promise<JudgeOutcome> {
   validateJudgeProfileSet(profiles);
@@ -65,12 +71,16 @@ export async function runJudge(profiles: readonly JudgeProfile[], request: Judge
     }
     const concurrencyKey = profile.tenantId + ':' + profile.applicationId + ':' + new URL(profile.baseUrl).origin + ':' + profile.modelId;
     let admitted = false;
+    let releaseCapacity:(()=>Promise<void>)|undefined;
     try {
       if (request.text.length > profile.maxInputChars) throw new Error('JUDGE_INPUT_INCOMPLETE');
       assertJudgeQuality(profile);
       if ((inFlight.get(concurrencyKey) ?? 0) >= profile.maxConcurrent) throw new Error('JUDGE_CAPACITY_EXCEEDED');
       inFlight.set(concurrencyKey,(inFlight.get(concurrencyKey) ?? 0)+1); admitted = true;
-      const signal = AbortSignal.any([request.signal,AbortSignal.timeout(Math.min(remaining,profile.perAttemptTimeoutMs))]);
+      // Explicit invokers are dependency-injected test/offline backends; live calls always reserve in PostgreSQL.
+      if(!dependencies.invoke||dependencies.reserveCapacity)releaseCapacity=await (dependencies.reserveCapacity??reserveJudgeCapacity)(profile);
+      const afterAdmission=deadline-Date.now();if(request.signal.aborted||afterAdmission<=0)throw new Error('JUDGE_CANCELLED');
+      const signal = AbortSignal.any([request.signal,AbortSignal.timeout(Math.min(afterAdmission,profile.perAttemptTimeoutMs))]);
       await bounded(() => (dependencies.checkEndpoint ?? assertJudgeEndpoint)(profile),signal);
       const raw = await bounded(() => (dependencies.invoke ?? invokeConfiguredJudge)(profile,request,signal),signal);
       if (raw.finishReason && raw.finishReason !== 'stop') throw new Error('JUDGE_OUTPUT_INCOMPLETE');
@@ -84,6 +94,7 @@ export async function runJudge(profiles: readonly JudgeProfile[], request: Judge
       if (error instanceof EgressRequestError && [401,403].includes(error.status ?? 0)) break;
       if (['JUDGE_PRIVATE_BOUNDARY_NOT_APPROVED','JUDGE_QUALITY_EVIDENCE_REQUIRED','JUDGE_INPUT_INCOMPLETE','JUDGE_MODEL_IDENTITY_CHANGED'].includes(status)) break;
     } finally {
+      if(releaseCapacity)await releaseCapacity().catch(()=>undefined);
       if (admitted) { const count = (inFlight.get(concurrencyKey) ?? 1)-1; if (count) inFlight.set(concurrencyKey,count); else inFlight.delete(concurrencyKey); }
     }
   }
@@ -91,5 +102,5 @@ export async function runJudge(profiles: readonly JudgeProfile[], request: Judge
 }
 export function judgeCacheKey(profile: JudgeProfile, request: JudgeRequest, bundleDigest: string): string {
   return createHash('sha256').update(JSON.stringify({profile:profileDigest(profile),bundleDigest,tenant:request.tenantId,application:request.applicationId,
-    direction:request.direction,industry:request.industry,locale:request.locale,privateOnly:request.privateOnly,text:request.text})).digest('hex');
+    direction:request.direction,industry:request.industry,locale:request.locale,privateOnly:request.privateOnly,text:request.text,taskContext:request.taskContext,proposals:request.proposals,role:request.role})).digest('hex');
 }

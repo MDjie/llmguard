@@ -1,3 +1,5 @@
+import {reserveJudgeCapacity} from '@/lib/judge/admission';
+import * as providerChat from '@/lib/providers/chat';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { GLM_JOINT_MODEL, JOINT_EVIDENCE_VERSION, assertCurrentJointEvidence, jointEvidenceEnvelope, jointEvidenceProfileSchema, runGlmJointEvidence } from '@/lib/multimodal/joint-evidence-judge';
 import { makeEvidenceView } from '@/lib/evidence/media-views';
@@ -5,6 +7,8 @@ import { sha256 } from '@/lib/gateway-runtime/protocol';
 import { qualityBindingDigest } from '@/lib/judge/profile-registry';
 import type { NativeBinding } from '@/contracts/http/native-multimodal';
 import type { JudgeInvoker } from '@/lib/judge/router';
+
+vi.mock('@/lib/judge/admission',()=>({reserveJudgeCapacity:vi.fn(async()=>async()=>{})}));
 
 const profile = jointEvidenceProfileSchema.parse({ schemaVersion:'2.0', profileId:'joint', revision:1, tenantId:'tenant', applicationId:'app',
   displayName:'GLM-5.3 joint evidence', enabled:true, mode:'SHADOW', providerId:'glm-private', providerType:'openai_compatible',
@@ -21,7 +25,7 @@ const invoke:JudgeInvoker = async (selected, request) => ({ id:'response',latenc
   content:JSON.stringify({schemaVersion:'2.0',assessmentId:request.assessmentId,complete:true,assessments:[{riskId:'prompt_injection',verdict:'UNSAFE',reasonCode:'INJECTION',
     evidence:views.map(view=>({start:request.text.indexOf(view.text),end:request.text.indexOf(view.text)+view.text.length}))}]}) });
 const deps = () => ({ profileJson:JSON.stringify(profile),invoke,checkEndpoint:async()=>{} });
-afterEach(()=>vi.unstubAllEnvs());
+afterEach(()=>{vi.unstubAllEnvs();vi.restoreAllMocks();});
 describe('GLM-5.3 joint derived evidence',()=>{
   it('keeps sources and UTF16 coordinates separate; duplicate views do not amplify evidence',()=>{
     const envelope=jointEvidenceEnvelope(binding,[...views,views[0]],16000);
@@ -33,7 +37,7 @@ describe('GLM-5.3 joint derived evidence',()=>{
     expect(()=>jointEvidenceEnvelope(binding,views,128)).toThrow('INPUT_INCOMPLETE');
   });
   it('runs the requested GLM model in shadow without granting native coverage',async()=>{
-    const result=await runGlmJointEvidence(input(),deps());expect(result).toMatchObject({status:'COMPLETE',mode:'SHADOW',action:'ALLOW',modelId:'glm-5.3',nativeCoverage:false});
+    const result=await runGlmJointEvidence(input(),deps());expect(result).toMatchObject({status:'COMPLETE',mode:'SHADOW',action:'ALLOW',modelId:GLM_JOINT_MODEL,nativeCoverage:false});
     expect(result.evidence.map(item=>item.locations.map(location=>location.artifactId))).toEqual([['image-0','image-1']]);
     expect(JSON.stringify(result)).not.toContain(views[0].text);
   });
@@ -63,12 +67,23 @@ describe('GLM-5.3 joint derived evidence',()=>{
   it('never sends private evidence to a cloud endpoint and does not use other model versions',async()=>{
     const call=vi.fn(invoke);const cloud={...profile,deploymentMode:'cloud',authMode:'bearer',secretRef:'key'};
     expect(await runGlmJointEvidence(input(),{...deps(),profileJson:JSON.stringify(cloud),invoke:call})).toMatchObject({status:'UNKNOWN'});expect(call).not.toHaveBeenCalled();
-    expect(()=>jointEvidenceProfileSchema.parse({...profile,modelId:'glm-4'})).toThrow();
-    expect(()=>jointEvidenceProfileSchema.parse({...profile,thinkingMode:'disabled'})).toThrow('GLM53_THINKING_CANNOT_BE_DISABLED');
+    expect(()=>jointEvidenceProfileSchema.parse({...profile,modelId:'glm-4'})).not.toThrow();
+    expect(()=>jointEvidenceProfileSchema.parse({...profile,modelId:'glm-5.3',thinkingMode:'disabled'})).toThrow('GLM53_THINKING_CANNOT_BE_DISABLED');
   });
   it('propagates cancellation and requires configuration to run',async()=>{
     expect(await runGlmJointEvidence(input(),{profileJson:'{}'})).toMatchObject({status:'NOT_APPLICABLE',nativeCoverage:false});
     const controller=new AbortController();controller.abort(new Error('cancelled'));
     await expect(runGlmJointEvidence({...input(),signal:controller.signal},deps())).rejects.toThrow('cancelled');
   });
+});
+
+it('reserves shared capacity for the production joint wrapper',async()=>{
+ vi.mocked(reserveJudgeCapacity).mockClear();
+ const release=vi.fn(async()=>{});vi.mocked(reserveJudgeCapacity).mockResolvedValueOnce(release);
+ vi.spyOn(providerChat,'callProviderChat').mockImplementation(async(_provider,messages)=>{
+  const envelope=JSON.parse(String(messages[1].content)) as {assessmentId:string};
+  return {id:'fixture',latencyMs:0,reportedModel:GLM_JOINT_MODEL,finishReason:'stop',content:JSON.stringify({schemaVersion:'2.0',assessmentId:envelope.assessmentId,complete:true,assessments:[{riskId:'prompt_injection',verdict:'SAFE',reasonCode:'NO_RISK',evidence:[]}]})};
+ });
+ const result=await runGlmJointEvidence(input(),{profileJson:JSON.stringify(profile),checkEndpoint:async()=>{}});
+ expect(result.status).toBe('COMPLETE');expect(reserveJudgeCapacity).toHaveBeenCalledOnce();expect(release).toHaveBeenCalledOnce();
 });

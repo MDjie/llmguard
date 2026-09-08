@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import {readMediaCapabilities} from '@/lib/media/capabilities';
 import { emptyQuerySchema, jsonObjectResponseSchema } from '@/contracts/http/common';
 import { withLegacyApiSecurity, type AuthenticatedPrincipal } from '@/lib/api-security';
 import { db } from '@/lib/db';
@@ -11,7 +12,7 @@ import { requireTenantContext, scopePredicate } from '@/lib/tenancy';
  * 从模型供应商管理中获取 useCase='ocr' 的模型
  */
 async function getOcrModels(
-  _request: Request,
+  request: Request,
   _routeContext: unknown,
   apiContext: { principal: AuthenticatedPrincipal | null },
 ) {
@@ -39,10 +40,18 @@ async function getOcrModels(
       recommended: provider.isDefaultTarget,
     }));
 
+    const media = await readMediaCapabilities(request.signal);
     return NextResponse.json({
       success: true,
       data: {
         models,
+        // Legacy provider entries are configuration, not proof of analyzer/model qualification.
+        capabilityVersion: media.version,
+        formats: media.formats.filter(format => format.category === 'image' || format.category === 'document'),
+        limits: {image: media.limits.image, document: media.limits.document},
+        analyzer: media.analyzer,
+        unavailableReason: media.unavailableReason,
+        qualification: media.qualification,
         hasOcrModels: models.length > 0,
         defaultModelId: models.find((m) => m.recommended)?.id || models[0]?.id || null,
       },

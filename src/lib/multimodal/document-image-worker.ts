@@ -76,6 +76,7 @@ export async function processNextDocumentImageJob() {
       },
       userText,
       contextArtifactId: job.contextArtifactId ?? undefined,
+      documentText:analysis.documentText?.map(part=>({...part,artifactId:artifact.id,artifactSha256:artifact.verifiedSha256??undefined})),
       ocr: analysis.ocr.map((item) => ({
         text: item.text,
         confidence: item.confidence,
@@ -191,6 +192,7 @@ export async function processNextDocumentImageJob() {
       labels: analysis.labels,
       anomalies: analysis.anomalies,
       documentElements: analysis.documentElements,
+      documentText:analysis.documentText?.map(part=>({...part,artifactId:artifact.id,artifactSha256:artifact.verifiedSha256??undefined})),
       ocr: analysis.ocr.map(({ text: _sensitiveText, ...item }) => ({
         ...item,
         textHashOnly: true,
