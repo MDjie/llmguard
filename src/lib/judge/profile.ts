@@ -45,6 +45,7 @@ export const judgeProfileSchema = z.object({
   structuredOutputMode: z.enum(['json_object','json_schema','strict_text_json']).default('json_object'),
   temperature: z.number().min(0).max(2).nullable().default(null),
   thinkingMode: z.enum(['omit','enabled','disabled']).default('omit'),
+  reasoningEffort: z.enum(['low','high','max']).optional(),
   promptTemplateVersion: z.literal('guard-judge-2.0'),
   adapterVersion: z.literal('guard-chat-adapter-2.0'),
   qualityEvidenceId: id.optional(),
@@ -56,6 +57,7 @@ export const judgeProfileSchema = z.object({
   if (p.authMode === 'bearer' && !p.secretRef) ctx.addIssue({code:'custom',message:'SECRET_REF_REQUIRED',path:['secretRef']});
   if (p.authMode === 'api_key_header' && (!p.secretRef || !p.authHeaderName)) ctx.addIssue({code:'custom',message:'CUSTOM_HEADER_CONFIG_REQUIRED',path:['authHeaderName']});
   if (p.authMode !== 'api_key_header' && p.authHeaderName) ctx.addIssue({code:'custom',message:'AUTH_HEADER_NAME_NOT_APPLICABLE',path:['authHeaderName']});
+  if (['glm-5.3','zai-org/GLM-5.3'].includes(p.modelId) && p.thinkingMode === 'disabled') ctx.addIssue({code:'custom',message:'GLM53_THINKING_CANNOT_BE_DISABLED',path:['thinkingMode']});
   if (p.perAttemptTimeoutMs > p.totalTimeoutMs) ctx.addIssue({code:'custom',message:'ATTEMPT_EXCEEDS_TOTAL_BUDGET'});
   if (!/^[a-zA-Z0-9_/-]+$/.test(p.path) || p.path.startsWith('/') || p.path.includes('..')) ctx.addIssue({code:'custom',message:'PATH_INVALID'});
   if (new Set(p.riskIds).size !== p.riskIds.length || new Set(p.directions).size !== p.directions.length) ctx.addIssue({code:'custom',message:'DUPLICATE_SCOPE'});

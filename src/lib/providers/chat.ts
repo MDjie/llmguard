@@ -66,6 +66,7 @@ export interface ProviderChatOptions {
   readonly responseFormat?: 'json_object'|'json_schema';
   readonly responseSchema?: Record<string,unknown>;
   readonly thinkingMode?: 'enabled' | 'disabled';
+  readonly reasoningEffort?: 'low' | 'high' | 'max';
   readonly maxTokens?: number;
   readonly signal?: AbortSignal;
   readonly timeoutMs?: number;
@@ -182,6 +183,7 @@ export async function callProviderChat(
       ...(options.thinkingMode ? (providerType === 'ollama'
         ? {reasoning_effort: options.thinkingMode === 'disabled' ? 'none' : 'medium'}
         : { thinking: { type: options.thinkingMode } }) : {}),
+      ...(options.reasoningEffort ? { reasoning_effort: options.reasoningEffort } : {}),
       max_tokens: options.maxTokens ?? 2_048,
       stream: false,
     },

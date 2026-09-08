@@ -79,7 +79,7 @@ export function fromJobResult(job: { id: string; bundleId: string; jobType?: str
     reasonCode: 'MEDIA_COVERAGE_INCOMPLETE', category: 'UNDETERMINED', evidence: [] });
   return decisionRecordedSchema.parse({ version: '1.0', source: 'GUARD_JOB', sourceId: job.id, jobId: job.id, traceId: `${job.jobType === 'audio_video' ? 'media' : 'job'}-trace-${job.id}`,
     decisionId: digest([job.id, result]), bundleId: job.bundleId, stage: nativeBinding.success ? nativeBinding.data.direction : 'INPUT', action: action.data, occurredAt: new Date().toISOString(),
-    coverage: { analysisCoverage: result.analysisCoverage ?? null, fusionCoverage: result.fusionCoverage ?? null, nativeCoverage: result.nativeCoverage ?? null, relationSources: result.relationSources ?? [], relations: Array.isArray(result.relations) ? result.relations.map(value => { if (!value || typeof value !== 'object') return null; const { explanation: _explanation, ...relation } = value; void _explanation; return relation; }) : [], releaseEligibility: result.releaseEligibility ?? null }, findings });
+    coverage: { analysisCoverage: result.analysisCoverage ?? null, fusionCoverage: result.fusionCoverage ?? null, nativeCoverage: result.nativeCoverage ?? null, jointEvidence: result.jointEvidence ?? null, relationSources: result.relationSources ?? [], relations: Array.isArray(result.relations) ? result.relations.map(value => { if (!value || typeof value !== 'object') return null; const { explanation: _explanation, ...relation } = value; void _explanation; return relation; }) : [], releaseEligibility: result.releaseEligibility ?? null }, findings });
 }
 
 export function groupAlertFindings(record: DecisionRecorded) {

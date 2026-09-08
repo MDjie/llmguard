@@ -1,5 +1,6 @@
 import { analyzeNativeArtifacts } from '@/lib/multimodal/native-analyzer';
 import { combineActionConstraints } from '@/lib/guard-engine-v2/action-constraints';
+import { runGlmJointEvidence } from './joint-evidence-judge';
 import { coverageResult } from '@/lib/multimodal/coverage';
 import { and, asc, eq } from 'drizzle-orm';
 import { readAcceptedTextArtifact } from '@/lib/artifacts';
@@ -103,10 +104,12 @@ export async function processNextDocumentImageJob() {
     const native = await analyzeNativeArtifacts({ scope, bundlePayload: bundle.payload, requiredRiskIds: bundle.payload.semanticCoverage?.requiredRiskIds ?? [],
       direction: 'INPUT', contextText: userText, contextArtifactId: job.contextArtifactId ?? undefined, heuristicSuspected: fusion.cooperativeAttack,
       artifacts: [{ artifact, parts }], signal: cancellation.signal });
+    const jointEvidence = native.binding ? await runGlmJointEvidence({ binding:native.binding, views:fusion.privateEvidenceViews, privateOnly:true, absoluteDeadlineEpochMs:Date.now()+60000, signal:cancellation.signal }) : null;
+    const finalEvidence = [...fusion.evidence, ...(jointEvidence?.mode === 'ENFORCE' ? jointEvidence.evidence : [])];
     const requireNative = bundle.payload.semanticDecisionMode === 'coverage-v1';
-    fusion.action = combineActionConstraints([fusion.action, ...(requireNative || native.gate.qualified ? [native.gate.action] : [])]).action;
+    fusion.action = combineActionConstraints([fusion.action, ...(jointEvidence ? [jointEvidence.action] : []), ...(requireNative || native.gate.qualified ? [native.gate.action] : [])]).action;
     const coverageSnapshot = coverageResult({ analysisCoverage: analysis.coverage, fusionCoverage: fusion.coverage, action: fusion.action,
-      failures: analysis.analysisFailures, strict: bundle.payload.semanticDecisionMode === 'coverage-v1', windowReasons: requireNative && !native.gate.eligible ? native.gate.reasonCodes : [] });
+      failures: analysis.analysisFailures, strict: bundle.payload.semanticDecisionMode === 'coverage-v1', windowReasons: [...(requireNative && !native.gate.eligible ? native.gate.reasonCodes : []), ...(jointEvidence?.mode==='ENFORCE'?jointEvidence.reasonCodes:[])] });
     if (analysis.derivatives.length > 0) {
       await db.transaction(async (transaction) => {
         const created = await transaction.insert(artifactDerivatives)
@@ -168,7 +171,7 @@ export async function processNextDocumentImageJob() {
       score,
       action: fusion.action,
       cooperativeAttack: fusion.cooperativeAttack,
-      evidence: fusion.evidence,
+      evidence: finalEvidence.map(item => ({ ...item })),
     });
     const result = {
       contractVersion: '1.0',
@@ -177,11 +180,11 @@ export async function processNextDocumentImageJob() {
       bundleId: bundle.id,
       action: fusion.action,
       cooperativeAttack: fusion.cooperativeAttack,
-      crossModalVerdict: native.gate.verdict, nativeCoverage: native.gate, relationSources: native.binding?.sources ?? [], relations: native.gate.relations,
+      crossModalVerdict: native.gate.verdict, nativeCoverage: native.gate, jointEvidence, relationSources: native.binding?.sources ?? [], relations: native.gate.relations,
       degraded: coverageSnapshot.degraded,
       analysisFailures: analysis.analysisFailures,
       textDecisions: fusion.textDecisions,
-      evidence: fusion.evidence,
+      evidence: finalEvidence,
       visual: analysis.visual,
       labels: analysis.labels,
       anomalies: analysis.anomalies,

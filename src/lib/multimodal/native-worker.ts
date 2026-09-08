@@ -13,6 +13,7 @@ import { analyzeAudioVideo } from '@/lib/media/analyzer';
 import { fuseMultimodal } from './fusion';
 import { fuseMediaTimeline } from '@/lib/media/timeline-fusion';
 import { analyzeNativeArtifacts } from './native-analyzer';
+import { runGlmJointEvidence } from './joint-evidence-judge';
 import type { GuardAction } from '@guardllm/contracts';
 export async function processNextNativeJointJob(){
  const job=await claimNextGuardJob(['native_joint']);if(!job)return null;
@@ -48,12 +49,14 @@ export async function processNextNativeJointJob(){
    }
   }
   const native=await analyzeNativeArtifacts({scope,bundlePayload:bundle.payload,requiredRiskIds:bundle.payload.semanticCoverage?.requiredRiskIds??[],direction:initial.binding.direction,contextText:userText,contextArtifactId:initial.binding.contextArtifactId,artifacts:inputs,signal:monitor.signal});
+  const jointEvidence=native.binding?await runGlmJointEvidence({binding:native.binding,views:privateViews,privateOnly:true,absoluteDeadlineEpochMs:context.absoluteDeadlineEpochMs,signal:monitor.signal}):null;
+  if(jointEvidence){actions.push(jointEvidence.action);if(jointEvidence.mode==='ENFORCE')evidence.push(...jointEvidence.evidence);if(jointEvidence.status==='UNKNOWN'&&jointEvidence.mode==='ENFORCE'){auxiliaryDegraded=true;for(const reason of jointEvidence.reasonCodes)auxiliaryReasons.add(reason);}}
   await validateNativeJobBinding(scope,job.ownerId,initial.binding);
   const action=combineActionConstraints([...actions,native.gate.action]).action;
   const eligible=native.gate.eligible&&['ALLOW','WARN'].includes(action);
   const degradationReasons=[...new Set([...auxiliaryReasons,...native.gate.reasonCodes])];
   await completeGuardJob(job,{contractVersion:'1.0',analysisContractVersion:'1.1',artifactId:job.artifactId,bundleId:job.bundleId,action,evidence,
-   cooperativeAttack:native.gate.verdict==='CONFIRMED',crossModalVerdict:native.gate.verdict,nativeBinding:native.binding,nativeAssessment:native.assessment,nativeCoverage:native.gate,relationSources:native.binding?.sources??[],relations:native.gate.relations,
+   cooperativeAttack:native.gate.verdict==='CONFIRMED',crossModalVerdict:native.gate.verdict,nativeBinding:native.binding,nativeAssessment:native.assessment,nativeCoverage:native.gate,jointEvidence,relationSources:native.binding?.sources??[],relations:native.gate.relations,
    analysisCoverage:coverage,releaseEligibility:{eligible,executionPermitRequired:true,reasonCodes:eligible?[]:[...degradationReasons,...(!['ALLOW','WARN'].includes(action)?['ACTION_REQUIRES_INTERVENTION']:[])]},degraded:auxiliaryDegraded||!native.gate.qualified||native.gate.reasonCodes.length>0,degradationReasons},{views:privateViews,mappings:coordinateMappings});
   return{jobId:job.id,status:'completed'};
  }catch(error:unknown){if(monitor.signal.aborted||isGuardJobCancellationError(error))return{jobId:job.id,status:'cancelled'};await failGuardJob(job,error);return{jobId:job.id,status:job.attempt>=job.maxAttempts?'failed':'retrying'};}finally{monitor.stop();}

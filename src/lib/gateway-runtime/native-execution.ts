@@ -6,6 +6,7 @@ import { scopePredicate,type TenantScope } from '@/lib/tenancy';
 import { nativeBindingSchema,nativeAssessmentSchema } from '@/contracts/http/native-multimodal';
 import { validateNativeJobBinding } from '@/lib/guard-jobs/native-binding';
 import { evaluateNativeAssessment } from '@/lib/multimodal/native-gate';
+import { assertCurrentJointEvidence } from '@/lib/multimodal/joint-evidence-judge';
 import { loadVerifiedPolicyBundle } from '@/lib/policy-bundle';
 import { canonicalJson,GatewayError,sha256 } from './protocol';
 import { NATIVE_MEDIA_MAX_BYTES } from './native-content';
@@ -25,6 +26,7 @@ export async function validateNativeExecutionJob(input:TenantScope&{subjectId:st
  if(canonicalJson(refs)!==canonicalJson(input.references)||canonicalJson(nativeRefs)!==canonicalJson(refs))throw new GatewayError('NATIVE_EXECUTION_SOURCE_MISMATCH',403);
  const bundle=await loadVerifiedPolicyBundle(input,input.bundleId);
  if(binding.bundleDigest!==sha256(canonicalJson(bundle.payload))||canonicalJson([...binding.requiredRiskIds].sort())!==canonicalJson([...(bundle.payload.semanticCoverage?.requiredRiskIds??[])].sort()))throw new GatewayError('NATIVE_EXECUTION_POLICY_MISMATCH',403);
+ try{assertCurrentJointEvidence(binding,result.data.jointEvidence);}catch{throw new GatewayError('NATIVE_JOINT_EVIDENCE_RECHECK_REQUIRED',403);}
  const gate=evaluateNativeAssessment(binding,result.data.nativeAssessment);if(!gate.eligible)throw new GatewayError('NATIVE_EXECUTION_QUALIFICATION_INVALID',403);
  let adapters:z.infer<typeof adapterSchema>[];try{adapters=z.array(adapterSchema).max(1000).parse(JSON.parse(process.env.NATIVE_MEDIA_ROUTE_ADAPTERS_JSON??'[]'));}catch{throw new GatewayError('NATIVE_ROUTE_ADAPTER_INVALID',503);}
  const candidates=adapters.filter(adapter=>adapter.tenantId===input.tenantId&&adapter.applicationId===input.applicationId&&adapter.modelRoute===input.modelRoute&&adapter.routingDigest===input.routingDigest&&Date.parse(adapter.validUntil)>Date.now());

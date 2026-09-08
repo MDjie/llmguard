@@ -37,6 +37,7 @@ export const invokeConfiguredJudge: JudgeInvoker = async (profile, request, sign
       maxTokens:profile.maxOutputTokens, responseFormat:profile.structuredOutputMode === 'strict_text_json' ? undefined : profile.structuredOutputMode,
       ...(profile.structuredOutputMode==='json_schema'?{responseSchema:judgeWireSchema(request.assessmentId,profile.riskIds,request.text.length)}:{}),
       thinkingMode:profile.thinkingMode === 'omit' ? undefined : profile.thinkingMode,
+      reasoningEffort:profile.reasoningEffort,
       signal, timeoutMs:profile.perAttemptTimeoutMs });
 };
 async function bounded<T>(run: () => Promise<T>, signal: AbortSignal): Promise<T> {
