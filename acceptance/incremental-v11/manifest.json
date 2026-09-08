@@ -1,0 +1,155 @@
+{
+  "schemaVersion": "1.0",
+  "targetJointModel": "glm-5.3",
+  "policy": "Code references and engineering fixtures never imply target acceptance. Every required item stays in the denominator.",
+  "items": [
+    {
+      "id": "V11-JOINT-GLM53",
+      "title": "GLM-5.3 派生证据联合裁判",
+      "implementationStatus": "IMPLEMENTED",
+      "mapsTo": [
+        "P1",
+        "P4",
+        "W06"
+      ],
+      "code": [
+        "src/lib/multimodal/joint-evidence-judge.ts",
+        "src/lib/multimodal/native-worker.ts"
+      ],
+      "tests": [
+        "tests/multimodal/joint-evidence-judge.test.ts"
+      ],
+      "blockingInputs": [
+        "GLM-5.3 endpoint/revision and scoped secret reference",
+        "independent target-model quality evidence"
+      ]
+    },
+    {
+      "id": "V11-MEDIA-TRANSFORM",
+      "title": "原生媒体遮挡、静音和裁剪",
+      "implementationStatus": "IMPLEMENTED",
+      "mapsTo": [
+        "P4",
+        "W06"
+      ],
+      "code": [
+        "services/media-analyzer/src/media-transform.ts",
+        "src/contracts/http/media-transform.ts"
+      ],
+      "tests": [
+        "tests/media-analyzer/media-transform.test.ts",
+        "scripts/integration/check-media-transforms.ts"
+      ],
+      "blockingInputs": [
+        "target format and codec toolchain quality approval"
+      ]
+    },
+    {
+      "id": "V11-NATIVE-RELEASE",
+      "title": "原生输出归档、复检和一次性释放",
+      "implementationStatus": "PARTIAL",
+      "mapsTo": [
+        "P4",
+        "W05"
+      ],
+      "code": [
+        "src/lib/multimodal/output-recheck.ts",
+        "src/lib/conversation-archive/native-output.ts",
+        "services/guard-gateway/src/main/java/com/guardllm/gateway/GuardedChatService.java"
+      ],
+      "tests": [
+        "tests/multimodal/output-recheck.test.ts",
+        "scripts/integration/check-gateway-v11-archive.mjs"
+      ],
+      "blockingInputs": [
+        "qualified original-media detector and business model output format",
+        "proxy candidate lifecycle, archive acknowledgement and one-time permit integration"
+      ]
+    },
+    {
+      "id": "V11-FINANCIAL-GOLD",
+      "title": "金融正式金标与策略质量",
+      "implementationStatus": "IMPLEMENTED",
+      "mapsTo": [
+        "P5",
+        "W06"
+      ],
+      "code": [
+        "src/lib/evaluation/dataset-workbench.ts",
+        "src/lib/policy-governance/financial-library.ts",
+        "src/lib/security-alerts/feedback-candidate.ts"
+      ],
+      "tests": [
+        "tests/content-safety/financial-library.test.ts",
+        "scripts/integration/check-media-evidence.ts"
+      ],
+      "blockingInputs": [
+        "independent financial reviewers and non-synthetic locked dataset",
+        "GLM-5.3 first-attempt campaign and production policy approval"
+      ]
+    },
+    {
+      "id": "V11-ARCHIVE-OPERATIONS",
+      "title": "180 天归档与真实存储恢复",
+      "implementationStatus": "IMPLEMENTED",
+      "mapsTo": [
+        "P3",
+        "W09"
+      ],
+      "code": [
+        "src/lib/conversation-archive/service.ts",
+        "src/lib/evidence/media-snapshots.ts"
+      ],
+      "tests": [
+        "scripts/integration/check-conversation-archive.ts",
+        "scripts/integration/check-media-evidence.ts"
+      ],
+      "blockingInputs": [
+        "customer versioned object store and key-ring/backup deletion policy",
+        "target storage failure and restore acceptance"
+      ]
+    },
+    {
+      "id": "V11-HA-SOAK",
+      "title": "故障恢复、资源采样与长稳",
+      "implementationStatus": "PARTIAL",
+      "mapsTo": [
+        "P6",
+        "W08"
+      ],
+      "code": [
+        "scripts/acceptance/runtime-resilience.ts",
+        "scripts/acceptance/gateway-v2-sse-load.mjs"
+      ],
+      "tests": [
+        "tests/acceptance/runtime-resilience.test.ts",
+        "scripts/integration/check-runtime-resilience.ts"
+      ],
+      "blockingInputs": [
+        "labeled test deployment and business-response timing join",
+        "target HA topology, capacity target, 24-hour observation and signed environment"
+      ]
+    },
+    {
+      "id": "V11-DELIVERY",
+      "title": "追踪矩阵与 POC 评分",
+      "implementationStatus": "IMPLEMENTED",
+      "mapsTo": [
+        "P6",
+        "W12"
+      ],
+      "code": [
+        "scripts/acceptance/v11-readiness.mjs",
+        "acceptance/generated/requirements.json",
+        "acceptance/poc-manifest.json"
+      ],
+      "tests": [
+        "tests/acceptance/v11-readiness.test.mjs"
+      ],
+      "blockingInputs": [
+        "frozen POC weights and signed target evidence",
+        "final immutable deployment source/image digests"
+      ]
+    }
+  ]
+}
