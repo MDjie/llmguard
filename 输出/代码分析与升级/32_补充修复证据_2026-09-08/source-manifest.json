@@ -1,0 +1,115 @@
+{
+  "schemaVersion": 1,
+  "basis": "STAGED_GIT_BLOBS_IN_SAME_DELIVERY_COMMIT",
+  "baselineCommit": "532561ac1d6a46ddddf8c7ce393771f913af7132",
+  "files": [
+    {
+      "path": ".gitattributes",
+      "gitBlobSha1": "1321954ffcc930be8c09e0359532e8e4f8fb33bc",
+      "sha256": "9302bc14c3fc2c03ecb25717a3c3004ff3ba5a3b3d43fb169115eff4263eccf2",
+      "bytes": 2127
+    },
+    {
+      "path": "scripts/integration/multiformat/README.md",
+      "gitBlobSha1": "a52824cf75487c26ae43ec7e13e0db3b710fa804",
+      "sha256": "a0cb42e9d52030687e639e0231b2b2e901ccd23646370aae8e7f8599fa3bc548",
+      "bytes": 5788
+    },
+    {
+      "path": "services/media-analyzer/Dockerfile",
+      "gitBlobSha1": "f524da74f35d2040d5ec2561478f5893ee4f3422",
+      "sha256": "8ea0a1332dd52e94f1bfb14848f24e28321959befd0ce3393c391b4e356a2f93",
+      "bytes": 2048
+    },
+    {
+      "path": "services/media-analyzer/scripts/verify-code-reader.mjs",
+      "gitBlobSha1": "2d84544a3029d06934e85e7b40be555888b40adc",
+      "sha256": "eade3581fd989e65dd558c0421bad76fe80fa2734ba9cc44023a78f59875dae2",
+      "bytes": 1073
+    },
+    {
+      "path": "services/media-analyzer/src/audio-coverage.ts",
+      "gitBlobSha1": "dcb85f175713f138f155e23c117e0d65f64eed46",
+      "sha256": "a5c67152217b62be68946e4c7227ea4b96827fa3358eff7303efd05f19be1f32",
+      "bytes": 5036
+    },
+    {
+      "path": "services/media-analyzer/src/audio-video.ts",
+      "gitBlobSha1": "7e0dff6db54c91ce50edbd55ba73c5b0219a7f4f",
+      "sha256": "dd01ca47613e7628e9f5f3a6667d4e8d20899b1999984ec6bf642f261f64067e",
+      "bytes": 33460
+    },
+    {
+      "path": "services/media-analyzer/src/model-adapters.ts",
+      "gitBlobSha1": "4aa1524050cf57fa34f29dd12da644387f44b2ad",
+      "sha256": "b82804208c4538f7cbd57178cfc788ec524870bac871eb0d7e7dfac673959136",
+      "bytes": 6741
+    },
+    {
+      "path": "src/contracts/http/multimodal-analysis.ts",
+      "gitBlobSha1": "6a9433280598333577c510dee0aaf3564121e434",
+      "sha256": "d340f74221964d8115548d86534468f4b09ac41f2a3f982ef6c33697942b064a",
+      "bytes": 4104
+    },
+    {
+      "path": "src/lib/guard-jobs/index.ts",
+      "gitBlobSha1": "2fe22bf5ef8efb509f9c2f7e6ad6a7789d907bf7",
+      "sha256": "6f7a5a62e101269054b87c499eaa7230616ce98c014d5cb363bbac99ecca5429",
+      "bytes": 481
+    },
+    {
+      "path": "src/lib/guard-jobs/service.ts",
+      "gitBlobSha1": "1a3db45536afa81aabdaaefa3a4bf023a7cc7e62",
+      "sha256": "f1f21a761be757aafc2f93e0a1ed5a016ea0855daaecf75a6bba154b63951fb8",
+      "bytes": 18882
+    },
+    {
+      "path": "src/lib/rag/ingest-worker.ts",
+      "gitBlobSha1": "74f88366ccbfc51157e3ab46f85bd752bfdc1a1e",
+      "sha256": "de0e189590ee67fbfe845e9df15656b14de5c10bf7068d1da5c9e31f3de97cd4",
+      "bytes": 8691
+    },
+    {
+      "path": "src/lib/rag/ingest-binding.ts",
+      "gitBlobSha1": "e7bfe620fddd300f25e10b96748ad1c5d7fe16a6",
+      "sha256": "d9c56dcfb6205032e7ea8e31a286db67880e3f02a56a4f0676c905cce3350e61",
+      "bytes": 1463
+    },
+    {
+      "path": "src/lib/rag/ingest-policy.ts",
+      "gitBlobSha1": "968d33a32de9b157f711e7a0ec815497d6d2c638",
+      "sha256": "587aa6eaedd6ac5139a8ceeb493b33b8180153f46a98bff77ee53fc4e227958d",
+      "bytes": 1031
+    },
+    {
+      "path": "tests/media-analyzer/audio-coverage.test.ts",
+      "gitBlobSha1": "7c9faf2b77f97236389c5373a48509447575f7f2",
+      "sha256": "f58e2a998c6ab953928ee5c5a56ddd2c49fe9a6a507236d5f433ea101c0b11de",
+      "bytes": 5740
+    },
+    {
+      "path": "tests/rag/ingest-boundaries.test.ts",
+      "gitBlobSha1": "0b9372761a5c5710dc9f764abf39f4e365c44151",
+      "sha256": "9443866469fafc4573a38dfa749a0d70de74b1686df797830615eed675576cd9",
+      "bytes": 3247
+    },
+    {
+      "path": "scripts/integration/multiformat/audio-processing-smoke.ts",
+      "gitBlobSha1": "999ea6f56d5f57b6953cddef7635c3ef01fa0750",
+      "sha256": "ece3619afd4f228c9a6e658a05a46adcf142e2603d3c6026bde85ad2d9c059d8",
+      "bytes": 7587
+    },
+    {
+      "path": "scripts/integration/multiformat/rag-atomic-smoke.ts",
+      "gitBlobSha1": "07b034624b5285f6bac03e0e8aeaa215bb7f38b6",
+      "sha256": "04309187c411460ff8296f1a9890bcf154c9e6422b406f1876dd984c17e6e9df",
+      "bytes": 6318
+    },
+    {
+      "path": "scripts/integration/multiformat/rag-worker-smoke.ts",
+      "gitBlobSha1": "0c4b30ab201a7d84c4fcb1501bcc0614da9c2a8e",
+      "sha256": "8b6934fa3ffd5b2227bfe0f9384945e21fe645ff9e68512f742b14b1d7321426",
+      "bytes": 8420
+    }
+  ]
+}

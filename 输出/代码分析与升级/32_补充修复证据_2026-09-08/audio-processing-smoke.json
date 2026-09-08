@@ -1,0 +1,427 @@
+{
+  "scope": "REAL_DECODING_WITH_SYNTHETIC_MODEL_RESPONSES",
+  "semanticQualification": false,
+  "results": [
+    {
+      "case": "silence-six-views-actual-pcm",
+      "pass": true,
+      "coverage": {
+        "artifactSha256": "17c2b8d26c9506cebee072d0f893a34224c8369b596b94438da9debc907c9da9",
+        "modality": "AUDIO",
+        "state": "COMPLETE",
+        "unit": "MILLISECOND",
+        "expectedUnits": 1500,
+        "processedUnits": 1500,
+        "processingCoverage": [
+          {
+            "unit": "AUDIO_TRACK",
+            "expected": 1,
+            "processed": 1,
+            "failed": 0,
+            "skipped": 0
+          },
+          {
+            "unit": "SUBTITLE_TRACK",
+            "expected": 0,
+            "processed": 0,
+            "failed": 0,
+            "skipped": 0
+          }
+        ],
+        "audioProcessing": [
+          {
+            "track": 0,
+            "channel": 0,
+            "sourceStartMs": 0,
+            "sampleRate": 16000,
+            "sampleCount": 24000,
+            "durationMs": 1500,
+            "views": [
+              {
+                "viewId": "track0-ch0-original",
+                "expectedIntervals": [
+                  {
+                    "startMs": 0,
+                    "endMs": 1500
+                  }
+                ],
+                "processedIntervals": [
+                  {
+                    "startMs": 0,
+                    "endMs": 1500
+                  }
+                ],
+                "state": "COMPLETE",
+                "modelVersions": [
+                  "synthetic-asr-not-qualified"
+                ]
+              },
+              {
+                "viewId": "track0-ch0-denoise",
+                "expectedIntervals": [
+                  {
+                    "startMs": 0,
+                    "endMs": 1500
+                  }
+                ],
+                "processedIntervals": [
+                  {
+                    "startMs": 0,
+                    "endMs": 1500
+                  }
+                ],
+                "state": "COMPLETE",
+                "modelVersions": [
+                  "synthetic-asr-not-qualified"
+                ]
+              },
+              {
+                "viewId": "track0-ch0-normalize",
+                "expectedIntervals": [
+                  {
+                    "startMs": 0,
+                    "endMs": 1500
+                  }
+                ],
+                "processedIntervals": [
+                  {
+                    "startMs": 0,
+                    "endMs": 1500
+                  }
+                ],
+                "state": "COMPLETE",
+                "modelVersions": [
+                  "synthetic-asr-not-qualified"
+                ]
+              },
+              {
+                "viewId": "track0-ch0-speed_0_9",
+                "expectedIntervals": [
+                  {
+                    "startMs": 0,
+                    "endMs": 1500
+                  }
+                ],
+                "processedIntervals": [
+                  {
+                    "startMs": 0,
+                    "endMs": 1500
+                  }
+                ],
+                "state": "COMPLETE",
+                "modelVersions": [
+                  "synthetic-asr-not-qualified"
+                ]
+              },
+              {
+                "viewId": "track0-ch0-speed_1_1",
+                "expectedIntervals": [
+                  {
+                    "startMs": 0,
+                    "endMs": 1500
+                  }
+                ],
+                "processedIntervals": [
+                  {
+                    "startMs": 0,
+                    "endMs": 1500
+                  }
+                ],
+                "state": "COMPLETE",
+                "modelVersions": [
+                  "synthetic-asr-not-qualified"
+                ]
+              },
+              {
+                "viewId": "track0-ch0-reverse_probe",
+                "expectedIntervals": [
+                  {
+                    "startMs": 0,
+                    "endMs": 1500
+                  }
+                ],
+                "processedIntervals": [
+                  {
+                    "startMs": 0,
+                    "endMs": 1500
+                  }
+                ],
+                "state": "COMPLETE",
+                "modelVersions": [
+                  "synthetic-asr-not-qualified"
+                ]
+              }
+            ],
+            "classifierComplete": true,
+            "observedSpeechIntervals": []
+          }
+        ],
+        "temporalCoverage": {
+          "durationMs": 1500,
+          "expectedAudioIntervals": [
+            {
+              "startMs": 0,
+              "endMs": 1500
+            }
+          ],
+          "processedIntervals": [
+            {
+              "startMs": 0,
+              "endMs": 1500
+            }
+          ],
+          "observedSpeechIntervals": [],
+          "processingBasis": "DECODED_SAMPLES_AND_PROVIDER_RECEIPTS",
+          "sampledAtMs": [],
+          "maximumGapMs": 0,
+          "enumerationComplete": true
+        },
+        "analyzerVersion": "media-analyzer/1.2+synthetic-asr-not-qualified,synthetic-classifier-not-qualified",
+        "reasonCodes": []
+      }
+    },
+    {
+      "case": "two-tracks-distinct-start-and-duration",
+      "pass": true,
+      "coverage": {
+        "artifactSha256": "3629ec6da176fa0439e5bc4cf06cb0d1b811b6dcb560ba0f8d7ae7917d23314a",
+        "modality": "VIDEO",
+        "state": "SAMPLED",
+        "unit": "MILLISECOND",
+        "expectedUnits": 2064,
+        "processedUnits": 2048,
+        "processingCoverage": [
+          {
+            "unit": "AUDIO_TRACK",
+            "expected": 2,
+            "processed": 2,
+            "failed": 0,
+            "skipped": 0
+          },
+          {
+            "unit": "SUBTITLE_TRACK",
+            "expected": 0,
+            "processed": 0,
+            "failed": 0,
+            "skipped": 0
+          }
+        ],
+        "audioProcessing": [
+          {
+            "track": 0,
+            "channel": 0,
+            "sourceStartMs": 0,
+            "sampleRate": 16000,
+            "sampleCount": 32768,
+            "durationMs": 2048,
+            "views": [
+              {
+                "viewId": "track0-ch0-original",
+                "expectedIntervals": [
+                  {
+                    "startMs": 0,
+                    "endMs": 2048
+                  }
+                ],
+                "processedIntervals": [
+                  {
+                    "startMs": 0,
+                    "endMs": 2048
+                  }
+                ],
+                "state": "COMPLETE",
+                "modelVersions": [
+                  "synthetic-asr-not-qualified"
+                ]
+              }
+            ],
+            "classifierComplete": true,
+            "observedSpeechIntervals": []
+          },
+          {
+            "track": 1,
+            "channel": 0,
+            "sourceStartMs": 500,
+            "sampleRate": 16000,
+            "sampleCount": 16384,
+            "durationMs": 1024,
+            "views": [
+              {
+                "viewId": "track1-ch0-original",
+                "expectedIntervals": [
+                  {
+                    "startMs": 500,
+                    "endMs": 1524
+                  }
+                ],
+                "processedIntervals": [
+                  {
+                    "startMs": 500,
+                    "endMs": 1524
+                  }
+                ],
+                "state": "COMPLETE",
+                "modelVersions": [
+                  "synthetic-asr-not-qualified"
+                ]
+              }
+            ],
+            "classifierComplete": true,
+            "observedSpeechIntervals": []
+          }
+        ],
+        "temporalCoverage": {
+          "durationMs": 2064,
+          "expectedAudioIntervals": [
+            {
+              "startMs": 0,
+              "endMs": 2048
+            }
+          ],
+          "processedIntervals": [
+            {
+              "startMs": 0,
+              "endMs": 2048
+            }
+          ],
+          "observedSpeechIntervals": [],
+          "processingBasis": "DECODED_SAMPLES_AND_PROVIDER_RECEIPTS",
+          "sampledAtMs": [
+            0
+          ],
+          "maximumGapMs": 2064,
+          "enumerationComplete": false
+        },
+        "analyzerVersion": "media-analyzer/1.2+synthetic-asr-not-qualified,synthetic-classifier-not-qualified,synthetic-visual-n",
+        "reasonCodes": [
+          "FRAME_SAMPLING_NOT_FULL_SEMANTIC_PROOF"
+        ]
+      }
+    },
+    {
+      "case": "failed-track-not-covered-by-successful-track",
+      "pass": true,
+      "coverage": {
+        "artifactSha256": "3629ec6da176fa0439e5bc4cf06cb0d1b811b6dcb560ba0f8d7ae7917d23314a",
+        "modality": "VIDEO",
+        "state": "INCOMPLETE",
+        "unit": "MILLISECOND",
+        "expectedUnits": 2064,
+        "processedUnits": 1024,
+        "processingCoverage": [
+          {
+            "unit": "AUDIO_TRACK",
+            "expected": 2,
+            "processed": 1,
+            "failed": 1,
+            "skipped": 0
+          },
+          {
+            "unit": "SUBTITLE_TRACK",
+            "expected": 0,
+            "processed": 0,
+            "failed": 0,
+            "skipped": 0
+          }
+        ],
+        "audioProcessing": [
+          {
+            "track": 0,
+            "channel": 0,
+            "sourceStartMs": 0,
+            "sampleRate": 16000,
+            "sampleCount": 32768,
+            "durationMs": 2048,
+            "views": [
+              {
+                "viewId": "track0-ch0-original",
+                "expectedIntervals": [
+                  {
+                    "startMs": 0,
+                    "endMs": 2048
+                  }
+                ],
+                "processedIntervals": [
+                  {
+                    "startMs": 0,
+                    "endMs": 2048
+                  }
+                ],
+                "state": "COMPLETE",
+                "modelVersions": [
+                  "synthetic-asr-not-qualified"
+                ]
+              }
+            ],
+            "classifierComplete": true,
+            "observedSpeechIntervals": []
+          },
+          {
+            "track": 1,
+            "channel": 0,
+            "sourceStartMs": 500,
+            "sampleRate": 16000,
+            "sampleCount": 16384,
+            "durationMs": 1024,
+            "views": [
+              {
+                "viewId": "track1-ch0-original",
+                "expectedIntervals": [
+                  {
+                    "startMs": 500,
+                    "endMs": 1524
+                  }
+                ],
+                "processedIntervals": [],
+                "state": "FAILED",
+                "modelVersions": []
+              }
+            ],
+            "classifierComplete": true,
+            "observedSpeechIntervals": []
+          }
+        ],
+        "temporalCoverage": {
+          "durationMs": 2064,
+          "expectedAudioIntervals": [
+            {
+              "startMs": 0,
+              "endMs": 2048
+            }
+          ],
+          "processedIntervals": [
+            {
+              "startMs": 0,
+              "endMs": 500
+            },
+            {
+              "startMs": 1524,
+              "endMs": 2048
+            }
+          ],
+          "observedSpeechIntervals": [],
+          "processingBasis": "DECODED_SAMPLES_AND_PROVIDER_RECEIPTS",
+          "sampledAtMs": [
+            0
+          ],
+          "maximumGapMs": 2064,
+          "enumerationComplete": false
+        },
+        "analyzerVersion": "media-analyzer/1.2+synthetic-asr-not-qualified,synthetic-classifier-not-qualified,synthetic-visual-n",
+        "reasonCodes": [
+          "ANALYZER_SYNTHETIC_ASR_FAILURE",
+          "ANALYZER_AUDIO_PROCESSING_INCOMPLETE",
+          "FRAME_SAMPLING_NOT_FULL_SEMANTIC_PROOF"
+        ]
+      }
+    },
+    {
+      "case": "invalid-classifier-timeline-does-not-count-as-processed",
+      "pass": true
+    },
+    {
+      "case": "video-cannot-bypass-through-audio-kind",
+      "pass": true
+    }
+  ]
+}

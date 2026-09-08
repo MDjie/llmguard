@@ -1,0 +1,26 @@
+{
+  "scope": "ISOLATED_REAL_RAG_WORKER_SYNTHETIC_TEXT_EMPTY_DEVELOPMENT_POLICY",
+  "semanticQualification": false,
+  "results": [
+    {
+      "case": "actual-object-read-policy-and-atomic-rag-lineage-commit",
+      "pass": true
+    },
+    {
+      "case": "different-owner-cannot-replace-existing-chunk",
+      "pass": true
+    },
+    {
+      "case": "submission-source-metadata-binding-rejects-change",
+      "pass": true
+    },
+    {
+      "case": "change-metadata-during-object-read-has-no-domain-side-effects",
+      "pass": true
+    },
+    {
+      "case": "cancel-during-object-read-has-no-domain-side-effects",
+      "pass": true
+    }
+  ]
+}

@@ -1,0 +1,539 @@
+{
+  "schemaVersion": 1,
+  "baselineCommit": "532561ac1d6a46ddddf8c7ce393771f913af7132",
+  "baselineRemoteVerified": true,
+  "createdAt": "2026-09-08T11:39:32.973492+00:00",
+  "planPath": "输出/代码分析与升级/32_逐项研发核对与补充修复计划_V1.1_2026-09-08.md",
+  "allDevelopmentComplete": false,
+  "qualityAccepted": false,
+  "originalTaskAudit": [
+    {
+      "id": "T01",
+      "developmentAssessment": "部分研发",
+      "finding": "已冻结源码/部署差异；尚无覆盖所有模型、适配器、解析器和占位配置的统一运行身份预检。",
+      "sourceFiles": [
+        "src/lib/media/capabilities.ts"
+      ],
+      "repairs": [
+        "R01",
+        "R10"
+      ]
+    },
+    {
+      "id": "T02",
+      "developmentAssessment": "基础研发完成",
+      "finding": "动作、分数含义、运行错误已分离，单测已覆盖；真实媒体业务验收仍未通过。",
+      "sourceFiles": [
+        "src/lib/document/detector.ts",
+        "src/lib/detection/v2-compat.ts"
+      ],
+      "repairs": [
+        "R12"
+      ]
+    },
+    {
+      "id": "T03",
+      "developmentAssessment": "部分研发",
+      "finding": "静态目录、API、OCR投影具备；缺每个profile的有效解码/检测/鉴定状态和入口绑定。",
+      "sourceFiles": [
+        "src/lib/media/formats/registry.ts",
+        "src/lib/media/capabilities.ts"
+      ],
+      "repairs": [
+        "R01"
+      ]
+    },
+    {
+      "id": "T04",
+      "developmentAssessment": "基础研发完成",
+      "finding": "选择/拖拽/多文件/取消/重试/录音及Problem显示存在；真实设备录音与断网长测待验收。",
+      "sourceFiles": [
+        "src/components/media/media-upload-panel.tsx",
+        "src/lib/media/upload-client.ts"
+      ],
+      "repairs": [
+        "R12"
+      ]
+    },
+    {
+      "id": "T05",
+      "developmentAssessment": "部分研发",
+      "finding": "45有效+3异常上传通过；容器/codec完整探测及稀有profile的反例集不完整。",
+      "sourceFiles": [
+        "src/lib/artifacts/verifier.ts",
+        "src/lib/artifacts/magic.ts"
+      ],
+      "repairs": [
+        "R01",
+        "R07"
+      ]
+    },
+    {
+      "id": "T06",
+      "developmentAssessment": "部分研发",
+      "finding": "文档异步Job/图片管线已接通；真实OCR+视觉+告警定位未闭环，去掉501不算完整完成。",
+      "sourceFiles": [
+        "src/lib/media/intake-worker.ts",
+        "src/app/api/document-scan/route.ts"
+      ],
+      "repairs": [
+        "R10",
+        "R12"
+      ]
+    },
+    {
+      "id": "T07",
+      "developmentAssessment": "基础研发完成",
+      "finding": "严格编码、完整流验证、窗口原始偏移、四类字幕cue已实现；复杂字幕与结构对照继续纳入测试。",
+      "sourceFiles": [
+        "src/lib/media/formats/subtitles.ts",
+        "src/lib/media/formats/text-decoder.ts"
+      ],
+      "repairs": [
+        "R12"
+      ]
+    },
+    {
+      "id": "T08",
+      "developmentAssessment": "部分研发",
+      "finding": "Office/PDF转换及OOXML隐藏文字具备；旧Office及包内隐藏图片/对象尚不能声明全面枚举。",
+      "sourceFiles": [
+        "services/media-analyzer/src/office.ts",
+        "services/media-analyzer/src/document-image.ts"
+      ],
+      "repairs": [
+        "R07"
+      ]
+    },
+    {
+      "id": "T09",
+      "developmentAssessment": "部分研发",
+      "finding": "GIF/TIFF/HEIC/AVIF/ODF部分profile实测；OFD/WPS/HEIF序列等不足。",
+      "sourceFiles": [
+        "services/media-analyzer/src/document-image.ts"
+      ],
+      "repairs": [
+        "R01",
+        "R07"
+      ]
+    },
+    {
+      "id": "T10",
+      "developmentAssessment": "部分研发",
+      "finding": "glm-5.3-flash和角色资格绑定已改；真实ASR/VLM/音频分类角色适配和配置鉴定未完成。",
+      "sourceFiles": [
+        "src/lib/multimodal/joint-evidence-judge.ts",
+        "services/media-analyzer/src/model-adapters.ts"
+      ],
+      "repairs": [
+        "R10"
+      ]
+    },
+    {
+      "id": "T11",
+      "developmentAssessment": "部分研发",
+      "finding": "多格式/分段/多声道具备；用转写命中时段表示处理时段，静音与多轨时长统计存在缺口。",
+      "sourceFiles": [
+        "services/media-analyzer/src/audio-video.ts"
+      ],
+      "repairs": [
+        "R02",
+        "R10"
+      ]
+    },
+    {
+      "id": "T12",
+      "developmentAssessment": "部分研发",
+      "finding": "字幕/音轨/抽帧已接入；多视频流、闪现全帧候选及独立风险覆盖未完成。",
+      "sourceFiles": [
+        "services/media-analyzer/src/audio-video.ts"
+      ],
+      "repairs": [
+        "R02",
+        "R07",
+        "R12"
+      ]
+    },
+    {
+      "id": "T13",
+      "developmentAssessment": "部分研发",
+      "finding": "文本和小体积原生附件受控；混合/文档仅INSPECTION，没有派生物的业务释放通路。",
+      "sourceFiles": [
+        "src/app/api/chat/attachments/route.ts",
+        "src/lib/gateway-runtime/native-execution.ts"
+      ],
+      "repairs": [
+        "R04",
+        "R05"
+      ]
+    },
+    {
+      "id": "T14",
+      "developmentAssessment": "部分研发",
+      "finding": "模拟页和样本导入可检测；RAG仍只读RAG_CHUNK，实际媒体评测执行缺失；RAG副作用先于Job完成提交。",
+      "sourceFiles": [
+        "src/lib/rag/ingest-worker.ts",
+        "src/lib/evaluation/service.ts"
+      ],
+      "repairs": [
+        "R03",
+        "R04",
+        "R06"
+      ]
+    },
+    {
+      "id": "T15",
+      "developmentAssessment": "基础研发完成",
+      "finding": "任务/权限/方向/策略/模型/模板进入上下文和缓存绑定，相关单测存在。",
+      "sourceFiles": [
+        "src/lib/judge/harness.ts",
+        "src/lib/judge/router.ts"
+      ],
+      "repairs": [
+        "R12"
+      ]
+    },
+    {
+      "id": "T16",
+      "developmentAssessment": "基础研发完成",
+      "finding": "局部反证、强制边界及旧确认风险保护已实现；独立样本纠偏效果未验收。",
+      "sourceFiles": [
+        "src/lib/guard-engine-v2/coverage-judge.ts",
+        "tests/guard-engine-v2/scoped-refiner.test.ts"
+      ],
+      "repairs": [
+        "R11",
+        "R12"
+      ]
+    },
+    {
+      "id": "T17",
+      "developmentAssessment": "部分研发",
+      "finding": "窗口/来源/去重已具备；没有完整NormalizedAsset，证据快照超过4MiB整任务失败。",
+      "sourceFiles": [
+        "src/lib/media/intake-worker.ts",
+        "src/lib/evidence/media-snapshots.ts"
+      ],
+      "repairs": [
+        "R04"
+      ]
+    },
+    {
+      "id": "T18",
+      "developmentAssessment": "数据工作未完成",
+      "finding": "894条只是待复核开发队列，没有双人金融复核或独立金融黑白对照集。",
+      "sourceFiles": [
+        "scripts/content-safety/prepare-multiformat-review.ts"
+      ],
+      "repairs": [
+        "R11"
+      ]
+    },
+    {
+      "id": "T19",
+      "developmentAssessment": "部分研发与数据工作",
+      "finding": "有统计门禁；可执行的真实消融/校准流程及冻结产物未完成，不得以单元测试代替校准。",
+      "sourceFiles": [
+        "src/lib/evaluation/multiformat-quality.ts"
+      ],
+      "repairs": [
+        "R11"
+      ]
+    },
+    {
+      "id": "T20",
+      "developmentAssessment": "部分研发",
+      "finding": "共享配额、租约和intake取消存在；RAG侧未完整接入尝试隔离，Artifact物理版本清理缺失。",
+      "sourceFiles": [
+        "src/lib/guard-jobs/service.ts",
+        "src/lib/rag/ingest-worker.ts",
+        "src/lib/artifacts/service.ts"
+      ],
+      "repairs": [
+        "R03",
+        "R08"
+      ]
+    },
+    {
+      "id": "T21",
+      "developmentAssessment": "部分研发",
+      "finding": "已有证据表和位置文字；真实媒体受控预览、点击跳转、完整正反证UI未闭环。",
+      "sourceFiles": [
+        "src/components/media/intake-evidence.tsx",
+        "src/lib/evidence/media-snapshots.ts"
+      ],
+      "repairs": [
+        "R04",
+        "R09"
+      ]
+    },
+    {
+      "id": "T22",
+      "developmentAssessment": "部分研发与测试资产",
+      "finding": "合成素材/运行器具备；还缺多模态评测manifest和独立语义资产。",
+      "sourceFiles": [
+        "scripts/integration/multiformat/README.md",
+        "src/lib/evaluation/multiformat-quality.ts"
+      ],
+      "repairs": [
+        "R06",
+        "R11",
+        "R12"
+      ]
+    },
+    {
+      "id": "T23",
+      "developmentAssessment": "验收未完成",
+      "finding": "1694单测、48上传、6权限和浏览器只是工程证据，G0-G4未全部通过。",
+      "sourceFiles": [
+        "输出/代码分析与升级/31_实施证据_2026-09-08/engineering-verification.json"
+      ],
+      "repairs": [
+        "R12"
+      ]
+    },
+    {
+      "id": "T24",
+      "developmentAssessment": "发布未完成",
+      "finding": "main已推送；未做正式影子灰度和G5，也没有生产激活。",
+      "sourceFiles": [
+        "输出/代码分析与升级/31_误报治理与多格式接入_实施与验收记录_2026-09-08.md"
+      ],
+      "repairs": [
+        "R12"
+      ]
+    }
+  ],
+  "repairs": [
+    {
+      "id": "R01",
+      "priority": "P0",
+      "title": "有效能力与统一配置预检",
+      "originalTasks": [
+        "T01",
+        "T03",
+        "T05",
+        "T09"
+      ],
+      "status": "OPEN",
+      "deliverables": "注册表投影逐格式upload/decode/detect/qualified状态、缺失依赖及版本；前端与旧OCR接口同源；上传后仍校验真实字节。",
+      "constraints": "不得将ffmpeg存在当作所有codec可用；资格从已批准范围读取，UI不展示秘密或内部地址。",
+      "acceptance": "无适配器、缺codec、过期资格、文本独立可用四类契约测试。",
+      "dependsOn": []
+    },
+    {
+      "id": "R02",
+      "priority": "P0",
+      "title": "音频处理覆盖与观测覆盖分离",
+      "originalTasks": [
+        "T11",
+        "T12"
+      ],
+      "status": "ENGINEERING_VERIFIED",
+      "deliverables": "记录实际解码采样数、音轨起点、每个ASR窗口及每个视图的处理结果；保留独立observedSpeechIntervals；不再用ASR词片段推算执行覆盖。",
+      "constraints": "处理成功不等于语义安全；视频仍SAMPLED；失败声道不能由其他成功声道补齐；时长未知不猜测。",
+      "acceptance": "静音、局部说话、不同音轨起点/时长、反转/变速、ASR窗口失败与漂移的确定性测试。",
+      "dependsOn": [],
+      "verificationScope": "Deterministic engineering; semantic model qualification and release remain open in R10-R12",
+      "evidence": [
+        "32_补充修复证据_2026-09-08/engineering-verification.json",
+        "32_补充修复证据_2026-09-08/audio-processing-smoke.json"
+      ]
+    },
+    {
+      "id": "R03",
+      "priority": "P0",
+      "title": "RAG取消与副作用提交隔离",
+      "originalTasks": [
+        "T14",
+        "T20"
+      ],
+      "status": "ENGINEERING_VERIFIED",
+      "deliverables": "RAG接入取消/心跳/总deadline，来源固定为RAG_UNTRUSTED/FORBIDDEN；按attempt锁定Job，源/块/谱系/最终Job在同一事务提交，重查原件所有者/摘要/过期。",
+      "constraints": "取消或旧attempt在事务前失效不得创建可检索块；失败/降级不能凭ALLOW进入accepted。",
+      "acceptance": "真实隔离PostgreSQL验证取消、attempt变化、回滚、同幂等重试；源码单测验证来源与降级语义。",
+      "dependsOn": [],
+      "verificationScope": "Deterministic engineering; semantic model qualification and release remain open in R10-R12",
+      "evidence": [
+        "32_补充修复证据_2026-09-08/engineering-verification.json",
+        "32_补充修复证据_2026-09-08/rag-atomic-smoke.json",
+        "32_补充修复证据_2026-09-08/rag-worker-smoke.json"
+      ]
+    },
+    {
+      "id": "R04",
+      "priority": "P1",
+      "title": "标准派生资产与大证据分层存储",
+      "originalTasks": [
+        "T13",
+        "T14",
+        "T17",
+        "T21"
+      ],
+      "status": "OPEN",
+      "deliverables": "NormalizedAsset固定父/子SHA、转换版本、覆盖/坐标映射；证据索引与受限分块密文分开，持久化ready前不能签发释放。",
+      "constraints": "保留原件；不能截断证据来凑4MiB；对象版本、授权访问、保留/删除与幂等必须覆盖全部分块。",
+      "acceptance": "大文档与多媒体超过4MiB、部分上传、重试、授权消费、hold/删除冲突。",
+      "dependsOn": []
+    },
+    {
+      "id": "R05",
+      "priority": "P1",
+      "title": "混合与文档聊天受控释放",
+      "originalTasks": [
+        "T13"
+      ],
+      "status": "OPEN",
+      "deliverables": "基于R04构造精确目标模型wire并重检原件+派生件；许可绑定任务、所有者、原/派生SHA、目标模型、策略与完整请求摘要。",
+      "constraints": "只有对应转换/profile/目标模型通过资格才启用；文档转换文本不宣称原生视觉覆盖；不放大现有1MiB原生限制。",
+      "acceptance": "相同原文换附件、重排、跨用户、改目标、过期、转换漂移均拒绝；真实模型wire联通。",
+      "dependsOn": [
+        "R04",
+        "R10"
+      ]
+    },
+    {
+      "id": "R06",
+      "priority": "P1",
+      "title": "RAG多模态入库和媒体评测manifest",
+      "originalTasks": [
+        "T14",
+        "T22"
+      ],
+      "status": "OPEN",
+      "deliverables": "在统一Artifact/Job上接入派生入库、源ACL/方向和风险隔离；CSV/TSV支持已验证媒体引用；manifest固定语义案例组与源谱系。",
+      "constraints": "UNKNOWN不进入主标签分母；同语义换容器不独立计数；实验结果不能获得生产资格。",
+      "acceptance": "两种媒体和混合附件的RAG/评测真实执行，跨租户及不匹配摘要拒绝。",
+      "dependsOn": [
+        "R03",
+        "R04"
+      ]
+    },
+    {
+      "id": "R07",
+      "priority": "P1",
+      "title": "剩余格式和隐藏内容枚举",
+      "originalTasks": [
+        "T05",
+        "T08",
+        "T09",
+        "T12"
+      ],
+      "status": "OPEN",
+      "deliverables": "补旧Office/OOXML嵌入图像与对象清单、OFD受控适配器、WPS/AMR/HEIF序列/多视频流profile；视图/页/轨预算一致。",
+      "constraints": "不能执行宏或嵌入程序；不可解对象明确缺口；稀有格式未通过实际样本鉴定时标为条件支持。",
+      "acceptance": "每个声明profile至少正常/风险/损坏/预算边界四类；不得静默漏页或漏轨。",
+      "dependsOn": [
+        "R01",
+        "R04"
+      ]
+    },
+    {
+      "id": "R08",
+      "priority": "P1",
+      "title": "Artifact版本化清理与容量恢复",
+      "originalTasks": [
+        "T20"
+      ],
+      "status": "OPEN",
+      "deliverables": "上传中断、取消及到期进入purge ledger；枚举受控prefix的确切版本，核验活跃引用与hold；物理删除核实完成后才释放配额。",
+      "constraints": "事务声明+租约+版本确认；不批量删桶，不用取消请求直接删仍被Job/证据引用的原件。",
+      "acceptance": "对象写入后崩溃、重复删除、hold竞争、版本回写、旧预签名TTL及配额恢复。",
+      "dependsOn": [
+        "R04"
+      ]
+    },
+    {
+      "id": "R09",
+      "priority": "P1",
+      "title": "告警链路与媒体定位交互",
+      "originalTasks": [
+        "T21"
+      ],
+      "status": "OPEN",
+      "deliverables": "复用证据访问授权，支持图片框/PDF页/音视频时间点；显示正反证、模型身份、来源映射、覆盖和运行失败。",
+      "constraints": "浏览器仅获取已授权的正确版本；证据视图偏移不可套用到脱敏文本；不加载任意外部URL。",
+      "acceptance": "浏览器点击定位、授权过期/使用一次、跨用户、正反证及处理失败分类。",
+      "dependsOn": [
+        "R04"
+      ]
+    },
+    {
+      "id": "R10",
+      "priority": "P0/P1",
+      "title": "真实模型角色适配与协议鉴定",
+      "originalTasks": [
+        "T06",
+        "T10",
+        "T11"
+      ],
+      "status": "OPEN",
+      "deliverables": "对已有配置中的文本裁判、视觉、ASR、音频分类、原生联合角色分别接线；仅文本ASR返回值保留段级定位并标明无置信度，或调用已鉴定对齐器。",
+      "constraints": "不猜endpoint/密钥；不伪造逐字时间或confidence=1；未经批准不启用云端回退和ENFORCE。",
+      "acceptance": "真实端点权限、返回契约、边界时长、角色范围、超时、模型版本固定的验收。",
+      "dependsOn": [
+        "R01"
+      ]
+    },
+    {
+      "id": "R11",
+      "priority": "P1",
+      "title": "金融复核、消融和校准运行器",
+      "originalTasks": [
+        "T18",
+        "T19",
+        "T22"
+      ],
+      "status": "OPEN",
+      "deliverables": "开发复核工作流、金融黑白对照、Base/Refiner/关系引擎消融、阈值与校准产物版本化；独立集按来源隔离且双人审定。",
+      "constraints": "不代填人工签名；独立集不参与阈值选择；保留FPR≤1%与FDR≤10%及既有召回门槛。",
+      "acceptance": "双人审定开发与独立数据、可复现消融产物及最终一次冻结评测。",
+      "dependsOn": [
+        "R06",
+        "R10"
+      ]
+    },
+    {
+      "id": "R12",
+      "priority": "P1",
+      "title": "全入口回归、G0-G5与灰度关闭",
+      "originalTasks": [
+        "T02",
+        "T04",
+        "T06",
+        "T07",
+        "T15",
+        "T16",
+        "T22",
+        "T23",
+        "T24"
+      ],
+      "status": "OPEN",
+      "deliverables": "按格式×入口×模型×动作运行真实闭环，容量/故障/断网/录音测试，冻结镜像与策略后影子/灰度及业务FDR观察。",
+      "constraints": "本轮补充单测或合成格式样本不能替代独立安全验收；未满足门槛不激活生产。",
+      "acceptance": "G0-G5全部证据、可回退部署、无未解决P0/P1，才关闭原方案。",
+      "dependsOn": [
+        "R01",
+        "R02",
+        "R03",
+        "R04",
+        "R05",
+        "R06",
+        "R07",
+        "R08",
+        "R09",
+        "R10",
+        "R11"
+      ]
+    }
+  ],
+  "updatedAt": "2026-09-08T12:18:46.274817+00:00",
+  "executionSummary": {
+    "engineeringVerified": [
+      "R02",
+      "R03"
+    ],
+    "openCount": 10,
+    "evidenceDirectory": "输出/代码分析与升级/32_补充修复证据_2026-09-08"
+  }
+}

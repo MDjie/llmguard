@@ -1,0 +1,83 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-09-08T12:18:46.274817+00:00",
+  "baselineCommit": "532561ac1d6a46ddddf8c7ce393771f913af7132",
+  "scope": "SUPPLEMENT_R02_R03_ENGINEERING_ONLY",
+  "sourceBinding": "source-manifest.json records the Git blobs included in this delivery; no production activation",
+  "checks": {
+    "unit": {
+      "status": "PASS",
+      "files": 261,
+      "passed": 1707
+    },
+    "typecheck": {
+      "status": "PASS"
+    },
+    "lint": {
+      "status": "PASS",
+      "errors": 0,
+      "existingWarnings": 75,
+      "changedFilesWarnings": 0
+    },
+    "contracts": {
+      "status": "PASS"
+    },
+    "nextProductionBuild": {
+      "status": "PASS"
+    },
+    "analyzerDockerBuild": {
+      "status": "PASS",
+      "image": "guardllm-main-analyzer:supplement-v11-20260908",
+      "imageId": "sha256:15204ad5a6300b3ea2846cf6f4f010f6ee70f6050fd71ef32d52e697e8c52d19",
+      "runtimePngDecode": "PASS"
+    },
+    "ragAtomicity": {
+      "status": "PASS",
+      "passed": 5,
+      "runtime": "ISOLATED_POSTGRES"
+    },
+    "ragWorker": {
+      "status": "PASS",
+      "passed": 5,
+      "runtime": "ISOLATED_POSTGRES_S3_EMPTY_SIGNED_DEVELOPMENT_POLICY"
+    },
+    "audioProcessing": {
+      "status": "PASS",
+      "passed": 5,
+      "runtime": "REAL_CODECS_AND_SYNTHETIC_ASR_CLASSIFIER_VLM"
+    }
+  },
+  "allDevelopmentComplete": false,
+  "qualityAccepted": false,
+  "productionActivated": false,
+  "engineeringVerifiedRepairs": [
+    "R02",
+    "R03"
+  ],
+  "openRepairs": [
+    "R01",
+    "R04",
+    "R05",
+    "R06",
+    "R07",
+    "R08",
+    "R09",
+    "R10",
+    "R11",
+    "R12"
+  ],
+  "qualityTargets": {
+    "fprMaximum": 0.01,
+    "fdrMaximum": 0.1,
+    "recallMinimum": 0.95,
+    "accuracyMinimum": 0.95,
+    "fnrMaximum": 0.05
+  },
+  "limitations": [
+    "Synthetic text and model responses do not establish safety detection quality.",
+    "Video remains sampled. Nominal-rate speed mappings need alignment qualification.",
+    "Legacy queued RAG jobs without executionBinding must be resubmitted; no automatic permissive fallback.",
+    "Audio containers containing video streams, including cover art, require a separately qualified multimodal profile.",
+    "Other engineering tasks remain open, beyond missing service configuration or independently reviewed data."
+  ]
+}

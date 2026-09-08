@@ -8,6 +8,12 @@ export const processingUnitSchema = z.object({
   expected: count, processed: count, failed: count, skipped: count,
 }).strict().refine(value => value.processed + value.failed + value.skipped <= value.expected, 'Unit counts exceed expected');
 
+export const audioTrackExecutionSchema=z.object({
+ track:count.max(64),channel:count.max(64),sourceStartMs:count,sampleRate:count.positive(),sampleCount:count.positive(),durationMs:count.positive(),
+ views:z.array(z.object({viewId:z.string().min(1).max(128),expectedIntervals:z.array(mediaIntervalSchema).max(10000),processedIntervals:z.array(mediaIntervalSchema).max(10000),state:z.enum(['COMPLETE','PARTIAL','FAILED']),modelVersions:z.array(z.string().min(1).max(128)).max(16)}).strict()).max(8),
+ classifierComplete:z.boolean(),observedSpeechIntervals:z.array(mediaIntervalSchema).max(10000),
+}).strict();
+
 /** Optional v1.1 facts extend the existing analyzer response without reinterpreting SAMPLED. */
 export const analysisCoverageSchema = z.object({
   artifactSha256: z.string().regex(/^[a-f0-9]{64}$/u), modality: z.enum(['IMAGE', 'DOCUMENT', 'AUDIO', 'VIDEO']),
@@ -15,10 +21,14 @@ export const analysisCoverageSchema = z.object({
   analyzerVersion: z.string().min(1).max(512), reasonCodes: z.array(z.string().min(1)).max(100),
   unit: z.enum(['PAGE_VIEW', 'MILLISECOND']).optional(),
   processingCoverage: z.array(processingUnitSchema).max(16).optional(),
+  audioProcessing:z.array(audioTrackExecutionSchema).max(16).optional(),
   temporalCoverage: z.object({
     durationMs: count, processedIntervals: z.array(mediaIntervalSchema).max(10000),
     sampledAtMs: z.array(count).max(10000), maximumGapMs: count,
     enumerationComplete: z.boolean(),
+    expectedAudioIntervals:z.array(mediaIntervalSchema).max(16).optional(),
+    observedSpeechIntervals:z.array(mediaIntervalSchema).max(10000).optional(),
+    processingBasis:z.literal('DECODED_SAMPLES_AND_PROVIDER_RECEIPTS').optional(),
   }).strict().optional(),
 }).strict().refine(value => value.processedUnits <= value.expectedUnits, 'Processed units exceed expected');
 export type AnalysisCoverage = z.infer<typeof analysisCoverageSchema>;

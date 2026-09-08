@@ -27,3 +27,6 @@
 /输出/代码分析与升级/30_误报与格式接入证据_2026-09-08/** -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
 /输出/代码分析与升级/31_实施证据_2026-09-08/** -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
 /输出/代码分析与升级/31_实施证据_2026-09-08/*.log -whitespace
+
+/输出/代码分析与升级/32_补充修复证据_2026-09-08/** -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+/输出/代码分析与升级/32_补充修复证据_2026-09-08/*.log -whitespace

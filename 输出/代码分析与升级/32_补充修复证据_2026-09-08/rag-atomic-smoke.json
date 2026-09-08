@@ -1,0 +1,25 @@
+{
+  "scope": "ISOLATED_POSTGRES_ATOMICITY_ONLY",
+  "results": [
+    {
+      "case": "cancelled-has-no-side-effects",
+      "pass": true
+    },
+    {
+      "case": "stale-attempt-has-no-side-effects",
+      "pass": true
+    },
+    {
+      "case": "domain-and-job-rollback-together",
+      "pass": true
+    },
+    {
+      "case": "domain-job-event-commit-together",
+      "pass": true
+    },
+    {
+      "case": "duplicate-completion-cannot-reapply-effects",
+      "pass": true
+    }
+  ]
+}

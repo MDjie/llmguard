@@ -1,0 +1,147 @@
+#0 building with "desktop-linux" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 2.09kB 0.0s done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/node:24.20.0-alpine
+#2 DONE 0.1s
+
+#3 [internal] load .dockerignore
+#3 transferring context: 1.36kB done
+#3 DONE 0.0s
+
+#4 [builder  1/18] FROM docker.io/library/node:24.20.0-alpine@sha256:e67514e5d0f6c46656005e1b693b2ec9d52e80b641307de684d4a015ba7a4eaf
+#4 resolve docker.io/library/node:24.20.0-alpine@sha256:e67514e5d0f6c46656005e1b693b2ec9d52e80b641307de684d4a015ba7a4eaf 0.0s done
+#4 DONE 0.0s
+
+#5 [stage-1 2/9] RUN apk add --no-cache ca-certificates ffmpeg font-noto-cjk poppler-utils libreoffice libheif-tools tiff-tools tesseract-ocr tesseract-ocr-data-eng tesseract-ocr-data-chi_sim zbar
+#5 CACHED
+
+#6 [internal] load build context
+#6 transferring context: 43.27kB done
+#6 DONE 0.0s
+
+#7 [builder  3/18] WORKDIR /workspace
+#7 CACHED
+
+#8 [builder  5/18] COPY scripts/enforce-pnpm.mjs ./scripts/enforce-pnpm.mjs
+#8 CACHED
+
+#9 [builder  4/18] COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+#9 CACHED
+
+#10 [builder  2/18] RUN corepack enable && corepack prepare pnpm@11.19.0 --activate
+#10 CACHED
+
+#11 [builder  6/18] RUN pnpm install --frozen-lockfile
+#11 CACHED
+
+#12 [builder  7/18] COPY services/media-analyzer services/media-analyzer
+#12 DONE 0.1s
+
+#13 [stage-1 3/9] RUN apk add --no-cache imagemagick
+#13 ...
+
+#14 [builder  8/18] COPY tsconfig.json ./tsconfig.json
+#14 DONE 0.1s
+
+#15 [builder  9/18] COPY src/lib/media/formats/pcm.ts src/lib/media/formats/pcm.ts
+#15 DONE 0.1s
+
+#16 [builder 10/18] COPY src/lib/evidence/coordinate-mapping.ts src/lib/evidence/coordinate-mapping.ts
+#16 DONE 0.1s
+
+#13 [stage-1 3/9] RUN apk add --no-cache imagemagick
+#13 ...
+
+#17 [builder 11/18] COPY src/contracts/http/native-multimodal.ts src/contracts/http/native-multimodal.ts
+#17 DONE 0.1s
+
+#18 [builder 12/18] COPY src/contracts/http/media-transform.ts src/contracts/http/media-transform.ts
+#18 DONE 0.4s
+
+#13 [stage-1 3/9] RUN apk add --no-cache imagemagick
+#13 ...
+
+#19 [builder 13/18] COPY src/lib/multimodal/native-gate.ts src/lib/multimodal/native-gate.ts
+#19 DONE 0.1s
+
+#20 [builder 14/18] COPY src/lib/gateway-runtime/protocol.ts src/lib/gateway-runtime/protocol.ts
+#20 DONE 0.2s
+
+#13 [stage-1 3/9] RUN apk add --no-cache imagemagick
+#13 ...
+
+#21 [builder 15/18] COPY src/lib/gateway-runtime/native-content.ts src/lib/gateway-runtime/native-content.ts
+#21 DONE 0.1s
+
+#22 [builder 16/18] COPY src/lib/gateway-runtime/error.ts src/lib/gateway-runtime/error.ts
+#22 DONE 0.1s
+
+#13 [stage-1 3/9] RUN apk add --no-cache imagemagick
+#13 ...
+
+#23 [builder 17/18] COPY src/lib/gateway-runtime/completion-fields.ts src/lib/gateway-runtime/completion-fields.ts
+#23 DONE 0.2s
+
+#24 [builder 18/18] RUN pnpm analyzer:build
+#24 0.891 $ tsup --config services/media-analyzer/tsup.config.ts
+#24 1.187 CLI Building entry: services/media-analyzer/src/server.ts
+#24 1.187 CLI Using tsconfig: tsconfig.json
+#24 1.188 CLI tsup v8.5.1
+#24 1.188 CLI Using tsup config: /workspace/services/media-analyzer/tsup.config.ts
+#24 1.190 CLI Target: node24
+#24 1.191 CLI Cleaning output folder
+#24 1.192 ESM Build start
+#24 1.263 ESM services/media-analyzer/dist/server.mjs 638.15 KB
+#24 1.263 ESM ⚡️ Build success in 71ms
+#24 DONE 1.3s
+
+#13 [stage-1 3/9] RUN apk add --no-cache imagemagick
+#13 13.42 ( 1/11) Installing imagemagick (7.1.2.30-r0)
+#13 18.04 ( 2/11) Installing imagemagick-jpeg (7.1.2.30-r0)
+#13 18.40 ( 3/11) Installing imagemagick-jxl (7.1.2.30-r0)
+#13 18.73 ( 4/11) Installing libwebpdemux (1.6.0-r0)
+#13 19.01 ( 5/11) Installing imagemagick-webp (7.1.2.30-r0)
+#13 19.36 ( 6/11) Installing imagemagick-heic (7.1.2.30-r0)
+#13 19.72 ( 7/11) Installing imagemagick-pango (7.1.2.30-r0)
+#13 20.00 ( 8/11) Installing imagemagick-svg (7.1.2.30-r0)
+#13 20.37 ( 9/11) Installing imagemagick-openexr (7.1.2.30-r0)
+#13 20.68 (10/11) Installing imagemagick-jp2 (7.1.2.30-r0)
+#13 21.02 (11/11) Installing imagemagick-tiff (7.1.2.30-r0)
+#13 21.45 Executing busybox-1.37.0-r31.trigger
+#13 21.46 OK: 1231.1 MiB in 391 packages
+#13 DONE 21.5s
+
+#25 [stage-1 4/9] COPY services/media-analyzer/scripts/verify-code-reader.mjs /tmp/verify-code-reader.mjs
+#25 DONE 0.1s
+
+#26 [stage-1 5/9] RUN node /tmp/verify-code-reader.mjs
+#26 0.626 CODE_READER_PNG_DECODE_OK
+#26 DONE 0.7s
+
+#27 [stage-1 6/9] RUN addgroup -S analyzer
+#27 DONE 0.6s
+
+#28 [stage-1 7/9] RUN adduser -S -G analyzer -u 10002 analyzer
+#28 DONE 0.9s
+
+#29 [stage-1 8/9] WORKDIR /app
+#29 DONE 0.1s
+
+#30 [stage-1 9/9] COPY --from=builder --chown=analyzer:analyzer /workspace/services/media-analyzer/dist/server.mjs /app/server.mjs
+#30 DONE 0.1s
+
+#31 exporting to image
+#31 exporting layers
+#31 exporting layers 0.9s done
+#31 exporting manifest sha256:c53fda37841995f13e3e01d8e37a8ed54773a438fdd3fcdce569105fbd9b2c5a 0.0s done
+#31 exporting config sha256:8595e55c06f55c9c9fad5d0ee95d90ee849b2a5334882c722104568d4ecf33f3 0.0s done
+#31 exporting attestation manifest sha256:8941aa0174850227d3a02f356b087f3aae2209dae6ec6249b836ff191e4c1cfd
+#31 exporting attestation manifest sha256:8941aa0174850227d3a02f356b087f3aae2209dae6ec6249b836ff191e4c1cfd 0.0s done
+#31 exporting manifest list sha256:15204ad5a6300b3ea2846cf6f4f010f6ee70f6050fd71ef32d52e697e8c52d19 0.0s done
+#31 naming to docker.io/library/guardllm-main-analyzer:supplement-v11-20260908 done
+#31 unpacking to docker.io/library/guardllm-main-analyzer:supplement-v11-20260908
+#31 unpacking to docker.io/library/guardllm-main-analyzer:supplement-v11-20260908 0.3s done
+#31 DONE 1.3s

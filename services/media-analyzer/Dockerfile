@@ -19,6 +19,9 @@ RUN pnpm analyzer:build
 
 FROM node:24.20.0-alpine
 RUN apk add --no-cache ca-certificates ffmpeg font-noto-cjk poppler-utils libreoffice libheif-tools tiff-tools tesseract-ocr tesseract-ocr-data-eng tesseract-ocr-data-chi_sim zbar
+RUN apk add --no-cache imagemagick
+COPY services/media-analyzer/scripts/verify-code-reader.mjs /tmp/verify-code-reader.mjs
+RUN node /tmp/verify-code-reader.mjs
 RUN addgroup -S analyzer
 RUN adduser -S -G analyzer -u 10002 analyzer
 WORKDIR /app

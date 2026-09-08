@@ -7,6 +7,7 @@ export {
   isGuardJobCancellationError,
   claimNextGuardJob,
   completeGuardJob,
+  completeGuardJobWithEffects,
   failGuardJob,
   monitorGuardJobCancellation,
   submitGuardJob,

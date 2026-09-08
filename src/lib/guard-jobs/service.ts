@@ -114,6 +114,9 @@ export async function submitGuardJob(input: {
   } else if (jobType === 'native_joint') {
     try { executionBinding = (await (await import('./native-binding')).captureNativeJobBinding(input.scope, input.ownerId, input.nativeArtifactIds!, input.contextArtifactId!, input.direction)).binding; }
     catch { throw new GuardJobError('GRD_NATIVE_JOB_SOURCE_INVALID', 'Native sources must be accepted, current, uniquely ordered and owned by this principal'); }
+  } else if (jobType === 'rag_ingest') {
+    if(artifact.kind!=='RAG_CHUNK')throw new GuardJobError('GRD_RAG_SOURCE_INVALID','RAG ingest requires an accepted RAG_CHUNK artifact');
+    executionBinding=(await import('@/lib/rag/ingest-binding')).captureRagIngestBinding(artifact);
   } else if (jobType === 'code_scan') executionBinding = await (await import('@/lib/connectors/code-sentinel-config')).captureCodeScanBinding(input.scope, input.ownerId, input.artifactId);
   const requestHash = createHash('sha256').update(canonicalJson({
     ownerId: input.ownerId,
@@ -311,14 +314,25 @@ export async function updateGuardJobProgress(
   });
 }
 
-export async function completeGuardJob(
+export type GuardJobTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+export interface GuardJobCompletion {
+  readonly result: Record<string, unknown>;
+  readonly privateEvidence?: PrivateMediaEvidence;
+}
+/** Serialize cancellation/reclaims and commit domain side effects with the terminal job record. */
+export async function completeGuardJobWithEffects(
   job: typeof guardJobs.$inferSelect,
-  result: Record<string, unknown>,
-  privateEvidence?: PrivateMediaEvidence,
+  effects: (transaction: GuardJobTransaction) => Promise<GuardJobCompletion>,
 ): Promise<void> {
-  result=z.record(z.string(),z.unknown()).parse(JSON.parse(JSON.stringify(result)));
   const scope = { tenantId: job.tenantId, applicationId: job.applicationId };
   await db.transaction(async (transaction) => {
+    const [active] = await transaction.select({id:guardJobs.id}).from(guardJobs).where(and(
+      eq(guardJobs.id,job.id), eq(guardJobs.attempt,job.attempt), eq(guardJobs.status,'running'),
+      eq(guardJobs.ownerId,job.ownerId), eq(guardJobs.bundleId,job.bundleId), scopePredicate(guardJobs,scope),
+    )).for('update');
+    if(!active)throw new GuardJobError('GRD_JOB_CANCELLED_OR_TERMINAL','The job attempt is no longer active');
+    const completion=await effects(transaction),privateEvidence=completion.privateEvidence;
+    let result=z.record(z.string(),z.unknown()).parse(JSON.parse(JSON.stringify(completion.result)));
     if(privateEvidence && resolveArchivePolicy(scope).mode==='STRICT_OBJECT'){
       const snapshot=await enqueueMediaEvidenceSnapshot(transaction,job,privateEvidence);
       result={...result,evidenceArchive:{id:snapshot.id,state:snapshot.state,sourceDigest:snapshot.sourceDigest}};
@@ -342,6 +356,13 @@ export async function completeGuardJob(
     const record = fromJobResult(job, result);
     if (record) await enqueueDecisionRecord(transaction, scope, record);
   });
+}
+export async function completeGuardJob(
+  job: typeof guardJobs.$inferSelect,
+  result: Record<string, unknown>,
+  privateEvidence?: PrivateMediaEvidence,
+): Promise<void> {
+  await completeGuardJobWithEffects(job,async()=>({result,privateEvidence}));
 }
 
 export async function failGuardJob(job: typeof guardJobs.$inferSelect, error: unknown): Promise<void> {

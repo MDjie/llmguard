@@ -52,3 +52,14 @@ pnpm exec tsx scripts/integration/multiformat/upload-matrix.ts <run-dir>
 ## 语义质量
 
 `pnpm detection:multiformat-quality` 的输入是实际运行结果及审定标签。缺少独立集、双人复核、来源隔离或运行身份时返回 BLOCKED/退出码 2。示例、单元测试中的合成全对数据和本目录生成的格式文件都不能用来宣称产品 FPR/FDR 达标。
+
+## V1.1 补充回归
+
+以下脚本在前述隔离环境执行，不能指向生产服务：
+
+- `rag-atomic-smoke.ts <run-dir>`：真实 PostgreSQL 验证取消/旧尝试拒绝、副作用回滚、Job/事件原子提交和重复完成。脚本校验三个数据库 URL 为本轮专用的 `127.0.0.1:5438/guardtest`。
+- `rag-worker-smoke.ts <run-dir>`：要求 RAG 队列空闲及对象存储为 `http://127.0.0.1:59000`；从真实 S3 读取合成文本，执行开发策略、写入 RAG 与谱系，并测试另一用户覆盖、提交后与读取中篡改、读取中取消。fixture 还须提供 `tenantId`、`applicationId`、`userId`，并已有开发策略 Job。脚本仅为本进程创建临时 RAG 签名密钥，不修改生产配置；隔离数据库保留测试痕迹。
+- 将 `audio-processing-smoke.ts` 用 esbuild 打包，再按上文受限容器参数挂载结果目录至 `/results` 执行。脚本使用真实 FFmpeg、ffprobe、OCR、二维码读取和 HTTP 字节加载；ASR、音频分类、VLM 为显式合成响应。覆盖静音六视图、多音轨时间、失败轨隔离、越界分类结果及视频伪装音频。
+- 分析器 Dockerfile 在构建时执行 `services/media-analyzer/scripts/verify-code-reader.mjs`，用实际 PNG 检查二维码读取依赖。命令存在但不能解码 PNG 时构建必须失败。
+
+上述脚本的 `semanticQualification` 均不代表语义质量通过。模型端点鉴定、独立安全标签和完整多模态 RAG 仍按补充计划推进。

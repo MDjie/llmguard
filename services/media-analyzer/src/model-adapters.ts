@@ -152,7 +152,7 @@ export function planAsrWindows(durationMs:number):Array<{startMs:number;endMs:nu
  return windows;
 }
 /** All providers see bounded mono PCM clips; preserve actual timing, never synthesize token confidence. */
-export async function transcribeAudioWindowed(input:Parameters<typeof transcribeAudio>[0]&{durationMs:number}):Promise<Awaited<ReturnType<typeof transcribeAudio>>>{
+export async function transcribeAudioWindowed(input:Parameters<typeof transcribeAudio>[0]&{durationMs:number;onWindowProcessed?:(window:{startMs:number;endMs:number;modelVersion:string})=>void}):Promise<Awaited<ReturnType<typeof transcribeAudio>>>{
  const segments:TranscriptSegment[]=[];let version:string|undefined;
  for(const [index,window] of planAsrWindows(input.durationMs).entries()){
   input.signal?.throwIfAborted();
@@ -166,6 +166,7 @@ export async function transcribeAudioWindowed(input:Parameters<typeof transcribe
    segments.push({...segment,startMs:window.startMs+segment.startMs,endMs:window.startMs+segment.endMs});
    if(segments.length>100000)throw new Error('ANALYZER_ASR_SEGMENT_LIMIT');
   }
+  input.onWindowProcessed?.({...window,modelVersion:result.modelVersion});
   } finally {
    // Keep at most one bounded provider clip on disk, including failure/cancellation.
    await unlink(output).catch((error: unknown) => {
