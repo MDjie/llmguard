@@ -1,0 +1,31 @@
+{
+  "status": "PASS",
+  "scope": "Document, links, saved metric arithmetic, source hashes and task consistency only; no application tests or provider calls",
+  "localReferencesChecked": 32,
+  "sourceHashesChecked": 41,
+  "plannedTasks": 24,
+  "testExecutionAllowed": false,
+  "errors": [],
+  "artifacts": [
+    {
+      "path": "输出/代码分析与升级/30_误报治理与全入口多格式多模态接入优化方案_V1.0_2026-09-08.md",
+      "sha256": "c070474bac11eb01d7a6f1d9d577121d6896f76ac4a31a911ba43f02d97e759f"
+    },
+    {
+      "path": "输出/代码分析与升级/30_false-positive-multiformat.tasks.v1.json",
+      "sha256": "4ec639d0f883829cea56f35750d52147a9dd0265856c3d2c2b7cc00bbee19e4a"
+    },
+    {
+      "path": "输出/代码分析与升级/30_误报与格式接入证据_2026-09-08/metric-reconciliation.json",
+      "sha256": "b6b1e56574216fd053bd0d36a6326555c52a271b6bdd3f35321c9bc81710977b"
+    },
+    {
+      "path": "输出/代码分析与升级/30_误报与格式接入证据_2026-09-08/source-index.json",
+      "sha256": "40086b37b40f4d274b12f08fc8c07a4a18e8ece1a477d862324073b042e48b86"
+    },
+    {
+      "path": "输出/代码分析与升级/30_误报与格式接入证据_2026-09-08/reconcile_metrics.py",
+      "sha256": "31da812084d007fa9484a38303db07286aed29abedccd59ce54ab8801a19a014"
+    }
+  ]
+}

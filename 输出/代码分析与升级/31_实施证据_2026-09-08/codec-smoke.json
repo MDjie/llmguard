@@ -1,0 +1,139 @@
+{
+  "version": "decoder-smoke-1",
+  "scope": "DECODING_ONLY_NOT_SECURITY_QUALIFICATION",
+  "results": [
+    {
+      "name": "sample.avif",
+      "pages": 1,
+      "hiddenTextCovered": null,
+      "status": "DECODED",
+      "expectedPages": 1
+    },
+    {
+      "name": "sample.bmp",
+      "pages": 1,
+      "hiddenTextCovered": null,
+      "status": "DECODED",
+      "expectedPages": 1
+    },
+    {
+      "name": "sample.doc",
+      "pages": 1,
+      "hiddenTextCovered": null,
+      "status": "DECODED",
+      "expectedPages": 1
+    },
+    {
+      "name": "sample.docx",
+      "pages": 1,
+      "hiddenTextCovered": null,
+      "status": "DECODED",
+      "expectedPages": 1
+    },
+    {
+      "name": "sample.gif",
+      "pages": 2,
+      "hiddenTextCovered": null,
+      "status": "DECODED",
+      "expectedPages": 2
+    },
+    {
+      "name": "sample.heic",
+      "pages": 1,
+      "hiddenTextCovered": null,
+      "status": "DECODED",
+      "expectedPages": 1
+    },
+    {
+      "name": "sample.jpg",
+      "pages": 1,
+      "hiddenTextCovered": null,
+      "status": "DECODED",
+      "expectedPages": 1
+    },
+    {
+      "name": "sample.odp",
+      "pages": 1,
+      "hiddenTextCovered": null,
+      "status": "DECODED",
+      "expectedPages": 1
+    },
+    {
+      "name": "sample.ods",
+      "pages": 1,
+      "hiddenTextCovered": null,
+      "status": "DECODED",
+      "expectedPages": 1
+    },
+    {
+      "name": "sample.odt",
+      "pages": 1,
+      "hiddenTextCovered": null,
+      "status": "DECODED",
+      "expectedPages": 1
+    },
+    {
+      "name": "sample.pdf",
+      "pages": 2,
+      "hiddenTextCovered": null,
+      "status": "DECODED",
+      "expectedPages": 2
+    },
+    {
+      "name": "sample.png",
+      "pages": 1,
+      "hiddenTextCovered": null,
+      "status": "DECODED",
+      "expectedPages": 1
+    },
+    {
+      "name": "sample.ppt",
+      "pages": 1,
+      "hiddenTextCovered": null,
+      "status": "DECODED",
+      "expectedPages": 1
+    },
+    {
+      "name": "sample.pptx",
+      "pages": 1,
+      "hiddenTextCovered": true,
+      "status": "DECODED",
+      "expectedPages": 1
+    },
+    {
+      "name": "sample.rtf",
+      "pages": 1,
+      "hiddenTextCovered": null,
+      "status": "DECODED",
+      "expectedPages": 1
+    },
+    {
+      "name": "sample.tiff",
+      "pages": 2,
+      "hiddenTextCovered": null,
+      "status": "DECODED",
+      "expectedPages": 2
+    },
+    {
+      "name": "sample.webp",
+      "pages": 1,
+      "hiddenTextCovered": null,
+      "status": "DECODED",
+      "expectedPages": 1
+    },
+    {
+      "name": "sample.xls",
+      "pages": 1,
+      "hiddenTextCovered": null,
+      "status": "DECODED",
+      "expectedPages": 1
+    },
+    {
+      "name": "sample.xlsx",
+      "pages": 1,
+      "hiddenTextCovered": true,
+      "status": "DECODED",
+      "expectedPages": 1
+    }
+  ]
+}

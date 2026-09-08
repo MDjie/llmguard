@@ -1,0 +1,212 @@
+▲ Next.js 16.3.3 (Turbopack)
+- Environments: .env.local, .env
+✓ Running next.config.ts took 35ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 6.4s
+  Running TypeScript ...
+  Finished TypeScript in 3.9s ...
+  Collecting page data using 31 workers ...
+  Generating static pages using 31 workers (0/92) ...
+  Generating static pages using 31 workers (23/92) 
+  Generating static pages using 31 workers (46/92) 
+  Generating static pages using 31 workers (69/92) 
+✓ Generating static pages using 31 workers (92/92) in 257ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ƒ /
+├ ƒ /_not-found
+├ ƒ /agent-logs
+├ ƒ /api/agent-logs
+├ ƒ /api/application-credentials
+├ ƒ /api/applications
+├ ƒ /api/archived-content/[id]/raw-access
+├ ƒ /api/archived-content/[id]/raw-access/consume
+├ ƒ /api/archived-content/[id]/raw-access/requests
+├ ƒ /api/audit/events
+├ ƒ /api/audit/reports
+├ ƒ /api/auth/change-password
+├ ƒ /api/auth/login
+├ ƒ /api/auth/logout
+├ ƒ /api/auth/me
+├ ƒ /api/auth/scope
+├ ƒ /api/chat
+├ ƒ /api/chat/attachments
+├ ƒ /api/content-access-requests
+├ ƒ /api/content-access-requests/[id]/review
+├ ƒ /api/conversations
+├ ƒ /api/conversations/[id]/messages
+├ ƒ /api/data-catalog
+├ ƒ /api/data-catalog/[id]
+├ ƒ /api/detect
+├ ƒ /api/detection-sessions
+├ ƒ /api/dimensions
+├ ƒ /api/dimensions/[id]
+├ ƒ /api/dimensions/[id]/rules
+├ ƒ /api/dimensions/[id]/rules/[ruleId]
+├ ƒ /api/dimensions/[id]/test
+├ ƒ /api/document-scan
+├ ƒ /api/document-scan/[id]
+├ ƒ /api/document-scan/[id]/findings/[findingId]
+├ ƒ /api/document-scan/[id]/rescan
+├ ƒ /api/document-scan/[id]/retry
+├ ƒ /api/escalation-summary
+├ ƒ /api/evaluation-runs
+├ ƒ /api/evaluation-runs/[id]
+├ ƒ /api/export
+├ ƒ /api/export/approvals
+├ ƒ /api/export/stats
+├ ƒ /api/gateway-routing
+├ ƒ /api/gateway/audit-batches
+├ ƒ /api/gateway/content-retention
+├ ƒ /api/gateway/onboarding
+├ ƒ /api/gateway/publications
+├ ƒ /api/gateway/requests
+├ ƒ /api/gateway/runtime
+├ ƒ /api/health
+├ ƒ /api/health/db
+├ ƒ /api/health/live
+├ ƒ /api/health/policy
+├ ƒ /api/history
+├ ƒ /api/incidents
+├ ƒ /api/incidents/[id]
+├ ƒ /api/incidents/[id]/conversation
+├ ƒ /api/incidents/[id]/raw-access
+├ ƒ /api/incidents/[id]/raw-access/consume
+├ ƒ /api/incidents/[id]/raw-access/requests
+├ ƒ /api/internal/gateway/archive
+├ ƒ /api/internal/gateway/archive/complete
+├ ƒ /api/internal/gateway/authorize
+├ ƒ /api/internal/gateway/evaluate
+├ ƒ /api/internal/gateway/events
+├ ƒ /api/internal/gateway/runtime
+├ ƒ /api/internal/gateway/runtime/ack
+├ ƒ /api/judge/helpers
+├ ƒ /api/media-evidence/[id]/hold
+├ ƒ /api/media-evidence/[id]/raw-access
+├ ƒ /api/media-evidence/[id]/raw-access/consume
+├ ƒ /api/media-evidence/[id]/raw-access/requests
+├ ƒ /api/media/capabilities
+├ ƒ /api/media/intake
+├ ƒ /api/metrics
+├ ƒ /api/ocr-models
+├ ƒ /api/operations/inspection
+├ ƒ /api/policies
+├ ƒ /api/policies/[id]
+├ ƒ /api/policies/[id]/clone
+├ ƒ /api/policies/[id]/escalation
+├ ƒ /api/policies/[id]/judge-config
+├ ƒ /api/policies/[id]/judge-evaluations
+├ ƒ /api/policies/[id]/keyword-categories
+├ ƒ /api/policies/[id]/keywords
+├ ƒ /api/policies/[id]/keywords/batch
+├ ƒ /api/policies/[id]/keywords/export
+├ ƒ /api/policies/[id]/set-default
+├ ƒ /api/policies/[id]/toggle
+├ ƒ /api/policies/[id]/versions
+├ ƒ /api/policies/compare
+├ ƒ /api/policy-bundles
+├ ƒ /api/policy-bundles/health-check
+├ ƒ /api/policy-governance/dictionaries
+├ ƒ /api/policy-governance/dictionaries/[id]/activate
+├ ƒ /api/policy-governance/dictionaries/[id]/approve
+├ ƒ /api/policy-governance/dictionaries/[id]/publish
+├ ƒ /api/policy-governance/dictionaries/[id]/rollback
+├ ƒ /api/policy-governance/dictionaries/[id]/test
+├ ƒ /api/policy-governance/dictionaries/[id]/validate
+├ ƒ /api/policy-governance/release-sets
+├ ƒ /api/policy-governance/release-sets/[id]/activate
+├ ƒ /api/policy-governance/release-sets/[id]/approve
+├ ƒ /api/policy-governance/release-sets/[id]/canary
+├ ƒ /api/policy-governance/release-sets/[id]/rollback
+├ ƒ /api/policy-governance/release-sets/[id]/shadow
+├ ƒ /api/policy-governance/shadow-compare
+├ ƒ /api/policy-governance/templates
+├ ƒ /api/policy-governance/templates/[id]/approve
+├ ƒ /api/policy-governance/templates/[id]/preview
+├ ƒ /api/policy-governance/templates/[id]/rollback
+├ ƒ /api/policy-runtime
+├ ƒ /api/policy-state
+├ ƒ /api/providers
+├ ƒ /api/providers/meta
+├ ƒ /api/providers/test
+├ ƒ /api/security-alerts
+├ ƒ /api/security-alerts/[id]
+├ ƒ /api/security-alerts/[id]/feedback
+├ ƒ /api/security-alerts/[id]/feedback/candidate
+├ ƒ /api/security-alerts/[id]/feedback/review
+├ ƒ /api/security-alerts/[id]/incident
+├ ƒ /api/security-alerts/[id]/media-evidence
+├ ƒ /api/security-scan-assets
+├ ƒ /api/security-scan-findings/[id]/reviews
+├ ƒ /api/security-scans
+├ ƒ /api/security-scans/[id]
+├ ƒ /api/simulate
+├ ƒ /api/stats
+├ ƒ /api/tenants
+├ ƒ /api/test-cases
+├ ƒ /api/test-cases/[id]
+├ ƒ /api/test-cases/import
+├ ƒ /api/test-cases/run
+├ ƒ /api/tool-registry
+├ ƒ /api/users
+├ ƒ /api/users/[id]
+├ ƒ /api/v1/content-marks/media/[contentId]
+├ ƒ /api/v1/content-marks/text
+├ ƒ /api/v1/content-marks/verify
+├ ƒ /api/v1/guard/artifacts/[id]
+├ ƒ /api/v1/guard/artifacts/[id]/complete
+├ ƒ /api/v1/guard/artifacts/[id]/parts/[partNumber]
+├ ƒ /api/v1/guard/artifacts/[id]/parts/[partNumber]/content
+├ ƒ /api/v1/guard/artifacts/[id]/retry
+├ ƒ /api/v1/guard/artifacts/uploads
+├ ƒ /api/v1/guard/evaluate
+├ ƒ /api/v1/guard/evaluate-shadow
+├ ƒ /api/v1/guard/jobs
+├ ƒ /api/v1/guard/jobs/[id]
+├ ƒ /api/v1/guard/rag/evaluate
+├ ƒ /api/v1/guard/rag/retrieve
+├ ƒ /api/v1/guard/tools/approvals
+├ ƒ /api/v1/guard/tools/authorize
+├ ƒ /api/v1/guard/tools/execute
+├ ƒ /api/v1/guard/tools/reconcile
+├ ƒ /api/v1/guard/tools/result
+├ ƒ /api/whitelist
+├ ƒ /api/whitelist-rules
+├ ƒ /api/whitelist-rules/test
+├ ƒ /api/whitelist/[id]
+├ ƒ /applications
+├ ƒ /change-password
+├ ƒ /conversations
+├ ƒ /dashboard
+├ ƒ /dictionaries
+├ ƒ /dimensions
+├ ƒ /dimensions/[id]
+├ ƒ /document-scan
+├ ƒ /document-scan/[id]
+├ ƒ /evaluation-runs
+├ ƒ /export
+├ ƒ /gateway-requests
+├ ƒ /history
+├ ƒ /incidents
+├ ƒ /login
+├ ƒ /model-eval
+├ ƒ /operations
+├ ƒ /policies
+├ ƒ /policies/[id]
+├ ƒ /policy-releases
+├ ƒ /providers
+├ ƒ /response-templates
+├ ○ /robots.txt
+├ ƒ /security-alerts
+├ ƒ /simulate
+├ ƒ /test-cases
+└ ƒ /whitelist
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

@@ -1,0 +1,172 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-09-08",
+  "mainCommit": "90432539830e11edd33c391d43a561bd5d153f56",
+  "method": "Read-only inspection of selected files; hashes refer to workspace files at authoring time. Deployment has not been revalidated.",
+  "sources": [
+    {
+      "path": ".artifact-build/fullstack-acceptance-20260908/paused-state.json",
+      "sha256": "8112ab6b78386c2be9145f8539cc46a919d8c9854970c1f567ac91db11d5152e"
+    },
+    {
+      "path": "playwright.config.ts",
+      "sha256": "6feb22285d09fd8c8dc72367e30fe4e91acbb7cbafb5aa689212ec26735681f8"
+    },
+    {
+      "path": "services/media-analyzer/src/audio-video.ts",
+      "sha256": "cf75f7ba74e46f7f5a408c21fb03d24981a386764065895542731534eed178d9"
+    },
+    {
+      "path": "services/media-analyzer/src/document-image.ts",
+      "sha256": "00b7ac6dd40bc1076a104982146899dfabc94e1a7c9a36a69e9a4b203a989c41"
+    },
+    {
+      "path": "services/media-analyzer/src/model-adapters.ts",
+      "sha256": "c53668fa158d8f16618fe0dc267def54b3d5f9e241c11b8a22dfe2c2a2789a11"
+    },
+    {
+      "path": "src/app/api/chat/route.ts",
+      "sha256": "2387c3cf16945f794828f6b971c3f8cee8dddb9bc8638b0e6f590859a6d73a2a"
+    },
+    {
+      "path": "src/app/api/document-scan/route.ts",
+      "sha256": "3f0b9e81a39b996cbe8ccd1226378a51b1a28b69f5b718a429dac2307cc68705"
+    },
+    {
+      "path": "src/app/api/health/route.ts",
+      "sha256": "cebb2ce853a251aa48210c4d083241d4667afd8f18f4ec8641a438612969fc51"
+    },
+    {
+      "path": "src/app/api/ocr-models/route.ts",
+      "sha256": "4934af18cda7bccc11f5369af2443e893942f65889a187d9db1cf4667d9fa193"
+    },
+    {
+      "path": "src/app/api/simulate/route.ts",
+      "sha256": "9fca74882df57538b0d559ef594d6c9e1d0f367053957fa461c93a87c18b1bba"
+    },
+    {
+      "path": "src/app/api/v1/guard/jobs/route.ts",
+      "sha256": "482793330fba8ab1599f859e3b34a33887701058975235703a4d4c05cb93f6f4"
+    },
+    {
+      "path": "src/app/document-scan/page.tsx",
+      "sha256": "7cea5540d1587ad197ffba6e04456a811fc36ed62181657d3a9c9249f789b64b"
+    },
+    {
+      "path": "src/components/console/gateway-chat.tsx",
+      "sha256": "d37204d0c24b2ccff385f54179b471995980e1fbe420882823205af7706acd32"
+    },
+    {
+      "path": "src/components/evaluation/sample-import-dialog.tsx",
+      "sha256": "551940aa85b10e1516e14e9ebb9742ef61cd997b0452e6723a36d4780bc4c681"
+    },
+    {
+      "path": "src/lib/artifacts/magic.ts",
+      "sha256": "c4cf8c81aed5c85864ae38e9a82aa0b51e3ed3edb2aa7caab0468c6b81548c66"
+    },
+    {
+      "path": "src/lib/artifacts/service.ts",
+      "sha256": "2d8cabc3f5ca764978eeec475fccc71d65177ddfc6ee4412f0ef339a05c5b21c"
+    },
+    {
+      "path": "src/lib/artifacts/verifier.ts",
+      "sha256": "2603c26353b9d65f19936ad207e8da7fb74d8228d07d774c1cd727c4f85a02e1"
+    },
+    {
+      "path": "src/lib/detection/v2-compat.ts",
+      "sha256": "521fb80d0c37ae390c2522a0ba07c4dcaee4b3686e273186561b57cbc5d8dfc0"
+    },
+    {
+      "path": "src/lib/document/converter.ts",
+      "sha256": "7339e9d9a96b79dd0499f6f3911da61aaece5c3c8fbfd23aaf00f52bddb42dea"
+    },
+    {
+      "path": "src/lib/document/detector.ts",
+      "sha256": "0ba65acd8f86dcd028b6aaa4078c45c29f92b5edeb3ad3d174300472ca342002"
+    },
+    {
+      "path": "src/lib/document/parser.ts",
+      "sha256": "6640c47b07222c811cbbab952eb2f213edc43bfc111cb79543fb43f09470f2c9"
+    },
+    {
+      "path": "src/lib/document/upload-security.ts",
+      "sha256": "0d69e6a9d271e897647ce1e96d8b50f39e5135dd0ee76155c4a96a5e4c865ecf"
+    },
+    {
+      "path": "src/lib/gateway-runtime/native-content.ts",
+      "sha256": "3613040eb7a519cbfa221f44fb88733bc20a2e375f3c76a445e815c3da69e5fc"
+    },
+    {
+      "path": "src/lib/gateway-runtime/native-execution.ts",
+      "sha256": "92b74728cea817197ce689ad00efd91fc4616acf6b1fb1e525a2407743a4f465"
+    },
+    {
+      "path": "src/lib/guard-engine-v2/aggregate.ts",
+      "sha256": "49e9f738d1afda0782ba602b536cf38d6a5098d355a41b65991baacf6963c9db"
+    },
+    {
+      "path": "src/lib/guard-engine-v2/coverage-judge.ts",
+      "sha256": "6f1c471217efc37f5da0f9f4a2ae6fc44ea6938c491d1e7fa5c6afcc01b91ab2"
+    },
+    {
+      "path": "src/lib/judge/engine.ts",
+      "sha256": "f1bac4fe1af7ecb09d7f76a2cac2e43952725cc4f8707d1f8765d274baf86ead"
+    },
+    {
+      "path": "src/lib/judge/profile-registry.ts",
+      "sha256": "b46e3e8789d427f823dee3ad4bb06532baa2f96dc4b25627cadedfb7c8f39db5"
+    },
+    {
+      "path": "src/lib/judge/response-schema.ts",
+      "sha256": "7eb9d344b8a79c38820e2f89d088029662456633b9e5e84addabf6563059a7ad"
+    },
+    {
+      "path": "src/lib/judge/router.ts",
+      "sha256": "a1e2b04c2a109ac35229f7f90c9f874fa005fe64671e95216621d5a5fba0647d"
+    },
+    {
+      "path": "src/lib/media/sampling-plan.ts",
+      "sha256": "02720cc09957028af8ebe828776a69176524acb16a5c77b4fd94cf594cffb07a"
+    },
+    {
+      "path": "src/lib/media/timeline-fusion.ts",
+      "sha256": "05dc64c8b95f1a0f10ff4987e23bcae84115e5a6d92fc97c97dc68f61d6a0d72"
+    },
+    {
+      "path": "src/lib/media/worker.ts",
+      "sha256": "3ffd92ac59b19e9cffa262ae56d7ade807e2e41acde1bfc4e1ced9026d456fb5"
+    },
+    {
+      "path": "src/lib/multimodal/fusion.ts",
+      "sha256": "86f493df3d61341e7e37c8d0786edb3857464a065051f9627dff62436c91e9c0"
+    },
+    {
+      "path": "src/lib/multimodal/joint-evidence-judge.ts",
+      "sha256": "a7da46e881e3fdaeb599f556a1bc5c380d3c3e070fce7fce8d2fe55c5380f5e4"
+    },
+    {
+      "path": "src/lib/multimodal/source-content.ts",
+      "sha256": "a5e51528b95b711f85293013f2f6e48f2e148f5d52b94760c7df138d1d79c379"
+    },
+    {
+      "path": "tests/e2e/app-connectivity.spec.ts",
+      "sha256": "1b2bb67e7a65d2c4f81c830664733b5df6d882e52c3eff476ca674ca1d10b257"
+    },
+    {
+      "path": "tests/e2e/gateway-workspace.spec.ts",
+      "sha256": "0f1cd0170c6fe64cec2659ad9700464215f64b8a03521038c71a675e79bf0841"
+    },
+    {
+      "path": "输出/测试报告/2026-09-08/detection-repair-completion-v1/independent-sql-verification.json",
+      "sha256": "d2e1a12032efe9f14f2ec9e7f6de2c9488891a1d07fc120aa66685b840249c76"
+    },
+    {
+      "path": "输出/测试报告/2026-09-08/detection-repair-completion-v1/paired-analysis.json",
+      "sha256": "27e48044717f485ce12dc077c9223a977c5c280c8a3c58fe3d8b503463df7d98"
+    },
+    {
+      "path": "输出/测试报告/llm护栏测试验收指标5，6，7差距分析.docx",
+      "sha256": "ec19885763a9e0be73307d0475a429a55ba4d4893a525ce9852b0434a70e8034"
+    }
+  ]
+}

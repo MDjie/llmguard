@@ -1,0 +1,168 @@
+{
+  "scope": "CODEC_ONLY_NOT_ASR_OR_SEMANTIC_QUALIFICATION",
+  "results": [
+    {
+      "name": "audio.wav",
+      "kind": "AUDIO",
+      "status": "DECODED",
+      "codec": "pcm_s16le",
+      "duration": "1.000000"
+    },
+    {
+      "name": "audio.mp3",
+      "kind": "AUDIO",
+      "status": "DECODED",
+      "codec": "mp3",
+      "duration": "1.000000"
+    },
+    {
+      "name": "audio.m4a",
+      "kind": "AUDIO",
+      "status": "DECODED",
+      "codec": "aac",
+      "duration": "1.000000"
+    },
+    {
+      "name": "audio.aac",
+      "kind": "AUDIO",
+      "status": "DECODED",
+      "codec": "aac",
+      "duration": "1.088022"
+    },
+    {
+      "name": "audio.flac",
+      "kind": "AUDIO",
+      "status": "DECODED",
+      "codec": "flac",
+      "duration": "1.000000"
+    },
+    {
+      "name": "audio.ogg",
+      "kind": "AUDIO",
+      "status": "DECODED",
+      "codec": "vorbis",
+      "duration": "1.000000"
+    },
+    {
+      "name": "audio.opus",
+      "kind": "AUDIO",
+      "status": "DECODED",
+      "codec": "opus",
+      "duration": "1.006500"
+    },
+    {
+      "name": "audio.wma",
+      "kind": "AUDIO",
+      "status": "DECODED",
+      "codec": "wmav2",
+      "duration": "1.000000"
+    },
+    {
+      "name": "audio.aiff",
+      "kind": "AUDIO",
+      "status": "DECODED",
+      "codec": "pcm_s16be",
+      "duration": "1.000000"
+    },
+    {
+      "name": "video.mp4",
+      "kind": "VIDEO",
+      "status": "DECODED",
+      "codecs": [
+        "mpeg4",
+        "aac"
+      ],
+      "duration": "1.000000"
+    },
+    {
+      "name": "video.mov",
+      "kind": "VIDEO",
+      "status": "DECODED",
+      "codecs": [
+        "mpeg4",
+        "aac"
+      ],
+      "duration": "1.000000"
+    },
+    {
+      "name": "video.mkv",
+      "kind": "VIDEO",
+      "status": "DECODED",
+      "codecs": [
+        "mpeg4",
+        "aac"
+      ],
+      "duration": "1.023000"
+    },
+    {
+      "name": "video.webm",
+      "kind": "VIDEO",
+      "status": "DECODED",
+      "codecs": [
+        "vp9",
+        "opus"
+      ],
+      "duration": "1.008000"
+    },
+    {
+      "name": "video.avi",
+      "kind": "VIDEO",
+      "status": "DECODED",
+      "codecs": [
+        "mpeg4",
+        "mp3"
+      ],
+      "duration": "1.200000"
+    },
+    {
+      "name": "video.wmv",
+      "kind": "VIDEO",
+      "status": "DECODED",
+      "codecs": [
+        "wmv2",
+        "wmav2"
+      ],
+      "duration": "1.092000"
+    },
+    {
+      "name": "video.flv",
+      "kind": "VIDEO",
+      "status": "DECODED",
+      "codecs": [
+        "aac",
+        "flv1"
+      ],
+      "duration": "1.022999"
+    },
+    {
+      "name": "video.mpg",
+      "kind": "VIDEO",
+      "status": "DECODED",
+      "codecs": [
+        "mpeg2video",
+        "mp2"
+      ],
+      "duration": "1.018778"
+    },
+    {
+      "name": "video.ts",
+      "kind": "VIDEO",
+      "status": "DECODED",
+      "codecs": [
+        "mpeg2video",
+        "mp2"
+      ],
+      "duration": "1.018778"
+    },
+    {
+      "name": "video.3gp",
+      "kind": "VIDEO",
+      "status": "DECODED",
+      "codecs": [
+        "mpeg4",
+        "aac"
+      ],
+      "duration": "1.000000"
+    }
+  ]
+}

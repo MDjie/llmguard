@@ -1,0 +1,1823 @@
+{
+  "sourceReportSha256": "cab0024d14826ff9a6eac85489c88f1a5bf78458ed70ebcd64f57fb1d0a229fc",
+  "total": 1694,
+  "passed": 1694,
+  "failed": 0,
+  "pending": 0,
+  "success": true,
+  "files": [
+    {
+      "path": "tests/product-feature-proxy.test.ts",
+      "status": "passed",
+      "total": 9,
+      "passed": 9,
+      "failed": 0
+    },
+    {
+      "path": "tests/product-features.test.ts",
+      "status": "passed",
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "path": "tests/acceptance/appliance-plan.test.mjs",
+      "status": "passed",
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "path": "tests/acceptance/coverage-audit.test.mjs",
+      "status": "passed",
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "path": "tests/acceptance/evidence.test.mjs",
+      "status": "passed",
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "path": "tests/acceptance/gateway-latency-join.test.mjs",
+      "status": "passed",
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "path": "tests/acceptance/gateway-offline-bundle.test.mjs",
+      "status": "passed",
+      "total": 5,
+      "passed": 5,
+      "failed": 0
+    },
+    {
+      "path": "tests/acceptance/gateway-performance.test.mjs",
+      "status": "passed",
+      "total": 6,
+      "passed": 6,
+      "failed": 0
+    },
+    {
+      "path": "tests/acceptance/gateway-sse-meter.test.mjs",
+      "status": "passed",
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "path": "tests/acceptance/integrated-plan.test.mjs",
+      "status": "passed",
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "path": "tests/acceptance/runtime-resilience.test.ts",
+      "status": "passed",
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "path": "tests/acceptance/v11-readiness.test.mjs",
+      "status": "passed",
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "path": "tests/api/policy-readiness-route.test.ts",
+      "status": "passed",
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "path": "tests/api/public-routes.test.ts",
+      "status": "passed",
+      "total": 5,
+      "passed": 5,
+      "failed": 0
+    },
+    {
+      "path": "tests/api-security/body-limit.test.ts",
+      "status": "passed",
+      "total": 5,
+      "passed": 5,
+      "failed": 0
+    },
+    {
+      "path": "tests/api-security/content-access-contracts.test.ts",
+      "status": "passed",
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "path": "tests/api-security/policy-governance-routes.test.mjs",
+      "status": "passed",
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "path": "tests/api-security/postgres-rate-limit.test.ts",
+      "status": "passed",
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "path": "tests/api-security/release-set-routes.test.mjs",
+      "status": "passed",
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "path": "tests/api-security/request-context.test.ts",
+      "status": "passed",
+      "total": 9,
+      "passed": 9,
+      "failed": 0
+    },
+    {
+      "path": "tests/api-security/route-boundaries.test.ts",
+      "status": "passed",
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "path": "tests/api-security/route-inventory.test.mjs",
+      "status": "passed",
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "path": "tests/api-security/with-api-security.test.ts",
+      "status": "passed",
+      "total": 14,
+      "passed": 14,
+      "failed": 0
+    },
+    {
+      "path": "tests/artifacts/magic.test.ts",
+      "status": "passed",
+      "total": 8,
+      "passed": 8,
+      "failed": 0
+    },
+    {
+      "path": "tests/artifacts/security-gate.test.ts",
+      "status": "passed",
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "path": "tests/appliance/artifact-isolation.test.ts",
+      "status": "passed",
+      "total": 5,
+      "passed": 5,
+      "failed": 0
+    },
+    {
+      "path": "tests/appliance/bundle-rollout.test.ts",
+      "status": "passed",
+      "total": 6,
+      "passed": 6,
+      "failed": 0
+    },
+    {
+      "path": "tests/appliance/capability-bundle.test.ts",
+      "status": "passed",
+      "total": 6,
+      "passed": 6,
+      "failed": 0
+    },
+    {
+      "path": "tests/appliance/evidence-file-store.test.ts",
+      "status": "passed",
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "path": "tests/appliance/evidence-wal.test.ts",
+      "status": "passed",
+      "total": 5,
+      "passed": 5,
+      "failed": 0
+    },
+    {
+      "path": "tests/appliance/fast-path-reference.test.ts",
+      "status": "passed",
+      "total": 7,
+      "passed": 7,
+      "failed": 0
+    },
+    {
+      "path": "tests/appliance/guard-runtime-adapter.test.ts",
+      "status": "passed",
+      "total": 5,
+      "passed": 5,
+      "failed": 0
+    },
+    {
+      "path": "tests/appliance/ha-controller.test.ts",
+      "status": "passed",
+      "total": 5,
+      "passed": 5,
+      "failed": 0
+    },
+    {
+      "path": "tests/appliance/inspection-fabric.test.ts",
+      "status": "passed",
+      "total": 6,
+      "passed": 6,
+      "failed": 0
+    },
+    {
+      "path": "tests/appliance/pal-hal.test.ts",
+      "status": "passed",
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "path": "tests/appliance/pal-v2.test.ts",
+      "status": "passed",
+      "total": 6,
+      "passed": 6,
+      "failed": 0
+    },
+    {
+      "path": "tests/appliance/protocol-framing.test.ts",
+      "status": "passed",
+      "total": 10,
+      "passed": 10,
+      "failed": 0
+    },
+    {
+      "path": "tests/appliance/system-update.test.ts",
+      "status": "passed",
+      "total": 5,
+      "passed": 5,
+      "failed": 0
+    },
+    {
+      "path": "tests/appliance/virtual-lab.test.ts",
+      "status": "passed",
+      "total": 5,
+      "passed": 5,
+      "failed": 0
+    },
+    {
+      "path": "tests/auth/auth-core.test.ts",
+      "status": "passed",
+      "total": 10,
+      "passed": 10,
+      "failed": 0
+    },
+    {
+      "path": "tests/auth/cookies.test.ts",
+      "status": "passed",
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "path": "tests/auth/users-route.test.ts",
+      "status": "passed",
+      "total": 1,
+      "passed": 1,
+      "failed": 0
+    },
+    {
+      "path": "tests/audit/chain.test.ts",
+      "status": "passed",
+      "total": 5,
+      "passed": 5,
+      "failed": 0
+    },
+    {
+      "path": "tests/audit/export.test.ts",
+      "status": "passed",
+      "total": 6,
+      "passed": 6,
+      "failed": 0
+    },
+    {
+      "path": "tests/audit/reporting.test.ts",
+      "status": "passed",
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "path": "tests/audit/trusted-timestamp.test.ts",
+      "status": "passed",
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "path": "tests/baseline/java-gateway-structure.test.mjs",
+      "status": "passed",
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "path": "tests/baseline/quality-baseline.test.mjs",
+      "status": "passed",
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "path": "tests/content-marking/mark.test.ts",
+      "status": "passed",
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "path": "tests/content-marking/media-pipeline.test.ts",
+      "status": "passed",
+      "total": 1,
+      "passed": 1,
+      "failed": 0
+    },
+    {
+      "path": "tests/contracts/appliance-contracts.test.mjs",
+      "status": "passed",
+      "total": 5,
+      "passed": 5,
+      "failed": 0
+    },
+    {
+      "path": "tests/contracts/generation-eol.test.mjs",
+      "status": "passed",
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "path": "tests/contracts/guard-contracts.test.mjs",
+      "status": "passed",
+      "total": 7,
+      "passed": 7,
+      "failed": 0
+    },
+    {
+      "path": "tests/contracts/guard-http-contract.test.ts",
+      "status": "passed",
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "path": "tests/contracts/policy-threshold-roundtrip.test.ts",
+      "status": "passed",
+      "total": 15,
+      "passed": 15,
+      "failed": 0
+    },
+    {
+      "path": "tests/context-trust/derived-envelope.test.ts",
+      "status": "passed",
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "path": "tests/context-trust/envelope.test.ts",
+      "status": "passed",
+      "total": 5,
+      "passed": 5,
+      "failed": 0
+    },
+    {
+      "path": "tests/context-trust/external-event.test.ts",
+      "status": "passed",
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "path": "tests/content-safety/financial-library.test.ts",
+      "status": "passed",
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "path": "tests/content-safety/lexicon-conversion.test.ts",
+      "status": "passed",
+      "total": 5,
+      "passed": 5,
+      "failed": 0
+    },
+    {
+      "path": "tests/content-safety/lexicon-pipeline.test.ts",
+      "status": "passed",
+      "total": 5,
+      "passed": 5,
+      "failed": 0
+    },
+    {
+      "path": "tests/content-safety/release-set.test.ts",
+      "status": "passed",
+      "total": 6,
+      "passed": 6,
+      "failed": 0
+    },
+    {
+      "path": "tests/content-safety/reviewed-conversion.test.ts",
+      "status": "passed",
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "path": "tests/data-catalog/policy.test.ts",
+      "status": "passed",
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "path": "tests/data-protection/db-compatibility.test.ts",
+      "status": "passed",
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "path": "tests/data-protection/export-approval.test.ts",
+      "status": "passed",
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "path": "tests/data-protection/lineage.test.ts",
+      "status": "passed",
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "path": "tests/data-protection/retention.test.ts",
+      "status": "passed",
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "path": "tests/detection/auxiliary-routes.test.ts",
+      "status": "passed",
+      "total": 1,
+      "passed": 1,
+      "failed": 0
+    },
+    {
+      "path": "tests/detection/decision.test.ts",
+      "status": "passed",
+      "total": 5,
+      "passed": 5,
+      "failed": 0
+    },
+    {
+      "path": "tests/detection/detect-route.test.ts",
+      "status": "passed",
+      "total": 1,
+      "passed": 1,
+      "failed": 0
+    },
+    {
+      "path": "tests/detection/deterministic-repetition-pattern.test.ts",
+      "status": "passed",
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "path": "tests/detection/dynamic-engine-behavior.test.ts",
+      "status": "passed",
+      "total": 6,
+      "passed": 6,
+      "failed": 0
+    },
+    {
+      "path": "tests/detection/judge.test.ts",
+      "status": "passed",
+      "total": 8,
+      "passed": 8,
+      "failed": 0
+    },
+    {
+      "path": "tests/detection/no-policy.test.ts",
+      "status": "passed",
+      "total": 1,
+      "passed": 1,
+      "failed": 0
+    },
+    {
+      "path": "tests/detection/safe-regex.test.ts",
+      "status": "passed",
+      "total": 5,
+      "passed": 5,
+      "failed": 0
+    },
+    {
+      "path": "tests/detection/v2-compatibility-map.test.ts",
+      "status": "passed",
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "path": "tests/dlp/entity-contract.test.ts",
+      "status": "passed",
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "path": "tests/dlp/entity-fusion.test.ts",
+      "status": "passed",
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "path": "tests/dlp/transformation.test.ts",
+      "status": "passed",
+      "total": 5,
+      "passed": 5,
+      "failed": 0
+    },
+    {
+      "path": "tests/conversation-archive/integrity.test.ts",
+      "status": "passed",
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "path": "tests/conversation-archive/native-output.test.ts",
+      "status": "passed",
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "path": "tests/conversation-archive/object-store.test.ts",
+      "status": "passed",
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "path": "tests/document/converter.test.ts",
+      "status": "passed",
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "path": "tests/document/parser-highlighter.test.ts",
+      "status": "passed",
+      "total": 9,
+      "passed": 9,
+      "failed": 0
+    },
+    {
+      "path": "tests/document/pdf-loader.test.ts",
+      "status": "passed",
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "path": "tests/document/upload-security.test.ts",
+      "status": "passed",
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "path": "tests/deployment/document-runtime-dependencies.test.mjs",
+      "status": "passed",
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "path": "tests/deployment/output-control-deployment.test.mjs",
+      "status": "passed",
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "path": "tests/deployment/policy-operations-governance.test.mjs",
+      "status": "passed",
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "path": "tests/deployment/policy-schema-compatibility.test.mjs",
+      "status": "passed",
+      "total": 1,
+      "passed": 1,
+      "failed": 0
+    },
+    {
+      "path": "tests/deployment/production-assets.test.mjs",
+      "status": "passed",
+      "total": 11,
+      "passed": 11,
+      "failed": 0
+    },
+    {
+      "path": "tests/deployment/toolchain-fallback.test.mjs",
+      "status": "passed",
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "path": "tests/gateway-routing/state-machine.test.ts",
+      "status": "passed",
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "path": "tests/guard-jobs/callback.test.ts",
+      "status": "passed",
+      "total": 1,
+      "passed": 1,
+      "failed": 0
+    },
+    {
+      "path": "tests/guard-jobs/cancellation-contract.test.ts",
+      "status": "passed",
+      "total": 1,
+      "passed": 1,
+      "failed": 0
+    },
+    {
+      "path": "tests/evaluation/candidate-assistance.test.ts",
+      "status": "passed",
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "path": "tests/evaluation/classification-metrics.test.ts",
+      "status": "passed",
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "path": "tests/evaluation/dataset-integrity.test.ts",
+      "status": "passed",
+      "total": 1,
+      "passed": 1,
+      "failed": 0
+    },
+    {
+      "path": "tests/evaluation/dataset-workbench.test.ts",
+      "status": "passed",
+      "total": 6,
+      "passed": 6,
+      "failed": 0
+    },
+    {
+      "path": "tests/evaluation/gateway-quality.test.ts",
+      "status": "passed",
+      "total": 6,
+      "passed": 6,
+      "failed": 0
+    },
+    {
+      "path": "tests/evaluation/isolated-judge.test.ts",
+      "status": "passed",
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "path": "tests/evaluation/isolated-policy.test.ts",
+      "status": "passed",
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "path": "tests/evaluation/metrics.test.ts",
+      "status": "passed",
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "path": "tests/evaluation/optimization-quality.test.ts",
+      "status": "passed",
+      "total": 6,
+      "passed": 6,
+      "failed": 0
+    },
+    {
+      "path": "tests/evaluation/optimization-report.test.ts",
+      "status": "passed",
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "path": "tests/guard-engine-v2/action-constraints.test.ts",
+      "status": "passed",
+      "total": 51,
+      "passed": 51,
+      "failed": 0
+    },
+    {
+      "path": "tests/guard-engine-v2/architecture-invariants.test.ts",
+      "status": "passed",
+      "total": 54,
+      "passed": 54,
+      "failed": 0
+    },
+    {
+      "path": "tests/guard-engine-v2/attack-taxonomy.test.ts",
+      "status": "passed",
+      "total": 13,
+      "passed": 13,
+      "failed": 0
+    },
+    {
+      "path": "tests/guard-engine-v2/builtin-detectors.test.ts",
+      "status": "passed",
+      "total": 12,
+      "passed": 12,
+      "failed": 0
+    },
+    {
+      "path": "tests/guard-engine-v2/cache-key.test.ts",
+      "status": "passed",
+      "total": 14,
+      "passed": 14,
+      "failed": 0
+    },
+    {
+      "path": "tests/guard-engine-v2/completion-regressions.test.ts",
+      "status": "passed",
+      "total": 11,
+      "passed": 11,
+      "failed": 0
+    },
+    {
+      "path": "tests/guard-engine-v2/conditional-refiner.test.ts",
+      "status": "passed",
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "path": "tests/guard-engine-v2/configurable-judge.test.ts",
+      "status": "passed",
+      "total": 15,
+      "passed": 15,
+      "failed": 0
+    },
+    {
+      "path": "tests/guard-engine-v2/content-safety-intent.test.ts",
+      "status": "passed",
+      "total": 24,
+      "passed": 24,
+      "failed": 0
+    },
+    {
+      "path": "tests/guard-engine-v2/coverage-limits.test.ts",
+      "status": "passed",
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "path": "tests/guard-engine-v2/dag.test.ts",
+      "status": "passed",
+      "total": 7,
+      "passed": 7,
+      "failed": 0
+    },
+    {
+      "path": "tests/guard-engine-v2/engine.test.ts",
+      "status": "passed",
+      "total": 12,
+      "passed": 12,
+      "failed": 0
+    },
+    {
+      "path": "tests/guard-engine-v2/legacy-output-policy-dag.test.ts",
+      "status": "passed",
+      "total": 1,
+      "passed": 1,
+      "failed": 0
+    },
+    {
+      "path": "tests/guard-engine-v2/lexical-context.test.ts",
+      "status": "passed",
+      "total": 35,
+      "passed": 35,
+      "failed": 0
+    },
+    {
+      "path": "tests/guard-engine-v2/normalization-security.test.ts",
+      "status": "passed",
+      "total": 26,
+      "passed": 26,
+      "failed": 0
+    },
+    {
+      "path": "tests/guard-engine-v2/policy-recipe-cache.test.ts",
+      "status": "passed",
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "path": "tests/guard-engine-v2/production-path.test.ts",
+      "status": "passed",
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "path": "tests/guard-engine-v2/prompt-injection-bilingual.test.ts",
+      "status": "passed",
+      "total": 207,
+      "passed": 207,
+      "failed": 0
+    },
+    {
+      "path": "tests/guard-engine-v2/protected-context.test.ts",
+      "status": "passed",
+      "total": 5,
+      "passed": 5,
+      "failed": 0
+    },
+    {
+      "path": "tests/guard-engine-v2/repair-candidate.test.ts",
+      "status": "passed",
+      "total": 57,
+      "passed": 57,
+      "failed": 0
+    },
+    {
+      "path": "tests/guard-engine-v2/risk-relations.test.ts",
+      "status": "passed",
+      "total": 6,
+      "passed": 6,
+      "failed": 0
+    },
+    {
+      "path": "tests/guard-engine-v2/scoped-refiner.test.ts",
+      "status": "passed",
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "path": "tests/guard-engine-v2/semantic-classifier.test.ts",
+      "status": "passed",
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "path": "tests/guard-engine-v2/semantic-coverage-v1.test.ts",
+      "status": "passed",
+      "total": 5,
+      "passed": 5,
+      "failed": 0
+    },
+    {
+      "path": "tests/guard-engine-v2/session-context.test.ts",
+      "status": "passed",
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "path": "tests/guard-engine-v2/text-defense-evaluation.test.ts",
+      "status": "passed",
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "path": "tests/guard-engine-v2/v2-compat.test.ts",
+      "status": "passed",
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "path": "tests/gateway-runtime/bounded-cache.test.ts",
+      "status": "passed",
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "path": "tests/gateway-runtime/completion-fields.test.ts",
+      "status": "passed",
+      "total": 8,
+      "passed": 8,
+      "failed": 0
+    },
+    {
+      "path": "tests/gateway-runtime/console-cursor.test.ts",
+      "status": "passed",
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "path": "tests/gateway-runtime/cross-language-golden.test.ts",
+      "status": "passed",
+      "total": 12,
+      "passed": 12,
+      "failed": 0
+    },
+    {
+      "path": "tests/gateway-runtime/execution-proof.test.ts",
+      "status": "passed",
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "path": "tests/gateway-runtime/input-mask.test.ts",
+      "status": "passed",
+      "total": 6,
+      "passed": 6,
+      "failed": 0
+    },
+    {
+      "path": "tests/gateway-runtime/legacy-projection.test.ts",
+      "status": "passed",
+      "total": 1,
+      "passed": 1,
+      "failed": 0
+    },
+    {
+      "path": "tests/gateway-runtime/model-routing.test.ts",
+      "status": "passed",
+      "total": 7,
+      "passed": 7,
+      "failed": 0
+    },
+    {
+      "path": "tests/gateway-runtime/native-content.test.ts",
+      "status": "passed",
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "path": "tests/gateway-runtime/native-execution.test.ts",
+      "status": "passed",
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "path": "tests/gateway-runtime/onboarding-state.test.ts",
+      "status": "passed",
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "path": "tests/gateway-runtime/processing-context.test.ts",
+      "status": "passed",
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "path": "tests/gateway-runtime/protocol.test.ts",
+      "status": "passed",
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "path": "tests/gateway-runtime/recheck.test.ts",
+      "status": "passed",
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "path": "tests/gateway-runtime/security.test.ts",
+      "status": "passed",
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "path": "tests/gateway-runtime/settings.test.ts",
+      "status": "passed",
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "path": "tests/gateway-runtime/window-policy.test.ts",
+      "status": "passed",
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "path": "tests/gateway-runtime/window-proof.test.ts",
+      "status": "passed",
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "path": "tests/gateway-runtime/window-risk.test.ts",
+      "status": "passed",
+      "total": 1,
+      "passed": 1,
+      "failed": 0
+    },
+    {
+      "path": "tests/guardrail/output-control-matrix.test.ts",
+      "status": "passed",
+      "total": 48,
+      "passed": 48,
+      "failed": 0
+    },
+    {
+      "path": "tests/guardrail/output-control.test.ts",
+      "status": "passed",
+      "total": 12,
+      "passed": 12,
+      "failed": 0
+    },
+    {
+      "path": "tests/guardrail/pii-masker.test.ts",
+      "status": "passed",
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "path": "tests/guardrail/rewrite-engine.test.ts",
+      "status": "passed",
+      "total": 7,
+      "passed": 7,
+      "failed": 0
+    },
+    {
+      "path": "tests/guardrail/template-runtime.test.ts",
+      "status": "passed",
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "path": "tests/incidents/console-structure.test.mjs",
+      "status": "passed",
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "path": "tests/incidents/state-machine.test.ts",
+      "status": "passed",
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "path": "tests/llm/risk-detectors.test.ts",
+      "status": "passed",
+      "total": 16,
+      "passed": 16,
+      "failed": 0
+    },
+    {
+      "path": "tests/judge/private-provider-security.test.ts",
+      "status": "passed",
+      "total": 19,
+      "passed": 19,
+      "failed": 0
+    },
+    {
+      "path": "tests/judge/provider-matrix.test.ts",
+      "status": "passed",
+      "total": 16,
+      "passed": 16,
+      "failed": 0
+    },
+    {
+      "path": "tests/guardrail-automation/engineering-dataset.test.ts",
+      "status": "passed",
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "path": "tests/guardrail-automation/keyword-batch-api.test.ts",
+      "status": "passed",
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "path": "tests/guardrail-automation/keyword-batch-parser.test.ts",
+      "status": "passed",
+      "total": 9,
+      "passed": 9,
+      "failed": 0
+    },
+    {
+      "path": "tests/guardrail-automation/whitelist-scope.test.ts",
+      "status": "passed",
+      "total": 11,
+      "passed": 11,
+      "failed": 0
+    },
+    {
+      "path": "tests/media/capabilities.test.ts",
+      "status": "passed",
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "path": "tests/media/formats.test.ts",
+      "status": "passed",
+      "total": 15,
+      "passed": 15,
+      "failed": 0
+    },
+    {
+      "path": "tests/media/quality.test.ts",
+      "status": "passed",
+      "total": 7,
+      "passed": 7,
+      "failed": 0
+    },
+    {
+      "path": "tests/media/sampling-plan.test.ts",
+      "status": "passed",
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "path": "tests/media/subtitles.test.ts",
+      "status": "passed",
+      "total": 6,
+      "passed": 6,
+      "failed": 0
+    },
+    {
+      "path": "tests/media/timeline-fusion.test.ts",
+      "status": "passed",
+      "total": 9,
+      "passed": 9,
+      "failed": 0
+    },
+    {
+      "path": "tests/media/timeline-windows.test.ts",
+      "status": "passed",
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "path": "tests/media-analyzer/code-reader.test.ts",
+      "status": "passed",
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "path": "tests/media-analyzer/core.test.ts",
+      "status": "passed",
+      "total": 8,
+      "passed": 8,
+      "failed": 0
+    },
+    {
+      "path": "tests/media-analyzer/media-marking.test.ts",
+      "status": "passed",
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "path": "tests/media-analyzer/media-transform.test.ts",
+      "status": "passed",
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "path": "tests/media-analyzer/model-adapters.test.ts",
+      "status": "passed",
+      "total": 5,
+      "passed": 5,
+      "failed": 0
+    },
+    {
+      "path": "tests/media-analyzer/native-joint.test.ts",
+      "status": "passed",
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "path": "tests/media-analyzer/office-integrity.test.ts",
+      "status": "passed",
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "path": "tests/media-analyzer/resilience.test.ts",
+      "status": "passed",
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "path": "tests/media-analyzer/subtitles.test.ts",
+      "status": "passed",
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "path": "tests/observability/bounded-output-metrics.test.ts",
+      "status": "passed",
+      "total": 1,
+      "passed": 1,
+      "failed": 0
+    },
+    {
+      "path": "tests/observability/gateway-cache-metrics.test.ts",
+      "status": "passed",
+      "total": 1,
+      "passed": 1,
+      "failed": 0
+    },
+    {
+      "path": "tests/observability/gateway-runtime-metrics.test.ts",
+      "status": "passed",
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "path": "tests/observability/logger.test.ts",
+      "status": "passed",
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "path": "tests/observability/metrics.test.ts",
+      "status": "passed",
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "path": "tests/observability/output-control-metrics.test.ts",
+      "status": "passed",
+      "total": 1,
+      "passed": 1,
+      "failed": 0
+    },
+    {
+      "path": "tests/observability/security-hardening-metrics.test.ts",
+      "status": "passed",
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "path": "tests/operations/content-access-projection.test.ts",
+      "status": "passed",
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "path": "tests/operations/governance-console.test.mjs",
+      "status": "passed",
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "path": "tests/operations/policy-governance-validation.test.ts",
+      "status": "passed",
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "path": "tests/operations/security-events.test.ts",
+      "status": "passed",
+      "total": 5,
+      "passed": 5,
+      "failed": 0
+    },
+    {
+      "path": "tests/object-store/s3-presign.test.ts",
+      "status": "passed",
+      "total": 1,
+      "passed": 1,
+      "failed": 0
+    },
+    {
+      "path": "tests/platform-adapters/inference.test.ts",
+      "status": "passed",
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "path": "tests/performance/requirements.test.mjs",
+      "status": "passed",
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "path": "tests/multimodal/action-contract.test.ts",
+      "status": "passed",
+      "total": 14,
+      "passed": 14,
+      "failed": 0
+    },
+    {
+      "path": "tests/multimodal/authorized-highlight.test.ts",
+      "status": "passed",
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "path": "tests/multimodal/coverage-ledger.test.ts",
+      "status": "passed",
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "path": "tests/multimodal/coverage.test.ts",
+      "status": "passed",
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "path": "tests/multimodal/detection-policy.test.ts",
+      "status": "passed",
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "path": "tests/multimodal/evidence-location.test.ts",
+      "status": "passed",
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "path": "tests/multimodal/fusion.test.ts",
+      "status": "passed",
+      "total": 10,
+      "passed": 10,
+      "failed": 0
+    },
+    {
+      "path": "tests/multimodal/joint-evidence-judge.test.ts",
+      "status": "passed",
+      "total": 8,
+      "passed": 8,
+      "failed": 0
+    },
+    {
+      "path": "tests/multimodal/media-annotations.test.ts",
+      "status": "passed",
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "path": "tests/multimodal/media-evidence-views.test.ts",
+      "status": "passed",
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "path": "tests/multimodal/native-gate.test.ts",
+      "status": "passed",
+      "total": 8,
+      "passed": 8,
+      "failed": 0
+    },
+    {
+      "path": "tests/multimodal/output-recheck.test.ts",
+      "status": "passed",
+      "total": 7,
+      "passed": 7,
+      "failed": 0
+    },
+    {
+      "path": "tests/multimodal/view-plan.test.ts",
+      "status": "passed",
+      "total": 1,
+      "passed": 1,
+      "failed": 0
+    },
+    {
+      "path": "tests/policy-governance/runtime-summary.test.ts",
+      "status": "passed",
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "path": "tests/policy-bundle/bootstrap.test.ts",
+      "status": "passed",
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "path": "tests/policy-bundle/detection-capabilities.test.ts",
+      "status": "passed",
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "path": "tests/policy-bundle/governance.test.ts",
+      "status": "passed",
+      "total": 7,
+      "passed": 7,
+      "failed": 0
+    },
+    {
+      "path": "tests/policy-bundle/integrity-events.test.ts",
+      "status": "passed",
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "path": "tests/policy-bundle/key-material.test.ts",
+      "status": "passed",
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "path": "tests/policy-bundle/lifecycle.test.ts",
+      "status": "passed",
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "path": "tests/policy-bundle/local-keys.test.ts",
+      "status": "passed",
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "path": "tests/policy-bundle/policy-bundle.test.ts",
+      "status": "passed",
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "path": "tests/policy-bundle/readiness.test.ts",
+      "status": "passed",
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "path": "tests/policy-bundle/release-console.test.mjs",
+      "status": "passed",
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "path": "tests/policy-bundle/rollout-health.test.ts",
+      "status": "passed",
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "path": "tests/policy-bundle/runtime-error.test.ts",
+      "status": "passed",
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "path": "tests/policy-bundle/shadow-comparison.test.ts",
+      "status": "passed",
+      "total": 1,
+      "passed": 1,
+      "failed": 0
+    },
+    {
+      "path": "tests/release/evidence-binding.test.ts",
+      "status": "passed",
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "path": "tests/rag/flow.test.ts",
+      "status": "passed",
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "path": "tests/rag/groundedness.test.ts",
+      "status": "passed",
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "path": "tests/rag/semantic-groundedness.test.ts",
+      "status": "passed",
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "path": "tests/resource-control/admission.test.ts",
+      "status": "passed",
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "path": "tests/resource-control/resilience.test.ts",
+      "status": "passed",
+      "total": 6,
+      "passed": 6,
+      "failed": 0
+    },
+    {
+      "path": "tests/resource-control/resource-control.test.ts",
+      "status": "passed",
+      "total": 5,
+      "passed": 5,
+      "failed": 0
+    },
+    {
+      "path": "tests/secure-memory/ledger.test.ts",
+      "status": "passed",
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "path": "tests/secure-memory/request-receipt.test.ts",
+      "status": "passed",
+      "total": 10,
+      "passed": 10,
+      "failed": 0
+    },
+    {
+      "path": "tests/secure-memory/session-risk-state.test.ts",
+      "status": "passed",
+      "total": 7,
+      "passed": 7,
+      "failed": 0
+    },
+    {
+      "path": "tests/security/database-tls.test.ts",
+      "status": "passed",
+      "total": 11,
+      "passed": 11,
+      "failed": 0
+    },
+    {
+      "path": "tests/security/egress.test.ts",
+      "status": "passed",
+      "total": 26,
+      "passed": 26,
+      "failed": 0
+    },
+    {
+      "path": "tests/security/provider-connection.test.ts",
+      "status": "passed",
+      "total": 35,
+      "passed": 35,
+      "failed": 0
+    },
+    {
+      "path": "tests/security/provider-registry.test.ts",
+      "status": "passed",
+      "total": 5,
+      "passed": 5,
+      "failed": 0
+    },
+    {
+      "path": "tests/security/provider-routes.test.ts",
+      "status": "passed",
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "path": "tests/security/provider-types.test.ts",
+      "status": "passed",
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "path": "tests/security/secrets.test.ts",
+      "status": "passed",
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "path": "tests/report-repair/deployment.test.mjs",
+      "status": "passed",
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "path": "tests/report-repair/dimensions.test.ts",
+      "status": "passed",
+      "total": 5,
+      "passed": 5,
+      "failed": 0
+    },
+    {
+      "path": "tests/report-repair/routes.test.ts",
+      "status": "passed",
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "path": "tests/report-repair/samples-evidence.test.ts",
+      "status": "passed",
+      "total": 6,
+      "passed": 6,
+      "failed": 0
+    },
+    {
+      "path": "tests/sdk/typescript-sdk.test.ts",
+      "status": "passed",
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "path": "tests/security-scanning/scanner.test.ts",
+      "status": "passed",
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "path": "tests/security-alerts/candidate-text.test.ts",
+      "status": "passed",
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "path": "tests/security-alerts/projection-errors.test.ts",
+      "status": "passed",
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "path": "tests/security-alerts/record.test.ts",
+      "status": "passed",
+      "total": 6,
+      "passed": 6,
+      "failed": 0
+    },
+    {
+      "path": "tests/tenancy/credentials.test.ts",
+      "status": "passed",
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "path": "tests/tenancy/runtime.test.ts",
+      "status": "passed",
+      "total": 1,
+      "passed": 1,
+      "failed": 0
+    },
+    {
+      "path": "tests/tokenization/coverage.test.ts",
+      "status": "passed",
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "path": "tests/supply-chain/artifact-manifest.test.ts",
+      "status": "passed",
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "path": "tests/tools/action-firewall.test.ts",
+      "status": "passed",
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "path": "tests/tools/contracts.test.ts",
+      "status": "passed",
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "path": "tests/tools/execution.test.ts",
+      "status": "passed",
+      "total": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "path": "tests/tools/policy.test.ts",
+      "status": "passed",
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "path": "tests/stream-gate/sse-gate.test.ts",
+      "status": "passed",
+      "total": 13,
+      "passed": 13,
+      "failed": 0
+    },
+    {
+      "path": "tests/stream-gate/token-boundary.test.ts",
+      "status": "passed",
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    }
+  ]
+}

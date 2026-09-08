@@ -1,0 +1,96 @@
+{
+  "version": "multiformat-engineering-delivery-1",
+  "generatedAt": "2026-09-08T11:34:09.806337+00:00",
+  "baseCommit": "90432539830e11edd33c391d43a561bd5d153f56",
+  "branch": "main",
+  "unit": {
+    "numTotalTests": 1694,
+    "numPassedTests": 1694,
+    "numFailedTests": 0,
+    "numPendingTests": 0,
+    "success": true,
+    "evidence": "unit-summary.json"
+  },
+  "typecheck": "PASS",
+  "contracts": "PASS_BACKWARD_COMPATIBLE",
+  "nextProductionBuild": "PASS",
+  "analyzerContainerBuild": "PASS",
+  "analyzerImage": {
+    "tag": "guardllm-main-analyzer:multiformat-v1-20260908",
+    "manifestListDigest": "sha256:545827ed0624db53629f2c53db81c8af0bf28f6f13d6561c5c3521b3a3b2be99"
+  },
+  "lint": {
+    "lastFullRunErrors": 0,
+    "lastFullRunWarnings": 75,
+    "latestChangedFilesErrors": 0,
+    "latestChangedFilesWarnings": 0,
+    "fullRunEvidence": "lint-release.log",
+    "scopedEvidence": "lint-scoped-release.log"
+  },
+  "decoding": {
+    "documentImageSamples": 19,
+    "audioVideoSamples": 19,
+    "explicitPcmSamples": 1,
+    "total": 39,
+    "semanticQualification": false
+  },
+  "upload": {
+    "total": 48,
+    "passed": 48,
+    "validAccepted": 45,
+    "invalidQuarantined": 3
+  },
+  "security": {
+    "total": 6,
+    "passed": 6
+  },
+  "browser": "PASS_REAL_AUTH_UI_STORAGE_VERIFIER_TEXT_AND_SRT_INTAKE_WORKER",
+  "isolatedOnly": true,
+  "productionActivated": false,
+  "historicalReview": {
+    "total": 894,
+    "candidateFalsePositives": 180,
+    "strictBlockRegressions": 714,
+    "humanReviewed": false,
+    "independentHoldout": false
+  },
+  "quality": {
+    "status": "BLOCKED",
+    "targetReached": false,
+    "formalFprMeasured": false,
+    "formalFdrMeasured": false,
+    "minimums": {
+      "benign": 4000,
+      "risk": 4000
+    },
+    "gates": {
+      "fprUpper95": 0.01,
+      "fdrUpper95": 0.1,
+      "recall": 0.95,
+      "accuracy": 0.95
+    }
+  },
+  "allPlanTasksClosed": false,
+  "taskAudit": "../30_false-positive-multiformat.tasks.v1.json",
+  "excludedFromGit": [
+    "credentials",
+    "private keys",
+    "database dumps",
+    "raw business conversations",
+    "eval-data corpora",
+    "unrelated historical untracked artifacts"
+  ],
+  "sourceCommit": "01ed3dd5d2cf165d135e42a8062bf36f2ab84bae",
+  "nextProductionBuildEvidence": "app-build-release-final.log",
+  "typecheckEvidence": "typecheck-release.log",
+  "contractsEvidence": "contracts-release.log",
+  "syntheticFixtures": 45,
+  "subtitleMappingFormats": [
+    "SRT",
+    "VTT",
+    "ASS",
+    "SSA"
+  ],
+  "sourceManifest": "source-manifest.json",
+  "verificationScopeNote": "Browser/API evidence precedes the final malformed-subtitle linear-scan change; that change passed the final full unit suite, typecheck and production build. No semantic qualification is implied."
+}

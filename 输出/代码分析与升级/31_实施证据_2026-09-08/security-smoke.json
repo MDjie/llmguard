@@ -1,0 +1,35 @@
+{
+  "scope": "REAL_ISOLATED_OWNER_TENANT_IMMUTABILITY_MULTIPART",
+  "results": [
+    {
+      "test": "other-principal-read",
+      "status": 404,
+      "pass": true
+    },
+    {
+      "test": "other-principal-write",
+      "status": 409,
+      "pass": true
+    },
+    {
+      "test": "foreign-tenant-read",
+      "status": 404,
+      "pass": true
+    },
+    {
+      "test": "foreign-tenant-write",
+      "status": 409,
+      "pass": true
+    },
+    {
+      "test": "immutable-part-retains-original-bytes",
+      "state": "accepted",
+      "pass": true
+    },
+    {
+      "test": "17MiB-two-part-integrity",
+      "state": "accepted",
+      "pass": true
+    }
+  ]
+}

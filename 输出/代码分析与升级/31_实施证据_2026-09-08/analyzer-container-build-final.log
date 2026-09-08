@@ -1,0 +1,117 @@
+#0 building with "desktop-linux" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 1.93kB 0.0s done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/node:24.20.0-alpine
+#2 DONE 0.1s
+
+#3 [internal] load .dockerignore
+#3 transferring context: 1.36kB 0.0s done
+#3 DONE 0.1s
+
+#4 [internal] load build context
+#4 DONE 0.0s
+
+#5 [builder  1/18] FROM docker.io/library/node:24.20.0-alpine@sha256:e67514e5d0f6c46656005e1b693b2ec9d52e80b641307de684d4a015ba7a4eaf
+#5 resolve docker.io/library/node:24.20.0-alpine@sha256:e67514e5d0f6c46656005e1b693b2ec9d52e80b641307de684d4a015ba7a4eaf
+#5 resolve docker.io/library/node:24.20.0-alpine@sha256:e67514e5d0f6c46656005e1b693b2ec9d52e80b641307de684d4a015ba7a4eaf 0.1s done
+#5 DONE 0.1s
+
+#4 [internal] load build context
+#4 transferring context: 55.79kB 0.0s done
+#4 DONE 0.1s
+
+#6 [builder  2/18] RUN corepack enable && corepack prepare pnpm@11.19.0 --activate
+#6 CACHED
+
+#7 [builder  3/18] WORKDIR /workspace
+#7 CACHED
+
+#8 [builder  4/18] COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+#8 CACHED
+
+#9 [builder  5/18] COPY scripts/enforce-pnpm.mjs ./scripts/enforce-pnpm.mjs
+#9 CACHED
+
+#10 [builder  6/18] RUN pnpm install --frozen-lockfile
+#10 CACHED
+
+#11 [builder  7/18] COPY services/media-analyzer services/media-analyzer
+#11 DONE 0.1s
+
+#12 [builder  8/18] COPY tsconfig.json ./tsconfig.json
+#12 DONE 0.1s
+
+#13 [builder  9/18] COPY src/lib/media/formats/pcm.ts src/lib/media/formats/pcm.ts
+#13 DONE 0.1s
+
+#14 [builder 10/18] COPY src/lib/evidence/coordinate-mapping.ts src/lib/evidence/coordinate-mapping.ts
+#14 DONE 0.1s
+
+#15 [builder 11/18] COPY src/contracts/http/native-multimodal.ts src/contracts/http/native-multimodal.ts
+#15 DONE 0.4s
+
+#16 [builder 12/18] COPY src/contracts/http/media-transform.ts src/contracts/http/media-transform.ts
+#16 DONE 0.9s
+
+#17 [builder 13/18] COPY src/lib/multimodal/native-gate.ts src/lib/multimodal/native-gate.ts
+#17 DONE 1.0s
+
+#18 [builder 14/18] COPY src/lib/gateway-runtime/protocol.ts src/lib/gateway-runtime/protocol.ts
+#18 DONE 0.7s
+
+#19 [builder 15/18] COPY src/lib/gateway-runtime/native-content.ts src/lib/gateway-runtime/native-content.ts
+#19 DONE 0.9s
+
+#20 [builder 16/18] COPY src/lib/gateway-runtime/error.ts src/lib/gateway-runtime/error.ts
+#20 DONE 0.6s
+
+#21 [builder 17/18] COPY src/lib/gateway-runtime/completion-fields.ts src/lib/gateway-runtime/completion-fields.ts
+#21 DONE 0.4s
+
+#22 [builder 18/18] RUN pnpm analyzer:build
+#22 4.476 $ tsup --config services/media-analyzer/tsup.config.ts
+#22 6.268 CLI Building entry: services/media-analyzer/src/server.ts
+#22 6.268 CLI Using tsconfig: tsconfig.json
+#22 6.269 CLI tsup v8.5.1
+#22 6.269 CLI Using tsup config: /workspace/services/media-analyzer/tsup.config.ts
+#22 6.284 CLI Target: node24
+#22 6.318 CLI Cleaning output folder
+#22 6.321 ESM Build start
+#22 6.746 ESM services/media-analyzer/dist/server.mjs 630.30 KB
+#22 6.746 ESM ⚡️ Build success in 425ms
+#22 DONE 7.3s
+
+#23 [stage-1 2/6] RUN apk add --no-cache ca-certificates ffmpeg font-noto-cjk poppler-utils libreoffice libheif-tools tiff-tools tesseract-ocr tesseract-ocr-data-eng tesseract-ocr-data-chi_sim zbar
+#23 CACHED
+
+#24 [stage-1 3/6] RUN addgroup -S analyzer
+#24 CACHED
+
+#25 [stage-1 4/6] RUN adduser -S -G analyzer -u 10002 analyzer
+#25 CACHED
+
+#26 [stage-1 5/6] WORKDIR /app
+#26 CACHED
+
+#27 [stage-1 6/6] COPY --from=builder --chown=analyzer:analyzer /workspace/services/media-analyzer/dist/server.mjs /app/server.mjs
+#27 DONE 0.7s
+
+#28 exporting to image
+#28 exporting layers
+#28 exporting layers 1.9s done
+#28 exporting manifest sha256:1f8764d8e3accdb430ffca8848ed30ed8f9548d2dfa4dac1801a4c1cde25d58f
+#28 exporting manifest sha256:1f8764d8e3accdb430ffca8848ed30ed8f9548d2dfa4dac1801a4c1cde25d58f 0.3s done
+#28 exporting config sha256:9642ca2bc70b4919713ec283a01af1722ec9c17cbad30bb9b1d1be17fc0cc61e
+#28 exporting config sha256:9642ca2bc70b4919713ec283a01af1722ec9c17cbad30bb9b1d1be17fc0cc61e 0.3s done
+#28 exporting attestation manifest sha256:1326d18b2388e4516c3c95a2a448a13915c54908ec61218bf88cfa110aa43d81
+#28 exporting attestation manifest sha256:1326d18b2388e4516c3c95a2a448a13915c54908ec61218bf88cfa110aa43d81 0.6s done
+#28 exporting manifest list sha256:545827ed0624db53629f2c53db81c8af0bf28f6f13d6561c5c3521b3a3b2be99
+#28 exporting manifest list sha256:545827ed0624db53629f2c53db81c8af0bf28f6f13d6561c5c3521b3a3b2be99 0.3s done
+#28 naming to docker.io/library/guardllm-main-analyzer:multiformat-v1-20260908
+#28 naming to docker.io/library/guardllm-main-analyzer:multiformat-v1-20260908 0.0s done
+#28 unpacking to docker.io/library/guardllm-main-analyzer:multiformat-v1-20260908
+#28 unpacking to docker.io/library/guardllm-main-analyzer:multiformat-v1-20260908 0.5s done
+#28 DONE 4.5s

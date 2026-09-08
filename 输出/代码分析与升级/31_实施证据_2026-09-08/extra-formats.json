@@ -1,0 +1,38 @@
+{
+  "scope": "SYNTHETIC_CODEC_FIXTURES_ONLY",
+  "results": [
+    {
+      "extension": "doc",
+      "status": "GENERATED"
+    },
+    {
+      "extension": "odt",
+      "status": "GENERATED"
+    },
+    {
+      "extension": "xls",
+      "status": "GENERATED"
+    },
+    {
+      "extension": "ods",
+      "status": "GENERATED"
+    },
+    {
+      "extension": "ppt",
+      "status": "GENERATED"
+    },
+    {
+      "extension": "odp",
+      "status": "GENERATED"
+    },
+    {
+      "extension": "pcm",
+      "status": "GENERATED_AND_DECODED",
+      "parameters": {
+        "sampleRate": 16000,
+        "channels": 2,
+        "sampleFormat": "s16le"
+      }
+    }
+  ]
+}

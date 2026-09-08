@@ -1,0 +1,17 @@
+{
+  "reused": false,
+  "bundleId": "58cbd3dd-8b1b-44b2-90df-ce8e43545f1c",
+  "generation": 1,
+  "policyId": "default-policy-balanced",
+  "policyVersion": 4,
+  "contentHash": "039c12517d8312535bea9eb1ac92306362d37059dbe8b01dae692280c3d07f4f",
+  "signingKeyId": "isolated-test-v1",
+  "publicKeyFingerprint": "2d44cf91b2ac17af5965a16061d47307427039ebde9ac7be4914a8c79865eca4",
+  "dimensionCount": 16,
+  "ruleCount": 81,
+  "thresholdCount": 16,
+  "applicationBound": true,
+  "deploymentProfile": "local-compose",
+  "assuranceLevel": "operator-attested-development-only",
+  "externalApproval": false
+}

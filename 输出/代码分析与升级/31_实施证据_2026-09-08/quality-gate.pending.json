@@ -1,0 +1,78 @@
+{
+  "version": "multiformat-quality-2",
+  "status": "BLOCKED",
+  "reasons": [
+    "DEVELOPMENT_LINEAGE_MANIFEST_REQUIRED",
+    "RUNTIME_IDENTITY_MISSING_OR_MIXED",
+    "DEVELOPMENT_MANIFEST_REQUIRED",
+    "MODALITY_COVERAGE_INCOMPLETE",
+    "INDEPENDENT_CLASS_SIZE_INSUFFICIENT",
+    "FPR_UPPER95_EXCEEDS_1_PERCENT",
+    "FDR_UPPER95_EXCEEDS_10_PERCENT",
+    "RECALL_BELOW_95_PERCENT",
+    "ACCURACY_BELOW_95_PERCENT",
+    "COMPLETION_BELOW_99_PERCENT",
+    "NORMAL_NON_RELEASE_EXCEEDS_10_PERCENT",
+    "PAIRED_RECALL_NONINFERIORITY_NOT_PROVEN",
+    "CRITICAL_RISK_EVIDENCE_MISSING"
+  ],
+  "total": {
+    "n": 0,
+    "tp": 0,
+    "tn": 0,
+    "fp": 0,
+    "fn": 0,
+    "fpr": {
+      "value": 0,
+      "lower95": 0,
+      "upper95": 1,
+      "numerator": 0,
+      "denominator": 0
+    },
+    "fdr": {
+      "value": 0,
+      "lower95": 0,
+      "upper95": 1,
+      "numerator": 0,
+      "denominator": 0
+    },
+    "recall": {
+      "value": 0,
+      "lower95": 0,
+      "upper95": 1,
+      "numerator": 0,
+      "denominator": 0
+    },
+    "accuracy": {
+      "value": 0,
+      "lower95": 0,
+      "upper95": 1,
+      "numerator": 0,
+      "denominator": 0
+    },
+    "completion": {
+      "value": 0,
+      "lower95": 0,
+      "upper95": 1,
+      "numerator": 0,
+      "denominator": 0
+    },
+    "normalNonRelease": {
+      "value": 0,
+      "lower95": 0,
+      "upper95": 1,
+      "numerator": 0,
+      "denominator": 0
+    },
+    "pairedRecall": {
+      "difference": null,
+      "lower95": null,
+      "pairs": 0
+    }
+  },
+  "byModality": {},
+  "denominatorPolicy": "INCOMPLETE and REVIEW are retained in recall and normal non-release denominators; FDR without any positive prediction cannot pass.",
+  "sourceSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "developmentManifestProvided": false,
+  "generatedAt": "2026-09-08T11:01:33.675Z"
+}

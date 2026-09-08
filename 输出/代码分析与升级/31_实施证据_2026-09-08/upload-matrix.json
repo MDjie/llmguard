@@ -1,0 +1,389 @@
+{
+  "scope": "REAL_AUTHENTICATED_API_STORAGE_VERIFIER",
+  "results": [
+    {
+      "name": "audio.aac",
+      "state": "accepted",
+      "expected": "accepted",
+      "code": null,
+      "detectedType": "audio/aac",
+      "pass": true
+    },
+    {
+      "name": "audio.aiff",
+      "state": "accepted",
+      "expected": "accepted",
+      "code": null,
+      "detectedType": "audio/aiff",
+      "pass": true
+    },
+    {
+      "name": "audio.flac",
+      "state": "accepted",
+      "expected": "accepted",
+      "code": null,
+      "detectedType": "audio/flac",
+      "pass": true
+    },
+    {
+      "name": "audio.m4a",
+      "state": "accepted",
+      "expected": "accepted",
+      "code": null,
+      "detectedType": "audio/mp4",
+      "pass": true
+    },
+    {
+      "name": "audio.mp3",
+      "state": "accepted",
+      "expected": "accepted",
+      "code": null,
+      "detectedType": "audio/mpeg",
+      "pass": true
+    },
+    {
+      "name": "audio.ogg",
+      "state": "accepted",
+      "expected": "accepted",
+      "code": null,
+      "detectedType": "audio/ogg",
+      "pass": true
+    },
+    {
+      "name": "audio.opus",
+      "state": "accepted",
+      "expected": "accepted",
+      "code": null,
+      "detectedType": "audio/ogg",
+      "pass": true
+    },
+    {
+      "name": "audio.pcm",
+      "state": "accepted",
+      "expected": "accepted",
+      "code": null,
+      "detectedType": "audio/pcm",
+      "pass": true
+    },
+    {
+      "name": "audio.wav",
+      "state": "accepted",
+      "expected": "accepted",
+      "code": null,
+      "detectedType": "audio/wav",
+      "pass": true
+    },
+    {
+      "name": "audio.wma",
+      "state": "accepted",
+      "expected": "accepted",
+      "code": null,
+      "detectedType": "video/x-ms-wmv",
+      "pass": true
+    },
+    {
+      "name": "bom-utf16.txt",
+      "state": "accepted",
+      "expected": "accepted",
+      "code": null,
+      "detectedType": "text/plain",
+      "pass": true
+    },
+    {
+      "name": "legacy-gb18030.txt",
+      "state": "accepted",
+      "expected": "accepted",
+      "code": null,
+      "detectedType": "text/plain",
+      "pass": true
+    },
+    {
+      "name": "sample.ass",
+      "state": "accepted",
+      "expected": "accepted",
+      "code": null,
+      "detectedType": "text/plain",
+      "pass": true
+    },
+    {
+      "name": "sample.avif",
+      "state": "accepted",
+      "expected": "accepted",
+      "code": null,
+      "detectedType": "image/avif",
+      "pass": true
+    },
+    {
+      "name": "sample.bmp",
+      "state": "accepted",
+      "expected": "accepted",
+      "code": null,
+      "detectedType": "image/bmp",
+      "pass": true
+    },
+    {
+      "name": "sample.doc",
+      "state": "accepted",
+      "expected": "accepted",
+      "code": null,
+      "detectedType": "application/x-ole-storage",
+      "pass": true
+    },
+    {
+      "name": "sample.docx",
+      "state": "accepted",
+      "expected": "accepted",
+      "code": null,
+      "detectedType": "application/zip",
+      "pass": true
+    },
+    {
+      "name": "sample.gif",
+      "state": "accepted",
+      "expected": "accepted",
+      "code": null,
+      "detectedType": "image/gif",
+      "pass": true
+    },
+    {
+      "name": "sample.heic",
+      "state": "accepted",
+      "expected": "accepted",
+      "code": null,
+      "detectedType": "image/heif",
+      "pass": true
+    },
+    {
+      "name": "sample.jpg",
+      "state": "accepted",
+      "expected": "accepted",
+      "code": null,
+      "detectedType": "image/jpeg",
+      "pass": true
+    },
+    {
+      "name": "sample.odp",
+      "state": "accepted",
+      "expected": "accepted",
+      "code": null,
+      "detectedType": "application/zip",
+      "pass": true
+    },
+    {
+      "name": "sample.ods",
+      "state": "accepted",
+      "expected": "accepted",
+      "code": null,
+      "detectedType": "application/zip",
+      "pass": true
+    },
+    {
+      "name": "sample.odt",
+      "state": "accepted",
+      "expected": "accepted",
+      "code": null,
+      "detectedType": "application/zip",
+      "pass": true
+    },
+    {
+      "name": "sample.pdf",
+      "state": "accepted",
+      "expected": "accepted",
+      "code": null,
+      "detectedType": "application/pdf",
+      "pass": true
+    },
+    {
+      "name": "sample.png",
+      "state": "accepted",
+      "expected": "accepted",
+      "code": null,
+      "detectedType": "image/png",
+      "pass": true
+    },
+    {
+      "name": "sample.ppt",
+      "state": "accepted",
+      "expected": "accepted",
+      "code": null,
+      "detectedType": "application/x-ole-storage",
+      "pass": true
+    },
+    {
+      "name": "sample.pptx",
+      "state": "accepted",
+      "expected": "accepted",
+      "code": null,
+      "detectedType": "application/zip",
+      "pass": true
+    },
+    {
+      "name": "sample.rtf",
+      "state": "accepted",
+      "expected": "accepted",
+      "code": null,
+      "detectedType": "application/rtf",
+      "pass": true
+    },
+    {
+      "name": "sample.srt",
+      "state": "accepted",
+      "expected": "accepted",
+      "code": null,
+      "detectedType": "text/plain",
+      "pass": true
+    },
+    {
+      "name": "sample.ssa",
+      "state": "accepted",
+      "expected": "accepted",
+      "code": null,
+      "detectedType": "text/plain",
+      "pass": true
+    },
+    {
+      "name": "sample.tiff",
+      "state": "accepted",
+      "expected": "accepted",
+      "code": null,
+      "detectedType": "image/tiff",
+      "pass": true
+    },
+    {
+      "name": "sample.vtt",
+      "state": "accepted",
+      "expected": "accepted",
+      "code": null,
+      "detectedType": "text/plain",
+      "pass": true
+    },
+    {
+      "name": "sample.webp",
+      "state": "accepted",
+      "expected": "accepted",
+      "code": null,
+      "detectedType": "image/webp",
+      "pass": true
+    },
+    {
+      "name": "sample.xls",
+      "state": "accepted",
+      "expected": "accepted",
+      "code": null,
+      "detectedType": "application/x-ole-storage",
+      "pass": true
+    },
+    {
+      "name": "sample.xlsx",
+      "state": "accepted",
+      "expected": "accepted",
+      "code": null,
+      "detectedType": "application/zip",
+      "pass": true
+    },
+    {
+      "name": "video.3gp",
+      "state": "accepted",
+      "expected": "accepted",
+      "code": null,
+      "detectedType": "video/3gpp",
+      "pass": true
+    },
+    {
+      "name": "video.avi",
+      "state": "accepted",
+      "expected": "accepted",
+      "code": null,
+      "detectedType": "video/x-msvideo",
+      "pass": true
+    },
+    {
+      "name": "video.flv",
+      "state": "accepted",
+      "expected": "accepted",
+      "code": null,
+      "detectedType": "video/x-flv",
+      "pass": true
+    },
+    {
+      "name": "video.mkv",
+      "state": "accepted",
+      "expected": "accepted",
+      "code": null,
+      "detectedType": "video/x-matroska",
+      "pass": true
+    },
+    {
+      "name": "video.mov",
+      "state": "accepted",
+      "expected": "accepted",
+      "code": null,
+      "detectedType": "video/quicktime",
+      "pass": true
+    },
+    {
+      "name": "video.mp4",
+      "state": "accepted",
+      "expected": "accepted",
+      "code": null,
+      "detectedType": "video/mp4",
+      "pass": true
+    },
+    {
+      "name": "video.mpg",
+      "state": "accepted",
+      "expected": "accepted",
+      "code": null,
+      "detectedType": "video/mpeg",
+      "pass": true
+    },
+    {
+      "name": "video.ts",
+      "state": "accepted",
+      "expected": "accepted",
+      "code": null,
+      "detectedType": "video/mp2t",
+      "pass": true
+    },
+    {
+      "name": "video.webm",
+      "state": "accepted",
+      "expected": "accepted",
+      "code": null,
+      "detectedType": "video/webm",
+      "pass": true
+    },
+    {
+      "name": "video.wmv",
+      "state": "accepted",
+      "expected": "accepted",
+      "code": null,
+      "detectedType": "video/x-ms-wmv",
+      "pass": true
+    },
+    {
+      "name": "forged.png",
+      "state": "quarantined",
+      "expected": "quarantined",
+      "code": "GRD_ARTIFACT_MAGIC_MISMATCH",
+      "detectedType": null,
+      "pass": true
+    },
+    {
+      "name": "bad-tail.txt",
+      "state": "quarantined",
+      "expected": "quarantined",
+      "code": "GRD_ARTIFACT_TEXT_ENCODING_INVALID",
+      "detectedType": null,
+      "pass": true
+    },
+    {
+      "name": "wrong-hash.txt",
+      "state": "quarantined",
+      "expected": "quarantined",
+      "code": "GRD_ARTIFACT_HASH_MISMATCH",
+      "detectedType": null,
+      "pass": true
+    }
+  ]
+}

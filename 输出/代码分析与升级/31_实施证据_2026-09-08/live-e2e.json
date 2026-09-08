@@ -1,0 +1,104 @@
+{
+  "scope": "ISOLATED_ENGINEERING_NOT_QUALITY_ACCEPTANCE",
+  "results": [
+    {
+      "step": "database",
+      "status": 200
+    },
+    {
+      "step": "login-ui-api",
+      "status": 200
+    },
+    {
+      "step": "entry",
+      "path": "/document-scan",
+      "uploadInputs": 1
+    },
+    {
+      "step": "entry",
+      "path": "/",
+      "uploadInputs": 1
+    },
+    {
+      "step": "ui-upload-through-object-store-verifier",
+      "status": "ACCEPTED"
+    },
+    {
+      "step": "intake-submit",
+      "status": 202,
+      "jobId": "7fb3942a-0f17-4b0a-97ee-213a4b6d93ef"
+    },
+    {
+      "step": "worker-result",
+      "status": "completed",
+      "result": {
+        "action": "ALLOW",
+        "bundleId": "58cbd3dd-8b1b-44b2-90df-ce8e43545f1c",
+        "degraded": false,
+        "evidence": [],
+        "artifactId": "b7bdefa8-b5cf-476d-b936-9f0d6212dacf",
+        "jointEvidence": null,
+        "nativeBinding": null,
+        "sourceBinding": {
+          "version": "intake-1",
+          "artifacts": [
+            {
+              "id": "b7bdefa8-b5cf-476d-b936-9f0d6212dacf",
+              "kind": "TEXT",
+              "sha256": "e2dbc5b4e95d90dcdc108d890911ca16f26a45ca8a4bb46f122ad76ef3b70baf",
+              "mediaType": "text/plain",
+              "sizeBytes": 54
+            },
+            {
+              "id": "1b1b1c84-6d37-4370-b81a-96b0cab3ca50",
+              "kind": "TEXT",
+              "sha256": "6fa05dda2cf5f9ac9daa6849e3462062106642be16cad50bd25b1af4769b8f40",
+              "mediaType": "text/plain",
+              "sizeBytes": 128
+            }
+          ],
+          "taskPurpose": ""
+        },
+        "nativeCoverage": null,
+        "contractVersion": "1.0",
+        "analysisCoverage": [
+          {
+            "complete": true,
+            "encoding": "utf-8",
+            "artifactId": "b7bdefa8-b5cf-476d-b936-9f0d6212dacf",
+            "expectedChunks": 1,
+            "processedChunks": 1
+          },
+          {
+            "complete": true,
+            "encoding": "utf-8",
+            "artifactId": "1b1b1c84-6d37-4370-b81a-96b0cab3ca50",
+            "expectedChunks": 1,
+            "processedChunks": 1
+          }
+        ],
+        "nativeAssessment": null,
+        "degradationReasons": [],
+        "operationalOutcome": "COMPLETE",
+        "relationAssessment": {
+          "coverage": "COMPLETE",
+          "evidence": [],
+          "relations": [],
+          "reasonCodes": [],
+          "inspectedSources": 2
+        },
+        "releaseEligibility": {
+          "eligible": true,
+          "reasonCodes": [],
+          "executionPermitRequired": true
+        },
+        "analysisContractVersion": "intake-1"
+      },
+      "failures": []
+    },
+    {
+      "step": "browser-runtime",
+      "errors": []
+    }
+  ]
+}

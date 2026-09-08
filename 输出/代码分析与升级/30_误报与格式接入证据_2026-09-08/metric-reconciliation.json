@@ -1,0 +1,285 @@
+{
+  "schemaVersion": 1,
+  "operation": "READ_SAVED_EVIDENCE_ONLY",
+  "mainCommit": "90432539830e11edd33c391d43a561bd5d153f56",
+  "primaryGroup": "native_test_dedup_train_disjoint",
+  "baseline": {
+    "scored": 29859,
+    "positive": 12917,
+    "negative": 16942,
+    "tp": 368,
+    "fp": 139,
+    "tn": 16803,
+    "fn": 12549,
+    "fpr": 0.00820446228308346,
+    "fdr": 0.27416173570019725,
+    "recall": 0.028489587365487342,
+    "fprWilson95": [
+      0.006953214235934985,
+      0.009678680940565043
+    ],
+    "fdrWilson95": [
+      0.23713901592165743,
+      0.3145810020098174
+    ],
+    "recallWilson95": [
+      0.02575775082534329,
+      0.031501790759359403
+    ]
+  },
+  "candidate": {
+    "scored": 29859,
+    "positive": 12917,
+    "negative": 16942,
+    "tp": 319,
+    "fp": 86,
+    "tn": 16856,
+    "fn": 12598,
+    "fpr": 0.005076142131979695,
+    "fdr": 0.2123456790123457,
+    "recall": 0.024696136873887126,
+    "fprWilson95": [
+      0.004112483967230002,
+      0.006264189227075415
+    ],
+    "fdrWilson95": [
+      0.17531401681157305,
+      0.2547829193648851
+    ],
+    "recallWilson95": [
+      0.022157713048495103,
+      0.027517183193074914
+    ]
+  },
+  "sliceScope": "Dataset-deduplicated diagnostic slices; not independently train-disjoint aggregates",
+  "diagnosticSlices": {
+    "dedup-dataset:ToxicChat/test/input": {
+      "baseline": {
+        "scored": 4951,
+        "positive": 354,
+        "negative": 4597,
+        "tp": 22,
+        "fp": 40,
+        "tn": 4557,
+        "fn": 332,
+        "fpr": 0.008701326952360235,
+        "fdr": 0.6451612903225806,
+        "recall": 0.062146892655367235,
+        "fprWilson95": [
+          0.006396723824932786,
+          0.011826346796193266
+        ],
+        "fdrWilson95": [
+          0.5208113075778423,
+          0.752572671489501
+        ],
+        "recallWilson95": [
+          0.041395673045591,
+          0.09229889375603373
+        ]
+      },
+      "candidate": {
+        "scored": 4951,
+        "positive": 354,
+        "negative": 4597,
+        "tp": 20,
+        "fp": 9,
+        "tn": 4588,
+        "fn": 334,
+        "fpr": 0.001957798564281053,
+        "fdr": 0.3103448275862069,
+        "recall": 0.05649717514124294,
+        "fprWilson95": [
+          0.0010303654085678593,
+          0.003716909414132207
+        ],
+        "fdrWilson95": [
+          0.17275616744483216,
+          0.4923013423309317
+        ],
+        "recallWilson95": [
+          0.03686756437494799,
+          0.08564886780476219
+        ]
+      }
+    },
+    "dedup-dataset:WildGuardTest/test/input": {
+      "baseline": {
+        "scored": 1699,
+        "positive": 754,
+        "negative": 945,
+        "tp": 25,
+        "fp": 17,
+        "tn": 928,
+        "fn": 729,
+        "fpr": 0.01798941798941799,
+        "fdr": 0.40476190476190477,
+        "recall": 0.033156498673740056,
+        "fprWilson95": [
+          0.01126161551828169,
+          0.02862013550440961
+        ],
+        "fdrWilson95": [
+          0.27042861147481323,
+          0.5550568724996064
+        ],
+        "recallWilson95": [
+          0.02255772484101355,
+          0.04848808321556715
+        ]
+      },
+      "candidate": {
+        "scored": 1699,
+        "positive": 754,
+        "negative": 945,
+        "tp": 17,
+        "fp": 3,
+        "tn": 942,
+        "fn": 737,
+        "fpr": 0.0031746031746031746,
+        "fdr": 0.15,
+        "recall": 0.022546419098143235,
+        "fprWilson95": [
+          0.0010802262233507321,
+          0.009291853041530863
+        ],
+        "fdrWilson95": [
+          0.052368745896216595,
+          0.36041886474075696
+        ],
+        "recallWilson95": [
+          0.014123766603351873,
+          0.03580944618178746
+        ]
+      }
+    },
+    "dedup-dataset:XSTest/test/input": {
+      "baseline": {
+        "scored": 450,
+        "positive": 200,
+        "negative": 250,
+        "tp": 1,
+        "fp": 2,
+        "tn": 248,
+        "fn": 199,
+        "fpr": 0.008,
+        "fdr": 0.6666666666666666,
+        "recall": 0.005,
+        "fprWilson95": [
+          0.0021966371203094217,
+          0.02869452958320804
+        ],
+        "fdrWilson95": [
+          0.2076596008020477,
+          0.9385080552796037
+        ],
+        "recallWilson95": [
+          0.0008831687156009814,
+          0.02777370439789293
+        ]
+      },
+      "candidate": {
+        "scored": 450,
+        "positive": 200,
+        "negative": 250,
+        "tp": 0,
+        "fp": 0,
+        "tn": 250,
+        "fn": 200,
+        "fpr": 0.0,
+        "fdr": null,
+        "recall": 0.0,
+        "fprWilson95": [
+          8.673617379884035e-19,
+          0.015133299495444574
+        ],
+        "fdrWilson95": null,
+        "recallWilson95": [
+          1.734723475976807e-18,
+          0.018845326377266575
+        ]
+      }
+    }
+  },
+  "failureTriage": {
+    "scope": "All stored candidate failure rows, not the 29,859 paired eligible population",
+    "labelBasis": {
+      "source_label": 180
+    },
+    "riskTypeCounts": {
+      "violence_hate": 46,
+      "output.sexual.minor": 30,
+      "malicious_code": 29,
+      "self_harm": 17,
+      "illegal_content": 9,
+      "output.sexual.exploitation": 9,
+      "prompt_injection.relation": 6,
+      "output.sexual.explicit_adult": 6,
+      "adult_content": 5,
+      "prompt_injection.direct": 5,
+      "prompt_injection.refusal_suppression": 4,
+      "financial.bank_card": 3,
+      "pii.mobile": 2,
+      "pii.email": 2,
+      "sensitive.health": 2,
+      "prompt_injection.coercion": 2,
+      "output.insurance.individual_promise": 2,
+      "prompt_injection.adversarial_response": 2,
+      "fraud_scam": 1,
+      "insurance.marketing.high_pressure": 1,
+      "ad_detection": 1,
+      "resource_abuse.excessive_output": 1,
+      "resource_abuse.computation": 1,
+      "prompt_injection": 1,
+      "resource_abuse.recursion": 1,
+      "credential.secret": 1
+    },
+    "warning": "Labels are not expert-adjudicated; rows may match more than one risk type"
+  },
+  "qualityGate": {
+    "state": "BLOCKED",
+    "checks": {
+      "minCases": true,
+      "accuracy": false,
+      "recall": false,
+      "fpr": true,
+      "fnr": false,
+      "independentHoldout": false,
+      "reasonAlignmentReviewed": false
+    },
+    "thresholds": {
+      "minCases": 2000,
+      "accuracy": 0.95,
+      "recall": 0.95,
+      "fpr": 0.01,
+      "fnr": 0.05
+    },
+    "candidateActivationAllowed": false
+  },
+  "approvedGoals": {
+    "fprMaximum": 0.01,
+    "fdrMaximum": 0.1,
+    "preserveStricterExistingGates": true
+  },
+  "caveats": [
+    "Historical offline text replay; no judge/provider inference executed by this script.",
+    "FDR is label-based strict-block FDR, not human-reviewed production alert FDR.",
+    "No fresh independent holdout; reason alignment is not yet reviewed.",
+    "Zero blocking results means FDR is undefined, not zero.",
+    "Wilson intervals are descriptive and assume independent Bernoulli units; clustered production samples need cluster-aware intervals."
+  ],
+  "sources": [
+    {
+      "path": "输出/测试报告/2026-09-08/detection-repair-completion-v1/paired-analysis.json",
+      "sha256": "27e48044717f485ce12dc077c9223a977c5c280c8a3c58fe3d8b503463df7d98"
+    },
+    {
+      "path": "输出/测试报告/2026-09-08/detection-repair-completion-v1/independent-sql-verification.json",
+      "sha256": "d2e1a12032efe9f14f2ec9e7f6de2c9488891a1d07fc120aa66685b840249c76"
+    },
+    {
+      "path": "输出/测试报告/2026-09-08/detection-repair-completion-v1/candidate-failures.jsonl",
+      "sha256": "b03a455751d5d9f57a0e8cc2303a41cc5eeedd665415a3df2c88da46a166fdef"
+    }
+  ]
+}

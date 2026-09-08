@@ -1,0 +1,606 @@
+{
+  "schemaVersion": 1,
+  "planVersion": "1.0",
+  "createdOn": "2026-09-08",
+  "sourceCommit": "90432539830e11edd33c391d43a561bd5d153f56",
+  "planPath": "输出/代码分析与升级/30_误报治理与全入口多格式多模态接入优化方案_V1.0_2026-09-08.md",
+  "status": "PARTIALLY_IMPLEMENTED_NOT_ACCEPTED",
+  "testExecutionAllowed": true,
+  "userApprovedMetrics": {
+    "normalFalsePositiveRateMaximum": 0.1,
+    "blockedFalseDiscoveryRateMaximum": 0.1,
+    "preserveExistingStricterGates": true
+  },
+  "effectiveExistingAndApprovedGates": {
+    "normalFalsePositiveRateMaximum": 0.01,
+    "blockedFalseDiscoveryRateMaximum": 0.1,
+    "accuracyMinimum": 0.95,
+    "recallMinimum": 0.95,
+    "falseNegativeRateMaximum": 0.05,
+    "minimumCases": 2000
+  },
+  "proposedAdditionalGates": {
+    "independentBenignRequestsMinimum": 4000,
+    "independentRiskRequestsMinimum": 4000,
+    "primaryFpr95UpperBoundMaximum": 0.01,
+    "primaryFdr95UpperBoundMaximum": 0.1,
+    "supportedInBudgetFileCompletionMinimum": 0.99,
+    "pairedRecallDifference95LowerBoundMinimum": -0.01
+  },
+  "tasks": [
+    {
+      "id": "T01",
+      "title": "冻结验收与版本身份",
+      "priorityAndBatch": "P0/一",
+      "ownerRole": "架构+质量",
+      "status": "IN_PROGRESS",
+      "deliverables": "app/worker/analyzer/policy/model/parser/codec 清单，部署差异及配置预检",
+      "acceptance": "输出可复核基线；拒绝未展开占位符，敏感配置不出日志",
+      "dependsOn": [],
+      "existingFilesToReview": [
+        ".artifact-build/fullstack-acceptance-20260908/paused-state.json",
+        "src/app/api/health/route.ts"
+      ],
+      "evidenceRequired": true,
+      "executionAuthorization": "IMPLEMENT_AND_TEST",
+      "acceptanceStatus": "NOT_CLOSED",
+      "executionNote": "已冻结起始源码和运行环境，生产部署一致性与占位配置迁移待完成。",
+      "executionReport": "输出/代码分析与升级/31_误报治理与多格式接入_实施与验收记录_2026-09-08.md"
+    },
+    {
+      "id": "T02",
+      "title": "统一处置语义与错误",
+      "priorityAndBatch": "P0/一",
+      "ownerRole": "后端+前端",
+      "status": "IN_PROGRESS",
+      "deliverables": "修复分片异常仍 completed；保留真实 action、scoreMeaning、operationalOutcome",
+      "acceptance": "T01；局部异常不能安全完成，POLICY 不显示100%置信度",
+      "dependsOn": [
+        "T01"
+      ],
+      "existingFilesToReview": [
+        "src/lib/document/detector.ts",
+        "src/lib/detection/v2-compat.ts",
+        "src/app/document-scan/page.tsx"
+      ],
+      "evidenceRequired": true,
+      "executionAuthorization": "IMPLEMENT_AND_TEST",
+      "acceptanceStatus": "NOT_CLOSED",
+      "executionNote": "已实现原始动作/分数语义与故障分离；等待真实多模态质量验收。",
+      "executionReport": "输出/代码分析与升级/31_误报治理与多格式接入_实施与验收记录_2026-09-08.md"
+    },
+    {
+      "id": "T03",
+      "title": "格式/能力注册表",
+      "priorityAndBatch": "P0/一",
+      "ownerRole": "平台后端",
+      "status": "IN_PROGRESS",
+      "deliverables": "同源 registry、capabilities API、OCR兼容投影",
+      "acceptance": "T01；UI与API有效格式/限额一致",
+      "dependsOn": [
+        "T01"
+      ],
+      "existingFilesToReview": [
+        "src/lib/document/upload-security.ts",
+        "src/lib/artifacts/magic.ts",
+        "src/app/api/ocr-models/route.ts"
+      ],
+      "evidenceRequired": true,
+      "executionAuthorization": "IMPLEMENT_AND_TEST",
+      "acceptanceStatus": "NOT_CLOSED",
+      "executionNote": "共享注册表、能力API及OCR旧接口兼容投影已实现；逐profile真实资格待完成。",
+      "executionReport": "输出/代码分析与升级/31_误报治理与多格式接入_实施与验收记录_2026-09-08.md"
+    },
+    {
+      "id": "T04",
+      "title": "共用上传会话组件",
+      "priorityAndBatch": "P0/一",
+      "ownerRole": "前端",
+      "status": "IN_PROGRESS",
+      "deliverables": "shadcn 选择/拖拽/多文件/取消/重试，统一 Problem 展示",
+      "acceptance": "T03；后端拒绝原因与 requestId 可见",
+      "dependsOn": [
+        "T03"
+      ],
+      "existingFilesToReview": [
+        "src/app/document-scan/page.tsx",
+        "src/components/console/gateway-chat.tsx"
+      ],
+      "evidenceRequired": true,
+      "executionAuthorization": "IMPLEMENT_AND_TEST",
+      "acceptanceStatus": "NOT_CLOSED",
+      "executionNote": "统一上传组件、取消重试与录音已实现；真实录音设备和复杂中断矩阵待验收。",
+      "executionReport": "输出/代码分析与升级/31_误报治理与多格式接入_实施与验收记录_2026-09-08.md"
+    },
+    {
+      "id": "T05",
+      "title": "完整性及容器探测",
+      "priorityAndBatch": "P0/一",
+      "ownerRole": "媒体后端",
+      "status": "IN_PROGRESS",
+      "deliverables": "magic、MIME别名、ZIP/ftyp/EBML/流验证、配额",
+      "acceptance": "T03；有效MIME别名可用，伪装/跨租户/哈希错拒绝",
+      "dependsOn": [
+        "T03"
+      ],
+      "existingFilesToReview": [
+        "src/lib/artifacts/verifier.ts",
+        "src/lib/artifacts/magic.ts",
+        "src/lib/artifacts/service.ts"
+      ],
+      "evidenceRequired": true,
+      "executionAuthorization": "IMPLEMENT_AND_TEST",
+      "acceptanceStatus": "NOT_CLOSED",
+      "executionNote": "真实MIME/哈希/编码、所有者/租户、不可覆盖和多分片已验证；稀有容器矩阵待补。",
+      "executionReport": "输出/代码分析与升级/31_误报治理与多格式接入_实施与验收记录_2026-09-08.md"
+    },
+    {
+      "id": "T06",
+      "title": "文档转异步 Job 并打通图片",
+      "priorityAndBatch": "P0/一",
+      "ownerRole": "后端+前端",
+      "status": "IN_PROGRESS",
+      "deliverables": "`/document-scan`→Artifact/Worker，去掉固定501，使用实际可用适配器",
+      "acceptance": "T02/T04/T05；JPG/PNG真实OCR+视觉+告警定位闭环；仅去掉501不算完成",
+      "dependsOn": [
+        "T02",
+        "T04",
+        "T05"
+      ],
+      "existingFilesToReview": [
+        "src/app/api/document-scan/route.ts",
+        "src/lib/document/detector.ts",
+        "src/app/document-scan/page.tsx",
+        "src/lib/media/worker.ts"
+      ],
+      "evidenceRequired": true,
+      "executionAuthorization": "IMPLEMENT_AND_TEST",
+      "acceptanceStatus": "NOT_CLOSED",
+      "executionNote": "异步intake与图片入口已实现；真实OCR/VLM语义闭环等待服务配置与资格。",
+      "executionReport": "输出/代码分析与升级/31_误报治理与多格式接入_实施与验收记录_2026-09-08.md"
+    },
+    {
+      "id": "T07",
+      "title": "文本编码与结构解析",
+      "priorityAndBatch": "P1/二",
+      "ownerRole": "文档后端",
+      "status": "IN_PROGRESS",
+      "deliverables": "文本A格式、编码映射、字幕时间码、label未知处理",
+      "acceptance": "T05；文字不有损替换，`.ts`冲突可区分",
+      "dependsOn": [
+        "T05"
+      ],
+      "existingFilesToReview": [
+        "src/lib/document/parser.ts",
+        "src/lib/document/upload-security.ts"
+      ],
+      "evidenceRequired": true,
+      "executionAuthorization": "IMPLEMENT_AND_TEST",
+      "acceptanceStatus": "NOT_CLOSED",
+      "executionNote": "严格编码、全流校验、窗口边界、SRT/VTT/ASS/SSA时间码和原始字符映射已实现；复杂结构及语义验收待完成。",
+      "executionReport": "输出/代码分析与升级/31_误报治理与多格式接入_实施与验收记录_2026-09-08.md"
+    },
+    {
+      "id": "T08",
+      "title": "Office/PDF A格式",
+      "priorityAndBatch": "P1/二",
+      "ownerRole": "文档后端",
+      "status": "IN_PROGRESS",
+      "deliverables": "PDF混合页、DOC/DOCX/XLS/XLSX/PPT/PPTX/RTF，沙箱转换",
+      "acceptance": "T05/T06；表格/备注/扫描图片覆盖与定位",
+      "dependsOn": [
+        "T05",
+        "T06"
+      ],
+      "existingFilesToReview": [
+        "src/lib/document/converter.ts",
+        "src/lib/document/parser.ts",
+        "services/media-analyzer/src/document-image.ts"
+      ],
+      "evidenceRequired": true,
+      "executionAuthorization": "IMPLEMENT_AND_TEST",
+      "acceptanceStatus": "NOT_CLOSED",
+      "executionNote": "Office/PDF转换与隐藏工作表/PPTX备注文本实测通过；隐藏图片和旧二进制Office完整覆盖待补。",
+      "executionReport": "输出/代码分析与升级/31_误报治理与多格式接入_实施与验收记录_2026-09-08.md"
+    },
+    {
+      "id": "T09",
+      "title": "图片与文档 B格式",
+      "priorityAndBatch": "P1/二",
+      "ownerRole": "媒体后端",
+      "status": "IN_PROGRESS",
+      "deliverables": "动画/多页TIFF/HEIF/AVIF、ODF/WPS/OFD适配",
+      "acceptance": "T08；每个B profile真实样本鉴定，无静默漏页",
+      "dependsOn": [
+        "T08"
+      ],
+      "existingFilesToReview": [
+        "services/media-analyzer/src/document-image.ts",
+        "src/lib/document/converter.ts",
+        "src/lib/artifacts/magic.ts"
+      ],
+      "evidenceRequired": true,
+      "executionAuthorization": "IMPLEMENT_AND_TEST",
+      "acceptanceStatus": "NOT_CLOSED",
+      "executionNote": "GIF/TIFF/HEIC/AVIF/ODF工程实测；OFD适配器、WPS及剩余profile和特殊序列待完成。",
+      "executionReport": "输出/代码分析与升级/31_误报治理与多格式接入_实施与验收记录_2026-09-08.md"
+    },
+    {
+      "id": "T10",
+      "title": "统一模型角色配置",
+      "priorityAndBatch": "P0/一",
+      "ownerRole": "模型平台",
+      "status": "IN_PROGRESS",
+      "deliverables": "消除联合裁判glm硬编码漂移，分离文本/ASR/VLM资格",
+      "acceptance": "T01/T03；身份与协议可追溯，未经鉴定不得 ENFORCE",
+      "dependsOn": [
+        "T01",
+        "T03"
+      ],
+      "existingFilesToReview": [
+        "src/lib/multimodal/joint-evidence-judge.ts",
+        "src/lib/judge/profile-registry.ts",
+        "src/lib/judge/router.ts",
+        "services/media-analyzer/src/model-adapters.ts"
+      ],
+      "evidenceRequired": true,
+      "executionAuthorization": "IMPLEMENT_AND_TEST",
+      "acceptanceStatus": "NOT_CLOSED",
+      "executionNote": "glm-5.3-flash默认值和模型/角色/协议资格绑定已实现；实际服务尚未完成鉴定。",
+      "executionReport": "输出/代码分析与升级/31_误报治理与多格式接入_实施与验收记录_2026-09-08.md"
+    },
+    {
+      "id": "T11",
+      "title": "音频 A/B管线",
+      "priorityAndBatch": "P1/二",
+      "ownerRole": "媒体+模型",
+      "status": "IN_PROGRESS",
+      "deliverables": "多格式转码、分段ASR、对齐/置信契约、多轨完整性",
+      "acceptance": "T05/T10；30秒提供方边界正确，支持目录音频逐项完成",
+      "dependsOn": [
+        "T05",
+        "T10"
+      ],
+      "existingFilesToReview": [
+        "services/media-analyzer/src/audio-video.ts",
+        "services/media-analyzer/src/model-adapters.ts"
+      ],
+      "evidenceRequired": true,
+      "executionAuthorization": "IMPLEMENT_AND_TEST",
+      "acceptanceStatus": "NOT_CLOSED",
+      "executionNote": "多音轨/声道、30秒ASR和显式PCM已实现；实际ASR/音频分类及覆盖语义待完成。",
+      "executionReport": "输出/代码分析与升级/31_误报治理与多格式接入_实施与验收记录_2026-09-08.md"
+    },
+    {
+      "id": "T12",
+      "title": "视频 A/B管线",
+      "priorityAndBatch": "P1/二",
+      "ownerRole": "媒体+模型",
+      "status": "IN_PROGRESS",
+      "deliverables": "container/codec profile、字幕/全音轨、抽帧/闪现覆盖声明",
+      "acceptance": "T09/T11；原始时间线与风险定位一致，预算不足显式PARTIAL",
+      "dependsOn": [
+        "T09",
+        "T11"
+      ],
+      "existingFilesToReview": [
+        "services/media-analyzer/src/audio-video.ts",
+        "src/lib/media/sampling-plan.ts",
+        "src/lib/media/timeline-fusion.ts"
+      ],
+      "evidenceRequired": true,
+      "executionAuthorization": "IMPLEMENT_AND_TEST",
+      "acceptanceStatus": "NOT_CLOSED",
+      "executionNote": "多容器/字幕轨/时间映射已实现；真实视觉与短闪现、多轨攻击验收待完成。",
+      "executionReport": "输出/代码分析与升级/31_误报治理与多格式接入_实施与验收记录_2026-09-08.md"
+    },
+    {
+      "id": "T13",
+      "title": "聊天多附件和录音",
+      "priorityAndBatch": "P1/二",
+      "ownerRole": "全栈",
+      "status": "IN_PROGRESS",
+      "deliverables": "消息schema增量、上传组件、附件单独发送、受控原生路由",
+      "acceptance": "T04/T06/T10/T11/T12/T15；真实模型wire与释放凭证一致",
+      "dependsOn": [
+        "T04",
+        "T06",
+        "T10",
+        "T11",
+        "T12",
+        "T15"
+      ],
+      "existingFilesToReview": [
+        "src/app/api/chat/route.ts",
+        "src/components/console/gateway-chat.tsx",
+        "src/lib/gateway-runtime/native-content.ts",
+        "src/lib/gateway-runtime/native-execution.ts"
+      ],
+      "evidenceRequired": true,
+      "executionAuthorization": "IMPLEMENT_AND_TEST",
+      "acceptanceStatus": "NOT_CLOSED",
+      "executionNote": "聊天附件/录音、完整请求绑定已实现；文档和混合派生释放路由尚未完成。",
+      "executionReport": "输出/代码分析与升级/31_误报治理与多格式接入_实施与验收记录_2026-09-08.md"
+    },
+    {
+      "id": "T14",
+      "title": "模拟/评测/RAG入口统一",
+      "priorityAndBatch": "P1/二",
+      "ownerRole": "全栈+质量",
+      "status": "IN_PROGRESS",
+      "deliverables": "复用job、样本CSV/TSV/多媒体引用、UNKNOWN标签",
+      "acceptance": "T07/T11/T12/T15；所有业务入口走同一格式/来源/策略契约",
+      "dependsOn": [
+        "T07",
+        "T11",
+        "T12",
+        "T15"
+      ],
+      "existingFilesToReview": [
+        "src/app/api/simulate/route.ts",
+        "src/components/evaluation/sample-import-dialog.tsx",
+        "src/app/api/v1/guard/jobs/route.ts"
+      ],
+      "evidenceRequired": true,
+      "executionAuthorization": "IMPLEMENT_AND_TEST",
+      "acceptanceStatus": "NOT_CLOSED",
+      "executionNote": "模拟/样本导入共享检测入口和显式标签已实现；RAG多模态及实际评测manifest集成待完成。",
+      "executionReport": "输出/代码分析与升级/31_误报治理与多格式接入_实施与验收记录_2026-09-08.md"
+    },
+    {
+      "id": "T15",
+      "title": "任务上下文与缓存绑定",
+      "priorityAndBatch": "P0/一",
+      "ownerRole": "检测后端",
+      "status": "IN_PROGRESS",
+      "deliverables": "JudgmentContextV3、可信权限与不可信来源分离、缓存键更新",
+      "acceptance": "T01/T10；同文本不同任务/授权不复用错误结果",
+      "dependsOn": [
+        "T01",
+        "T10"
+      ],
+      "existingFilesToReview": [
+        "src/lib/judge/router.ts",
+        "src/lib/judge/response-schema.ts",
+        "src/lib/guard-engine-v2/coverage-judge.ts",
+        "src/lib/multimodal/source-content.ts"
+      ],
+      "evidenceRequired": true,
+      "executionAuthorization": "IMPLEMENT_AND_TEST",
+      "acceptanceStatus": "NOT_CLOSED",
+      "executionNote": "V3任务来源上下文和缓存绑定已实现并回归；真实裁判场景待验收。",
+      "executionReport": "输出/代码分析与升级/31_误报治理与多格式接入_实施与验收记录_2026-09-08.md"
+    },
+    {
+      "id": "T16",
+      "title": "反证复核状态机",
+      "priorityAndBatch": "P1/三",
+      "ownerRole": "检测+模型",
+      "status": "IN_PROGRESS",
+      "deliverables": "proposal/refiner/receipt、强制风险不撤销、证据核验",
+      "acceptance": "T02/T15；正常引述纠偏，独立高危和强制边界保留",
+      "dependsOn": [
+        "T02",
+        "T15"
+      ],
+      "existingFilesToReview": [
+        "src/lib/guard-engine-v2/coverage-judge.ts",
+        "src/lib/guard-engine-v2/aggregate.ts",
+        "src/lib/judge/response-schema.ts"
+      ],
+      "evidenceRequired": true,
+      "executionAuthorization": "IMPLEMENT_AND_TEST",
+      "acceptanceStatus": "NOT_CLOSED",
+      "executionNote": "局部反证与强制风险保护已实现并回归；独立纠偏/召回验收待完成。",
+      "executionReport": "输出/代码分析与升级/31_误报治理与多格式接入_实施与验收记录_2026-09-08.md"
+    },
+    {
+      "id": "T17",
+      "title": "长文档/混合证据图",
+      "priorityAndBatch": "P1/三",
+      "ownerRole": "检测+媒体",
+      "status": "IN_PROGRESS",
+      "deliverables": "邻域、章节/轨道关联、源定位、事件去重",
+      "acceptance": "T07/T12/T15/T16；跨片语义完整、重复证据不造重复事件",
+      "dependsOn": [
+        "T07",
+        "T12",
+        "T15",
+        "T16"
+      ],
+      "existingFilesToReview": [
+        "src/lib/document/parser.ts",
+        "src/lib/document/detector.ts",
+        "src/lib/multimodal/joint-evidence-judge.ts",
+        "src/lib/media/timeline-fusion.ts"
+      ],
+      "evidenceRequired": true,
+      "executionAuthorization": "IMPLEMENT_AND_TEST",
+      "acceptanceStatus": "NOT_CLOSED",
+      "executionNote": "长文偏移、去重和混合证据已实现；跨章节语义与大证据分层落盘待完善。",
+      "executionReport": "输出/代码分析与升级/31_误报治理与多格式接入_实施与验收记录_2026-09-08.md"
+    },
+    {
+      "id": "T18",
+      "title": "金融样本与判定表",
+      "priorityAndBatch": "P1/一至三",
+      "ownerRole": "安全专家+业务",
+      "status": "IN_PROGRESS",
+      "deliverables": "复核主FP及TP丢失，金融黑白对照、标签治理",
+      "acceptance": "T01；双人标注、来源隔离、逐风险理由正确",
+      "dependsOn": [
+        "T01"
+      ],
+      "existingFilesToReview": [
+        "输出/测试报告/2026-09-08/detection-repair-completion-v1/paired-analysis.json"
+      ],
+      "evidenceRequired": true,
+      "executionAuthorization": "IMPLEMENT_AND_TEST",
+      "acceptanceStatus": "NOT_CLOSED",
+      "executionNote": "生成894条历史开发复核队列（180候选FP/714严格BLOCK回退）；尚无双人复核及独立金融集。",
+      "executionReport": "输出/代码分析与升级/31_误报治理与多格式接入_实施与验收记录_2026-09-08.md"
+    },
+    {
+      "id": "T19",
+      "title": "校准及消融",
+      "priorityAndBatch": "P1/三",
+      "ownerRole": "模型+质量",
+      "status": "IN_PROGRESS",
+      "deliverables": "Base/Refiner策略、概率校准、按风险阈值与成本选择",
+      "acceptance": "T16/T17/T18/T22；独立集不参与调参，双误报目标且召回门禁通过",
+      "dependsOn": [
+        "T16",
+        "T17",
+        "T18",
+        "T22"
+      ],
+      "existingFilesToReview": [
+        "src/lib/judge/profile-registry.ts",
+        "src/lib/guard-engine-v2/coverage-judge.ts"
+      ],
+      "evidenceRequired": true,
+      "executionAuthorization": "IMPLEMENT_AND_TEST",
+      "acceptanceStatus": "NOT_CLOSED",
+      "executionNote": "统计与消融基础已准备；真实模型、审定开发集和独立集不足，未校准或证明目标。",
+      "executionReport": "输出/代码分析与升级/31_误报治理与多格式接入_实施与验收记录_2026-09-08.md"
+    },
+    {
+      "id": "T20",
+      "title": "运行预算与故障恢复",
+      "priorityAndBatch": "P1/二",
+      "ownerRole": "平台后端",
+      "status": "IN_PROGRESS",
+      "deliverables": "跨Worker配额、取消、租约重试、清理、幂等",
+      "acceptance": "T06/T10/T11；超时不漏放，重试不串版本",
+      "dependsOn": [
+        "T06",
+        "T10",
+        "T11"
+      ],
+      "existingFilesToReview": [
+        "src/lib/media/worker.ts",
+        "src/lib/judge/router.ts",
+        "src/lib/artifacts/service.ts"
+      ],
+      "evidenceRequired": true,
+      "executionAuthorization": "IMPLEMENT_AND_TEST",
+      "acceptanceStatus": "NOT_CLOSED",
+      "executionNote": "并发/RPM、租约、尝试隔离、ASR文件清理和公平轮转已实现；Artifact版本化物理清理及长时压测待完成。",
+      "executionReport": "输出/代码分析与升级/31_误报治理与多格式接入_实施与验收记录_2026-09-08.md"
+    },
+    {
+      "id": "T21",
+      "title": "证据及告警界面",
+      "priorityAndBatch": "P1/三",
+      "ownerRole": "前端+后端",
+      "status": "IN_PROGRESS",
+      "deliverables": "页/框/时间定位、正反证、覆盖、原始动作与处理错误分离",
+      "acceptance": "T02/T13/T14/T17；用户能还原同一次请求的完整链路",
+      "dependsOn": [
+        "T02",
+        "T13",
+        "T14",
+        "T17"
+      ],
+      "existingFilesToReview": [
+        "src/app/document-scan/page.tsx",
+        "src/components/console/gateway-chat.tsx"
+      ],
+      "evidenceRequired": true,
+      "executionAuthorization": "IMPLEMENT_AND_TEST",
+      "acceptanceStatus": "NOT_CLOSED",
+      "executionNote": "动作、覆盖、告警列表和定位已实现；真实媒体跳转及完整业务证据链待验收。",
+      "executionReport": "输出/代码分析与升级/31_误报治理与多格式接入_实施与验收记录_2026-09-08.md"
+    },
+    {
+      "id": "T22",
+      "title": "独立测试资产与运行器",
+      "priorityAndBatch": "P1/一至三",
+      "ownerRole": "质量+专家",
+      "status": "IN_PROGRESS",
+      "deliverables": "冻结语义集、格式/codec语料、真实联通用例、统计脚本",
+      "acceptance": "T01/T18；成组无泄漏，标签任务匹配；恢复测试后执行",
+      "dependsOn": [
+        "T01",
+        "T18"
+      ],
+      "existingFilesToReview": [
+        "playwright.config.ts",
+        "tests/e2e/app-connectivity.spec.ts",
+        "tests/e2e/gateway-workspace.spec.ts"
+      ],
+      "evidenceRequired": true,
+      "executionAuthorization": "IMPLEMENT_AND_TEST",
+      "acceptanceStatus": "NOT_CLOSED",
+      "executionNote": "已增加真实codec、API、浏览器和权限运行器；独立语义资产和完整profile矩阵待补。",
+      "executionReport": "输出/代码分析与升级/31_误报治理与多格式接入_实施与验收记录_2026-09-08.md"
+    },
+    {
+      "id": "T23",
+      "title": "全链路与质量验收",
+      "priorityAndBatch": "P1/三",
+      "ownerRole": "质量+全栈",
+      "status": "IN_PROGRESS",
+      "deliverables": "执行第11节、缺陷回修、独立验收报告",
+      "acceptance": "T06–T22相关任务完成且测试已恢复；G0–G4通过",
+      "dependsOn": [
+        "T06",
+        "T07",
+        "T08",
+        "T09",
+        "T10",
+        "T11",
+        "T12",
+        "T13",
+        "T14",
+        "T15",
+        "T16",
+        "T17",
+        "T18",
+        "T19",
+        "T20",
+        "T21",
+        "T22"
+      ],
+      "existingFilesToReview": [
+        "playwright.config.ts",
+        "tests/e2e/app-connectivity.spec.ts"
+      ],
+      "evidenceRequired": true,
+      "executionAuthorization": "IMPLEMENT_AND_TEST",
+      "acceptanceStatus": "NOT_CLOSED",
+      "executionNote": "工程回归已执行；G0-G4正式质量验收未通过，不标记完成。",
+      "executionReport": "输出/代码分析与升级/31_误报治理与多格式接入_实施与验收记录_2026-09-08.md"
+    },
+    {
+      "id": "T24",
+      "title": "灰度与交付关闭",
+      "priorityAndBatch": "P1/三",
+      "ownerRole": "架构+运维+安全",
+      "status": "PLANNED",
+      "deliverables": "影子、签名策略、配置迁移、回退、业务FDR观察、任务闭环",
+      "acceptance": "T23；G5与发布条件满足，全部格式/入口有证据后关闭",
+      "dependsOn": [
+        "T23"
+      ],
+      "existingFilesToReview": [
+        "src/lib/judge/profile-registry.ts"
+      ],
+      "evidenceRequired": true,
+      "executionAuthorization": "IMPLEMENT_AND_TEST",
+      "acceptanceStatus": "NOT_CLOSED",
+      "executionNote": "交付代码与回退说明；未做影子灰度或生产激活，等待T23/G5。",
+      "executionReport": "输出/代码分析与升级/31_误报治理与多格式接入_实施与验收记录_2026-09-08.md"
+    }
+  ],
+  "executionAuthorization": "User requested full implementation, verification, commit and push to main on 2026-09-08",
+  "lastEngineeringVerification": {
+    "evidencePath": "输出/代码分析与升级/31_实施证据_2026-09-08/engineering-verification.json",
+    "targetQualityReached": false,
+    "sourceDelivery": "Source committed on main; remote push is verified in the user-facing delivery response.",
+    "sourceCommit": "01ed3dd5d2cf165d135e42a8062bf36f2ab84bae"
+  },
+  "allTasksCompleted": false,
+  "qualityAccepted": false,
+  "productionActivated": false
+}
