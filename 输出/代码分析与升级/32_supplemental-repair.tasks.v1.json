@@ -376,9 +376,10 @@
       "constraints": "保留原件；不能截断证据来凑4MiB；对象版本、授权访问、保留/删除与幂等必须覆盖全部分块。",
       "acceptance": "大文档与多媒体超过4MiB、部分上传、重试、授权消费、hold/删除冲突。",
       "dependsOn": [],
-      "latestAudit": "G轮新增NormalizedAsset父子SHA、转换版本、完整文本/坐标/时段及attempt隔离；>4MiB原件真实PG/MinIO、幂等/所有者/摘要/取消检查通过。派生RAG文本闭环已过，混合聊天许可协议与完整媒体消费仍未关闭。",
+      "latestAudit": "H轮标准派生件已接通聊天控制面及目标请求归档；完整上下文与父子摘要重检通过。大媒体/PDF预览产物和完整媒体消费仍有剩余工程。",
       "latestEvidence": [
-        "输出/代码分析与升级/34_接续修复证据_2026-09-09/verification.json"
+        "输出/代码分析与升级/34_接续修复证据_2026-09-09/verification.json",
+        "输出/代码分析与升级/35_剩余任务证据_2026-09-09/verification.json"
       ]
     },
     {
@@ -388,7 +389,7 @@
       "originalTasks": [
         "T13"
       ],
-      "status": "OPEN",
+      "status": "PARTIAL_VERIFIED",
       "deliverables": "基于R04构造精确目标模型wire并重检原件+派生件；许可绑定任务、所有者、原/派生SHA、目标模型、策略与完整请求摘要。",
       "constraints": "只有对应转换/profile/目标模型通过资格才启用；文档转换文本不宣称原生视觉覆盖；不放大现有1MiB原生限制。",
       "acceptance": "相同原文换附件、重排、跨用户、改目标、过期、转换漂移均拒绝；真实模型wire联通。",
@@ -396,7 +397,10 @@
         "R04",
         "R10"
       ],
-      "latestAudit": "混合/文档聊天仍受资格门限制，尚未完成标准派生件到精确目标模型wire的受控释放。"
+      "latestAudit": "H轮实现完整对话绑定、DERIVED引用、转换/profile/策略/模型路由资格、精确目标wire加密归档和发送前撤销。27项真实PG/MinIO/文本引擎/签名控制面检查通过；尚未调用真实上游模型或完成文档/混合资格，不升级为全部完成。",
+      "latestEvidence": [
+        "输出/代码分析与升级/35_剩余任务证据_2026-09-09/verification.json"
+      ]
     },
     {
       "id": "R06",
@@ -456,9 +460,10 @@
       "dependsOn": [
         "R04"
       ],
-      "latestAudit": "G轮实现原Artifact purge ledger、受控前缀确切版本、签名TTL等待、引用/hold及租约保护、空版本后返还配额。标准资产与清理13项实PG/MinIO检查通过，含故障/版本回写；TTL为受控合成边界。默认部署因自动审批拒绝未启用，长期运行/引用释放验收仍待完成。",
+      "latestAudit": "G轮13项清理保护继续通过；H轮新增6项真实进程崩溃/重启、租约保护、剩余版本恢复及子件删除后父件引用释放。TTL/部分租约为受控时间；实际先前崩溃也已在租约到期后恢复。默认Worker仍未启用，长期运行与部署验收未闭合。",
       "latestEvidence": [
-        "输出/代码分析与升级/34_接续修复证据_2026-09-09/verification.json"
+        "输出/代码分析与升级/34_接续修复证据_2026-09-09/verification.json",
+        "输出/代码分析与升级/35_剩余任务证据_2026-09-09/verification.json"
       ]
     },
     {
@@ -475,7 +480,10 @@
       "dependsOn": [
         "R04"
       ],
-      "latestAudit": "F轮原文独立授权、一次读取、位置高亮、关闭清除、反馈双人复核和候选下载通过；完整音视频定位仍依赖标准派生资产，不宣称整体完成。"
+      "latestAudit": "H轮接通当前音轨v2时间坐标，校验音轨起点/时长/精度；视频记录源时长，播放器校验完整区间并显示关联证据，补充解析器/模型身份及覆盖失败信息。旧无时长映射不提供跳转。PDF/intake原件专属授权与完整浏览器正反证交互仍待完成。",
+      "latestEvidence": [
+        "输出/代码分析与升级/35_剩余任务证据_2026-09-09/verification.json"
+      ]
     },
     {
       "id": "R10",
@@ -552,9 +560,10 @@
         "R10",
         "R11"
       ],
-      "latestAudit": "G轮增量工程已验证：1757单测、构建/类型/静态/协议检查、103表1635字段、派生资产/RAG/清理及浏览器回归。初次J17缺前置清单失败，修复后独立重跑通过，未声称单次冷启动全绿；R05/R09和真实语义/资格/G0-G5仍未关闭。",
+      "latestAudit": "H轮增量27项派生聊天控制面、6项清理恢复、13项清理回归、10项RAG回归及1767单元通过；不是完整浏览器冷启动，不替代G0-G5、真实角色、质量或生产资格。",
       "latestEvidence": [
-        "输出/代码分析与升级/34_接续修复证据_2026-09-09/verification.json"
+        "输出/代码分析与升级/34_接续修复证据_2026-09-09/verification.json",
+        "输出/代码分析与升级/35_剩余任务证据_2026-09-09/verification.json"
       ]
     }
   ],
@@ -569,5 +578,6 @@
     "latestIncrementalEvidence": "输出/代码分析与升级/34_接续修复证据_2026-09-09/verification.json",
     "allDevelopmentComplete": false
   },
-  "latestDevelopmentAudit": "2026-09-09"
+  "latestDevelopmentAudit": "2026-09-09",
+  "latestSupplementalRun": ".artifact-build/comprehensive-resume-20260909-h"
 }

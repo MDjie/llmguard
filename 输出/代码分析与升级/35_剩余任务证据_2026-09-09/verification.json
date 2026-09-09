@@ -1,0 +1,428 @@
+{
+  "version": "remaining-work-verification-1",
+  "date": "2026-09-09",
+  "baselineHead": "7da0ffcb4b87ca05e47f72bcc824be28ff92dc07",
+  "run": "H",
+  "coldRun": false,
+  "status": "PARTIAL_VERIFIED",
+  "allDevelopmentComplete": false,
+  "qualityAccepted": false,
+  "productionActivated": false,
+  "realUpstreamModelCalled": false,
+  "browserAcceptanceThisRound": false,
+  "defaultPurgeWorkerEnabled": false,
+  "scope": "ISOLATED_PG_MINIO_TEXT_ENGINE_AND_SIGNED_GATEWAY_CONTROL_PLANE",
+  "unit": {
+    "status": "PASS",
+    "total": 1767,
+    "passed": 1767,
+    "failed": 0,
+    "skipped": 0
+  },
+  "integration": {
+    "derivedChat": {
+      "status": "PASS",
+      "count": 27,
+      "checks": [
+        {
+          "id": "FULL_CONTEXT_REAL_INTAKE_BOUND",
+          "status": "PASS"
+        },
+        {
+          "id": "CONTEXT_BOUND_SUBMISSION_IDEMPOTENT",
+          "status": "PASS"
+        },
+        {
+          "id": "CHANGED_CONTEXT_IDEMPOTENCY_CONFLICT",
+          "status": "PASS"
+        },
+        {
+          "id": "UNCONFIGURED_ROUTE_DENIED",
+          "status": "PASS"
+        },
+        {
+          "id": "EXACT_TEXT_WIRE_ORDER_AND_SOURCE_PROVENANCE",
+          "status": "PASS"
+        },
+        {
+          "id": "PROMPT_CHANGE_AFTER_4096_CHARS_REJECTED",
+          "status": "PASS"
+        },
+        {
+          "id": "REORDERED_OR_REPLACED_ATTACHMENTS_REJECTED",
+          "status": "PASS"
+        },
+        {
+          "id": "OWNER_AND_TENANT_ISOLATION",
+          "status": "PASS"
+        },
+        {
+          "id": "MODEL_AND_ROUTING_CHANGE_REJECTED",
+          "status": "PASS"
+        },
+        {
+          "id": "SIGNED_PROJECTION_PROOF_REVALIDATES_REAL_OBJECTS",
+          "status": "PASS"
+        },
+        {
+          "id": "SIGNED_PROOF_TAMPER_REJECTED",
+          "status": "PASS"
+        },
+        {
+          "id": "MANDATORY_ARCHIVE_CANNOT_BE_BYPASSED",
+          "status": "PASS"
+        },
+        {
+          "id": "LIVE_ADAPTER_REVOCATION_RECHECKED",
+          "status": "PASS"
+        },
+        {
+          "id": "TRANSFORM_VERSION_DRIFT_REJECTED",
+          "status": "PASS"
+        },
+        {
+          "id": "ORIGINAL_REVOCATION_RECHECKED",
+          "status": "PASS"
+        },
+        {
+          "id": "CHILD_DIGEST_CHANGE_REJECTED",
+          "status": "PASS"
+        },
+        {
+          "id": "STALE_JOB_CANNOT_RELEASE",
+          "status": "PASS"
+        },
+        {
+          "id": "TARGET_WIRE_BUDGET_ENFORCED",
+          "status": "PASS"
+        },
+        {
+          "id": "INCOMPLETE_DETECTION_CANNOT_RELEASE",
+          "status": "PASS"
+        },
+        {
+          "id": "GATEWAY_AUTHORIZATION_ARCHIVES_DERIVED_PROVENANCE",
+          "status": "PASS"
+        },
+        {
+          "id": "REAL_GATEWAY_RECHECKS_FULL_PROJECTED_INPUT",
+          "status": "PASS"
+        },
+        {
+          "id": "PROJECTED_INPUT_REWRITE_REQUIRES_NEW_ANALYSIS",
+          "status": "PASS"
+        },
+        {
+          "id": "SEND_INTENT_REQUIRES_DURABLE_MODEL_INPUT",
+          "status": "PASS"
+        },
+        {
+          "id": "TARGET_MODEL_WIRE_TAMPER_REJECTED",
+          "status": "PASS"
+        },
+        {
+          "id": "EXACT_TARGET_MODEL_WIRE_ENCRYPTED_AND_READ_BACK",
+          "status": "PASS"
+        },
+        {
+          "id": "SIGNED_REQUEST_RECEIVES_SEND_INTENT_AFTER_CHECKS",
+          "status": "PASS"
+        },
+        {
+          "id": "ADAPTER_REVOCATION_BEFORE_SEND_START_REJECTED",
+          "status": "PASS"
+        }
+      ],
+      "rawEvidence": ".artifact-build/comprehensive-resume-20260909-h/derived-chat.json"
+    },
+    "purgeRecovery": {
+      "status": "PASS",
+      "count": 6,
+      "checks": [
+        {
+          "id": "REAL_WORKER_CRASH_PRESERVES_LEDGER_AND_QUOTA",
+          "status": "PASS"
+        },
+        {
+          "id": "RESTART_CANNOT_STEAL_LIVE_LEASE",
+          "status": "PASS"
+        },
+        {
+          "id": "FRESH_PROCESS_RESUMES_EXACT_REMAINING_VERSION",
+          "status": "PASS"
+        },
+        {
+          "id": "EXPIRED_PARENT_RETAINED_WHILE_CHILD_REFERENCES_IT",
+          "status": "PASS"
+        },
+        {
+          "id": "CHILD_PURGE_RELEASES_PARENT_REFERENCE_ON_RESTART",
+          "status": "PASS"
+        },
+        {
+          "id": "COMPLETED_LEDGER_IS_IDEMPOTENT_AFTER_RESTART",
+          "status": "PASS"
+        }
+      ],
+      "rawEvidence": ".artifact-build/comprehensive-resume-20260909-h/purge-recovery.json"
+    },
+    "normalizedPurge": {
+      "status": "PASS",
+      "count": 13,
+      "checks": [
+        {
+          "id": "NORMALIZED_REAL_OBJECT_AND_PARENT_DIGEST",
+          "status": "PASS"
+        },
+        {
+          "id": "NORMALIZED_IDEMPOTENT_RETRY",
+          "status": "PASS"
+        },
+        {
+          "id": "NORMALIZED_OWNER_ISOLATION",
+          "status": "PASS"
+        },
+        {
+          "id": "NORMALIZED_DIGEST_TAMPER_REJECTED",
+          "status": "PASS"
+        },
+        {
+          "id": "NORMALIZED_CANCELLED_ATTEMPT_FENCED",
+          "status": "PASS"
+        },
+        {
+          "id": "PURGE_INTERRUPTED_UPLOAD_QUEUED_IDEMPOTENTLY",
+          "status": "PASS"
+        },
+        {
+          "id": "PURGE_NEW_UPLOAD_SIGNATURE_REJECTED",
+          "status": "PASS"
+        },
+        {
+          "id": "PURGE_WAIT_FOR_SIGNED_UPLOAD_EXPIRY",
+          "status": "PASS"
+        },
+        {
+          "id": "PURGE_HOLD_WINS_BEFORE_CLAIM",
+          "status": "PASS"
+        },
+        {
+          "id": "PURGE_FAILED_DELETE_RETAINS_QUOTA",
+          "status": "PASS"
+        },
+        {
+          "id": "PURGE_VERSION_REWRITE_RETAINS_QUOTA",
+          "status": "PASS"
+        },
+        {
+          "id": "PURGE_EXACT_VERSIONS_AND_HOLD_RACE",
+          "status": "PASS"
+        },
+        {
+          "id": "PURGE_QUOTA_RELEASED_AFTER_EMPTY_VERSION_CHECK",
+          "status": "PASS"
+        }
+      ],
+      "rawEvidence": ".artifact-build/comprehensive-resume-20260909-h/normalized-purge-final.json"
+    },
+    "normalizedRag": {
+      "status": "PASS",
+      "count": 10,
+      "checks": [
+        {
+          "id": "MANIFEST_WRONG_SOURCE_DIGEST_REJECTED",
+          "status": "PASS"
+        },
+        {
+          "id": "REAL_TEXT_INTAKE_CREATED_NORMALIZED_ASSET",
+          "status": "PASS"
+        },
+        {
+          "id": "MEDIA_RAG_SUBMISSION_IDEMPOTENT",
+          "status": "PASS"
+        },
+        {
+          "id": "MEDIA_RAG_OWNER_ISOLATION",
+          "status": "PASS"
+        },
+        {
+          "id": "REAL_NORMALIZED_RAG_INGEST_PERSISTED_OWNER_ACL",
+          "status": "PASS"
+        },
+        {
+          "id": "RAG_FOREIGN_PRINCIPAL_CANNOT_READ_PROJECTION",
+          "status": "PASS"
+        },
+        {
+          "id": "RAG_ORIGINAL_REVOCATION_RECHECKED",
+          "status": "PASS"
+        },
+        {
+          "id": "RAG_INTAKE_RESULT_DIGEST_CHANGE_REJECTED",
+          "status": "PASS"
+        },
+        {
+          "id": "CANCELLED_MEDIA_RAG_CANNOT_INDEX",
+          "status": "PASS"
+        },
+        {
+          "id": "INCOMPLETE_MEDIA_COVERAGE_CANNOT_INDEX",
+          "status": "PASS"
+        }
+      ],
+      "rawEvidence": ".artifact-build/comprehensive-resume-20260909-h/normalized-rag.json"
+    }
+  },
+  "builds": {
+    "typescript": {
+      "status": "PASS",
+      "exitCode": 0,
+      "elapsedMs": 36314,
+      "rawEvidence": ".artifact-build/comprehensive-resume-20260909-h/typecheck-final-pass.json"
+    },
+    "analyzerBuild": {
+      "status": "PASS",
+      "exitCode": 0,
+      "elapsedMs": 1432,
+      "rawEvidence": ".artifact-build/comprehensive-resume-20260909-h/analyzer-build.json"
+    },
+    "productionBuild": {
+      "status": "PASS",
+      "exitCode": 0,
+      "elapsedMs": 29606,
+      "rawEvidence": ".artifact-build/comprehensive-resume-20260909-h/production-build.json"
+    }
+  },
+  "lint": {
+    "status": "PASS",
+    "scope": "ALL_CHANGED_AND_NEW_CODE",
+    "exitCode": 0,
+    "errors": 0,
+    "warnings": 0
+  },
+  "publicContracts": {
+    "status": "PASS",
+    "command": "pnpm contracts:check",
+    "exitCode": 0
+  },
+  "purgeClock": "CONTROLLED_SYNTHETIC_TTL_AND_LEASE_PLUS_OBSERVED_REAL_RESTART",
+  "knownInitialFailures": [
+    "Isolated signing key absent; fixed with process-local synthetic keypair",
+    "Repeated immutable PUT correctly returned 412; test changed to valid separate parts",
+    "Windows crash exit code differed; persisted crash marker and object state now verified",
+    "Console reference metadata caused a comparison mismatch; fixed by explicit identity projection",
+    "Video duration variable and integration type import corrected",
+    "Existing processing context expectation updated for derived flag"
+  ],
+  "evidenceHandling": "Initial failure logs and reports retained. Temporary stage/test filename collision corrected and RAG details regenerated.",
+  "remaining": [
+    "R04/R09 PDF and intake-original preview scope, derived preview assets and complete browser workflow",
+    "R01/R07 rare profiles and embedded media qualification",
+    "R05/R06/R10 real model and mixed media acceptance",
+    "R11/FX12 independent dual labels, ablation, calibration and quality gates",
+    "R08 long-running retention and deployment acceptance",
+    "FX03/FX05/R12 qualification-driven publication and G0-G5/shadow/canary"
+  ],
+  "sourceIdentity": {
+    "workingTree": true,
+    "files": [
+      {
+        "path": "scripts/integration/comprehensive/derived-chat.ts",
+        "sha256": "74ba0110a24ead84cd67c60d9903eb2a719749286b9a27e43cc50cde25a9078c"
+      },
+      {
+        "path": "scripts/integration/comprehensive/derived-gateway.ts",
+        "sha256": "313c237b8b63b71d44ae3d17c70455b1e81844d077f99dc34424a528c1d5fd3c"
+      },
+      {
+        "path": "scripts/integration/comprehensive/purge-recovery-child.ts",
+        "sha256": "0b2e9bb39305b0ddf8f831a710879f053ae6df45026e66754b3ba7a8925773b8"
+      },
+      {
+        "path": "scripts/integration/comprehensive/purge-recovery.ts",
+        "sha256": "22f868ba6d408f4a0b79584860abd297c038ad3c3584f3dd0c625a017df7c489"
+      },
+      {
+        "path": "scripts/integration/comprehensive/run.mjs",
+        "sha256": "4d527c1156eab6ee75808891a16e4e102edc731dd34447f6328f017cb21074c2"
+      },
+      {
+        "path": "services/media-analyzer/src/audio-video.ts",
+        "sha256": "03bfc27b9723ae65dc32e9f4690c2c4295622e7a26da0f189365cc17ce600c05"
+      },
+      {
+        "path": "src/app/api/chat/attachments/route.ts",
+        "sha256": "a9ed7d32baa21b87f2da9af48e23ee0f08da616c0673dfca7c66a70b2d24cf0a"
+      },
+      {
+        "path": "src/components/console/gateway-chat.tsx",
+        "sha256": "fa0c4c8f2b60306f4c588cd753b6609162933aa247e82f62120d06128bcaaa19"
+      },
+      {
+        "path": "src/components/incidents/authorized-media.tsx",
+        "sha256": "05bc43c84267aaf3a44f9ae162a0a519a1b2372304aae023b432487b01a64ac7"
+      },
+      {
+        "path": "src/components/media/intake-evidence.tsx",
+        "sha256": "fce54ceedbb0b14a4ce1f6e543fcb1ff4b8c1271b1a8981b6d83395c431036e2"
+      },
+      {
+        "path": "src/contracts/http/gateway-chat.ts",
+        "sha256": "0279bf1876e8d8e301d571f79b96af7ffe71c9fa81942e379164a644c7d5b49c"
+      },
+      {
+        "path": "src/contracts/http/media-evidence.ts",
+        "sha256": "1c5b5a30a53239f77c636a8322186608d7f1ae8ed427e42155238b4fea6b66fa"
+      },
+      {
+        "path": "src/lib/evidence/media-annotations.ts",
+        "sha256": "2b2dee60c111d0e636b3d87f3bc0a01dd4b5bedc9fe6d9f7a6287e908afcda60"
+      },
+      {
+        "path": "src/lib/evidence/media-preview.ts",
+        "sha256": "2bc13ff75b88e47700d282d629aae255ff760a25f449e6358852f8e730951ec0"
+      },
+      {
+        "path": "src/lib/gateway-runtime/artifact-context.ts",
+        "sha256": "573ea46ad533a1dc0042ae5aac388b99e8b8a91a8ed34895c98a905c7fb8285b"
+      },
+      {
+        "path": "src/lib/gateway-runtime/derived-execution.ts",
+        "sha256": "c94299d4d4d8ae53c56a3da970111c01dc4a637922e08b8862aedcef99c28c55"
+      },
+      {
+        "path": "src/lib/gateway-runtime/evaluation.ts",
+        "sha256": "a8f44229933047856037c984adb4f4d2dbb95aaa481b72c7c291c5bf240d03ab"
+      },
+      {
+        "path": "src/lib/gateway-runtime/processing-context.ts",
+        "sha256": "ee94220f79be1ac1ecc22a2ac4d348f24062ca46cc24b2d19419715806592090"
+      },
+      {
+        "path": "src/lib/guard-jobs/intake-binding.ts",
+        "sha256": "7f2335b0460d3b35b7f104211a1eaba7aa56983b0e779cea3ba105ca92b0274f"
+      },
+      {
+        "path": "src/lib/guard-jobs/service.ts",
+        "sha256": "cb3184cd5a8db0bed30ca5ecbc4d2edced08249220a0291a2f273ccec57ea94c"
+      },
+      {
+        "path": "src/lib/media/intake-worker.ts",
+        "sha256": "039dc66b9273860792a8b33e9b0997b36a7d33d1e587bb7290065c4e97b62500"
+      },
+      {
+        "path": "tests/gateway-runtime/derived-execution.test.ts",
+        "sha256": "3a8a8944c252a471a202e2f46f790372d190654dd16a3b7b606d6d5cb5b1fc88"
+      },
+      {
+        "path": "tests/gateway-runtime/processing-context.test.ts",
+        "sha256": "a5c42586f31f19b2e051f1b1db4a486fa995e7a78f9b0bddb443fad5de49245f"
+      },
+      {
+        "path": "tests/multimodal/media-preview.test.ts",
+        "sha256": "278c73087daae5f9f4dca00c16b1c4564b174874553e1fa2c6d47e152c91d383"
+      }
+    ],
+    "sha256": "45935ceb57e696f669e237357fea3566235af345cd8520c72ed1c8fac84d7d55"
+  }
+}
