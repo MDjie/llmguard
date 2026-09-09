@@ -27,6 +27,8 @@ try{
  if(!await command('provision',['scripts/integration/comprehensive/provision.mjs',out]))throw new Error('PROVISION_REQUIRED');
  if(!await command('build',envRun('next','build')))throw new Error('BUILD_REQUIRED');
  await command('unit',['node_modules/vitest/vitest.mjs','run','--reporter=json','--outputFile='+out+'/unit-results.json']);
+ if(!await command('derived-chat',envRun('tsx','scripts/integration/comprehensive/derived-chat.ts')))throw new Error('DERIVED_CHAT_VALIDATION_REQUIRED');
+ if(!await command('purge-recovery',envRun('tsx','scripts/integration/comprehensive/purge-recovery.ts')))throw new Error('PURGE_RECOVERY_VALIDATION_REQUIRED');
  if(!await command('normalized-purge',envRun('tsx','scripts/integration/comprehensive/normalized-purge.ts')))throw new Error('NORMALIZED_PURGE_VALIDATION_REQUIRED');
  if(!await command('normalized-rag',envRun('tsx','scripts/integration/comprehensive/normalized-rag.ts')))throw new Error('NORMALIZED_RAG_VALIDATION_REQUIRED');
  if(!await command('start',['scripts/integration/comprehensive/start.mjs',out]))throw new Error('START_REQUIRED');ready=true;
