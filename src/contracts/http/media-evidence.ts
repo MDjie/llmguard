@@ -10,6 +10,9 @@ export const evidenceSnapshotSchema=z.object({version:z.literal('media-evidence-
 export const mediaEvidenceMetadataSchema=z.object({id:z.string().regex(/^[a-f0-9]{64}$/),jobId:z.uuid(),state:z.enum(['PENDING','OBJECT_WRITTEN','READY','DELETE_PENDING','DELETED']),
  sourceDigest:z.string().regex(/^[a-f0-9]{64}$/),createdAt:z.iso.datetime(),expiresAt:z.iso.datetime(),holdUntil:z.iso.datetime().nullable(),errorCode:z.string().nullable()}).strict();
 
-export const mediaAnnotationSchema=z.object({evidenceId:z.string().min(1).max(128),label:z.string().max(512),region:z.tuple([z.number().min(0).max(1),z.number().min(0).max(1),z.number().min(0).max(1),z.number().min(0).max(1)]).optional(),startMs:z.number().int().nonnegative().optional(),endMs:z.number().int().nonnegative().optional()}).strict();
+export const mediaAnnotationSchema=z.object({evidenceId:z.string().min(1).max(128),label:z.string().max(512),region:z.tuple([z.number().min(0).max(1),z.number().min(0).max(1),z.number().min(0).max(1),z.number().min(0).max(1)]).optional(),startMs:z.number().int().nonnegative().optional(),endMs:z.number().int().nonnegative().optional()}).strict().superRefine((value,context)=>{
+ if((value.startMs===undefined)!==(value.endMs===undefined)||(value.startMs!==undefined&&value.endMs!<value.startMs))context.addIssue({code:'custom',message:'Invalid annotation interval'});
+ if(value.region&&(value.region[2]<=value.region[0]||value.region[3]<=value.region[1]))context.addIssue({code:'custom',message:'Invalid annotation rectangle'});
+});
 export type MediaAnnotation=z.infer<typeof mediaAnnotationSchema>;
 export const mediaProvenanceSchema=z.object({version:z.literal('media-source-provenance-1'),jobId:z.uuid(),artifactId:z.string(),sourceDigest:z.string().regex(/^[a-f0-9]{64}$/),views:z.array(evidenceLocationSchema).max(10000),mappings:z.array(z.record(z.string(),z.unknown())).max(10000)}).strict();

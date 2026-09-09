@@ -733,7 +733,7 @@ export async function analyzeAudioVideo(
         reasonCodes:[...analysisFailures.map(f=>f.code),...(request.artifact.kind==='VIDEO'?['FRAME_SAMPLING_NOT_FULL_SEMANTIC_PROOF']:[])]},
       format: metadata.format,
       durationMs: metadata.durationMs,
-      coordinateMappings:[...coordinateMappings,...frames.map(frame=>({viewId:'frame_'+frame.frameIndex,mappingVersion:'video-frame-to-source-1',basis:'SOURCE_TIME_MS',frameIndex:frame.frameIndex,timeMs:frame.timeMs}))],
+      coordinateMappings:[...coordinateMappings,...frames.map(frame=>({viewId:'frame_'+frame.frameIndex,mappingVersion:'video-frame-to-source-1',basis:'SOURCE_TIME_MS',frameIndex:frame.frameIndex,timeMs:frame.timeMs,sourceDurationMs:metadata.durationMs}))],
       transcript,
       subtitles,
       frames: frames.slice(0, request.sampling.maxFrames),

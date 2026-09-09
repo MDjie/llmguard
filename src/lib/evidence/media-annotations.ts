@@ -19,7 +19,11 @@ export function authorizedMediaAnnotations(artifactId:string,sha256:string,mimeT
    if((mimeType.startsWith('audio/')||mimeType==='video/mp4')&&location.startMs!==undefined&&location.endMs!==undefined&&mapping.mappingVersion==='audio-time-to-source-1'&&mapping.basis==='SOURCE_TIME_MS'&&z.number().int().positive().safeParse(mapping.sourceDurationMs).success&&location.endMs<=Number(mapping.sourceDurationMs)){
     entry.startMs=location.startMs;entry.endMs=location.endMs;
    }
-   if(mimeType==='video/mp4'&&location.frameIndex!==undefined&&mapping.mappingVersion==='video-frame-to-source-1'&&mapping.basis==='SOURCE_TIME_MS'&&mapping.frameIndex===location.frameIndex&&mapping.timeMs===location.startMs&&location.startMs===location.endMs){entry.startMs=location.startMs;entry.endMs=location.endMs;}
+   if((mimeType.startsWith('audio/')||mimeType==='video/mp4')&&location.startMs!==undefined&&location.endMs!==undefined&&mapping.mappingVersion==='audio-time-to-source-2'){
+    const timeline=z.object({basis:z.literal('SOURCE_TIME_MS'),sourceStartMs:z.number().int().nonnegative(),sourceDurationMs:z.number().int().positive(),sampleRate:z.number().int().positive(),sampleCount:z.number().int().positive(),timeScale:z.number().positive(),mappingAccuracy:z.enum(['SOURCE_TIME','NOMINAL_RATE'])}).loose().safeParse(mapping);
+    if(timeline.success&&location.startMs>=timeline.data.sourceStartMs&&location.endMs<=timeline.data.sourceStartMs+timeline.data.sourceDurationMs&&((timeline.data.timeScale===1&&timeline.data.mappingAccuracy==='SOURCE_TIME')||(timeline.data.timeScale!==1&&timeline.data.mappingAccuracy==='NOMINAL_RATE'))){entry.startMs=location.startMs;entry.endMs=location.endMs;}
+   }
+   if(mimeType==='video/mp4'&&location.frameIndex!==undefined&&mapping.mappingVersion==='video-frame-to-source-1'&&mapping.basis==='SOURCE_TIME_MS'&&mapping.frameIndex===location.frameIndex&&mapping.timeMs===location.startMs&&location.startMs===location.endMs&&z.number().int().positive().safeParse(mapping.sourceDurationMs).success&&location.endMs!==undefined&&location.endMs<=Number(mapping.sourceDurationMs)){entry.startMs=location.startMs;entry.endMs=location.endMs;}
    if(entry.region||entry.startMs!==undefined)result.push(entry);
   }
  }
