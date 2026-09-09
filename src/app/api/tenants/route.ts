@@ -1,4 +1,6 @@
-import { asc, eq } from 'drizzle-orm';
+import { and, asc, eq, inArray } from 'drizzle-orm';
+import { userApplicationMemberships } from '@/lib/iam/schema';
+import { defaultGrantAttributes } from '@/lib/iam/policy';
 import { NextResponse } from 'next/server';
 import { withApiSecurity } from '@/lib/api-security';
 import { requireTenantContext } from '@/lib/tenancy';
@@ -43,11 +45,12 @@ export const GET = withApiSecurity(
   },
   async ({ principal }) => {
     const scope = requireTenantContext(principal);
-    const systemAdmin = principal?.roles.includes('SYSTEM_ADMIN');
+    const memberships = await db.select({tenantId:tenantMemberships.tenantId}).from(tenantMemberships)
+      .where(and(eq(tenantMemberships.userId,principal!.subject),eq(tenantMemberships.status,'active')));
     const rows = await db
       .select()
       .from(tenants)
-      .where(systemAdmin ? undefined : eq(tenants.id, scope.tenantId))
+      .where(inArray(tenants.id, memberships.map(row=>row.tenantId).concat(scope.tenantId)))
       .orderBy(asc(tenants.code));
     return NextResponse.json({ items: rows.map(tenantDto) });
   },
@@ -78,6 +81,8 @@ export const POST = withApiSecurity(
         userId: principal!.subject,
         defaultApplicationId: application.id,
       });
+      await transaction.insert(userApplicationMemberships).values({userId:principal!.subject,tenantId:tenant.id,
+        applicationId:application.id,attributes:defaultGrantAttributes,grantedBy:principal!.subject});
       return { tenant, application };
     });
     return NextResponse.json({

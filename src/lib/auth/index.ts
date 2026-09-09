@@ -18,16 +18,12 @@ export {
 } from './password';
 export {
   changePasswordAndRevokeSessions,
-  createManagedUser,
-  deleteManagedUser,
   findUserByEmail,
   findUserById,
   findUserByUsername,
-  listUsers,
   listRecentPasswordHashes,
   nextLoginFailureState,
   revokeUserSessions,
-  updateManagedUser,
   updateOwnProfile,
 } from './repository';
 export { getJwtSecret, issueSession, verifySessionToken } from './session';

@@ -164,7 +164,7 @@ export default function ProvidersPage() {
       const data = await response.json();
 
       if (data.success) {
-        toast.success(editingProvider ? '供应商更新成功' : '供应商创建成功');
+        toast.success('模型配置已保存并保持停用，请提交独立上线审批');
         setShowForm(false);
         setEditingProvider(null);
         loadProviders();
@@ -219,6 +219,7 @@ export default function ProvidersPage() {
   };
 
   const handleToggle = async (provider: LLMProvider) => {
+    if(!provider.isEnabled){window.location.assign('/iam-approvals');return;}
     try {
       const response = await fetch(`/api/providers?id=${provider.id}`, {
         method: 'PUT',
@@ -229,7 +230,7 @@ export default function ProvidersPage() {
       const data = await response.json();
 
       if (data.success) {
-        toast.success(provider.isEnabled ? '供应商已停用' : '供应商已启用');
+        toast.success('供应商已停用；重新上线需独立审批');
         loadProviders();
       } else {
         toast.error(data.detail || data.error || '操作失败');
@@ -502,7 +503,7 @@ export default function ProvidersPage() {
                     </div>
                     <div className="flex gap-1">
                       <Badge variant={provider.isEnabled ? 'default' : 'secondary'}>
-                        {provider.isEnabled ? '已启用' : '已停用'}
+                        {provider.isEnabled ? '已启用' : '停用 / 待审批'}<span className="ml-2 select-all text-xs">{provider.id}</span>
                       </Badge>
                     </div>
                   </div>

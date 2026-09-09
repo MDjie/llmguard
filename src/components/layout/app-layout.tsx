@@ -36,6 +36,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTr
 import { UserProfileModal } from '@/components/login/user-profile-modal';
 import { csrfHeaders } from '@/lib/auth/csrf-client';
 import type { Permission } from '@/lib/api-security';
+import { landingForRole } from '@/lib/iam/oidc-config';
 
 // 导航分组结构
 interface NavigationItem {
@@ -64,9 +65,11 @@ const navigationGroups: readonly {
   {
     title: '配置管理',
     items: [
+      { name: '账户与授权', href: '/users', icon: UserCog, desc: '账户、角色与应用授权', permission: 'iam:users:read' },
+      { name: '授权审批', href: '/iam-approvals', icon: CheckCircle, desc: '权限变更和应急访问', permission: 'profile:self:write' },
       { name: '应用接入', href: '/applications', icon: Building2, desc: '应用、凭据与运行版本', permission: 'application:read' },
       { name: '检测维度', href: '/dimensions', icon: Layers, desc: '维度与规则配置', permission: 'policy:read' },
-      { name: '白名单规则', href: '/whitelist', icon: CheckCircle, desc: '安全内容放行', permission: 'policy:manage' },
+      { name: '白名单规则', href: '/whitelist', icon: CheckCircle, desc: '安全内容放行', permission: 'policy:read' },
       { name: '安全策略', href: '/policies', icon: Settings, desc: '检测策略管理', permission: 'policy:manage' },
       { name: '敏感词典', href: '/dictionaries', icon: BookOpenCheck, desc: '分层词典与版本治理', permission: 'policy:read' },
       { name: '响应模板', href: '/response-templates', icon: MessagesSquare, desc: '代答模板与复检治理', permission: 'policy:read' },
@@ -168,6 +171,7 @@ export function AppLayout({
         if (res.ok) {
           const data = await res.json();
           if (data.success && data.user) {
+            if(pathname==='/' && !data.user.permissions.includes('guard:use')){router.replace(landingForRole(String(data.user.role)));return;}
             if (data.user.mustChangePassword) {
               router.replace('/change-password');
               return;
@@ -379,7 +383,8 @@ export function AppLayout({
         </div>
       </aside>
       <main id="main-content" tabIndex={-1} className="console-content min-h-screen min-w-0 px-3 pb-6 pt-[76px] outline-none sm:px-5 md:ml-[188px]">
-        {children}
+        {navigationGroups.flatMap(group=>group.items).some(item=>(pathname===item.href||(item.href!=='/'&&pathname.startsWith(item.href+'/')))&&!user?.permissions.includes(item.permission)) ?
+          <div className="rounded-lg border p-8"><h1 className="text-xl font-semibold">无权访问此页面</h1><p className="mt-2 text-muted-foreground">当前账户未获得该功能权限，请从左侧选择已授权功能。</p></div> : children}
       </main>
       <UserProfileModal open={showProfileModal} onOpenChange={setShowProfileModal} user={user}
         onUserUpdate={(updatedUser) => setUser((current) => (current ? { ...current, ...updatedUser } : current))} />

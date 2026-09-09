@@ -138,7 +138,7 @@ export function createRequestContext(
   request: NextRequest,
   now: () => number,
 ): RequestContext {
-  const search = request.nextUrl.search;
+  const search = request.nextUrl.pathname.startsWith('/api/auth/oidc/') ? '' : request.nextUrl.search;
   return {
     requestId: randomUUID(),
     traceId: traceIdFrom(request),

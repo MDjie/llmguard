@@ -22,6 +22,8 @@ const sessionClaimsSchema = z.object({
     'READ_ONLY',
   ]),
   tokenVersion: z.number().int().nonnegative(),
+  authenticationStrength: z.enum(['password','mfa']).default('password'),
+  identityProvider: z.string().max(512).optional(),
   iat: z.number().int().positive(),
   exp: z.number().int().positive(),
   iss: z.literal(SESSION_ISSUER),
@@ -29,6 +31,8 @@ const sessionClaimsSchema = z.object({
 });
 
 export interface SessionClaims {
+  readonly authenticationStrength: 'password' | 'mfa';
+  readonly identityProvider?: string;
   readonly sub: string;
   readonly jti: string;
   readonly username: string;
@@ -41,6 +45,9 @@ export interface SessionClaims {
 }
 
 export interface SessionUser {
+  readonly authenticationStrength?: 'password' | 'mfa';
+  readonly identityProvider?: string;
+  readonly maxAgeSeconds?: number;
   readonly id: string;
   readonly username: string;
   readonly role: PlatformRole;
@@ -66,12 +73,15 @@ export function issueSession(
   rememberMe: boolean,
   secret = getJwtSecret(),
 ): IssuedSession {
-  const maxAgeSeconds = rememberMe ? REMEMBERED_SESSION_SECONDS : DEFAULT_SESSION_SECONDS;
+  const requestedAge = rememberMe ? REMEMBERED_SESSION_SECONDS : DEFAULT_SESSION_SECONDS;
+  const maxAgeSeconds = Math.max(1, Math.min(requestedAge, user.maxAgeSeconds ?? requestedAge));
   const token = sign(
     {
       username: user.username,
       role: user.role,
       tokenVersion: user.tokenVersion,
+      authenticationStrength: user.authenticationStrength ?? 'password',
+      ...(user.identityProvider ? { identityProvider: user.identityProvider } : {}),
     },
     secret,
     {

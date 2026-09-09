@@ -10,10 +10,15 @@ import { Eye, EyeOff, User, Lock, Shield, RefreshCw, Headphones, HelpCircle } fr
 import { toast } from 'sonner';
 import { ContactModal } from '@/components/login/contact-modal';
 import { HelpModal } from '@/components/login/help-modal';
+import { landingForRole } from '@/lib/iam/oidc-config';
 
 export default function LoginPage() {
   const router = useRouter();
   const [username, setUsername] = useState('');
+  const [enterpriseEnabled,setEnterpriseEnabled] = useState(false);
+  useEffect(()=>{void fetch('/api/auth/oidc/config').then(async response=>{
+    if(response.ok){const data:unknown=await response.json();setEnterpriseEnabled(typeof data==='object'&&data!==null&&'enabled' in data&&data.enabled===true);}
+  }).catch(()=>undefined);},[]);
   const [password, setPassword] = useState('');
   const [captcha, setCaptcha] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -78,7 +83,7 @@ export default function LoginPage() {
         if (rememberMe) {
           localStorage.setItem('rememberedUsername', username);
         }
-        router.push(data.user?.mustChangePassword ? '/change-password' : '/');
+        router.push(data.user?.mustChangePassword ? '/change-password' : landingForRole(String(data.user?.role)));
       } else {
         const message = response.status >= 500
           ? '认证服务暂不可用，请稍后重试'
@@ -143,6 +148,7 @@ export default function LoginPage() {
               <div className="blue-line" />
 
               <form onSubmit={handleLogin} className="form">
+                {enterpriseEnabled && <Button type="button" variant="outline" onClick={()=>{window.location.assign('/api/auth/oidc/start');}}>企业登录（多因素认证）</Button>}
                 {/* 用户名 */}
                 <div className="field">
                   <User className="field-icon" />

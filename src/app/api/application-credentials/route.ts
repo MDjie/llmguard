@@ -47,6 +47,7 @@ export const GET = withApiSecurity(
       eq(applicationCredentials.tenantId, scope.tenantId),
       eq(applicationCredentials.applicationId, scope.applicationId),
       isNull(applicationCredentials.revokedAt),
+      principal!.roles.includes('APP_DEVELOPER') ? eq(applicationCredentials.createdBy,principal!.subject) : undefined,
     )).orderBy(desc(applicationCredentials.createdAt));
     return NextResponse.json({ items: rows.map(credentialDto) });
   },
@@ -107,6 +108,7 @@ export const DELETE = withApiSecurity(
     const scope = requireTenantContext(principal);
     await db.update(applicationCredentials).set({ revokedAt: new Date() }).where(and(
       eq(applicationCredentials.id, query.id),
+      principal!.roles.includes('APP_DEVELOPER') ? eq(applicationCredentials.createdBy,principal!.subject) : undefined,
       eq(applicationCredentials.tenantId, scope.tenantId),
       eq(applicationCredentials.applicationId, scope.applicationId),
       isNull(applicationCredentials.revokedAt),

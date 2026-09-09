@@ -1,96 +1,45 @@
-import bcrypt from 'bcrypt';
-import postgres from 'postgres';
+import { randomUUID } from 'node:crypto';
+import { and,eq,inArray,sql } from 'drizzle-orm';
+import { z } from 'zod';
 
-const usernamePattern = /^[A-Za-z0-9._-]{3,50}$/;
-
-function requiredEnvironment(name: string): string {
-  const value = process.env[name]?.trim();
-  if (!value) throw new Error(`${name} is required`);
-  return value;
-}
-
-function validatePassword(password: string, username: string): void {
-  const valid =
-    Array.from(password).length >= 12 &&
-    Buffer.byteLength(password, 'utf8') <= 72 &&
-    /[A-Z]/.test(password) &&
-    /[a-z]/.test(password) &&
-    /\d/.test(password) &&
-    /[^A-Za-z\d]/.test(password) &&
-    !password.toLocaleLowerCase('en-US').includes(username.toLocaleLowerCase('en-US'));
-  if (!valid) {
-    throw new Error(
-      'BOOTSTRAP_ADMIN_PASSWORD must be 12+ characters with upper/lower/digit/symbol and must not contain the username',
-    );
-  }
-}
-
-async function main(): Promise<void> {
-  const databaseUrl =
-    process.env.PGDATABASE_URL ?? process.env.COZE_SUPABASE_DB_URL ?? process.env.DATABASE_URL;
-  if (!databaseUrl) throw new Error('PGDATABASE_URL or DATABASE_URL is required');
-
-  const username = process.env.BOOTSTRAP_ADMIN_USERNAME?.trim() || 'admin';
-  const password = requiredEnvironment('BOOTSTRAP_ADMIN_PASSWORD');
-  const email = process.env.BOOTSTRAP_ADMIN_EMAIL?.trim() || null;
-  const tenantCode = process.env.BOOTSTRAP_TENANT_CODE?.trim() || 'legacy';
-  const applicationCode = process.env.BOOTSTRAP_APPLICATION_CODE?.trim() || 'default';
-  if (!usernamePattern.test(username)) {
-    throw new Error('BOOTSTRAP_ADMIN_USERNAME contains unsupported characters');
-  }
-  validatePassword(password, username);
-
-  const passwordHash = await bcrypt.hash(password, 12);
-  const client = postgres(databaseUrl, { max: 1, connect_timeout: 10 });
-  try {
-    await client.begin(async (transaction) => {
-      const existing = await transaction<{ id: string }[]>`
-        SELECT id FROM users WHERE username = ${username} LIMIT 1
-      `;
-      if (existing.length > 0) {
-        throw new Error('Bootstrap administrator already exists; use the authenticated password reset flow');
-      }
-      const [scope] = await transaction<{ tenantId: string; applicationId: string }[]>`
-        SELECT t.id AS "tenantId", a.id AS "applicationId"
-        FROM tenants t
-        JOIN applications a ON a.tenant_id = t.id
-        WHERE t.code = ${tenantCode}
-          AND a.code = ${applicationCode}
-          AND t.status = 'active'
-          AND a.status = 'active'
-        LIMIT 1
-      `;
-      if (!scope) {
-        throw new Error('Bootstrap tenant/application scope was not found or is inactive');
-      }
-
-      const [created] = await transaction<{ id: string }[]>`
-        INSERT INTO users (
-          username, nickname, email, password, role, status,
-          token_version, failed_login_count, login_count,
-          must_change_password, password_changed_at, created_at, updated_at
-        ) VALUES (
-          ${username}, ${'系统管理员'}, ${email}, ${passwordHash}, ${'SYSTEM_ADMIN'}, ${'active'},
-          0, 0, 0, FALSE, NOW(), NOW(), NOW()
-        )
-        RETURNING id
-      `;
-      await transaction`
-        INSERT INTO tenant_memberships (
-          tenant_id, user_id, default_application_id, status
-        ) VALUES (
-          ${scope.tenantId}, ${created.id}, ${scope.applicationId}, 'active'
-        )
-      `;
+async function main(){
+  if(!process.env.PGDATABASE_URL&&!process.env.DATABASE_URL)throw new Error('Explicit PGDATABASE_URL or DATABASE_URL is required');
+  const {db,closeDatabaseConnection}=await import('../src/storage/database/shared/db');
+  try{
+    const {users,tenants,applications,tenantMemberships,passwordHistory}=await import('../src/storage/database/shared/schema');
+    const {iamIdentityProfiles,userApplicationMemberships}=await import('../src/lib/iam/schema');
+    const {hashPassword,validatePasswordPolicy}=await import('../src/lib/auth/password');
+    const {auditIam}=await import('../src/lib/iam/management');
+    const role=z.enum(['SYSTEM_ADMIN','SECURITY_ADMIN','AUDIT_ADMIN']).parse(process.env.BOOTSTRAP_ADMIN_ROLE??'SYSTEM_ADMIN');
+    const username=z.string().regex(/^[A-Za-z0-9._-]{3,50}$/).parse(process.env.BOOTSTRAP_ADMIN_USERNAME);
+    const password=process.env.BOOTSTRAP_ADMIN_PASSWORD;
+    if(!password||!validatePasswordPolicy(password,[username]).valid)throw new Error('A strong BOOTSTRAP_ADMIN_PASSWORD is required');
+    const reason=z.string().min(10).max(1000).parse(process.env.BOOTSTRAP_IAM_REASON);
+    const passwordHash=await hashPassword(password);
+    const roleAliases=role==='SYSTEM_ADMIN'?['SYSTEM_ADMIN','system_admin','admin']:[role,role.toLowerCase()];
+    const userId=randomUUID();
+    await db.transaction(async tx=>{
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended('iam:bootstrap',0))`);
+      const [scope]=await tx.select({tenantId:tenants.id,applicationId:applications.id,environment:applications.environment,dataClass:applications.dataClass})
+        .from(tenants).innerJoin(applications,eq(applications.tenantId,tenants.id)).where(and(
+          eq(tenants.code,process.env.BOOTSTRAP_TENANT_CODE??'legacy'),eq(applications.code,process.env.BOOTSTRAP_APPLICATION_CODE??'default'),
+          eq(tenants.status,'active'),eq(applications.status,'active'))).for('share');
+      if(!scope)throw new Error('Active bootstrap scope not found');
+      const [existing]=await tx.select({id:users.id}).from(users).innerJoin(tenantMemberships,eq(users.id,tenantMemberships.userId))
+        .where(and(eq(tenantMemberships.tenantId,scope.tenantId),eq(tenantMemberships.status,'active'),eq(users.status,'active'),inArray(users.role,roleAliases))).limit(1);
+      if(existing)throw new Error('This tenant already has this administrative role; use authenticated independent approval');
+      const [duplicate]=await tx.select({id:users.id}).from(users).where(eq(users.username,username));
+      if(duplicate)throw new Error('Username already exists; bootstrap never overwrites an account');
+      await tx.insert(users).values({id:userId,username,nickname:username,password:passwordHash,role,status:'active',mustChangePassword:true,passwordChangedAt:new Date(),createdBy:'iam-bootstrap'});
+      await tx.insert(tenantMemberships).values({tenantId:scope.tenantId,defaultApplicationId:scope.applicationId,userId,status:'active'});
+      await tx.insert(userApplicationMemberships).values({tenantId:scope.tenantId,applicationId:scope.applicationId,userId,
+        attributes:{allowedEnvironments:[z.enum(['development','test','staging','production']).parse(scope.environment)],
+          maxDataClass:z.enum(['public','internal','confidential','restricted']).parse(scope.dataClass),userGroupIds:[]},grantedBy:'iam-bootstrap'});
+      await tx.insert(iamIdentityProfiles).values({userId,loginMethod:'local'});
+      await tx.insert(passwordHistory).values({userId,passwordHash});
+      await auditIam(tx,{...scope,principalId:'iam-bootstrap'},'iam.bootstrap.created',userId,{role,reason,mustChangePassword:true});
     });
-    process.stdout.write(`Bootstrap administrator created: ${username}\n`);
-  } finally {
-    await client.end({ timeout: 5 });
-  }
+    console.log(JSON.stringify({status:'created',role,userId,mustChangePassword:true}));
+  }finally{await closeDatabaseConnection();}
 }
-
-main().catch((error: unknown) => {
-  const message = error instanceof Error ? error.message : 'Unknown bootstrap error';
-  process.stderr.write(`Bootstrap failed: ${message}\n`);
-  process.exitCode = 1;
-});
+main().catch((error:unknown)=>{console.error(error instanceof Error?error.message:'IAM_BOOTSTRAP_FAILED');process.exitCode=1;});

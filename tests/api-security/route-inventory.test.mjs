@@ -11,6 +11,9 @@ const workloadRoutes = new Set([
 ]);
 const publicRoutes = new Set([
   'auth/login/route.ts',
+  'auth/oidc/start/route.ts',
+  'auth/oidc/callback/route.ts',
+  'auth/oidc/config/route.ts',
   'health/db/route.ts',
   'health/policy/route.ts',
   'health/live/route.ts',

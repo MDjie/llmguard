@@ -8,6 +8,11 @@ import { verifyScopeSession } from './scope-session';
 import { APPLICATION_HEADER_NAME, TENANT_HEADER_NAME } from '@/lib/tenancy/context';
 import { authenticateApplicationCredential } from '@/lib/tenancy/credentials';
 import { resolveUserTenantScope } from '@/lib/tenancy/repository';
+import { db } from '@/storage/database/shared/db';
+import { eq } from 'drizzle-orm';
+import { iamIdentityProfiles } from '@/lib/iam/schema';
+import { listEffectiveApplications } from '@/lib/iam/grants';
+import { isPrivilegedRole } from '@/lib/iam/policy';
 
 const scopeIdPattern = /^[A-Za-z0-9_-]{1,128}$/;
 
@@ -45,6 +50,12 @@ export async function authenticateRequest(
 
   const role = normalizePlatformRole(user.role);
   if (!role || role !== claims.role) return null;
+  const [identity] = await db.select().from(iamIdentityProfiles).where(eq(iamIdentityProfiles.userId,user.id));
+  if (!identity) return null;
+  if (identity.loginMethod === 'oidc' && (claims.identityProvider !== identity.issuer || claims.authenticationStrength !== 'mfa')) return null;
+  if (identity.loginMethod === 'emergency' && (!identity.emergencyUntil || identity.emergencyUntil.getTime() <= Date.now())) return null;
+  if (process.env.IAM_ENTERPRISE_LOGIN_REQUIRED === 'true' && isPrivilegedRole(role) &&
+    identity.loginMethod !== 'emergency' && claims.authenticationStrength !== 'mfa') return null;
   const mustChangePassword = Boolean(user.mustChangePassword);
   let requestedTenantId = request.headers.get(TENANT_HEADER_NAME) ?? undefined;
   let requestedApplicationId = request.headers.get(APPLICATION_HEADER_NAME) ?? undefined;
@@ -74,8 +85,12 @@ export async function authenticateRequest(
     requestedApplicationId,
   );
   if (!scope) return null;
+  const grants = await listEffectiveApplications(user.id, scope.tenantId);
+  const grant = grants.find(row => row.app.id === scope.applicationId);
+  if (!grant) return null;
 
   return {
+    authorizationAttributes:grant.grant.attributes,
     subject: user.id,
     roles: [role],
     permissions: permissionsForRole(role, mustChangePassword),
@@ -84,5 +99,8 @@ export async function authenticateRequest(
     applicationId: scope.applicationId,
     tokenVersion: user.tokenVersion,
     mustChangePassword,
+    userGroupIds: grant.grant.attributes.userGroupIds,
+    authenticationStrength: claims.authenticationStrength,
+    identityProvider: claims.identityProvider,
   };
 }

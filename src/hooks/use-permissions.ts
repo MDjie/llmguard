@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { Permission } from '@/lib/api-security/types';
 export function usePermissions() {
   const [permissions,setPermissions]=useState<readonly string[]>([]);
@@ -14,5 +14,5 @@ export function usePermissions() {
     }).catch(()=>undefined);
     return ()=>controller.abort();
   },[]);
-  return (permission:Permission)=>permissions.includes(permission);
+  return useCallback((permission:Permission)=>permissions.includes(permission),[permissions]);
 }

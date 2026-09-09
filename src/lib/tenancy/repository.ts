@@ -1,9 +1,9 @@
 import { and, eq, gt, isNull, or } from 'drizzle-orm';
+import { listEffectiveApplications } from '@/lib/iam/grants';
 import { db } from '@/storage/database/shared/db';
 import {
   applicationCredentials,
   applications,
-  tenantMemberships,
   tenants,
 } from '@/storage/database/shared/schema';
 import type { TenantScope } from './context';
@@ -20,34 +20,9 @@ export async function resolveUserTenantScope(
   requestedTenantId?: string,
   requestedApplicationId?: string,
 ): Promise<TenantScope | null> {
-  const membershipConditions = [
-    eq(tenantMemberships.userId, userId),
-    eq(tenantMemberships.status, 'active'),
-    eq(tenants.status, 'active'),
-    eq(applications.status, 'active'),
-  ];
-  if (requestedTenantId) membershipConditions.push(eq(tenantMemberships.tenantId, requestedTenantId));
-  if (requestedApplicationId) membershipConditions.push(eq(applications.id, requestedApplicationId));
-
-  const applicationJoin = and(
-    eq(applications.tenantId, tenantMemberships.tenantId),
-    requestedApplicationId
-      ? eq(applications.id, requestedApplicationId)
-      : eq(applications.id, tenantMemberships.defaultApplicationId),
-  );
-
-  const [scope] = await db
-    .select({
-      tenantId: tenantMemberships.tenantId,
-      applicationId: applications.id,
-    })
-    .from(tenantMemberships)
-    .innerJoin(tenants, eq(tenants.id, tenantMemberships.tenantId))
-    .innerJoin(applications, applicationJoin)
-    .where(and(...membershipConditions))
-    .limit(1);
-
-  return scope ?? null;
+  const rows = await listEffectiveApplications(userId, requestedTenantId);
+  const selected = rows.find(row => requestedApplicationId ? row.app.id === requestedApplicationId : row.app.id === row.defaultId);
+  return selected ? { tenantId: selected.app.tenantId, applicationId: selected.app.id } : null;
 }
 
 export async function findActiveApplicationCredential(

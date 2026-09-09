@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { grantAttributesSchema } from '@/lib/iam/policy';
 
 const id = z.string().min(1).max(128);
 const code = z.string().min(2).max(64).regex(/^[a-z][a-z0-9_-]*$/);
@@ -53,6 +54,7 @@ export const tenantResponseSchema = z.object({
 });
 
 export const applicationResponseSchema = applicationMetadataSchema.extend({
+  authorizationAttributes:grantAttributesSchema.optional(),
   authVersion:z.number().int().positive().optional(),integrationState:z.string().optional(),
   id,
   tenantId: id,

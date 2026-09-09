@@ -488,6 +488,8 @@ export const llmProviders = pgTable(
 		name: varchar("name", { length: 100 }).notNull(),
 		displayName: varchar("display_name", { length: 200 }).notNull(),
 		providerType: varchar("provider_type", { length: 50 }).notNull(), // OpenAI-compatible family, Ollama, or custom compatible endpoint
+    governanceVersion: integer("governance_version").notNull().default(1),
+    proposedBy: varchar("proposed_by", { length: 100 }),
 		baseUrl: varchar("base_url", { length: 500 }),
 		secretRef: varchar("secret_ref", { length: 80 }).references(() => secretEnvelopes.ref, { onDelete: "set null" }),
 		apiKeyEncrypted: text("api_key_encrypted"),

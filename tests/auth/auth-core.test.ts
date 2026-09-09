@@ -70,17 +70,17 @@ describe('authentication core', () => {
     expect(threshold.lockedUntil?.toISOString()).toBe('2026-09-01T00:15:00.000Z');
   });
 
-  it('grants the system administrator the complete platform permission set', () => {
+  it('separates administration, security operations and independent audit', () => {
     expect(normalizePlatformRole('admin')).toBe('SYSTEM_ADMIN');
     expect(hasPermission('SYSTEM_ADMIN', 'iam:users:manage')).toBe(true);
-    expect(hasPermission('SYSTEM_ADMIN', 'policy:read')).toBe(true);
-    expect(hasPermission('SYSTEM_ADMIN', 'policy:manage')).toBe(true);
-    expect(hasPermission('SYSTEM_ADMIN', 'security:operate')).toBe(true);
-    expect(hasPermission('SYSTEM_ADMIN', 'audit:read')).toBe(true);
+    expect(hasPermission('SYSTEM_ADMIN', 'policy:read')).toBe(false);
+    expect(hasPermission('SYSTEM_ADMIN', 'policy:manage')).toBe(false);
+    expect(hasPermission('SYSTEM_ADMIN', 'security:operate')).toBe(false);
+    expect(hasPermission('SYSTEM_ADMIN', 'audit:read')).toBe(false);
     expect(hasPermission('SECURITY_ADMIN', 'policy:manage')).toBe(true);
     expect(hasPermission('SECURITY_ADMIN', 'audit:read')).toBe(false);
     expect(hasPermission('AUDIT_ADMIN', 'audit:read')).toBe(true);
-    expect(hasPermission('SYSTEM_ADMIN', 'data:catalog:manage')).toBe(true);
+    expect(hasPermission('SYSTEM_ADMIN', 'data:catalog:manage')).toBe(false);
     expect(hasPermission('BUSINESS_OPERATOR', 'provider:read')).toBe(true);
     expect(hasPermission('APP_DEVELOPER', 'policy:read')).toBe(true);
     expect(hasPermission('SECURITY_ADMIN', 'data:catalog:manage')).toBe(true);

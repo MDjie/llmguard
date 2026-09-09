@@ -10,6 +10,7 @@ import {
   normalizePlatformRole,
   passwordMatchesHistory,
   setSessionCookies,
+  clearScopeCookie,
   validatePasswordPolicy,
   verifyStoredPassword,
 } from '@/lib/auth';
@@ -41,6 +42,7 @@ export const POST = withApiSecurity(
     },
   },
   async ({ body, principal }) => {
+    if (principal?.identityProvider) throw new ApiProblem({status:403,code:'OIDC_PASSWORD_MANAGED_EXTERNALLY',title:'密码由企业身份平台管理',detail:'请在企业身份平台修改密码。'});
     if (!principal) {
       throw new ApiProblem({
         status: 401,
@@ -91,7 +93,7 @@ export const POST = withApiSecurity(
     }
 
     const passwordHash = await hashPassword(body.newPassword);
-    const updated = await changePasswordAndRevokeSessions(user.id, passwordHash, new Date());
+    const updated = await changePasswordAndRevokeSessions(user.id, passwordHash, new Date(),user.tokenVersion);
     const session = issueSession(
       {
         id: updated.id,
@@ -106,6 +108,7 @@ export const POST = withApiSecurity(
       mustChangePassword: false as const,
     });
     setSessionCookies(response, session);
+    clearScopeCookie(response);
     return response;
   },
 );

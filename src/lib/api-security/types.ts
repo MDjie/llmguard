@@ -1,5 +1,6 @@
 import type { NextRequest } from 'next/server';
 import type { ZodType } from 'zod';
+import type { GrantAttributes } from '@/lib/iam/policy';
 
 export const PLATFORM_ROLES = [
   'SYSTEM_ADMIN',
@@ -30,6 +31,8 @@ export const PLATFORM_PERMISSIONS = [
   'history:read',
   'iam:users:manage',
   'iam:users:read',
+  'iam:changes:approve',
+  'iam:recovery:approve',
   'observability:metrics:read',
   'platform:settings:manage',
   'policy:approve',
@@ -56,6 +59,7 @@ export function isPlatformPermission(value: string): value is Permission {
 export type AuthenticationMethod = 'bearer' | 'cookie' | 'service';
 
 export interface AuthenticatedPrincipal {
+  readonly authorizationAttributes?: GrantAttributes;
   readonly subject: string;
   readonly roles: readonly PlatformRole[];
   readonly userGroupIds?: readonly string[];
@@ -65,6 +69,8 @@ export interface AuthenticatedPrincipal {
   readonly applicationId?: string;
   readonly tokenVersion?: number;
   readonly mustChangePassword?: boolean;
+  readonly authenticationStrength?: 'password' | 'mfa';
+  readonly identityProvider?: string;
 }
 
 export interface RequestContext {

@@ -1,4 +1,9 @@
 import { normalizePlatformRole } from './authorization';
+import { eq } from 'drizzle-orm';
+import { db } from '@/storage/database/shared/db';
+import { iamIdentityProfiles } from '@/lib/iam/schema';
+import { isPrivilegedRole } from '@/lib/iam/policy';
+import { resolveUserTenantScope } from '@/lib/tenancy/repository';
 import { hashPassword, passwordExpired, validatePasswordPolicy, verifyStoredPassword } from './password';
 import {
   findUserByUsername,
@@ -17,8 +22,8 @@ export interface LoginInput {
 }
 
 export type LoginResult =
-  | { readonly success: true; readonly user: UserRecord }
-  | { readonly success: false; readonly reason: 'INVALID_CREDENTIALS' | 'ACCOUNT_UNAVAILABLE' };
+  | { readonly success: true; readonly user: UserRecord; readonly emergencyUntil: Date | null }
+  | { readonly success: false; readonly reason: 'INVALID_CREDENTIALS' | 'ACCOUNT_UNAVAILABLE' | 'ENTERPRISE_OR_RECOVERY_LOGIN_REQUIRED' | 'ACCOUNT_SCOPE_UNAVAILABLE' };
 
 function accountAvailable(user: UserRecord, now: Date): boolean {
   if (user.status !== 'active') {
@@ -53,11 +58,23 @@ export async function authenticateCredentials(input: LoginInput): Promise<LoginR
     return { success: false, reason: 'ACCOUNT_UNAVAILABLE' };
   }
 
+  const [identity] = await db.select().from(iamIdentityProfiles).where(eq(iamIdentityProfiles.userId, user.id));
+  const emergency = identity?.loginMethod === 'emergency';
+  if (!identity || identity.loginMethod === 'oidc' ||
+    (emergency && (!identity.emergencyUntil || identity.emergencyUntil.getTime() <= now.getTime())) ||
+    (!emergency && isPrivilegedRole(role) && process.env.IAM_ENTERPRISE_LOGIN_REQUIRED === 'true')) {
+    return { success: false, reason: 'ENTERPRISE_OR_RECOVERY_LOGIN_REQUIRED' };
+  }
+  if (!(await resolveUserTenantScope(user.id))) {
+    return { success: false, reason: 'ACCOUNT_SCOPE_UNAVAILABLE' };
+  }
+
   const passwordPolicy = validatePasswordPolicy(input.password, [user.username, user.email ?? '']);
   const passwordHash = verification.needsRehash
     ? await hashPassword(input.password)
     : undefined;
   const updated = await recordSuccessfulLogin(user.id, {
+    expectedTokenVersion:user.tokenVersion,
     now,
     clientIp: input.clientIp,
     ...(passwordHash ? { passwordHash } : {}),
@@ -67,5 +84,5 @@ export async function authenticateCredentials(input: LoginInput): Promise<LoginR
       !passwordPolicy.valid ||
       passwordExpired(user.passwordChangedAt, now),
   });
-  return { success: true, user: updated };
+  return { success: true, user: updated, emergencyUntil: emergency ? identity.emergencyUntil : null };
 }

@@ -15,6 +15,12 @@ x-runtime-environment: &runtime-environment
   AUDIT_CHAIN_KEY: "${AUDIT_CHAIN_KEY:?AUDIT_CHAIN_KEY is required}"
   AUDIT_CHAIN_KEY_ID: "${AUDIT_CHAIN_KEY_ID:-audit-hmac-v1}"
   PASSWORD_MAX_AGE_DAYS: "${PASSWORD_MAX_AGE_DAYS:-90}"
+  IAM_OIDC_ISSUER: "${IAM_OIDC_ISSUER:-}"
+  IAM_OIDC_CLIENT_ID: "${IAM_OIDC_CLIENT_ID:-}"
+  IAM_OIDC_CLIENT_SECRET: "${IAM_OIDC_CLIENT_SECRET:-}"
+  IAM_OIDC_REDIRECT_URI: "${IAM_OIDC_REDIRECT_URI:-}"
+  IAM_OIDC_MFA_ACR: "${IAM_OIDC_MFA_ACR:-}"
+  IAM_ENTERPRISE_LOGIN_REQUIRED: "${IAM_ENTERPRISE_LOGIN_REQUIRED:-false}"
   CONTENT_MARKING_KEY: "${CONTENT_MARKING_KEY:?CONTENT_MARKING_KEY is required}"
   CONTENT_MARKING_KEY_ID: "${CONTENT_MARKING_KEY_ID:-content-mark-hmac-v1}"
   CONTENT_MARKING_PROVIDER_CODE: "${CONTENT_MARKING_PROVIDER_CODE:?CONTENT_MARKING_PROVIDER_CODE is required}"
@@ -179,6 +185,8 @@ services:
       - ./drizzle/0070_policy_bundle_lifecycle_states.sql:/docker-entrypoint-initdb.d/80-policy-bundle-lifecycle-states.sql:ro
       - ./drizzle/0071_artifact_purge_ledger.sql:/docker-entrypoint-initdb.d/81-artifact-purge-ledger.sql:ro
       - ./drizzle/0072_original_media_access.sql:/docker-entrypoint-initdb.d/82-original-media-access.sql:ro
+      - ./drizzle/0073_iam_application_grants.sql:/docker-entrypoint-initdb.d/83-iam-application-grants.sql:ro
+      - ./drizzle/0074_provider_approval.sql:/docker-entrypoint-initdb.d/84-provider-approval.sql:ro
     ports:
       - "127.0.0.1:${DB_PORT:-5434}:5432"
     healthcheck:
@@ -327,6 +335,10 @@ services:
   audit-chain-worker:
     <<: *worker-service
     command: ["node", "--import", "tsx", "scripts/run-worker.mjs", "audit-chain"]
+
+  iam-worker:
+    <<: *worker-service
+    command: ["node", "--import", "tsx", "scripts/run-worker.mjs", "iam"]
 
 
 volumes:

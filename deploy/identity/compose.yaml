@@ -1,0 +1,38 @@
+name: guardllm-identity
+services:
+  identity-db:
+    image: postgres:16.10-alpine
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?Set a unique database password}
+    volumes:
+      - identity-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak -d keycloak"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.7.3
+    command: ["start"]
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://identity-db:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?Set a unique database password}
+      KC_HOSTNAME: ${KEYCLOAK_HOSTNAME:?Set the public HTTPS identity URL}
+      KC_HTTP_ENABLED: "true"
+      KC_PROXY_HEADERS: xforwarded
+      KC_HEALTH_ENABLED: "true"
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME:?Set the bootstrap admin username}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?Set a unique bootstrap admin password}
+    ports:
+      - "127.0.0.1:58090:8080"
+    depends_on:
+      identity-db:
+        condition: service_healthy
+    restart: unless-stopped
+volumes:
+  identity-data:

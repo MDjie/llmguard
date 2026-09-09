@@ -197,7 +197,8 @@ export const POST = withApiSecurity(
           defaultModel: body.defaultModel ?? null,
           useCase: body.useCase,
           ...(body.deploymentConfig ? {configJson:{deployment:body.deploymentConfig}} : {}),
-          isEnabled: true,
+          isEnabled: false,
+          proposedBy: principal.subject,
           createdBy: principal.subject,
           updatedAt: new Date(),
         })
@@ -222,6 +223,7 @@ export const PUT = withApiSecurity(
     rateLimitPolicy: { id: 'provider-update', windowMs: 60_000, maxRequests: 20, scope: 'principal' },
   },
   async ({ body, query, principal }) => {
+    if(body.isEnabled===true||body.isDefaultTarget===true||body.isDefaultJudge===true)throw new ApiProblem({status:409,code:'PROVIDER_APPROVAL_REQUIRED',title:'模型上线需要独立审批',detail:'请在授权审批页面提交模型上线申请。'});
     const scope = requireTenantContext(principal);
     const [existing] = await db.select().from(llmProviders).where(and(
       eq(llmProviders.id, query.id),
@@ -239,7 +241,7 @@ export const PUT = withApiSecurity(
     const providerType = body.providerType ?? parseProviderType(existing.providerType);
     const deployment = body.deploymentConfig ?? readProviderDeployment(existing.configJson);
     const endpointChanged = body.providerType !== undefined || body.baseUrl !== undefined;
-    const mustValidateEndpoint = endpointChanged || body.deploymentConfig !== undefined || (body.isEnabled === true && !existing.isEnabled);
+    const mustValidateEndpoint = endpointChanged || body.deploymentConfig !== undefined;
     const baseUrl = mustValidateEndpoint
       ? await validatedBaseUrl(providerType, body.baseUrl ?? existing.baseUrl)
       : existing.baseUrl;
@@ -273,9 +275,11 @@ export const PUT = withApiSecurity(
           ...(body.defaultModel !== undefined ? { defaultModel: body.defaultModel } : {}),
           ...(body.useCase !== undefined ? { useCase: body.useCase } : {}),
           ...(body.deploymentConfig ? {configJson:{...(typeof existing.configJson === 'object' && existing.configJson !== null ? existing.configJson : {}),deployment:body.deploymentConfig}} : {}),
-          ...(body.isEnabled !== undefined ? { isEnabled: body.isEnabled } : {}),
-          ...(body.isDefaultTarget !== undefined ? { isDefaultTarget: body.isDefaultTarget } : {}),
-          ...(body.isDefaultJudge !== undefined ? { isDefaultJudge: body.isDefaultJudge } : {}),
+          isEnabled: false,
+          isDefaultTarget: false,
+          isDefaultJudge: false,
+          proposedBy: principal!.subject,
+          governanceVersion: sql`${llmProviders.governanceVersion}+1`,
           ...(newSecretRef !== undefined ? { secretRef: newSecretRef, apiKeyEncrypted: null } : {}),
           ...(removeSecret ? { secretRef: null, apiKeyEncrypted: null } : {}),
           updatedAt: new Date(),

@@ -1,0 +1,37 @@
+{
+  "date": "2026-09-09",
+  "sourceImplementation": "implemented_including_approved_login_counter_ordering",
+  "productionDeployed": false,
+  "unitTests": {
+    "total": 1804,
+    "passed": 1804,
+    "failed": 0
+  },
+  "integrationAndBrowserScenarios": {
+    "total": 24,
+    "passed": 24
+  },
+  "checks": {
+    "typescript": "passed",
+    "productionBuild": "passed",
+    "changedFilesEslint": "passed",
+    "fullEslint": { "errors": 0, "warnings": 65 },
+    "composeSyntax": "passed"
+  },
+  "existingEnvironment": {
+    "activeSystemAdministrators": 2,
+    "activeSecurityAdministrators": 0,
+    "activeAuditAdministrators": 0,
+    "iamMigrationApplied": false
+  },
+  "approvedLoginCounterFix": {
+    "action": "Move existing login identity/scope checks before recordSuccessfulLogin in local source only",
+    "status": "explicitly_approved_by_user_and_applied"
+  },
+  "externalPrerequisites": [
+    "real security and audit role owners",
+    "Keycloak domain and TLS",
+    "realm/client enforced MFA and issuer/subject binding",
+    "production migration and role exercise"
+  ]
+}

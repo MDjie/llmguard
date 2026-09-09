@@ -1,22 +1,32 @@
 import {
-  PLATFORM_PERMISSIONS,
   type Permission,
   type PlatformRole,
 } from '@/lib/api-security/types';
 
 const rolePermissions: Readonly<Record<PlatformRole, readonly Permission[]>> = {
-  SYSTEM_ADMIN: PLATFORM_PERMISSIONS,
+  SYSTEM_ADMIN: [
+    'auth:password:change', 'profile:self:write', 'iam:users:read', 'iam:users:manage',
+    'tenant:read', 'tenant:manage', 'application:read', 'application:manage',
+    'application:credential:manage', 'application:integrate',
+    'platform:settings:manage', 'observability:metrics:read', 'iam:recovery:approve',
+  ],
   SECURITY_ADMIN: [
     'auth:password:change',
     'profile:self:write',
     'policy:read',
     'policy:manage',
+    'policy:write',
+    'policy:publish',
+    'tenant:read',
+    'application:read',
+    'guard:use',
     'security:operate',
     'content:raw:read',
     'content:raw:write',
     'history:read',
     'history:manage',
-    'audit:approve',
+    'provider:manage',
+    'iam:recovery:approve',
     'provider:read',
     'provider:test',
     'data:catalog:read',
@@ -27,6 +37,11 @@ const rolePermissions: Readonly<Record<PlatformRole, readonly Permission[]>> = {
     'profile:self:write',
     'audit:read',
     'audit:export',
+    'audit:approve',
+    'policy:read',
+    'policy:approve',
+    'iam:changes:approve',
+    'iam:recovery:approve',
     'tenant:read',
     'application:read',
     'data:catalog:read',
@@ -78,10 +93,11 @@ const roleAliases: Readonly<Record<string, PlatformRole>> = {
 export function normalizePlatformRole(value: string): PlatformRole | null {
   const normalized = value.trim();
   const direct = normalized.toUpperCase();
-  if (direct in rolePermissions) {
+  if (Object.hasOwn(rolePermissions, direct)) {
     return direct as PlatformRole;
   }
-  return roleAliases[normalized.toLowerCase()] ?? null;
+  const alias = normalized.toLowerCase();
+  return Object.hasOwn(roleAliases, alias) ? roleAliases[alias] : null;
 }
 
 export function permissionsForRole(

@@ -3,6 +3,7 @@ import { Client } from 'pg';
 import { is } from 'drizzle-orm';
 import { PgTable, getTableConfig } from 'drizzle-orm/pg-core';
 import * as schema from '../../../src/storage/database/shared/schema';
+import * as iamSchema from '../../../src/lib/iam/schema';
 async function main() {
   const out = process.argv[2];
   const env = out ? JSON.parse(readFileSync(out + '/environment.private.json', 'utf8')) as Record<string, string> : process.env;
@@ -12,7 +13,7 @@ async function main() {
   try {
     const result = await client.query<{ table_name: string; column_name: string; is_nullable: string; data_type: string; character_maximum_length: number | null }>("SELECT table_name,column_name,is_nullable,data_type,character_maximum_length FROM information_schema.columns WHERE table_schema='public'");
     const actual = new Map(result.rows.map(row => [row.table_name + '.' + row.column_name, row]));
-    const tables = Object.values(schema).filter(value => is(value, PgTable)).map(value => getTableConfig(value));
+    const tables = Object.values({...schema,...iamSchema}).filter(value => is(value, PgTable)).map(value => getTableConfig(value));
     const missing = tables.flatMap(table => table.columns.filter(column => !actual.has(table.name + '.' + column.name)).map(column => ({ table: table.name, column: column.name, type: column.getSQLType() })));
     const relevant = ['agent_traces.record_id', 'agent_traces.provider_id', 'agent_traces.workflow_name', 'agent_traces.request_payload', 'agent_traces.response_payload', 'agent_traces.latency_ms', 'agent_traces.success', 'agent_traces.error_message', 'judge_model_invocations.input_hash', 'judge_model_invocations.prompt_tokens', 'judge_model_invocations.completion_tokens', 'judge_model_invocations.total_tokens', 'whitelist_rules.proposed_by', 'whitelist_rules.revision', 'export_approval_requests.export_query', 'artifacts.purged_at', 'artifacts.hold_until', 'artifacts.upload_expires_at', 'artifact_purge_ledger.state', 'artifact_purge_ledger.lease_token', 'artifact_purge_ledger.lease_until', 'artifact_purge_ledger.versions', 'artifact_purge_ledger.not_before', 'artifact_purge_ledger.retry_at'];
     const shapeErrors: string[] = [];

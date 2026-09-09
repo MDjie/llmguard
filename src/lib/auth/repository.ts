@@ -1,66 +1,10 @@
-import { and, desc, eq, ilike, inArray, or, sql, type SQL } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 import { db } from '@/storage/database/shared/db';
 import { passwordHistory, users } from '@/storage/database/shared/schema';
 import { LOGIN_FAILURE_THRESHOLD, LOGIN_LOCK_DURATION_MS, PASSWORD_HISTORY_DEPTH } from './constants';
+import { ApiProblem } from '@/lib/api-security/problem';
 
 export type UserRecord = typeof users.$inferSelect;
-
-const publicUserColumns = {
-  id: users.id,
-  username: users.username,
-  nickname: users.nickname,
-  email: users.email,
-  phone: users.phone,
-  avatar: users.avatar,
-  role: users.role,
-  status: users.status,
-  department: users.department,
-  description: users.description,
-  lastLoginAt: users.lastLoginAt,
-  loginCount: users.loginCount,
-  failedLoginCount: users.failedLoginCount,
-  lockedUntil: users.lockedUntil,
-  passwordChangedAt: users.passwordChangedAt,
-  mustChangePassword: users.mustChangePassword,
-  createdAt: users.createdAt,
-  updatedAt: users.updatedAt,
-  createdBy: users.createdBy,
-};
-
-export interface UserListInput {
-  readonly page: number;
-  readonly pageSize: number;
-  readonly keyword?: string;
-  readonly role?: string;
-  readonly status?: string;
-}
-
-export interface ManagedUserCreate {
-  readonly username: string;
-  readonly passwordHash: string;
-  readonly nickname: string | null;
-  readonly email: string | null;
-  readonly phone: string | null;
-  readonly role: string;
-  readonly department: string | null;
-  readonly description: string | null;
-  readonly createdBy: string;
-  readonly now: Date;
-}
-
-export interface ManagedUserUpdate {
-  readonly nickname?: string | null;
-  readonly email?: string | null;
-  readonly phone?: string | null;
-  readonly role?: string;
-  readonly status?: string;
-  readonly department?: string | null;
-  readonly description?: string | null;
-  readonly passwordHash?: string;
-  readonly mustChangePassword?: boolean;
-  readonly revokeSessions: boolean;
-  readonly now: Date;
-}
 
 export interface LoginFailureState {
   readonly failedLoginCount: number;
@@ -68,6 +12,7 @@ export interface LoginFailureState {
 }
 
 export interface SuccessfulLoginUpdate {
+  readonly expectedTokenVersion: number;
   readonly now: Date;
   readonly clientIp: string;
   readonly passwordHash?: string;
@@ -109,102 +54,6 @@ export async function listRecentPasswordHashes(
   return rows.map((row) => row.passwordHash);
 }
 
-function escapeLike(value: string): string {
-  return value.replace(/[\\%_]/g, (character) => `\\${character}`);
-}
-
-function roleStorageValues(role: string): readonly string[] {
-  if (role === 'SYSTEM_ADMIN') return ['SYSTEM_ADMIN', 'admin'];
-  if (role === 'BUSINESS_OPERATOR') return ['BUSINESS_OPERATOR', 'user'];
-  return [role];
-}
-
-export async function listUsers(input: UserListInput) {
-  const conditions: SQL[] = [];
-  if (input.keyword) {
-    const pattern = `%${escapeLike(input.keyword)}%`;
-    const keywordCondition = or(
-      ilike(users.username, pattern),
-      ilike(users.nickname, pattern),
-      ilike(users.email, pattern),
-    );
-    if (keywordCondition) conditions.push(keywordCondition);
-  }
-  if (input.role) conditions.push(inArray(users.role, roleStorageValues(input.role)));
-  if (input.status) conditions.push(eq(users.status, input.status));
-  const predicate = conditions.length > 0 ? and(...conditions) : undefined;
-  const offset = (input.page - 1) * input.pageSize;
-
-  const [items, countRows] = await Promise.all([
-    db
-      .select(publicUserColumns)
-      .from(users)
-      .where(predicate)
-      .orderBy(desc(users.createdAt))
-      .limit(input.pageSize)
-      .offset(offset),
-    db.select({ count: sql<number>`count(*)::int` }).from(users).where(predicate),
-  ]);
-  return { items, total: Number(countRows[0]?.count ?? 0) };
-}
-
-export async function createManagedUser(input: ManagedUserCreate): Promise<UserRecord> {
-  const [user] = await db
-    .insert(users)
-    .values({
-      username: input.username,
-      password: input.passwordHash,
-      nickname: input.nickname,
-      email: input.email,
-      phone: input.phone,
-      role: input.role,
-      status: 'active',
-      department: input.department,
-      description: input.description,
-      createdBy: input.createdBy,
-      passwordChangedAt: input.now,
-      mustChangePassword: true,
-      tokenVersion: 0,
-      createdAt: input.now,
-      updatedAt: input.now,
-    })
-    .returning();
-  if (!user) throw new Error('User insert returned no row');
-  return user;
-}
-
-export async function updateManagedUser(
-  userId: string,
-  input: ManagedUserUpdate,
-): Promise<UserRecord | null> {
-  const values: Partial<typeof users.$inferInsert> = {
-    updatedAt: input.now,
-    ...(input.nickname !== undefined ? { nickname: input.nickname } : {}),
-    ...(input.email !== undefined ? { email: input.email } : {}),
-    ...(input.phone !== undefined ? { phone: input.phone } : {}),
-    ...(input.role !== undefined ? { role: input.role } : {}),
-    ...(input.status !== undefined ? { status: input.status } : {}),
-    ...(input.department !== undefined ? { department: input.department } : {}),
-    ...(input.description !== undefined ? { description: input.description } : {}),
-    ...(input.passwordHash
-      ? {
-          password: input.passwordHash,
-          passwordChangedAt: input.now,
-          mustChangePassword: input.mustChangePassword ?? true,
-        }
-      : {}),
-  };
-  const [user] = await db
-    .update(users)
-    .set({
-      ...values,
-      ...(input.revokeSessions ? { tokenVersion: sql`${users.tokenVersion} + 1` } : {}),
-    })
-    .where(eq(users.id, userId))
-    .returning();
-  return user ?? null;
-}
-
 export async function updateOwnProfile(
   userId: string,
   values: {
@@ -221,11 +70,6 @@ export async function updateOwnProfile(
     .where(eq(users.id, userId))
     .returning();
   return user ?? null;
-}
-
-export async function deleteManagedUser(userId: string): Promise<boolean> {
-  const deleted = await db.delete(users).where(eq(users.id, userId)).returning({ id: users.id });
-  return deleted.length === 1;
 }
 
 export function nextLoginFailureState(
@@ -282,7 +126,7 @@ export async function recordSuccessfulLogin(
         : {}),
       updatedAt: update.now,
     })
-    .where(eq(users.id, userId))
+    .where(and(eq(users.id, userId),eq(users.tokenVersion,update.expectedTokenVersion),eq(users.status,'active')))
     .returning();
 
   if (!user) {
@@ -295,15 +139,17 @@ export async function changePasswordAndRevokeSessions(
   userId: string,
   passwordHash: string,
   now: Date,
+  expectedTokenVersion: number,
 ): Promise<UserRecord> {
   return db.transaction(async (transaction) => {
     const [current] = await transaction
-      .select({ password: users.password })
+      .select({ password: users.password,tokenVersion:users.tokenVersion,status:users.status })
       .from(users)
       .where(eq(users.id, userId))
       .limit(1)
       .for('update');
     if (!current) throw new Error('User not found while changing password');
+    if(current.status!=='active'||current.tokenVersion!==expectedTokenVersion)throw new ApiProblem({status:409,code:'SESSION_CHANGED',title:'账户状态已变化',detail:'请重新登录后再修改密码。'});
     await transaction.insert(passwordHistory).values({
       userId,
       passwordHash: current.password,

@@ -6,6 +6,7 @@ import {
   issueSession,
   normalizePlatformRole,
   setSessionCookies,
+  clearScopeCookie,
 } from '@/lib/auth';
 
 const loginBodySchema = z
@@ -51,6 +52,12 @@ export const POST = withApiSecurity(
     });
 
     if (!result.success) {
+      if (result.reason === 'ENTERPRISE_OR_RECOVERY_LOGIN_REQUIRED') {
+        throw new ApiProblem({status:403,code:result.reason,title:'登录方式不符',detail:'请使用企业登录，或由独立审批人员启用应急访问。'});
+      }
+      if (result.reason === 'ACCOUNT_SCOPE_UNAVAILABLE') {
+        throw new ApiProblem({status:403,code:result.reason,title:'账户尚未授权',detail:'请联系管理员配置有效的默认应用及应用授权。'});
+      }
       throw new ApiProblem({
         status: 401,
         code: 'INVALID_CREDENTIALS',
@@ -75,6 +82,7 @@ export const POST = withApiSecurity(
         username: result.user.username,
         role,
         tokenVersion: result.user.tokenVersion,
+        ...(result.emergencyUntil ? { maxAgeSeconds: Math.floor((result.emergencyUntil.getTime()-Date.now())/1000) } : {}),
       },
       body.rememberMe,
     );
@@ -91,6 +99,7 @@ export const POST = withApiSecurity(
       },
     });
     setSessionCookies(response, session);
+    clearScopeCookie(response);
     return response;
   },
 );

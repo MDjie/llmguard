@@ -27,6 +27,7 @@ import { databaseApiAuditor } from './database-auditor';
 import { logger } from '@/lib/observability/logger';
 import { observeHttpRequest } from '@/lib/observability/metrics';
 import { runWithTenantScope } from '@/lib/tenancy/runtime';
+import { grantAllowsPermission } from '@/lib/iam/policy';
 
 const UNSAFE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 const JSON_MEDIA_TYPE = 'application/json';
@@ -535,7 +536,8 @@ export function createApiSecurity(dependencies: ApiSecurityDependencies = {}) {
         }
 
         if (options.permission) {
-          if (!principal || !(await authorize(principal, options.permission, requestContext))) {
+          if (!principal || !(await authorize(principal, options.permission, requestContext)) ||
+            (principal.authorizationAttributes && !grantAllowsPermission(principal.authorizationAttributes,options.permission))) {
             throw new ApiProblem({
               status: 403,
               code: 'PERMISSION_DENIED',
