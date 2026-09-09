@@ -1,10 +1,12 @@
+import {readOriginalResource} from './original-resource';
 import { and, eq, gt, inArray, or } from 'drizzle-orm';
 import { db } from '@/storage/database/shared/db';
 import { archivedContentObjects, conversationArchives, mediaEvidenceSnapshots, securityIncidents } from '@/storage/database/shared/schema';
 import { scopePredicate, type TenantScope } from '@/lib/tenancy';
 import { incidentEvidenceDigest } from '@/lib/incidents/projection';
-export type ContentResourceType = 'INCIDENT_EVIDENCE' | 'ARCHIVED_CONTENT' | 'MEDIA_EVIDENCE';
+export type ContentResourceType = 'INCIDENT_EVIDENCE' | 'ARCHIVED_CONTENT' | 'MEDIA_EVIDENCE' | 'MEDIA_ORIGINAL';
 export async function readAccessResourceDigest(reader: Pick<typeof db, 'select'>, scope: TenantScope, type: string, id: string, now = new Date(), lock = false) {
+  if(type==='MEDIA_ORIGINAL')return (await readOriginalResource(reader,scope,id,now,lock))?.sourceDigest??null;
   if (type === 'INCIDENT_EVIDENCE') {
     const query = reader.select({ value: securityIncidents.answerEvidence }).from(securityIncidents).where(and(scopePredicate(securityIncidents, scope), eq(securityIncidents.id, id))).limit(1);
     const [row] = await (lock ? query.for('share') : query); return row ? incidentEvidenceDigest(row.value) : null;

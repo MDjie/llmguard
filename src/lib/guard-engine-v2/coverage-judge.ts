@@ -57,7 +57,7 @@ export async function evaluateCoverageJudge(profiles:readonly JudgeProfile[],con
           semanticCoverage:'INCOMPLETE',assessmentId:outcome.response.assessmentId,
           modelVersion:(outcome.reportedModel??outcome.profile.modelId).slice(0,256),configurationDigest:outcome.profileDigest,
           reasonCode:!unsafe&&!mayClear?'SEMANTIC_REFINER_REFUTATION_INVALID':'SEMANTIC_'+role.toUpperCase()+'_'+outcome.profile.mode+'_'+assessment.verdict,
-          evidence:assessment.evidence.map(e=>textEvidence(context,view,window.start+e.start,window.start+e.end,text.slice(window.start+e.start,window.start+e.end),'[redacted]')),
+          evidence:(role==='refiner'&&!unsafe?(assessment.counterEvidence??[]):assessment.evidence).map(e=>textEvidence(context,view,window.start+e.start,window.start+e.end,text.slice(window.start+e.start,window.start+e.end),'[redacted]')),
         };
         if(enforced&&unsafe&&role==='base'&&outcome.profile.adjudicationMode) proposals.push({riskId:assessment.riskId,contextDigest:taskContext.sourceDigest,evidence:assessment.evidence.map(e=>({start:e.start+window.start,end:e.end+window.start}))});
         if(enforced&&!unsafe&&mayClear&&role==='refiner'&&outcome.profile.adjudicationMode){
@@ -75,6 +75,11 @@ export async function evaluateCoverageJudge(profiles:readonly JudgeProfile[],con
       if(unsafe.length)observations.push(...unsafe.map(o=>({...o,semanticCoverage:complete?'COMPLETE' as const:'INCOMPLETE' as const})));
       else if(complete&&items.length===plan.windows.length)observations.push({...items[0],semanticCoverage:'COMPLETE'});
       else observations.push(unknown(plan.complete?'SEMANTIC_CONTEXT_NOT_FULLY_ASSESSED':'SEMANTIC_WINDOW_BUDGET_EXCEEDED',risk));
+      // Keep other assessed windows for authorized review without giving a partial
+      // window its own complete-coverage claim or changing the aggregate verdict.
+      const published=unsafe.length?unsafe:complete&&items.length===plan.windows.length?[items[0]]:[];
+      observations.push(...items.filter(item=>!published.includes(item)&&item.evidence.length>0)
+        .map(item=>({...item,semanticCoverage:'INCOMPLETE' as const})));
     }
   };
   // A qualified explicit classifier may already have fulfilled the base role.

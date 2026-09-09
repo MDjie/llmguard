@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { mediaAnnotationSchema } from './media-evidence';
+import { mediaAnnotationSchema,reviewHighlightSchema } from './media-evidence';
+import {originalPreviewSchema} from './original-preview';
 
 export const contentAccessPurposeSchema = z.enum([
   'INCIDENT_INVESTIGATION',
@@ -33,7 +34,7 @@ const contentAccessStatusSchema = z.enum(['pending', 'approved', 'rejected', 'ex
 
 export const contentAccessRequestDataSchema = z.object({
   id: z.uuid(),
-  resourceType: z.enum(['INCIDENT_EVIDENCE', 'ARCHIVED_CONTENT', 'MEDIA_EVIDENCE']),
+  resourceType: z.enum(['INCIDENT_EVIDENCE', 'ARCHIVED_CONTENT', 'MEDIA_EVIDENCE', 'MEDIA_ORIGINAL']),
   resourceId: z.string().min(1).max(128),
   sourceDigest: z.string().regex(/^[a-f0-9]{64}$/u),
   requesterId: z.string().min(1).max(100),
@@ -75,6 +76,8 @@ export const contentAccessConsumeResponseSchema = z.object({
     expiresAt: z.iso.datetime(),
     consumedAt: z.iso.datetime(),
     answerEvidence: z.string(),
+    originalPreview: originalPreviewSchema.optional(),
+    reviewHighlights:z.array(reviewHighlightSchema).max(8).optional(),
     media: z.object({ mimeType: z.enum(['image/png','image/jpeg','image/webp','image/gif','audio/wav','audio/x-wav','audio/mpeg','video/mp4']), dataBase64: z.string().max(1398104), annotations:z.array(mediaAnnotationSchema).max(100).optional() }).strict().optional(),
     highlightViews: z.array(z.object({ label: z.string(), parts: z.array(z.object({ start: z.number().int(), end: z.number().int(), text: z.string(), evidenceIds: z.array(z.string()) }).strict()) }).strict()).max(8).optional(),
   }).strict(),

@@ -70,6 +70,7 @@ function buildText(segments: readonly InputSegment[]) {
     const start = text.length;
     text += segment.text;
     const { text: _text, ...provenance } = segment;
+    void _text;
     spans.push({ ...provenance, start, end: text.length, textVersion: createHash('sha256').update(segment.text).digest('hex') });
   }
   return { text, spans };
@@ -141,6 +142,7 @@ function mappedEvidence(
       locations: locations.flatMap(item => item.location ? [item.location] : []),
       locationState: locations.length > 0 && locations.every(item => item.state === 'VERIFIED') ? 'VERIFIED' as const : 'UNVERIFIED' as const,
       detectorId: observation.detectorId,
+      modelVersion: observation.modelVersion,
       status: observation.status, decisionRole: observation.decisionRole,
       detectorVersion: observation.detectorVersion,
       ruleId: observation.ruleId,

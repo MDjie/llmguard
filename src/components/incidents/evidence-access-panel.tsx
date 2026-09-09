@@ -1,8 +1,14 @@
 'use client';
 
-import { useCallback, useEffect, useState, useRef } from 'react';
+import { useCallback, useEffect, useState, useRef, useId } from 'react';
 import { Check, Eye, KeyRound, Loader2, ShieldCheck, ShieldX, TimerReset, X } from 'lucide-react';
 import { AuthorizedMediaPreview,type AuthorizedMedia } from './authorized-media';
+import {ReviewEvidenceHighlights} from './review-evidence-highlights';
+import {z} from 'zod';
+import {reviewHighlightSchema} from '@/contracts/http/media-evidence';
+import {OriginalPreviewDisplay} from './original-preview-display';
+import type {OriginalPreview} from '@/contracts/http/original-preview';
+import {contentAccessConsumeResponseSchema} from '@/contracts/http/content-access';
 import { toast } from 'sonner';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -19,6 +25,7 @@ import type { Permission } from '@/lib/api-security';
 interface AccessRequest {
   id: string;
   resourceId: string;
+  resourceType: string;
   sourceDigest: string;
   requesterId: string;
   purpose: 'INCIDENT_INVESTIGATION' | 'REGULATORY_REVIEW' | 'FALSE_POSITIVE_APPEAL';
@@ -59,10 +66,14 @@ export function EvidenceAccessPanel({
   readonly candidate?: { alertId: string; feedbackId: string };
   readonly incidentId: string;
   readonly sourceDigest?: string;
-  readonly resourceType?: 'INCIDENT_EVIDENCE' | 'ARCHIVED_CONTENT' | 'MEDIA_EVIDENCE';
+  readonly resourceType?: 'INCIDENT_EVIDENCE' | 'ARCHIVED_CONTENT' | 'MEDIA_EVIDENCE' | 'MEDIA_ORIGINAL';
 }) {
-  const accessBase = `${resourceType === 'MEDIA_EVIDENCE' ? '/api/media-evidence' : resourceType === 'ARCHIVED_CONTENT' ? '/api/archived-content' : '/api/incidents'}/${encodeURIComponent(incidentId)}/raw-access`;
+  const accessBase = `${resourceType === 'MEDIA_ORIGINAL' ? '/api/media-originals' : resourceType === 'MEDIA_EVIDENCE' ? '/api/media-evidence' : resourceType === 'ARCHIVED_CONTENT' ? '/api/archived-content' : '/api/incidents'}/${encodeURIComponent(incidentId)}/raw-access`;
+  const headingId=useId();
   const activeAccess = useRef(accessBase);
+  const consumeController=useRef<AbortController|null>(null);
+  const [originalPreview,setOriginalPreview]=useState<OriginalPreview|null>(null);
+  const [reviewHighlights,setReviewHighlights]=useState<z.infer<typeof reviewHighlightSchema>[]>([]);
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [ownRequests, setOwnRequests] = useState<AccessRequest[]>([]);
   const [pendingRequests, setPendingRequests] = useState<AccessRequest[]>([]);
@@ -79,7 +90,8 @@ export function EvidenceAccessPanel({
   const [rawEvidence, setRawEvidence] = useState<string | null>(null);
   const [candidateGrant,setCandidateGrant]=useState<AccessRequest|null>(null),[licenseRef,setLicenseRef]=useState(''),[selector,setSelector]=useState('MATCHED_EVIDENCE'),[origin,setOrigin]=useState<'customer'|'synthetic'>('customer');
   const [consumingId, setConsumingId] = useState<string | null>(null);
-  useEffect(() => { activeAccess.current = accessBase; setRawEvidence(null); setHighlightViews([]); setMedia(null); }, [accessBase]);
+  const clearEvidence=useCallback(()=>{consumeController.current?.abort();consumeController.current=null;setRawEvidence(null);setHighlightViews([]);setMedia(null);setOriginalPreview(null);setReviewHighlights([]);setConsumingId(null);},[]);
+  useEffect(() => { activeAccess.current=accessBase;clearEvidence();return()=>{activeAccess.current='';consumeController.current?.abort();}; }, [accessBase,clearEvidence]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -95,7 +107,7 @@ export function EvidenceAccessPanel({
       if (me.user.permissions.includes('audit:approve')) {
         tasks.push(readJson<{ data: { items: AccessRequest[] } }>(
           await fetch('/api/content-access-requests?status=pending&page=1&pageSize=100', { cache: 'no-store' }),
-        ).then((payload) => setPendingRequests(payload.data.items.filter((item) => item.resourceId === incidentId))));
+        ).then((payload) => setPendingRequests(payload.data.items.filter((item) => item.resourceId === incidentId && item.resourceType === resourceType))));
       }
       await Promise.all(tasks);
     } catch (error) {
@@ -103,14 +115,14 @@ export function EvidenceAccessPanel({
     } finally {
       setLoading(false);
     }
-  }, [incidentId, accessBase]);
+  }, [incidentId, accessBase, resourceType]);
 
   useEffect(() => { void load(); }, [load]);
   useEffect(() => {
-    if (!rawEvidence) { setHighlightViews([]); setMedia(null); return; }
-    const timer = window.setTimeout(() => setRawEvidence(null), 60_000);
+    if (rawEvidence === null) return;
+    const timer = window.setTimeout(clearEvidence, 60_000);
     return () => window.clearTimeout(timer);
-  }, [rawEvidence]);
+  }, [rawEvidence,clearEvidence]);
 
   const requestAccess = async () => {
     if (reason.trim().length < 10) return;
@@ -153,25 +165,29 @@ export function EvidenceAccessPanel({
   };
 
   const consume = async (request: AccessRequest) => {
+    clearEvidence();const controller=new AbortController();consumeController.current=controller;
     setConsumingId(request.id);
     try {
-      const payload = await readJson<{ data: { answerEvidence: string; highlightViews?: HighlightView[]; media?:AuthorizedMedia } }>(
+      const payload = contentAccessConsumeResponseSchema.parse(await readJson<unknown>(
         await fetch(`${accessBase}/consume`, {
           method: 'POST',
           headers: { 'content-type': 'application/json', ...csrfHeaders() },
           body: JSON.stringify({ requestId: request.id }),
+          signal:controller.signal,
           cache: 'no-store',
         }),
-      );
-      if (activeAccess.current !== accessBase) return;
+      ));
+      if (activeAccess.current !== accessBase || controller.signal.aborted) return;
+      setOriginalPreview(payload.data.originalPreview??null);
+      setReviewHighlights(payload.data.reviewHighlights??[]);
       setMedia(payload.data.media ?? null);
       setHighlightViews(payload.data.highlightViews ?? []);
       setRawEvidence(payload.data.answerEvidence);
       await load();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : '原文查看失败');
+      if(!controller.signal.aborted)toast.error(error instanceof Error ? error.message : '原文查看失败');
     } finally {
-      setConsumingId(null);
+      if(consumeController.current===controller){consumeController.current=null;setConsumingId(null);}
     }
   };
 
@@ -195,10 +211,10 @@ export function EvidenceAccessPanel({
   if (!canRequest && !canApprove) return null;
 
   return (
-    <section className="space-y-3" aria-labelledby="evidence-access-heading">
+    <section className="space-y-3" aria-labelledby={headingId} data-testid={'evidence-access-'+resourceType+'-'+incidentId}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h3 id="evidence-access-heading" className="text-sm font-semibold text-gray-900">原文访问控制</h3>
+          <h3 id={headingId} className="text-sm font-semibold text-gray-900">{resourceType==='MEDIA_ORIGINAL'?'原件独立访问控制':'原文访问控制'}</h3>
           <p className="mt-1 text-xs text-gray-500">双人审批、摘要绑定、15 分钟有效、仅可查看一次</p>
         </div>
         {canRequest && <Button size="sm" variant="outline" onClick={() => setRequestOpen(true)}><KeyRound className="h-4 w-4" />申请查看</Button>}
@@ -257,7 +273,7 @@ export function EvidenceAccessPanel({
       <Dialog open={requestOpen} onOpenChange={setRequestOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>申请查看原文证据</DialogTitle>
+            <DialogTitle>{resourceType==='MEDIA_ORIGINAL'?'申请查看所选原件或 PDF 页':'申请查看原文证据'}</DialogTitle>
             <DialogDescription>申请人与审批人必须不同。批准后仅在 15 分钟内允许一次查看；必要性说明不得粘贴事件原文或客户隐私。</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -282,13 +298,15 @@ export function EvidenceAccessPanel({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={rawEvidence !== null} onOpenChange={(open) => { if (!open) setRawEvidence(null); }}>
+      <Dialog open={rawEvidence !== null} onOpenChange={(open) => { if (!open) clearEvidence(); }}>
         <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader><DialogTitle className="flex items-center gap-2"><TimerReset className="h-5 w-5 text-amber-600" />临时原文证据</DialogTitle><DialogDescription>该授权已消费；内容将在 60 秒后从当前界面自动清除。请勿复制到日志、工单或非受控系统。</DialogDescription></DialogHeader>
+          <ReviewEvidenceHighlights items={reviewHighlights}/>
+          {originalPreview && <OriginalPreviewDisplay preview={originalPreview}/>}
           {media && <AuthorizedMediaPreview key={accessBase} media={media}/>}
           {highlightViews.map(view => <section key={view.label} className="max-h-64 overflow-auto rounded border p-3"><p className="mb-2 text-xs text-muted-foreground">命中位置 · {view.label}</p><div className="whitespace-pre-wrap break-words font-mono text-sm">{view.parts.map(part => part.evidenceIds.length ? <mark key={part.start} className="bg-amber-200 text-black" title={'证据 ' + part.evidenceIds.join('、')}>{part.text}</mark> : <span key={part.start}>{part.text}</span>)}</div></section>)}
-          <details open={!media && !highlightViews.length}><summary className="cursor-pointer text-sm text-muted-foreground">查看完整归档内容</summary><Textarea readOnly aria-label="完整归档内容" value={rawEvidence ?? ''} rows={10} className="mt-2 max-h-80 resize-none font-mono text-sm [field-sizing:fixed]" /></details>
-          <DialogFooter><Button onClick={() => setRawEvidence(null)}><X className="h-4 w-4" />关闭并清除</Button></DialogFooter>
+          <details open={!media && !originalPreview && !highlightViews.length}><summary className="cursor-pointer text-sm text-muted-foreground">查看完整归档内容</summary><Textarea readOnly aria-label="完整归档内容" value={rawEvidence ?? ''} rows={10} className="mt-2 max-h-80 resize-none font-mono text-sm [field-sizing:fixed]" /></details>
+          <DialogFooter><Button onClick={clearEvidence}><X className="h-4 w-4" />关闭并清除</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </section>

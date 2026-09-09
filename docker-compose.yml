@@ -178,6 +178,7 @@ services:
       - ./drizzle/0069_layered_media_evidence.sql:/docker-entrypoint-initdb.d/79-layered-media-evidence.sql:ro
       - ./drizzle/0070_policy_bundle_lifecycle_states.sql:/docker-entrypoint-initdb.d/80-policy-bundle-lifecycle-states.sql:ro
       - ./drizzle/0071_artifact_purge_ledger.sql:/docker-entrypoint-initdb.d/81-artifact-purge-ledger.sql:ro
+      - ./drizzle/0072_original_media_access.sql:/docker-entrypoint-initdb.d/82-original-media-access.sql:ro
     ports:
       - "127.0.0.1:${DB_PORT:-5434}:5432"
     healthcheck:

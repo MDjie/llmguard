@@ -126,6 +126,7 @@ function evidence(decisionValue: GuardDecision, spans: readonly Span[], traceId:
       const base = {
         locations: location.location ? [location.location] : [], locationState: location.state,
         detectorId: observation.detectorId,
+        modelVersion: observation.modelVersion,
         status: observation.status, decisionRole: observation.decisionRole,
         detectorVersion: observation.detectorVersion,
         ruleId: observation.ruleId,

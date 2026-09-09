@@ -1,9 +1,10 @@
+import {reviewPolarity} from '@/lib/evidence/review-evidence';
 import {makeEvidenceView} from '@/lib/evidence/media-views';
 import {validateEvidenceLocation} from '@/lib/evidence/location';
 import {createHash} from 'node:crypto';
 import {and,asc,eq} from 'drizzle-orm';
 import type {GuardAction} from '@guardllm/contracts';
-import type {EvidenceView} from '@/contracts/http/media-evidence';
+import type {EvidenceView,ReviewEvidence} from '@/contracts/http/media-evidence';
 import {db} from '@/storage/database/shared/db';
 import {artifactParts} from '@/storage/database/shared/schema';
 import {scopePredicate} from '@/lib/tenancy';
@@ -40,7 +41,7 @@ export async function processNextIntakeJob(){
   const initial=await validateIntakeBinding(scope,job.ownerId,job.executionBinding),bundle=await loadVerifiedPolicyBundle(scope,job.bundleId);
   const chatContext=initial.binding.context ? await readAcceptedTextArtifact(scope,initial.binding.context.artifactId,256*1024,['TEXT'],signal) : undefined;
   if(chatContext!==undefined && createHash('sha256').update(chatContext).digest('hex')!==initial.binding.context!.sha256)throw new Error('INTAKE_CONTEXT_DIGEST_CHANGED');
-  const textEvidenceKeys=new Set<string>();
+  const textEvidenceKeys=new Set<string>(),reviewEvidence:ReviewEvidence[]=[];
   const actions:GuardAction[]=[],evidence:unknown[]=[],coverage:unknown[]=[],views:EvidenceView[]=[],mappings:Record<string,unknown>[]=[];
   const reasons=new Set<string>(),relations:RelationSource[]=[];
   const mediaInputs:Parameters<typeof analyzeNativeArtifacts>[0]['artifacts'][number][]=[];
@@ -68,18 +69,19 @@ export async function processNextIntakeJob(){
      const content=fusionSourceContent(chunk.content,[{start:0,end:chunk.content.length,source:'file_text',artifactId:artifact.id}],ctx);
      const decision=await createEngineForPolicyBundle(bundle).evaluate({contractVersion:'1.0',context:ctx,content});
      actions.push(decision.action);if(decision.degraded||decision.degradationReasons.length){complete=false;decision.degradationReasons.forEach(reason=>reasons.add(reason));}
-     const confirmed=decision.observations.filter(isConfirmedObservation);
+     const confirmed=decision.observations.filter(observation=>isConfirmedObservation(observation)||observation.detectorId==='configurable-judge');
      if(confirmed.some(item=>item.evidence.length)){
       const view=makeEvidenceView({artifactId:artifact.id,sourceDigest:artifact.verifiedSha256!,text:chunk.content,textLength:chunk.content.length,contentPath:'/text/chunks/'+chunk.index,viewId:'chunk-'+chunk.index,source:'file_text'});
       views.push(view);mappings.push({artifactId:artifact.id,viewId:view.viewId,mappingVersion:'decoded-text-window-1',offsetEncoding:'UTF16',globalStart:chunk.startOffset,globalEnd:chunk.endOffset,encoding:decoded.encoding,bomBytes:decoded.bomBytes,decodedTextSha256});
       for(const observation of confirmed)for(const ref of observation.evidence){
        const start=ref.start===undefined?undefined:ref.start+chunk.startOffset,end=ref.end===undefined?undefined:ref.end+chunk.startOffset;
-       const key=JSON.stringify([artifact.id,observation.riskType,observation.detectorId,start,end,ref.contentHmac]);if(textEvidenceKeys.has(key))continue;textEvidenceKeys.add(key);
+       const key=JSON.stringify([artifact.id,observation.riskType,observation.detectorId,observation.assessmentId,observation.modelVersion,observation.reasonCode,reviewPolarity(observation),start,end,ref.contentHmac]);if(textEvidenceKeys.has(key))continue;textEvidenceKeys.add(key);
        const cues=start!==undefined&&end!==undefined&&subtitle?subtitleCuesForRange(subtitle.cues,start,end):[];
        const locatedViews=cues.length?cues.map(cue=>({...view,viewId:view.viewId+'-cue-'+cue.index,startMs:cue.startMs,endMs:cue.endMs})): [view];
        if(cues.length)views.push(...locatedViews);
        const locations=locatedViews.flatMap(locatedView=>{const {text:_text,source:_source,...position}=locatedView;void _text;void _source;const located=validateEvidenceLocation({...position,textStart:ref.start,textEnd:ref.end});return located.location?[located.location]:[];});
-       evidence.push({...ref,evidenceRef:createHash('sha256').update(key).digest('hex'),riskType:observation.riskType,detectorId:observation.detectorId,detectorVersion:observation.detectorVersion,status:observation.status,decisionRole:observation.decisionRole,reasonCode:observation.reasonCode,score:observation.score,scoreMeaning:observation.scoreMeaning??'UNCALIBRATED',action:decision.action,artifactId:artifact.id,sourceDigest:artifact.verifiedSha256,decodedTextSha256,offsetEncoding:'UTF16',start,end,locationState:ref.start===undefined||!locations.length?'UNVERIFIED':'VERIFIED',locations:ref.start===undefined?[]:locations});
+       if(locations.length)reviewEvidence.push({evidenceId:createHash('sha256').update(key).digest('hex'),polarity:reviewPolarity(observation),riskType:observation.riskType,detectorId:observation.detectorId,modelVersion:observation.modelVersion,decisionRole:observation.decisionRole??'UNSPECIFIED',reasonCode:observation.reasonCode??'DETECTION_OBSERVATION',locations});
+       if(isConfirmedObservation(observation))evidence.push({...ref,evidenceRef:createHash('sha256').update(key).digest('hex'),riskType:observation.riskType,detectorId:observation.detectorId,detectorVersion:observation.detectorVersion,status:observation.status,decisionRole:observation.decisionRole,reasonCode:observation.reasonCode,score:observation.score,scoreMeaning:observation.scoreMeaning??'UNCALIBRATED',action:decision.action,artifactId:artifact.id,sourceDigest:artifact.verifiedSha256,decodedTextSha256,offsetEncoding:'UTF16',start,end,locationState:ref.start===undefined||!locations.length?'UNVERIFIED':'VERIFIED',locations:ref.start===undefined?[]:locations});
       }
      }
 
@@ -130,7 +132,7 @@ export async function processNextIntakeJob(){
   const action=combineActionConstraints(actions).action,eligible=!reasons.size&&['ALLOW','WARN'].includes(action);
   await completeGuardJob(job,{contractVersion:'1.0',analysisContractVersion:'intake-1',artifactId:job.artifactId,bundleId:job.bundleId,action,sourceBinding:initial.binding,...(initial.binding.context?{contextDigest:initial.binding.context.sha256}:{}),analysisCoverage:coverage,evidence,
    normalizedAssets,relationAssessment:{...relationAssessment,evidence:relationAssessment.evidence},nativeBinding:native?.binding??null,nativeAssessment:native?.assessment??null,nativeCoverage:native?.gate??null,jointEvidence:joint,degraded:reasons.size>0,degradationReasons:[...reasons],operationalOutcome:reasons.size?'INCOMPLETE':action==='REQUIRE_REVIEW'?'REQUIRES_REVIEW':'COMPLETE',
-   releaseEligibility:{eligible,executionPermitRequired:true,reasonCodes:eligible?[]:[...reasons,...(!['ALLOW','WARN'].includes(action)?['ACTION_REQUIRES_INTERVENTION']:[])]}},{views,mappings});
+   releaseEligibility:{eligible,executionPermitRequired:true,reasonCodes:eligible?[]:[...reasons,...(!['ALLOW','WARN'].includes(action)?['ACTION_REQUIRES_INTERVENTION']:[])]}},{views,mappings,reviewEvidence});
   return {jobId:job.id,status:'completed'};
  }catch(error:unknown){if(monitor.signal.aborted||isGuardJobCancellationError(error))return {jobId:job.id,status:'cancelled'};await failGuardJob(job,error);return {jobId:job.id,status:job.attempt>=job.maxAttempts?'failed':'retrying'};}finally{monitor.stop();}
 }

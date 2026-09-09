@@ -1,3 +1,4 @@
+import {reviewFromMappedEvidence} from '@/lib/evidence/review-evidence';
 import { z } from 'zod';
 import { enqueueMediaEvidenceSnapshot, type PrivateMediaEvidence } from '@/lib/evidence/media-snapshots';
 import { resolveArchivePolicy } from '@/lib/conversation-archive/policy';
@@ -353,7 +354,8 @@ export async function completeGuardJobWithEffects(
     const completion=await effects(transaction),privateEvidence=completion.privateEvidence;
     let result=z.record(z.string(),z.unknown()).parse(JSON.parse(JSON.stringify(completion.result)));
     if(privateEvidence && resolveArchivePolicy(scope).mode==='STRICT_OBJECT'){
-      const snapshot=await enqueueMediaEvidenceSnapshot(transaction,job,privateEvidence);
+      const reviews=[...new Map([...(privateEvidence.reviewEvidence??[]),...reviewFromMappedEvidence(result.evidence)].map(item=>[item.evidenceId,item])).values()];
+      const snapshot=await enqueueMediaEvidenceSnapshot(transaction,job,{...privateEvidence,reviewEvidence:reviews});
       result={...result,evidenceArchive:{id:snapshot.id,state:snapshot.state,sourceDigest:snapshot.sourceDigest}};
     }
     const [completed] = await transaction.update(guardJobs).set({

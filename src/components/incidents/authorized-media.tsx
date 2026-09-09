@@ -1,13 +1,15 @@
 'use client';
-import { useRef,useState } from 'react';
+import { useEffect,useRef,useState } from 'react';
 import Image from 'next/image';
+import {originalMediaSchema,type OriginalPreview} from '@/contracts/http/original-preview';
 import type { MediaAnnotation } from '@/contracts/http/media-evidence';
 import { Button } from '@/components/ui/button';
 export type {AuthorizedMedia} from '@/lib/evidence/media-preview';
 import {authorizedMediaSchema,verifiedSeekSeconds,activeMediaAnnotations,type AuthorizedMedia} from '@/lib/evidence/media-preview';
-export function AuthorizedMediaPreview({media}:{media:AuthorizedMedia}){
+export function AuthorizedMediaPreview({media,original=false}:{media:AuthorizedMedia|OriginalPreview['media'];original?:boolean}){
  const audio=useRef<HTMLAudioElement>(null),video=useRef<HTMLVideoElement>(null),[size,setSize]=useState<{width:number;height:number}|null>(null),[seekError,setSeekError]=useState(''),[mediaReady,setMediaReady]=useState(false),[position,setPosition]=useState(0);
- const checked=authorizedMediaSchema.safeParse(media);
+ useEffect(()=>{const players=[audio.current,video.current];return()=>{for(const player of players){if(player){player.pause();player.removeAttribute('src');player.load();}}};},[]);
+ const checked=(original?originalMediaSchema:authorizedMediaSchema).safeParse(media);
  if(!checked.success)return <p role="alert" className="text-sm">授权媒体格式无法验证，请查看归档详情。</p>;
  const src='data:'+checked.data.mimeType+';base64,'+checked.data.dataBase64,annotations=checked.data.annotations??[];
  const seek=(annotation:MediaAnnotation)=>{const element=audio.current??video.current,seconds=verifiedSeekSeconds(annotation,element?.duration??NaN);if(!element||seconds===null){setSeekError('媒体尚未就绪或完整时间范围无法验证');return;}element.currentTime=seconds;setPosition(seconds);setSeekError('');};

@@ -3,7 +3,7 @@ import { mediaProvenanceSchema,type MediaAnnotation } from '@/contracts/http/med
 import type { AlertView } from '@/contracts/http/security-alerts';
 import { viewIdentity } from './media-views';
 /** Only stored analyzer provenance can assert a source coordinate system. Legacy locations remain textual. */
-export function authorizedMediaAnnotations(artifactId:string,sha256:string,mimeType:string,raw:unknown,alerts:readonly Pick<AlertView,'evidence'>[]):MediaAnnotation[]{
+export function authorizedMediaAnnotations(artifactId:string,sha256:string,mimeType:string,raw:unknown,alerts:readonly Pick<AlertView,'evidence'>[],selectedPage?:number):MediaAnnotation[]{
  const parsed=mediaProvenanceSchema.safeParse(raw);if(!parsed.success||parsed.data.artifactId!==artifactId||parsed.data.sourceDigest!==sha256)return [];
  const {views,mappings}=parsed.data,identities=new Set(views.filter(v=>v.artifactId===artifactId&&v.sourceDigest===sha256).map(viewIdentity));
  const result:MediaAnnotation[]=[];
@@ -13,7 +13,9 @@ export function authorizedMediaAnnotations(artifactId:string,sha256:string,mimeT
    if(!identities.has(viewIdentity(location)))continue;
    const mapping=mappings.find(item=>item.artifactId===artifactId&&item.viewId===location.viewId);if(!mapping)continue;
    const entry:MediaAnnotation={evidenceId:evidence.evidenceId,label:location.contentPath};
-   if(['image/png','image/jpeg','image/webp'].includes(mimeType)&&location.region&&(!location.page||location.page===1)&&mapping.mappingVersion==='inverse-image-view-1'&&mapping.basis==='DISPLAY_ORIENTED_SOURCE_PAGE'){
+   const imagePage=['image/png','image/jpeg','image/webp'].includes(mimeType)&&(!location.page||location.page===1);
+   const pdfPage=mimeType==='application/pdf'&&selectedPage!==undefined&&location.page===selectedPage&&mapping.page===selectedPage;
+   if((imagePage||pdfPage)&&location.region&&mapping.mappingVersion==='inverse-image-view-1'&&mapping.basis==='DISPLAY_ORIENTED_SOURCE_PAGE'){
     if(location.region[2]>location.region[0]&&location.region[3]>location.region[1])entry.region=location.region;
    }
    if((mimeType.startsWith('audio/')||mimeType==='video/mp4')&&location.startMs!==undefined&&location.endMs!==undefined&&mapping.mappingVersion==='audio-time-to-source-1'&&mapping.basis==='SOURCE_TIME_MS'&&z.number().int().positive().safeParse(mapping.sourceDurationMs).success&&location.endMs<=Number(mapping.sourceDurationMs)){

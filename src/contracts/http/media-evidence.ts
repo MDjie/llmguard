@@ -4,8 +4,11 @@ export const evidenceViewSchema = evidenceLocationSchema.safeExtend({
  text:z.string().max(262144),source:z.string().min(1).max(128),
 }).strict();
 export type EvidenceView = z.infer<typeof evidenceViewSchema>;
+export const reviewEvidenceSchema=z.object({evidenceId:z.string().min(1).max(128),polarity:z.enum(['SUPPORT','COUNTER']),riskType:z.string().max(128),detectorId:z.string().max(128),modelVersion:z.string().max(256).optional(),decisionRole:z.string().max(64),reasonCode:z.string().max(128),locations:z.array(evidenceLocationSchema).min(1).max(1000)}).strict();
+export type ReviewEvidence=z.infer<typeof reviewEvidenceSchema>;
+export const reviewHighlightSchema=reviewEvidenceSchema.omit({riskType:true,locations:true}).extend({modelVersion:z.string().max(256),label:z.string(),parts:z.array(z.object({start:z.number().int(),end:z.number().int(),text:z.string(),evidenceIds:z.array(z.string())}).strict())}).strict();
 export const evidenceSnapshotSchema=z.object({version:z.literal('media-evidence-1'),jobId:z.uuid(),bundleId:z.string().min(1),
- views:z.array(evidenceViewSchema).max(10000),mappings:z.array(z.record(z.string(),z.unknown())).max(10000),
+ reviewEvidence:z.array(reviewEvidenceSchema).max(10000).optional(),views:z.array(evidenceViewSchema).max(10000),mappings:z.array(z.record(z.string(),z.unknown())).max(10000),
 }).strict();
 export const mediaEvidenceMetadataSchema=z.object({id:z.string().regex(/^[a-f0-9]{64}$/),jobId:z.uuid(),state:z.enum(['PENDING','OBJECT_WRITTEN','READY','DELETE_PENDING','DELETED']),
  sourceDigest:z.string().regex(/^[a-f0-9]{64}$/),createdAt:z.iso.datetime(),expiresAt:z.iso.datetime(),holdUntil:z.iso.datetime().nullable(),errorCode:z.string().nullable()}).strict();

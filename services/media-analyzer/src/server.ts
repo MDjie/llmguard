@@ -1,3 +1,4 @@
+import {renderPdfPreview} from './pdf-preview';
 import {analyzerCapabilities} from './capabilities';
 import { analyzeNativeJoint } from './native-joint';
 import { transformMedia } from './media-transform';
@@ -72,6 +73,7 @@ async function route(request: IncomingMessage, response: ServerResponse) {
   }
   if (request.method !== 'POST' || ![
     '/v1/capabilities',
+    '/v1/preview/pdf-page',
     '/v1/analyze/document-image',
     '/v1/analyze/audio-video',
     '/v1/mark/media',
@@ -100,6 +102,7 @@ async function route(request: IncomingMessage, response: ServerResponse) {
   try {
     const body = await jsonBody(request);
     const runner = new ProcessCommandRunner(controller.signal);
+    if (request.url === '/v1/preview/pdf-page') { respond(response, 200, await renderPdfPreview(body, runner, controller.signal)); return; }
     if (request.url === '/v1/transform/media') { respond(response, 200, await transformMedia(body, runner, controller.signal)); return; }
     if (request.url === '/v1/analyze/native-joint') { respond(response, 200, await analyzeNativeJoint(body, runner, controller.signal)); return; }
     const result = request.url === '/v1/analyze/document-image'

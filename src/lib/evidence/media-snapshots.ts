@@ -1,3 +1,4 @@
+import {assertReviewBindings,highlightReviewEvidence} from './review-evidence';
 import { enqueueLayeredEvidence, publishEvidenceChunks, readLayeredEvidence, deleteEvidenceChunks, layeredManifestSchema, MAX_MEDIA_EVIDENCE_BYTES } from './layered-media';
 import {intakeBindingSchema} from '@/lib/guard-jobs/intake-binding';
 import { nativeJobBindingSchema } from '@/lib/guard-jobs/native-binding';
@@ -7,7 +8,7 @@ import { and, asc, eq, gt, inArray, isNull, lte, or, sql } from 'drizzle-orm';
 import { db } from '@/storage/database/shared/db';
 import { artifacts, guardJobs, mediaEvidenceSnapshots, contentAccessRequests, securityAlerts } from '@/storage/database/shared/schema';
 import { scopePredicate, type TenantScope, type TenantContext } from '@/lib/tenancy';
-import { evidenceSnapshotSchema, mediaEvidenceMetadataSchema, type EvidenceView } from '@/contracts/http/media-evidence';
+import { evidenceSnapshotSchema, mediaEvidenceMetadataSchema, type EvidenceView,type ReviewEvidence } from '@/contracts/http/media-evidence';
 import { sealReceipt, openReceipt, archiveContentHmac } from '@/lib/gateway-runtime/security';
 import { canonicalJson } from '@/lib/gateway-runtime/protocol';
 import { archiveObjectStore, type ArchiveObjectStore } from '@/lib/conversation-archive/object-store';
@@ -16,7 +17,7 @@ import { uniqueEvidenceViews, textVersion, highlightMediaViews } from './media-v
 import type { SecretEnvelope } from '@/lib/secrets/types';
 type Transaction=Parameters<Parameters<typeof db.transaction>[0]>[0];
 type Snapshot=typeof mediaEvidenceSnapshots.$inferSelect;
-export interface PrivateMediaEvidence {views:readonly EvidenceView[];mappings?:readonly Record<string,unknown>[]}
+export interface PrivateMediaEvidence {views:readonly EvidenceView[];mappings?:readonly Record<string,unknown>[];reviewEvidence?:readonly ReviewEvidence[]}
 const digest=(value:string|Uint8Array)=>createHash('sha256').update(value).digest('hex');
 const normalize=(value:unknown)=>canonicalJson(JSON.parse(JSON.stringify(value)));
 export const mediaEvidenceId=(scope:TenantScope,jobId:string)=>digest(canonicalJson(['media-evidence-1',scope.tenantId,scope.applicationId,jobId]));
@@ -25,7 +26,8 @@ const fail=(code:string):never=>{throw new Error(code);};
 export function mediaEvidenceMetadata(row:Snapshot){return mediaEvidenceMetadataSchema.parse({id:row.id,jobId:row.jobId,state:row.state,sourceDigest:row.contentHmac,createdAt:row.createdAt.toISOString(),expiresAt:row.expiresAt.toISOString(),holdUntil:row.holdUntil?.toISOString()??null,errorCode:row.errorCode});}
 export async function enqueueMediaEvidenceSnapshot(tx:Transaction,job:typeof guardJobs.$inferSelect,input:PrivateMediaEvidence){
  const scope={tenantId:job.tenantId,applicationId:job.applicationId},id=mediaEvidenceId(scope,job.id);
- const payload=evidenceSnapshotSchema.parse({version:'media-evidence-1',jobId:job.id,bundleId:job.bundleId,views:uniqueEvidenceViews(input.views),mappings:input.mappings??[]});
+ const payload=evidenceSnapshotSchema.parse({version:'media-evidence-1',jobId:job.id,bundleId:job.bundleId,views:uniqueEvidenceViews(input.views),mappings:input.mappings??[],...(input.reviewEvidence?.length?{reviewEvidence:input.reviewEvidence}:{})});
+ assertReviewBindings(payload.views,payload.reviewEvidence??[]);
  const allowedSources=new Map<string,string|null>([[job.artifactId,null],...(job.contextArtifactId?[[job.contextArtifactId,null] as [string,null]]:[])]);
  if(job.jobType==='native_joint'){const binding=nativeJobBindingSchema.parse(job.executionBinding);allowedSources.clear();allowedSources.set(binding.contextArtifactId,binding.contextSha256);for(const source of binding.artifacts)allowedSources.set(source.id,source.sha256);}
  if(job.jobType==='intake'){const binding=intakeBindingSchema.parse(job.executionBinding);allowedSources.clear();for(const source of binding.artifacts)allowedSources.set(source.id,source.sha256);}
@@ -65,6 +67,7 @@ export async function readMediaEvidence(scope:TenantScope,id:string,store:Archiv
   const content=layered.success?await readLayeredEvidence(scope,id,layered.data,store):evidenceSnapshotSchema.parse(opened);
   if(content.jobId!==row.jobId||archiveContentHmac(normalize(content),row.keyIds[0])!==row.contentHmac)fail('MEDIA_EVIDENCE_INTEGRITY_FAILED');
   for(const view of content.views)if(textVersion(view.text)!==view.contentVersion)fail('MEDIA_EVIDENCE_TEXT_VERSION_CHANGED');
+  assertReviewBindings(content.views,content.reviewEvidence??[]);
   return {row,content};
  }finally{bytes.fill(0);}
 }
@@ -74,9 +77,9 @@ export async function consumeMediaEvidence(scope:TenantContext,id:string,grantId
  const before=await readRow(scope,id);if(!active(before)||before.contentHmac!==grant.sourceDigest)fail('MEDIA_EVIDENCE_GRANT_CHANGED');
  const {row,content}=await readMediaEvidence(scope,id,store);
  const alerts=await db.select({evidence:securityAlerts.evidence}).from(securityAlerts).where(and(scopePredicate(securityAlerts,scope),eq(securityAlerts.jobId,row.jobId))).limit(1000);
- const highlightViews=highlightMediaViews(content.views,alerts);
+ const highlightViews=highlightMediaViews(content.views,alerts),reviewHighlights=highlightReviewEvidence(content.views,content.reviewEvidence??[]);
  return db.transaction(async tx=>{const [current]=await tx.select().from(mediaEvidenceSnapshots).where(and(scopePredicate(mediaEvidenceSnapshots,scope),eq(mediaEvidenceSnapshots.id,id))).for('share');const [access]=await tx.select().from(contentAccessRequests).where(predicate).for('update');const now=new Date();if(!current||!active(current,now)||current.contentHmac!==grant.sourceDigest||!access||!access.expiresAt||access.expiresAt<=now||access.sourceDigest!==current.contentHmac)fail('MEDIA_EVIDENCE_GRANT_CHANGED');
-  await tx.update(contentAccessRequests).set({usedAt:now}).where(eq(contentAccessRequests.id,grantId));const payload={incidentId:id,accessRequestId:grantId,sourceDigest:current.contentHmac,expiresAt:access.expiresAt!.toISOString(),consumedAt:now.toISOString(),answerEvidence:JSON.stringify(content,null,2),highlightViews};await afterConsume?.(tx,payload);return payload;});
+  await tx.update(contentAccessRequests).set({usedAt:now}).where(eq(contentAccessRequests.id,grantId));const payload={incidentId:id,accessRequestId:grantId,sourceDigest:current.contentHmac,expiresAt:access.expiresAt!.toISOString(),consumedAt:now.toISOString(),answerEvidence:JSON.stringify(content,null,2),highlightViews,reviewHighlights};await afterConsume?.(tx,payload);return payload;});
 }
 export async function listJobMediaEvidence(scope:TenantScope,jobId:string){const rows=await db.select().from(mediaEvidenceSnapshots).where(and(scopePredicate(mediaEvidenceSnapshots,scope),eq(mediaEvidenceSnapshots.jobId,jobId))).limit(1);return rows.map(mediaEvidenceMetadata);}
 export async function setMediaEvidenceHold(scope:TenantContext,id:string,until:Date){
@@ -85,7 +88,7 @@ export async function setMediaEvidenceHold(scope:TenantContext,id:string,until:D
 }
 export async function deleteExpiredMediaEvidence(scope:TenantScope,id:string,store:ArchiveObjectStore=archiveObjectStore(),now=new Date()){
  const row=await db.transaction(async tx=>{const [current]=await tx.select().from(mediaEvidenceSnapshots).where(and(scopePredicate(mediaEvidenceSnapshots,scope),eq(mediaEvidenceSnapshots.id,id))).for('update');if(!current||!['READY','DELETE_PENDING'].includes(current.state)||current.expiresAt>now||current.holdUntil&&current.holdUntil>now)return null;
-  const [grant]=await tx.select({id:contentAccessRequests.id}).from(contentAccessRequests).where(and(scopePredicate(contentAccessRequests,scope),eq(contentAccessRequests.resourceType,'MEDIA_EVIDENCE'),eq(contentAccessRequests.resourceId,id),eq(contentAccessRequests.status,'approved'),isNull(contentAccessRequests.usedAt),gt(contentAccessRequests.expiresAt,now))).limit(1);if(grant)return null;
+  const [grant]=await tx.select({id:contentAccessRequests.id}).from(contentAccessRequests).where(and(scopePredicate(contentAccessRequests,scope),or(and(eq(contentAccessRequests.resourceType,'MEDIA_EVIDENCE'),eq(contentAccessRequests.resourceId,id)),and(eq(contentAccessRequests.resourceType,'MEDIA_ORIGINAL'),sql`${contentAccessRequests.resourceId} like ${id+':%'}`)),eq(contentAccessRequests.status,'approved'),isNull(contentAccessRequests.usedAt),gt(contentAccessRequests.expiresAt,now))).limit(1);if(grant)return null;
   if(current.state==='READY')await tx.update(mediaEvidenceSnapshots).set({state:'DELETE_PENDING'}).where(eq(mediaEvidenceSnapshots.id,id));return current;});
  if(!row||!row.objectVersion)return false;
  const deletedChunks=await deleteEvidenceChunks(scope,id,store);
