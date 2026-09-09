@@ -12,7 +12,7 @@ export const gatewayChatResponseSchema = z.object({
 export const gatewayChatProvidersSchema = z.object({ success: z.literal(true), data: z.array(z.object({ id: z.string(), displayName: z.string(), defaultModel: z.string().nullable(), isDefaultTarget: z.boolean() })) });
 export type GatewayChatResult = z.infer<typeof gatewayChatResponseSchema>['data'];
 
-export const chatArtifactReferenceSchema=z.object({artifactId:z.string().uuid(),sha256:z.string().regex(/^[a-f0-9]{64}$/),jobId:z.string().uuid().optional()}).strict();
+export const chatArtifactReferenceSchema=z.object({artifactId:z.string().uuid(),sha256:z.string().regex(/^[a-f0-9]{64}$/),jobId:z.string().uuid().optional(),representation:z.literal('TEXT_PROJECTION').optional()}).strict().refine(value=>!value.representation||Boolean(value.jobId),'A projection requires an intake job');
 export const chatArtifactReferencesSchema=z.array(chatArtifactReferenceSchema).min(1).max(8).refine(values=>new Set(values.map(value=>value.artifactId)).size===values.length);
 export const consoleMessageSchema=z.object({role:z.enum(['system','user','assistant']),content:z.string().min(1).max(32768)}).strict();
 export type ChatArtifactReference=z.infer<typeof chatArtifactReferenceSchema>;

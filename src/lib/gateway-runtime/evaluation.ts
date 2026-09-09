@@ -71,6 +71,7 @@ export async function evaluateGateway(body: GatewayRequest, signal: AbortSignal)
   if ((body.stage.endsWith('RECHECK') ? 'RECHECK' : 'INITIAL') !== body.attemptKind) throw new GatewayError('STEP_ATTEMPT_INVALID', 400);
   const inputHmac = evidenceHmac(canonicalJson({ stage: body.stage, segments: body.segments, snapshotId: body.snapshotId, ...(body.window ? { window: body.window } : {}) }));
   const processing = readProcessingContext(row);
+  if (processing.derivedExecution && body.stage === 'INPUT_RECHECK') throw new GatewayError('DERIVED_INPUT_RECHECK_REQUIRES_NEW_JOB', 422);
   if (processing.nativeExecution && body.stage === 'INPUT_RECHECK') throw new GatewayError('NATIVE_JOINT_RECHECK_REQUIRED', 422);
   if (body.stage === 'INPUT' && canonicalJson(body.segments) !== canonicalJson(processing.inputSegments)) throw new GatewayError('AUTHORIZED_INPUT_CHANGED', 403);
   if (body.stage.endsWith('RECHECK')) {

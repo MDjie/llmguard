@@ -1,3 +1,5 @@
+import { chatArtifactReferenceSchema, chatArtifactReferencesSchema } from '@/contracts/http/gateway-chat';
+import { derivedExecutionProofSchema, prepareDerivedExecution } from './derived-execution';
 import type { EvidenceView } from '@/contracts/http/media-evidence';
 import { and, asc, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
@@ -15,12 +17,12 @@ import { nativeExecutionProofSchema, validateNativeExecutionJob } from './native
 import { signPayload, verifyPayload } from './security';
 
 const hash = z.string().regex(/^[a-f0-9]{64}$/);
-const referenceSchema = z.object({ artifactId: z.string().uuid(), sha256: hash, jobId: z.uuid().optional() }).strict();
-const optionsSchema = z.array(referenceSchema).min(1).max(8).refine(values => new Set(values.map(v => v.artifactId)).size === values.length);
+const referenceSchema = chatArtifactReferenceSchema;
+const optionsSchema = chatArtifactReferencesSchema;
 export const artifactContextProofSchema = z.object({ manifest: z.object({
   version: z.literal('1.0'), tenantId: z.string(), applicationId: z.string(), subjectId: z.string(), requestId: z.string(), bundleId: z.string(),
-  issuedAt: z.number().int(), expiresAt: z.number().int(), nativeExecution: nativeExecutionProofSchema.optional(),
-  references: z.array(referenceSchema.extend({ bindingDigest: hash, bytes: z.number().int().nonnegative() }).strict()).min(1).max(8),
+  issuedAt: z.number().int(), expiresAt: z.number().int(), nativeExecution: nativeExecutionProofSchema.optional(), derivedExecution: derivedExecutionProofSchema.optional(),
+  references: z.array(referenceSchema.safeExtend({ bindingDigest: hash, bytes: z.number().int().nonnegative() }).strict()).min(1).max(8),
 }).strict(), keyId: z.string(), signature: z.string() }).strict();
 export type ArtifactContextProof = z.infer<typeof artifactContextProofSchema>;
 type Context = TenantScope & { subjectId: string; requestId: string; bundleId: string };
@@ -45,6 +47,27 @@ export async function materializeArtifactRequest(input: Context & {
   archiveRequired?: boolean; modelRoute?: string; routingDigest?: string; request: Record<string, JsonValue>; sourceSegments: ContentSegment[]; references: z.infer<typeof optionsSchema>; deadline: number; maxInputChars: number; signal: AbortSignal;
 }) {
   input.signal.throwIfAborted();
+  if (input.references.some(ref => ref.representation === 'TEXT_PROJECTION')) {
+    const jobId = input.references[0].jobId;
+    if (!jobId || input.references.some(ref => ref.jobId !== jobId || ref.representation !== 'TEXT_PROJECTION')) throw new GatewayError('DERIVED_JOB_REFERENCE_MISMATCH',403);
+    if (!input.archiveRequired) throw new GatewayError('DERIVED_ARCHIVE_REQUIRED',403);
+    if (!input.modelRoute || !input.routingDigest) throw new GatewayError('DERIVED_ROUTE_BINDING_REQUIRED',403);
+    const prepared = await prepareDerivedExecution({...input,jobId,contextDigest:sha256(canonicalJson(input.request)),modelRoute:input.modelRoute,routingDigest:input.routingDigest});
+    const sources = new Map(input.sourceSegments.map(segment => [segment.contentPath.replace(/^\/messages\/(\d+)\//u, (_match:string,n:string) => '/messages/' + (Number(n)>=prepared.insertionIndex ? Number(n)+input.references.length : Number(n)) + '/'),segment.sourceType]));
+    const segments = extractSegments(prepared.request,'INPUT',input.maxInputChars).map(segment => {
+      const index = Number(segment.contentPath.split('/')[2]);
+      return {...segment,sourceType:index>=prepared.insertionIndex && index<prepared.insertionIndex+input.references.length ? 'FILE' as const : sources.get(segment.contentPath) ?? segment.sourceType};
+    });
+    for (const [index,data] of prepared.archiveData.entries()) await writeArchiveContent(input,{requestId:input.requestId,purpose:'RECEIVED_INPUT',sequence:index+1,representation:'CONTENT_SEGMENTS',data},undefined,input.signal);
+    await db.transaction(async tx => {
+      const [current] = await tx.select({state:gatewayRequests.preparationState}).from(gatewayRequests).where(and(scopePredicate(gatewayRequests,input),eq(gatewayRequests.id,input.requestId))).for('update');
+      if (current?.state !== 'PREPARING') throw new GatewayError('REQUEST_PREPARATION_CLOSED',409);
+      await tx.update(conversationArchives).set({mediaComplete:true,version:sql`${conversationArchives.version} + 1`}).where(and(scopePredicate(conversationArchives,input),eq(conversationArchives.requestId,input.requestId)));
+    });
+    const manifest: ArtifactContextProof['manifest'] = {version:'1.0',tenantId:input.tenantId,applicationId:input.applicationId,subjectId:input.subjectId,requestId:input.requestId,bundleId:input.bundleId,issuedAt:Date.now(),expiresAt:input.deadline,
+      references:prepared.references.map(ref=>({...ref,jobId,representation:'TEXT_PROJECTION'})),derivedExecution:prepared.proof};
+    return {request:prepared.request,segments,proof:{manifest,...signPayload('gateway-artifact-context-v1',manifest)}};
+  }
   const proofReferences: ArtifactContextProof['manifest']['references'] = [];
   const native = input.references.some(ref => ref.jobId !== undefined);
   let derivedViews:EvidenceView[]=[],derivedMappings:Record<string,unknown>[]=[];
@@ -73,7 +96,7 @@ export async function materializeArtifactRequest(input: Context & {
       try {
         const block = nativeMediaBlock(before.artifact.kind as NativeMediaKind, before.artifact.detectedMediaType ?? '', raw);
         contents.push(block);
-        archiveData = { artifactId: reference.artifactId, sha256: reference.sha256, mimeType: before.artifact.detectedMediaType, provenance:{version:'media-source-provenance-1',jobId:reference.jobId,artifactId:reference.artifactId,sourceDigest:reference.sha256,views:derivedViews.filter(view=>view.artifactId===reference.artifactId).map(({text:_text,source:_source,...location})=>location),mappings:derivedMappings.filter(mapping=>mapping.artifactId===reference.artifactId)}, dataBase64: Buffer.from(raw).toString('base64') };
+        archiveData = { artifactId: reference.artifactId, sha256: reference.sha256, mimeType: before.artifact.detectedMediaType, provenance:{version:'media-source-provenance-1',jobId:reference.jobId,artifactId:reference.artifactId,sourceDigest:reference.sha256,views:derivedViews.filter(view=>view.artifactId===reference.artifactId).map(({text:_text,source:_source,...location})=>{void _text;void _source;return location;}),mappings:derivedMappings.filter(mapping=>mapping.artifactId===reference.artifactId)}, dataBase64: Buffer.from(raw).toString('base64') };
       } finally { raw.fill(0); }
     } else {
       const text = await readAcceptedTextArtifact(input, reference.artifactId, 1048576, ['TEXT'], input.signal);
@@ -118,6 +141,13 @@ export async function assertArtifactContextActive(proof: ArtifactContextProof, i
   const m = proof.manifest;
   verifyPayload('gateway-artifact-context-v1', m, proof.keyId, proof.signature);
   if (m.tenantId !== input.tenantId || m.applicationId !== input.applicationId || m.subjectId !== input.subjectId || m.requestId !== input.requestId || m.bundleId !== input.bundleId || m.expiresAt <= Date.now() || m.issuedAt > Date.now() + 1000) throw new GatewayError('ARTIFACT_CONTEXT_BINDING_INVALID', 403);
+  if (m.derivedExecution) {
+    if (m.nativeExecution || m.references.some(ref => ref.representation !== 'TEXT_PROJECTION' || ref.jobId !== m.derivedExecution!.jobId)) throw new GatewayError('DERIVED_PROOF_INVALID',403);
+    const renewed = await prepareDerivedExecution({...input,...m.derivedExecution,references:m.references.map(ref=>({artifactId:ref.artifactId,sha256:ref.sha256})),signal:AbortSignal.timeout(Math.max(1,Math.min(30000,m.expiresAt-Date.now())))});
+    if (canonicalJson(renewed.proof) !== canonicalJson(m.derivedExecution) || canonicalJson(renewed.references) !== canonicalJson(m.references.map(ref=>({artifactId:ref.artifactId,sha256:ref.sha256,bindingDigest:ref.bindingDigest,bytes:ref.bytes})))) throw new GatewayError('DERIVED_EXECUTION_CHANGED',403);
+    return;
+  }
+  if (m.references.some(ref => ref.representation)) throw new GatewayError('DERIVED_PROOF_REQUIRED',403);
   if (m.nativeExecution) {
     const renewed = await validateNativeExecutionJob({ ...input, ...m.nativeExecution, references: m.references.map(ref => ({ artifactId: ref.artifactId, sha256: ref.sha256 })) });
     if (canonicalJson(renewed) !== canonicalJson(m.nativeExecution)) throw new GatewayError('NATIVE_EXECUTION_CHANGED', 403);

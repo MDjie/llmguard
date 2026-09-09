@@ -110,7 +110,7 @@ export async function submitGuardJob(input: {
   if (jobType === 'intake') {
     const ids=input.sourceArtifactIds ?? [input.artifactId];
     if(ids[0]!==input.artifactId)throw new GuardJobError('GRD_INTAKE_SOURCE_INVALID','The first source must be the primary artifact');
-    try{executionBinding=(await (await import('./intake-binding')).captureIntakeBinding(input.scope,input.ownerId,ids,input.taskPurpose)).binding;}
+    try{executionBinding=(await (await import('./intake-binding')).captureIntakeBinding(input.scope,input.ownerId,ids,input.taskPurpose,input.contextArtifactId)).binding;}
     catch{throw new GuardJobError('GRD_INTAKE_SOURCE_INVALID','Sources must be accepted, current and owned');}
   } else if (jobType === 'native_joint') {
     try { executionBinding = (await (await import('./native-binding')).captureNativeJobBinding(input.scope, input.ownerId, input.nativeArtifactIds!, input.contextArtifactId!, input.direction)).binding; }
@@ -151,6 +151,10 @@ export async function submitGuardJob(input: {
     if (currentSources.length !== sourceIds.length || currentSources.some(row => row.state !== 'accepted' || row.contentExpiresAt <= new Date())) throw new GuardJobError('GRD_ARTIFACT_NOT_ACCEPTED', 'Source changed before job submission');
     if (jobType === 'intake') {
       const binding = (await import('./intake-binding')).intakeBindingSchema.parse(executionBinding);
+      if (binding.context) {
+        const context = currentSources.find(row => row.id === binding.context!.artifactId);
+        if (!context || context.verifiedSha256 !== binding.context.sha256 || context.kind !== 'TEXT') throw new GuardJobError('GRD_INTAKE_CONTEXT_CHANGED', 'Context changed before job submission');
+      }
       for (const ref of binding.artifacts) {
         const row = currentSources.find(item => item.id === ref.id);
         if (!row || row.verifiedSha256 !== ref.sha256 || row.kind !== ref.kind || row.verifiedSize !== ref.sizeBytes || row.detectedMediaType !== ref.mediaType) throw new GuardJobError('GRD_INTAKE_SOURCE_CHANGED', 'Source changed before job submission');

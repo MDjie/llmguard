@@ -26,6 +26,7 @@ import {analyzeAudioVideo} from './analyzer';
 import {fuseMediaTimeline} from './timeline-fusion';
 import {analyzeNativeArtifacts} from '@/lib/multimodal/native-analyzer';
 import {runGlmJointEvidence} from '@/lib/multimodal/joint-evidence-judge';
+import {readAcceptedTextArtifact} from '@/lib/artifacts/text-reader';
 import {persistNormalizedAsset} from '@/lib/artifacts/normalized';
 import {projectDocument,projectMedia,projectText} from '@/lib/artifacts/normalized-projection';
 import type {NormalizedAsset} from '@/lib/artifacts/normalized-contract';
@@ -37,6 +38,8 @@ export async function processNextIntakeJob(){
  const timeout=AbortSignal.timeout(30*60_000),signal=AbortSignal.any([monitor.signal,timeout]);
  try{
   const initial=await validateIntakeBinding(scope,job.ownerId,job.executionBinding),bundle=await loadVerifiedPolicyBundle(scope,job.bundleId);
+  const chatContext=initial.binding.context ? await readAcceptedTextArtifact(scope,initial.binding.context.artifactId,256*1024,['TEXT'],signal) : undefined;
+  if(chatContext!==undefined && createHash('sha256').update(chatContext).digest('hex')!==initial.binding.context!.sha256)throw new Error('INTAKE_CONTEXT_DIGEST_CHANGED');
   const textEvidenceKeys=new Set<string>();
   const actions:GuardAction[]=[],evidence:unknown[]=[],coverage:unknown[]=[],views:EvidenceView[]=[],mappings:Record<string,unknown>[]=[];
   const reasons=new Set<string>(),relations:RelationSource[]=[];
@@ -116,7 +119,7 @@ export async function processNextIntakeJob(){
   let native=null,joint=null;
   if(mediaInputs.length){
    await updateGuardJobProgress(job,'joint_adjudication',85);
-   const contextText=JSON.stringify({taskPurpose:initial.binding.taskPurpose,files:relations.filter(item=>item.sourceType==='FILE').map(({objectRef,text})=>({artifactId:objectRef,instructionCapability:'FORBIDDEN',text}))});
+   const contextText=JSON.stringify({taskPurpose:initial.binding.taskPurpose,...(chatContext!==undefined?{chatContext}:{}),files:relations.filter(item=>item.sourceType==='FILE').map(({objectRef,text})=>({artifactId:objectRef,instructionCapability:'FORBIDDEN',text}))});
    native=await analyzeNativeArtifacts({scope,bundlePayload:bundle.payload,requiredRiskIds:bundle.payload.semanticCoverage?.requiredRiskIds??[],direction:'INPUT',contextText,artifacts:mediaInputs,signal});
    joint=native.binding?await runGlmJointEvidence({binding:native.binding,views:views.filter(item=>mediaSourceIds.has(item.artifactId)),privateOnly:true,absoluteDeadlineEpochMs:Date.now()+120000,signal}):null;
    if(joint){actions.push(joint.action);if(joint.mode==='ENFORCE')evidence.push(...joint.evidence);if(joint.mode==='ENFORCE'&&joint.status==='UNKNOWN')joint.reasonCodes.forEach(reason=>reasons.add(reason));}
@@ -125,7 +128,7 @@ export async function processNextIntakeJob(){
   signal.throwIfAborted();await validateIntakeBinding(scope,job.ownerId,initial.binding);
   if(reasons.size)actions.push('REQUIRE_REVIEW');
   const action=combineActionConstraints(actions).action,eligible=!reasons.size&&['ALLOW','WARN'].includes(action);
-  await completeGuardJob(job,{contractVersion:'1.0',analysisContractVersion:'intake-1',artifactId:job.artifactId,bundleId:job.bundleId,action,sourceBinding:initial.binding,analysisCoverage:coverage,evidence,
+  await completeGuardJob(job,{contractVersion:'1.0',analysisContractVersion:'intake-1',artifactId:job.artifactId,bundleId:job.bundleId,action,sourceBinding:initial.binding,...(initial.binding.context?{contextDigest:initial.binding.context.sha256}:{}),analysisCoverage:coverage,evidence,
    normalizedAssets,relationAssessment:{...relationAssessment,evidence:relationAssessment.evidence},nativeBinding:native?.binding??null,nativeAssessment:native?.assessment??null,nativeCoverage:native?.gate??null,jointEvidence:joint,degraded:reasons.size>0,degradationReasons:[...reasons],operationalOutcome:reasons.size?'INCOMPLETE':action==='REQUIRE_REVIEW'?'REQUIRES_REVIEW':'COMPLETE',
    releaseEligibility:{eligible,executionPermitRequired:true,reasonCodes:eligible?[]:[...reasons,...(!['ALLOW','WARN'].includes(action)?['ACTION_REQUIRES_INTERVENTION']:[])]}},{views,mappings});
   return {jobId:job.id,status:'completed'};

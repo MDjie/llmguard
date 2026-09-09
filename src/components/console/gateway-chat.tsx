@@ -49,7 +49,7 @@ export function GatewayChat() {
       const currentMessages=[...history,{role:user.role,content:user.content}];
       let references:z.infer<typeof chatArtifactReferencesSchema>|undefined;
       if(attachments.length){
-        const prepared=z.object({data:z.object({mode:z.enum(['TEXT','NATIVE','INSPECTION']),jobId:z.string().uuid().optional(),references:chatArtifactReferencesSchema})}).parse(await mediaJson('/api/chat/attachments',{method:'POST',signal:controller.signal,headers:{'content-type':'application/json'},body:JSON.stringify({providerId,messages:currentMessages,artifactIds:attachments.map(item=>item.artifactId),idempotencyKey:requestId+'-attachments'})})).data;
+        const prepared=z.object({data:z.object({mode:z.enum(['TEXT','NATIVE','DERIVED','INSPECTION']),jobId:z.string().uuid().optional(),references:chatArtifactReferencesSchema})}).parse(await mediaJson('/api/chat/attachments',{method:'POST',signal:controller.signal,headers:{'content-type':'application/json'},body:JSON.stringify({providerId,messages:currentMessages,artifactIds:attachments.map(item=>item.artifactId),idempotencyKey:requestId+'-attachments'})})).data;
         references=prepared.references;
         if(prepared.jobId){
           setAttachmentJob(prepared.jobId);let completed=false;
@@ -72,6 +72,7 @@ export function GatewayChat() {
       const value: unknown = await response.json();
       if (!response.ok) {
         const problem = z.object({ code: z.string().optional(), detail: z.string().optional() }).safeParse(value);
+        if (problem.success && problem.data.code === 'DERIVED_ROUTE_NOT_QUALIFIED') throw new Error('附件检测已完成，但当前模型与文件转换尚未取得释放资格。请查看附件检测记录。');
         throw new Error(problem.success ? [problem.data.detail ?? '安全网关未批准本次请求。', problem.data.code].filter(Boolean).join(' ') : '网关执行失败，请查看请求执行记录。');
       }
       const result = gatewayChatResponseSchema.parse(value).data;
