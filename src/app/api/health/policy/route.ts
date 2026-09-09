@@ -4,6 +4,17 @@ import { inspectPolicyReadiness, isPolicyBundleRuntimeError } from '@/lib/policy
 
 const responseSchema = z.object({
   ready: z.literal(true),
+  detectionCapabilities: z.object({
+    runtimeCompatible: z.boolean(),
+    capabilityVersion: z.literal('guard-detection-capabilities-1'),
+    declaredProfile: z.enum(['TEXT_BASELINE', 'MULTIMODAL_EXTRACTED', 'LEGACY_UNDECLARED']),
+    enabledDetectorIds: z.array(z.string().min(1)),
+    missingDetectorIds: z.array(z.string().min(1)),
+    reasons: z.array(z.string().min(1)),
+    qualityQualified: z.null(),
+    qualityStatus: z.literal('NOT_ASSESSED_BY_CAPABILITY_CHECK'),
+    mediaRuntimeVerified: z.literal(false),
+  }).strict(),
   service: z.literal('guardllm'),
   bundleId: z.string().min(1).max(36),
   generation: z.number().int().nonnegative(),

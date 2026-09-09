@@ -25,6 +25,11 @@ const ready = {
     level: 'operator-attested-development-only' as const,
     externalApproval: false,
   },
+  detectionCapabilities: {
+    runtimeCompatible: false, capabilityVersion: 'guard-detection-capabilities-1' as const,
+    declaredProfile: 'LEGACY_UNDECLARED' as const, enabledDetectorIds: [], missingDetectorIds: [], reasons: [],
+    qualityQualified: null, qualityStatus: 'NOT_ASSESSED_BY_CAPABILITY_CHECK' as const, mediaRuntimeVerified: false,
+  },
   profile: { id: 'policy-1', name: 'Default', version: 1 },
   applicationBinding: { bound: true as const, active: true as const },
   compilation: {
