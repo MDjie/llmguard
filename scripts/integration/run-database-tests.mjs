@@ -311,6 +311,25 @@ try {
     throw new Error('P5 content-access identity trigger is missing');
   }
 
+  const originalScopeTrigger = await client.query(
+    `select 1 from pg_trigger trigger
+       join pg_class relation on relation.oid = trigger.tgrelid
+      where relation.relname = 'content_access_requests'
+        and trigger.tgname = 'guard_original_media_access_scope_trigger'
+        and not trigger.tgisinternal`,
+  );
+  if (originalScopeTrigger.rowCount !== 1) {
+    throw new Error('Original media content-access scope trigger is missing');
+  }
+  const originalResourceConstraint = await client.query(
+    `select pg_get_constraintdef(oid) as definition from pg_constraint
+      where conrelid = 'content_access_requests'::regclass
+        and conname = 'content_access_requests_resource_ck'`,
+  );
+  if (!originalResourceConstraint.rows[0]?.definition.includes('MEDIA_ORIGINAL')) {
+    throw new Error('Original media content-access resource constraint is missing');
+  }
+
   const forbiddenP5Columns = await client.query(
     `select column_name
        from information_schema.columns

@@ -27,10 +27,13 @@ try{
  if(!await command('provision',['scripts/integration/comprehensive/provision.mjs',out]))throw new Error('PROVISION_REQUIRED');
  if(!await command('build',envRun('next','build')))throw new Error('BUILD_REQUIRED');
  await command('unit',['node_modules/vitest/vitest.mjs','run','--reporter=json','--outputFile='+out+'/unit-results.json']);
+ if(!await command('original-preview',envRun('tsx','scripts/integration/comprehensive/original-preview.ts')))throw new Error('ORIGINAL_PREVIEW_VALIDATION_REQUIRED');
  if(!await command('derived-chat',envRun('tsx','scripts/integration/comprehensive/derived-chat.ts')))throw new Error('DERIVED_CHAT_VALIDATION_REQUIRED');
  if(!await command('purge-recovery',envRun('tsx','scripts/integration/comprehensive/purge-recovery.ts')))throw new Error('PURGE_RECOVERY_VALIDATION_REQUIRED');
  if(!await command('normalized-purge',envRun('tsx','scripts/integration/comprehensive/normalized-purge.ts')))throw new Error('NORMALIZED_PURGE_VALIDATION_REQUIRED');
+ if(!await command('purge-real-ttl',envRun('tsx','scripts/integration/comprehensive/purge-real-ttl.ts'),{timeoutMs:180000}))throw new Error('REAL_TTL_VALIDATION_REQUIRED');
  if(!await command('normalized-rag',envRun('tsx','scripts/integration/comprehensive/normalized-rag.ts')))throw new Error('NORMALIZED_RAG_VALIDATION_REQUIRED');
+ if(!await command('backup-restore',['scripts/integration/comprehensive/backup-restore.mjs',out],{timeoutMs:180000}))throw new Error('BACKUP_RESTORE_VALIDATION_REQUIRED');
  if(!await command('start',['scripts/integration/comprehensive/start.mjs',out]))throw new Error('START_REQUIRED');ready=true;
  for(let n=0;n<60;n++){try{if((await fetch('http://127.0.0.1:58089/api/health/db',{signal:AbortSignal.timeout(5000)})).status===200)break;}catch{}if(n===59)throw new Error('HEALTH_TIMEOUT');await new Promise(resolve=>setTimeout(resolve,1000));}
  await command('schema-parity',envRun('tsx','scripts/integration/comprehensive/schema-parity.ts',out));
@@ -38,6 +41,7 @@ try{
  await command('trace-fixture',envRun('tsx','scripts/integration/comprehensive/trace-fixture.ts'));
  await command('format-fixture',['scripts/integration/multiformat/generate-fixtures.py',out+'/format-fixtures'],{program:process.env.COMPREHENSIVE_PYTHON??'python'});
  await command('format-generate',['scripts/integration/comprehensive/generate-media.mjs',out]);
+ await command('profile-boundaries',['scripts/integration/comprehensive/profile-boundaries.mjs',out]);
  await command('crawl',['scripts/integration/comprehensive/crawl.mjs',out]);
  const common={REUSE_SESSION:'1'};
  await command('journeys',['scripts/integration/comprehensive/journeys.mjs',out],{env:{...common,JOURNEY_IDS:'J02,J03,J04,J05,J06,J07,J08,J09,J10,J11,J12,J13,J14,J15,J16,J17'}});
@@ -46,6 +50,9 @@ try{
  await command('diagnostics',['scripts/integration/comprehensive/diagnostics.mjs',out],{env:{...common,JOURNEY_IDS:'J27,J28,J29,J30',JOURNEY_OUTPUT:'diagnostics'}});
  await command('final',['scripts/integration/comprehensive/final-journeys.mjs',out],{env:{...common,JOURNEY_OUTPUT:'final'}});
  await command('evidence-workflow',['scripts/integration/comprehensive/evidence-workflow.mjs',out]);
+ // Issue fresh short-lived grants immediately before the browser check.
+ await command('original-preview-refresh',envRun('tsx','scripts/integration/comprehensive/original-preview.ts'));
+ await command('original-preview-browser',['scripts/integration/comprehensive/original-preview-browser.mjs',out]);
  await command('security',envRun('tsx','scripts/integration/comprehensive/security.ts',out));
  await command('uploads',envRun('tsx','scripts/integration/multiformat/upload-matrix.ts',out));
  await command('media-stages',['scripts/integration/comprehensive/media-stages.mjs',out],{allowBlocked:true});

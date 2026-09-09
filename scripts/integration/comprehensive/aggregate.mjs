@@ -1,7 +1,7 @@
 import {readFileSync,writeFileSync,existsSync} from 'node:fs';
 import {resolve} from 'node:path';
 const [target,...directories]=process.argv.slice(2);if(!target||!directories.length)throw new Error('Usage: aggregate.mjs <output.json> <run-directory> ...');
-const suites=['journeys','repair-workflows','extended','diagnostics','final','evidence-workflow','auth-workflows','media-stages'];
+const suites=['journeys','repair-workflows','extended','diagnostics','final','evidence-workflow','original-preview-browser','auth-workflows','media-stages'];
 const records=new Map(),runs=[];
 for(const directory of directories){const out=resolve(directory);const read=name=>existsSync(out+'/'+name+'.json')?JSON.parse(readFileSync(out+'/'+name+'.json','utf8')):null;const identity=read('source-identity'),execution=read('run-result'),unit=read('unit-results');
  runs.push({directory:out,source:identity?.sha256,head:identity?.head,status:execution?.status??'INTERRUPTED',coldRun:execution?.coldRun??false,steps:execution?.steps??[],unit:unit?{passed:unit.numPassedTests,failed:unit.numFailedTests,pending:unit.numPendingTests}:null});

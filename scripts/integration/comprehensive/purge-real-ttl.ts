@@ -1,0 +1,40 @@
+import assert from 'node:assert/strict';
+import {readFileSync,writeFileSync} from 'node:fs';
+import {resolve} from 'node:path';
+import {createHash,randomUUID} from 'node:crypto';
+import {eq,ne} from 'drizzle-orm';
+import {db,closeDatabaseConnection} from '@/storage/database/shared/db';
+import {artifacts,artifactPurgeLedger} from '@/storage/database/shared/schema';
+import {createArtifactUpload,signArtifactPart} from '@/lib/artifacts/service';
+import {requestArtifactPurge,purgeNextArtifact} from '@/lib/artifacts/purge';
+import {S3ArtifactVersionStore} from '@/lib/artifacts/version-store';
+const out=resolve(process.env.COMPREHENSIVE_RUN_DIR!);
+const fixture=JSON.parse(readFileSync(out+'/fixture.private.json','utf8')) as {tenantId:string;applicationId:string;userId:string};
+const scope={tenantId:fixture.tenantId,applicationId:fixture.applicationId},checks:Array<{id:string;status:'PASS'}>=[],startedAt=new Date();
+const check=(id:string)=>{checks.push({id,status:'PASS'});console.log(id+' PASS');};
+async function waitUntil(time:number){while(Date.now()<time){await new Promise(resolve=>setTimeout(resolve,Math.min(10000,time-Date.now())));}}
+async function main(){
+ const database=new URL(process.env.DATABASE_URL!);assert.equal(database.hostname,'127.0.0.1');assert.equal(database.port,'5438');assert.match(database.pathname,/^\/guardllm_integration_full_\d+$/);
+ assert.equal((await db.select().from(artifactPurgeLedger).where(ne(artifactPurgeLedger.state,'PURGED'))).length,0,'No unrelated pending cleanup may exist');
+ const bytes=Buffer.from('synthetic real TTL verification'),digest=createHash('sha256').update(bytes).digest('hex');
+ const {artifact}=await createArtifactUpload({scope,ownerId:fixture.userId,kind:'TEXT',fileName:'real-ttl.txt',mediaType:'text/plain',sizeBytes:bytes.length,sha256:digest,idempotencyKey:randomUUID(),retentionDays:1,metadata:{engineeringFixture:true}});
+ const signedAt=Date.now(),signed=await signArtifactPart(scope,fixture.userId,artifact.id,1);
+ const upload=()=>fetch(signed.url,{method:'PUT',headers:signed.headers,body:bytes,signal:AbortSignal.timeout(10000)});
+ const first=await upload();assert.equal(first.status,200);await first.body?.cancel();
+ const store=new S3ArtifactVersionStore();assert.equal((await store.list(artifact.objectPrefix,1)).length,1);
+ await requestArtifactPurge(scope,fixture.userId,artifact.id);
+ const [ledger]=await db.select().from(artifactPurgeLedger).where(eq(artifactPurgeLedger.artifactId,artifact.id));
+ assert.ok(ledger.notBefore.getTime()>=signedAt+124000);assert.ok(ledger.notBefore.getTime()<signedAt+130000);
+ assert.equal(await purgeNextArtifact(store),null);check('REAL_TTL_DRAIN_PREVENTS_EARLY_DELETION');
+ await assert.rejects(signArtifactPart(scope,fixture.userId,artifact.id,1));check('NEW_SIGNATURE_REJECTED_AFTER_CANCELLATION');
+ await waitUntil(signedAt+66000);
+ const expired=await upload();assert.equal(expired.status,403);await expired.body?.cancel();check('OLD_PUT_SIGNATURE_EXPIRES_WITH_REAL_CLOCK');
+ assert.equal(await purgeNextArtifact(store),null);assert.equal((await store.list(artifact.objectPrefix,1)).length,1);check('DRAIN_GRACE_PRESERVES_OBJECT_AFTER_SIGNATURE_EXPIRY');
+ await waitUntil(ledger.notBefore.getTime()+1000);
+ const result=await purgeNextArtifact(store);assert.equal(result?.artifactId,artifact.id);assert.equal(result?.status,'purged');
+ assert.equal((await store.list(artifact.objectPrefix,1)).length,0);
+ const [deleted]=await db.select().from(artifacts).where(eq(artifacts.id,artifact.id));assert.ok(deleted.purgedAt);check('REAL_DRAIN_ELAPSES_BEFORE_VERSION_DELETE_AND_QUOTA_RELEASE');
+ const late=await upload();assert.equal(late.status,403);await late.body?.cancel();assert.equal((await store.list(artifact.objectPrefix,1)).length,0);check('EXPIRED_SIGNATURE_CANNOT_RECREATE_PURGED_OBJECT');
+ writeFileSync(out+'/purge-real-ttl.json',JSON.stringify({status:'PASS',clock:'REAL_WALL_CLOCK_NO_TIMESTAMP_REWRITE',scope:'ONE_NEW_SYNTHETIC_ARTIFACT_ONLY',startedAt,finishedAt:new Date(),elapsedMs:Date.now()-startedAt.getTime(),checks},null,2));
+}
+main().catch(error=>{writeFileSync(out+'/purge-real-ttl.json',JSON.stringify({status:'FAIL',checks,error:error instanceof Error?error.message:'unknown'},null,2));console.error(error instanceof Error?error.message:'unknown');process.exitCode=1;}).finally(closeDatabaseConnection);
