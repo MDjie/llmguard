@@ -33,9 +33,10 @@ export function validateOfficeExternalReferences(xml:string):void {
  parser.on('closetag',()=>{depth--;});parser.write(xml).close();
 }
 /** Validate ZIP central-directory bounds before LibreOffice sees an OOXML/ODF container. */
-export function inspectOfficeZip(bytes:Buffer,extension:string):Array<{name:string;bytes:Buffer}>{
- if(bytes.length<4||bytes.readUInt32LE(0)!==0x04034b50)return [];
- const entries:Array<{name:string;bytes:Buffer}>=[];
+export interface OfficePackageMember { containerPath:string;sha256:string;sizeBytes:number;kind:'XML'|'MEDIA'|'EMBEDDED_OBJECT'|'ACTIVE_CONTENT'|'OTHER';execution:'FORBIDDEN'; }
+function readOfficePackage(bytes:Buffer,extension:string,inventoryOnly=false):{entries:Array<{name:string;bytes:Buffer}>;members:OfficePackageMember[]}{
+ if(bytes.length<4||bytes.readUInt32LE(0)!==0x04034b50)return {entries:[],members:[]};
+ const entries:Array<{name:string;bytes:Buffer}>=[],members:OfficePackageMember[]=[];
  let end=-1;for(let offset=bytes.length-22;offset>=Math.max(0,bytes.length-65557);offset--){if(bytes.readUInt32LE(offset)===0x06054b50){end=offset;break;}}
  if(end<0||end+22+bytes.readUInt16LE(end+20)!==bytes.length)throw new Error('ANALYZER_OFFICE_ARCHIVE_INVALID');
  const count=bytes.readUInt16LE(end+10),centralSize=bytes.readUInt32LE(end+12);let pos=bytes.readUInt32LE(end+16),expanded=0;
@@ -47,8 +48,9 @@ export function inspectOfficeZip(bytes:Buffer,extension:string):Array<{name:stri
   const flags=bytes.readUInt16LE(pos+8),method=bytes.readUInt16LE(pos+10),compressed=bytes.readUInt32LE(pos+20),size=bytes.readUInt32LE(pos+24),length=bytes.readUInt16LE(pos+28),extra=bytes.readUInt16LE(pos+30),comment=bytes.readUInt16LE(pos+32),local=bytes.readUInt32LE(pos+42);
   if(pos+46+length+extra+comment>end||flags&1||![0,8].includes(method)||local+30>pos)throw new Error('ANALYZER_OFFICE_ARCHIVE_UNSUPPORTED');
   const name=bytes.subarray(pos+46,pos+46+length).toString('utf8');
-  if(!name||name.includes('\\')||name.startsWith('/')||name.split('/').includes('..')||name.includes(':')||names.has(name))throw new Error('ANALYZER_OFFICE_PATH_INVALID');
-  if(/vbaProject|macros?\/|scripts?\/|embeddings\//iu.test(name))throw new Error('ANALYZER_OFFICE_ACTIVE_CONTENT');
+  if(!name||name.includes('\0')||name.includes('\\')||name.startsWith('/')||name.split('/').includes('..')||name.includes(':')||names.has(name))throw new Error('ANALYZER_OFFICE_PATH_INVALID');
+  const active=/vbaProject|macros?\/|scripts?\//iu.test(name),embedded=/embeddings\//iu.test(name);
+  if(!inventoryOnly&&(active||embedded))throw new Error('ANALYZER_OFFICE_ACTIVE_CONTENT');
   names.add(name);expanded+=size;
   if(expanded>256*1024*1024||size>32*1024*1024||size>Math.max(1,compressed)*1000)throw new Error('ANALYZER_OFFICE_EXPANSION_LIMIT');
   if(bytes.readUInt32LE(local)!==0x04034b50)throw new Error('ANALYZER_OFFICE_ARCHIVE_INVALID');
@@ -60,6 +62,7 @@ export function inspectOfficeZip(bytes:Buffer,extension:string):Array<{name:stri
   const raw=bytes.subarray(start,start+compressed),decoded=method===8?inflateRawSync(raw,{maxOutputLength:32*1024*1024}):raw;
   if(decoded.length!==size)throw new Error('ANALYZER_OFFICE_ENTRY_SIZE_MISMATCH');
   if(officeCrc32(decoded)!==bytes.readUInt32LE(pos+16))throw new Error('ANALYZER_OFFICE_ENTRY_CHECKSUM_MISMATCH');
+  members.push({containerPath:name,sha256:createHash('sha256').update(decoded).digest('hex'),sizeBytes:size,kind:active?'ACTIVE_CONTENT':embedded?'EMBEDDED_OBJECT':/(?:^|\/)(?:media|Pictures)\/|\.(?:png|jpe?g|gif|tiff?|webp|svg|emf|wmf|mp3|mp4|wav)$/iu.test(name)?'MEDIA':/\.xml$|\.rels$/iu.test(name)?'XML':/\.bin$/iu.test(name)?'EMBEDDED_OBJECT':'OTHER',execution:'FORBIDDEN'});
   if(name.endsWith('.rels')||['content.xml','settings.xml'].includes(name)) {
    validateOfficeExternalReferences(new TextDecoder('utf-8',{fatal:true}).decode(decoded));
   }
@@ -69,7 +72,14 @@ export function inspectOfficeZip(bytes:Buffer,extension:string):Array<{name:stri
  if(pos!==end)throw new Error('ANALYZER_OFFICE_ARCHIVE_INVALID');
  const required:Readonly<Record<string,string>>={docx:'word/document.xml',xlsx:'xl/workbook.xml',pptx:'ppt/presentation.xml',odt:'content.xml',ods:'content.xml',odp:'content.xml'};
  if(required[extension]&&!names.has(required[extension]))throw new Error('ANALYZER_OFFICE_CONTAINER_MISMATCH');
- return entries;
+ return {entries,members};
+}
+export function inspectOfficeZip(bytes:Buffer,extension:string){return readOfficePackage(bytes,extension).entries;}
+/** Enumerates inert bytes only; this API never makes a package eligible for rendering. */
+export function officePackageInventory(bytes:Buffer,extension:string){
+ const {members}=readOfficePackage(bytes,extension,true);
+ const unresolved=members.filter(member=>['MEDIA','EMBEDDED_OBJECT','ACTIVE_CONTENT'].includes(member.kind));
+ return {version:'office-package-inventory-1' as const,members,unresolved,nativeCoverageClaimed:false as const};
 }
 export async function officeToPdf(inputPath:string,fileName:string,workspace:string,runner:CommandRunner,timeoutMs:number,signal?:AbortSignal):Promise<string>{
  const extension=extname(fileName).slice(1).toLowerCase();

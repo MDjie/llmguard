@@ -1,4 +1,4 @@
-import {officeToPdf,officePackageText} from './office';
+import {officeToPdf,officePackageText,officePackageInventory} from './office';
 import { mapRegion, inverseRotation, tileMapping, type Affine } from '../../../src/lib/evidence/coordinate-mapping';
 import { copyFile, readdir, stat, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -354,7 +354,10 @@ export async function analyzeDocumentImage(
     ? 100 * 1_024 * 1_024 : 500 * 1_024 * 1_024;
   if (request.artifact.sizeBytes > maxBytes) throw new Error('ANALYZER_ARTIFACT_TOO_LARGE');
   return withLoadedArtifact(request.artifact, async (inputPath, workspace) => {
-    const documentText=request.artifact.kind==='DOCUMENT'&&request.artifact.mediaType!=='application/pdf'?officePackageText(await readFile(inputPath),(request.artifact.fileName??'').split('.').at(-1)?.toLowerCase()??''):[];
+    const officeBytes=request.artifact.kind==='DOCUMENT'&&request.artifact.mediaType!=='application/pdf'?await readFile(inputPath):null;
+    const officeExtension=(request.artifact.fileName??'').split('.').at(-1)?.toLowerCase()??'';
+    const inventory=officeBytes?officePackageInventory(officeBytes,officeExtension):null;
+    const documentText=officeBytes?officePackageText(officeBytes,officeExtension):[];
     const pages = await sourcePages(request, inputPath, workspace, runner, signal);
     const views = await materializeViews(request, pages, workspace, runner, signal);
     await assertDecodeBudgets(request, pages, views, runner, workspace, signal);
@@ -362,7 +365,7 @@ export async function analyzeDocumentImage(
     const codes: CodeRegion[] = [];
     const labels: VisualLabel[] = [];
     const visual: VisualRisk[] = [];
-    const failures: AnalysisFailure[] = [];
+    const failures: AnalysisFailure[] = inventory?.unresolved.length ? [{component:'VISUAL',required:true,code:'ANALYZER_OFFICE_EMBEDDED_CONTENT_UNANALYZED'}] : [];
     const versions = new Set<string>();
     let lowConfidenceOcr=false;
     const analyzedViews = await mapInBatches(
@@ -448,7 +451,7 @@ export async function analyzeDocumentImage(
         processingCoverage:[{unit:'PAGE_VIEW' as const,expected:pages.length*request.views.length,processed:views.length,failed:0,skipped:Math.max(0,pages.length*request.views.length-views.length)}],
         analyzerVersion:`media-analyzer/1.1+${[...versions].sort().join(',') || 'degraded'}`,
         reasonCodes:[...analysisFailures.map(f=>f.code),...(lowConfidenceOcr?['OCR_LOW_CONFIDENCE_REGIONS']:[])]},
-      coordinateMappings:[...views.map(view=>view.mapping),...documentText.map(part=>({viewId:part.viewId,containerPath:part.containerPath,sourceRelation:part.sourceRelation,mappingVersion:'office-package-text-1',offsetEncoding:'UTF16'}))],
+      coordinateMappings:[...(inventory?.members.map(member=>({...member,mappingVersion:inventory.version,coverage:'INVENTORY_ONLY',sourceRelation:'OFFICE_PACKAGE_MEMBER'}))??[]),...views.map(view=>view.mapping),...documentText.map(part=>({viewId:part.viewId,containerPath:part.containerPath,sourceRelation:part.sourceRelation,mappingVersion:'office-package-text-1',offsetEncoding:'UTF16'}))],
       documentText,
       ocr,
       codes,
