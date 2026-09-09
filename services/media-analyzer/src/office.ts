@@ -77,9 +77,12 @@ function readOfficePackage(bytes:Buffer,extension:string,inventoryOnly=false):{e
 export function inspectOfficeZip(bytes:Buffer,extension:string){return readOfficePackage(bytes,extension).entries;}
 /** Enumerates inert bytes only; this API never makes a package eligible for rendering. */
 export function officePackageInventory(bytes:Buffer,extension:string){
+ const isPackage=bytes.length>=4&&bytes.readUInt32LE(0)===0x04034b50;
  const {members}=readOfficePackage(bytes,extension,true);
  const unresolved=members.filter(member=>['MEDIA','EMBEDDED_OBJECT','ACTIVE_CONTENT'].includes(member.kind));
- return {version:'office-package-inventory-1' as const,members,unresolved,nativeCoverageClaimed:false as const};
+ return {version:'office-package-inventory-1' as const,members,unresolved,
+  inventoryComplete:isPackage,coverageGaps:isPackage?[]:['ANALYZER_OFFICE_NON_PACKAGE_CONTENT_UNASSESSED'],
+  nativeCoverageClaimed:false as const};
 }
 export async function officeToPdf(inputPath:string,fileName:string,workspace:string,runner:CommandRunner,timeoutMs:number,signal?:AbortSignal):Promise<string>{
  const extension=extname(fileName).slice(1).toLowerCase();

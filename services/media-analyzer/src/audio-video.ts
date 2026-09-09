@@ -83,7 +83,7 @@ function uniqueFailures(values: readonly AnalysisFailure[]): AnalysisFailure[] {
   ])).values()].slice(0, 100);
 }
 
-async function probe(
+export async function probeMedia(
   runner: CommandRunner,
   inputPath: string,
   workspace: string,
@@ -107,6 +107,10 @@ async function probe(
     throw new Error('ANALYZER_FFPROBE_JSON_INVALID');
   }
   const parsed = probeSchema.parse(value);
+  // Until source mappings identify every video stream, never silently select one.
+  if (parsed.streams.filter(stream => stream.codec_type === 'video').length > 1) {
+    throw new Error('ANALYZER_VIDEO_MULTI_STREAM_PROFILE_UNAVAILABLE');
+  }
   const durations=[parsed.format.duration,...parsed.streams.map(stream=>stream.duration)]
     .filter((value):value is string=>value!==undefined&&value!=='N/A').map(Number);
   if(!durations.length||durations.some(value=>!Number.isFinite(value)||value<0))throw new Error('ANALYZER_MEDIA_DURATION_UNKNOWN');
@@ -354,7 +358,7 @@ async function extractFrames(input: {
   for (const job of jobs) {
     await input.runner.run(process.env.ANALYZER_FFMPEG_COMMAND ?? 'ffmpeg', [
       '-nostdin', '-v', 'error', '-protocol_whitelist', 'file,pipe',
-      '-i', input.inputPath, '-vf', job.filter,
+      '-i', input.inputPath, '-map', '0:v:0', '-vf', job.filter,
       '-frames:v', String(job.maximumFrames), '-vsync', 'vfr',
       '-y', join(input.workspace, `frame-${input.prefix}-${job.id}-%06d.png`),
     ], {
@@ -502,7 +506,7 @@ export async function analyzeAudioVideo(
     : 3 * 1_024 * 1_024 * 1_024;
   if (request.artifact.sizeBytes > maximum) throw new Error('ANALYZER_ARTIFACT_TOO_LARGE');
   return withLoadedArtifact(request.artifact, async (inputPath, workspace) => {
-    const metadata = await probe(
+    const metadata = await probeMedia(
       runner, inputPath, workspace, request.sandbox.ffprobeTimeoutMs, signal, request.artifact.pcm);
     if(metadata.audioUnits.length>16)throw new Error('ANALYZER_AUDIO_TRACK_BUDGET_EXCEEDED');
     assertMediaResourceBudget({

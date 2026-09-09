@@ -365,7 +365,10 @@ export async function analyzeDocumentImage(
     const codes: CodeRegion[] = [];
     const labels: VisualLabel[] = [];
     const visual: VisualRisk[] = [];
-    const failures: AnalysisFailure[] = inventory?.unresolved.length ? [{component:'VISUAL',required:true,code:'ANALYZER_OFFICE_EMBEDDED_CONTENT_UNANALYZED'}] : [];
+    const failures: AnalysisFailure[] = [
+      ...(inventory?.unresolved.length ? [{component:'VISUAL' as const,required:true,code:'ANALYZER_OFFICE_EMBEDDED_CONTENT_UNANALYZED'}] : []),
+      ...(inventory?.coverageGaps.map(code=>({component:'VISUAL' as const,required:true,code}))??[]),
+    ];
     const versions = new Set<string>();
     let lowConfidenceOcr=false;
     const analyzedViews = await mapInBatches(
