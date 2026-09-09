@@ -1,0 +1,383 @@
+{
+  "status": "PASS",
+  "checkedAt": "2026-09-09T04:52:25.239Z",
+  "unit": {
+    "total": 1797,
+    "passed": 1797,
+    "failed": 0
+  },
+  "browserChecks": [
+    {
+      "id": "LEGACY_SIGNATURE_AND_UNKNOWN_SOURCE_PRESERVED",
+      "status": "PASS"
+    },
+    {
+      "id": "SOURCE_VERSION_PACKAGE_SEQUENCE_AND_DIGEST",
+      "status": "PASS",
+      "detail": {
+        "source": 5,
+        "packages": [
+          13,
+          14
+        ]
+      }
+    },
+    {
+      "id": "SAVED_RULE_CHANGES_REQUIRE_RECOMPILATION",
+      "status": "PASS"
+    },
+    {
+      "id": "COMPILATION_DOES_NOT_PUBLISH",
+      "status": "PASS"
+    },
+    {
+      "id": "POLICY_PAGES_SHOW_COMPLETE_IDENTITIES_AND_LIVE_BINDING",
+      "status": "PASS"
+    },
+    {
+      "id": "AUDIT_TABS_LEGACY_REDIRECT_AND_BROWSER_HISTORY",
+      "status": "PASS"
+    },
+    {
+      "id": "MOBILE_AUDIT_SWITCHING",
+      "status": "PASS"
+    },
+    {
+      "id": "READONLY_CANNOT_COMPILE",
+      "status": "PASS"
+    },
+    {
+      "id": "NO_BROWSER_RUNTIME_ERRORS",
+      "status": "PASS"
+    }
+  ],
+  "governanceChecks": [
+    {
+      "id": "J03",
+      "module": "策略详情与关键词检索",
+      "status": "PASS"
+    },
+    {
+      "id": "J11",
+      "module": "响应模板创建、预览复检",
+      "status": "PASS"
+    },
+    {
+      "id": "J12",
+      "module": "词典草稿、校验和测试",
+      "status": "PASS"
+    }
+  ],
+  "build": {
+    "status": "PASS",
+    "digest": "35c0fcd3400ef3aab0d5979d46ebd8443ca12e8052feb07b42b5b55828a807ac",
+    "images": [
+      "guardllm-main-app:retest-20260909",
+      "guardllm-main-worker:retest-20260909"
+    ]
+  },
+  "images": {
+    "status": "PASS",
+    "sourceFiles": 764,
+    "images": [
+      {
+        "name": "guardllm-main-app:retest-20260909",
+        "id": "sha256:f8091e84aa633c10b677b3fb9bac80703e33c7b4159a8fe547038a93c05345cb"
+      },
+      {
+        "name": "guardllm-main-worker:retest-20260909",
+        "id": "sha256:1cdf47b187c42cedfa77041c6fd7187e50e3c86ce1f3b6d772c4864c560ffdf9"
+      }
+    ]
+  },
+  "deployment": {
+    "status": "PASS",
+    "changedServices": [
+      "app",
+      "gateway-request-worker",
+      "archive-worker",
+      "evaluation-worker",
+      "security-scan-worker",
+      "artifact-worker",
+      "native-multimodal-worker",
+      "multimodal-worker",
+      "media-worker",
+      "content-marking-worker",
+      "rag-worker",
+      "callback-worker",
+      "audit-export-worker",
+      "audit-timestamp-worker",
+      "audit-chain-worker"
+    ],
+    "unchanged": [
+      "postgres",
+      "media-analyzer",
+      "application_policy_bindings"
+    ],
+    "backupBytes": 3713637,
+    "images": [
+      "sha256:f8091e84aa633c10b677b3fb9bac80703e33c7b4159a8fe547038a93c05345cb",
+      "sha256:1cdf47b187c42cedfa77041c6fd7187e50e3c86ce1f3b6d772c4864c560ffdf9"
+    ],
+    "completedAt": "2026-09-09T04:50:12.125Z"
+  },
+  "live": {
+    "base": "http://127.0.0.1:58082",
+    "checkedAt": "2026-09-09T04:50:36.782Z",
+    "checks": [
+      {
+        "path": "/login",
+        "status": 200,
+        "code": null,
+        "ready": null,
+        "capabilities": null,
+        "expected": [
+          200
+        ]
+      },
+      {
+        "path": "/api/health/live",
+        "status": 200,
+        "code": null,
+        "ready": null,
+        "capabilities": null,
+        "expected": [
+          200
+        ]
+      },
+      {
+        "path": "/api/health/db",
+        "status": 200,
+        "code": null,
+        "ready": null,
+        "capabilities": null,
+        "expected": [
+          200
+        ]
+      },
+      {
+        "path": "/api/health/policy",
+        "status": 200,
+        "code": null,
+        "ready": true,
+        "capabilities": {
+          "runtimeCompatible": false,
+          "capabilityVersion": "guard-detection-capabilities-1",
+          "declaredProfile": "LEGACY_UNDECLARED",
+          "enabledDetectorIds": [
+            "content-safety-intent-baseline",
+            "insurance-compliance-baseline",
+            "prompt-attack-baseline",
+            "reasoning-attack-baseline",
+            "resource-abuse-baseline",
+            "rules",
+            "structured-dlp"
+          ],
+          "missingDetectorIds": [
+            "protected-context-leak",
+            "output-credential-leak",
+            "output-privacy-dlp",
+            "output-internal-data",
+            "output-political-compliance",
+            "output-sexual-safety",
+            "output-illegal-harmful",
+            "output-insurance-compliance",
+            "source-risk-relations"
+          ],
+          "reasons": [
+            "BASELINE_CAPABILITY_MISSING:output-credential-leak",
+            "BASELINE_CAPABILITY_MISSING:output-illegal-harmful",
+            "BASELINE_CAPABILITY_MISSING:output-insurance-compliance",
+            "BASELINE_CAPABILITY_MISSING:output-internal-data",
+            "BASELINE_CAPABILITY_MISSING:output-political-compliance",
+            "BASELINE_CAPABILITY_MISSING:output-privacy-dlp",
+            "BASELINE_CAPABILITY_MISSING:output-sexual-safety",
+            "BASELINE_CAPABILITY_MISSING:protected-context-leak",
+            "BASELINE_CAPABILITY_MISSING:source-risk-relations",
+            "DETECTION_CAPABILITIES_UNDECLARED"
+          ],
+          "qualityQualified": null,
+          "qualityStatus": "NOT_ASSESSED_BY_CAPABILITY_CHECK",
+          "mediaRuntimeVerified": false
+        },
+        "expected": [
+          200
+        ]
+      },
+      {
+        "path": "/api/stats",
+        "status": 401,
+        "code": "AUTHENTICATION_REQUIRED",
+        "ready": null,
+        "capabilities": null,
+        "expected": [
+          401,
+          403
+        ]
+      }
+    ],
+    "browser": {
+      "title": "国舜大模型安全网关平台",
+      "url": "http://127.0.0.1:58082/login",
+      "passwordInputs": 1,
+      "errors": [],
+      "assetFailures": []
+    },
+    "status": "PASS"
+  },
+  "containers": [
+    {
+      "name": "guardllm-r0-audit-timestamp-worker-1",
+      "service": "audit-timestamp-worker",
+      "id": "81b4a471c9fabbff039b9520a406c069213a253fc721ee3d1a8578817e39b369",
+      "image": "sha256:1cdf47b187c42cedfa77041c6fd7187e50e3c86ce1f3b6d772c4864c560ffdf9",
+      "running": true,
+      "health": null,
+      "restarts": 0
+    },
+    {
+      "name": "guardllm-r0-rag-worker-1",
+      "service": "rag-worker",
+      "id": "8311c011ace819a5e8998849b9307caab1faf730dd0761694417332522ab6427",
+      "image": "sha256:1cdf47b187c42cedfa77041c6fd7187e50e3c86ce1f3b6d772c4864c560ffdf9",
+      "running": true,
+      "health": null,
+      "restarts": 0
+    },
+    {
+      "name": "guardllm-r0-media-worker-1",
+      "service": "media-worker",
+      "id": "ecf90e11f716dde143d96a9a83a3c3b762c6fb3fc8abecbc8b270a90251e0d17",
+      "image": "sha256:1cdf47b187c42cedfa77041c6fd7187e50e3c86ce1f3b6d772c4864c560ffdf9",
+      "running": true,
+      "health": null,
+      "restarts": 0
+    },
+    {
+      "name": "guardllm-r0-gateway-request-worker-1",
+      "service": "gateway-request-worker",
+      "id": "f0b3fbe73943ccf7a98a9fb7c82d6b80209cd25e452a7481c4597854d3430b7d",
+      "image": "sha256:1cdf47b187c42cedfa77041c6fd7187e50e3c86ce1f3b6d772c4864c560ffdf9",
+      "running": true,
+      "health": null,
+      "restarts": 0
+    },
+    {
+      "name": "guardllm-r0-callback-worker-1",
+      "service": "callback-worker",
+      "id": "fe3a2dea38acd0a8fc021e72df46e82ba7325d0fd9a7c3b5763faf39d7a494e5",
+      "image": "sha256:1cdf47b187c42cedfa77041c6fd7187e50e3c86ce1f3b6d772c4864c560ffdf9",
+      "running": true,
+      "health": null,
+      "restarts": 0
+    },
+    {
+      "name": "guardllm-r0-security-scan-worker-1",
+      "service": "security-scan-worker",
+      "id": "62ef2e61879cb31aba16258778d94e2828379e5b80c6ed199217cafd713dcabd",
+      "image": "sha256:1cdf47b187c42cedfa77041c6fd7187e50e3c86ce1f3b6d772c4864c560ffdf9",
+      "running": true,
+      "health": null,
+      "restarts": 0
+    },
+    {
+      "name": "guardllm-r0-multimodal-worker-1",
+      "service": "multimodal-worker",
+      "id": "54a4861c86097689fb6c335e355ecb0292b654fe02b0457abab971dba679d02a",
+      "image": "sha256:1cdf47b187c42cedfa77041c6fd7187e50e3c86ce1f3b6d772c4864c560ffdf9",
+      "running": true,
+      "health": null,
+      "restarts": 0
+    },
+    {
+      "name": "guardllm-r0-archive-worker-1",
+      "service": "archive-worker",
+      "id": "a0fd75782139b48e19b5d222b44645602b4102da1bc9386d1e35120f20eb342f",
+      "image": "sha256:1cdf47b187c42cedfa77041c6fd7187e50e3c86ce1f3b6d772c4864c560ffdf9",
+      "running": true,
+      "health": null,
+      "restarts": 0
+    },
+    {
+      "name": "guardllm-r0-content-marking-worker-1",
+      "service": "content-marking-worker",
+      "id": "79b062f104f4724a7cd72d31a68b6cd4a0b1b35a690d885984ff736f9d34d346",
+      "image": "sha256:1cdf47b187c42cedfa77041c6fd7187e50e3c86ce1f3b6d772c4864c560ffdf9",
+      "running": true,
+      "health": null,
+      "restarts": 0
+    },
+    {
+      "name": "guardllm-r0-audit-chain-worker-1",
+      "service": "audit-chain-worker",
+      "id": "e196a5afa94f38100ad7b2e4332d5992e16ab75650744ea0a2e1c6c495ef1815",
+      "image": "sha256:1cdf47b187c42cedfa77041c6fd7187e50e3c86ce1f3b6d772c4864c560ffdf9",
+      "running": true,
+      "health": null,
+      "restarts": 0
+    },
+    {
+      "name": "guardllm-r0-native-multimodal-worker-1",
+      "service": "native-multimodal-worker",
+      "id": "8851c1665ab5f8865196beee5cdfe631679021ec05427997993dd405833f6b8d",
+      "image": "sha256:1cdf47b187c42cedfa77041c6fd7187e50e3c86ce1f3b6d772c4864c560ffdf9",
+      "running": true,
+      "health": null,
+      "restarts": 0
+    },
+    {
+      "name": "guardllm-r0-artifact-worker-1",
+      "service": "artifact-worker",
+      "id": "f247aad5f36c0085f10816a172fcf4859a7e9169ef4e5dc5a04652332905eb14",
+      "image": "sha256:1cdf47b187c42cedfa77041c6fd7187e50e3c86ce1f3b6d772c4864c560ffdf9",
+      "running": true,
+      "health": null,
+      "restarts": 0
+    },
+    {
+      "name": "guardllm-r0-evaluation-worker-1",
+      "service": "evaluation-worker",
+      "id": "daa302a81e87f80818c2e5b2266e1b96788a89401746ea5ed66d9589c766fd7d",
+      "image": "sha256:1cdf47b187c42cedfa77041c6fd7187e50e3c86ce1f3b6d772c4864c560ffdf9",
+      "running": true,
+      "health": null,
+      "restarts": 0
+    },
+    {
+      "name": "guardllm-r0-audit-export-worker-1",
+      "service": "audit-export-worker",
+      "id": "558f852409fb9bbfc8619697df2a2d90e1492afd13189caa793099ac2a097464",
+      "image": "sha256:1cdf47b187c42cedfa77041c6fd7187e50e3c86ce1f3b6d772c4864c560ffdf9",
+      "running": true,
+      "health": null,
+      "restarts": 0
+    },
+    {
+      "name": "guardllm-r0-app-1",
+      "service": "app",
+      "id": "43324846124e1e43e851bd13cd12abb02b1b3cc4336e446ba28fbab26f907044",
+      "image": "sha256:f8091e84aa633c10b677b3fb9bac80703e33c7b4159a8fe547038a93c05345cb",
+      "running": true,
+      "health": "healthy",
+      "restarts": 0
+    },
+    {
+      "name": "guardllm-r0-media-analyzer-1",
+      "service": "media-analyzer",
+      "id": "4045bb1472082c7ae1f6305097d0b3721622030454fcf236eace97ba973e6db2",
+      "image": "sha256:c163aa18e4d174b3c1b33f412207ace70ea4e6f9d2bfd3a922b4fde84fb4fc19",
+      "running": true,
+      "health": "healthy",
+      "restarts": 0
+    },
+    {
+      "name": "guardllm-r0-postgres-1",
+      "service": "postgres",
+      "id": "6c3f2e0dc0a278e91f09059b9c9e2bf872bb7c78ad3b1a226c19a5d7acd414a5",
+      "image": "sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297",
+      "running": true,
+      "health": "healthy",
+      "restarts": 0
+    }
+  ]
+}
