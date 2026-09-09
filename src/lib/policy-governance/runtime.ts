@@ -13,6 +13,7 @@ import { scopePredicate, type TenantScope } from '@/lib/tenancy';
 import { db } from '@/storage/database/shared/db';
 import { applicationPolicyBindings, policyBundles } from '@/storage/database/shared/schema';
 import { PolicyGovernanceOperationError } from './errors';
+import { parseCompiledPolicyBundlePayload } from '@/lib/policy-bundle/runtime';
 import { profileDigest } from '@/lib/judge/profile-registry';
 
 function digestSummary(bundle: Awaited<ReturnType<typeof loadVerifiedPolicyBundle>>) {
@@ -75,11 +76,16 @@ export async function getPolicyRuntimeSummary(scope: TenantScope) {
     contentHash: policyBundles.contentHash,
     signingKeyId: policyBundles.signingKeyId,
     policyId: policyBundles.policyId,
+    canonicalJson: policyBundles.canonicalJson,
   }).from(policyBundles).where(and(
     scopePredicate(policyBundles, scope),
     inArray(policyBundles.id, bundleIds),
   ));
-  const byId = new Map(rows.map((row) => [row.id, row]));
+  const byId = new Map(rows.map(({ canonicalJson, ...row }) => {
+    let sourcePolicyVersion: number | null = null;
+    try { sourcePolicyVersion = parseCompiledPolicyBundlePayload(canonicalJson).sourcePolicyVersion ?? null; } catch { /* Verification below reports invalid bundles. */ }
+    return [row.id, { ...row, sourcePolicyVersion }];
+  }));
   const summary = (id: string | null) => id ? byId.get(id) ?? null : null;
   // An active bundle that cannot be verified (e.g. signing-key identity is not
   // configured) must surface as NOT READY with a reason code, not as a 500

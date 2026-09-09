@@ -1,3 +1,6 @@
+import { compileCurrentPolicyDraft } from '@/lib/policy-bundle/service';
+import { parseCompiledPolicyBundlePayload } from '@/lib/policy-bundle/runtime';
+import { policyConfigurationDigest } from '@/lib/policy-bundle/configuration-digest';
 import { and, desc, eq } from 'drizzle-orm';
 import { jsonObjectResponseSchema } from '@/contracts/http/common';
 import {
@@ -43,6 +46,8 @@ export const GET = withApiSecurity(
       version: policyBundles.version,
       state: policyBundles.state,
       contentHash: policyBundles.contentHash,
+      canonicalJson: policyBundles.canonicalJson,
+      signatureAlgorithm: policyBundles.signatureAlgorithm,
       signingKeyId: policyBundles.signingKeyId,
       createdBy: policyBundles.createdBy,
       approvedBy: policyBundles.approvedBy,
@@ -56,7 +61,29 @@ export const GET = withApiSecurity(
       lifecycleVersion: policyBundles.lifecycleVersion,
       createdAt: policyBundles.createdAt,
     }).from(policyBundles).where(and(...conditions)).orderBy(desc(policyBundles.createdAt));
-    return Response.json({ success: true, data: rows });
+    const current = new Map<string, { version: number; digest: string } | null>();
+    for (const id of new Set(rows.map(row => row.policyId))) {
+      try {
+        const draft = await compileCurrentPolicyDraft(scope, id, 1);
+        current.set(id, { version: draft.sourcePolicyVersion!, digest: policyConfigurationDigest(draft) });
+      } catch {
+        // Invalid or unavailable drafts must not hide historical signed packages.
+        current.set(id, null);
+      }
+    }
+    const data = rows.map(({ canonicalJson, ...row }) => {
+      const draft = current.get(row.policyId);
+      let sourcePolicyVersion: number | null = null;
+      let configurationDigest: string | null = null;
+      try {
+        const payload = parseCompiledPolicyBundlePayload(canonicalJson);
+        sourcePolicyVersion = payload.sourcePolicyVersion ?? null;
+        configurationDigest = policyConfigurationDigest(payload);
+      } catch { /* Preserve the list and report comparison as unavailable. */ }
+      return { ...row, sourcePolicyVersion, configurationDigest, currentSourcePolicyVersion: draft?.version ?? null,
+        draftComparison: !draft || !configurationDigest ? 'unavailable' : draft.digest === configurationDigest ? 'current' : 'changed' };
+    });
+    return Response.json({ success: true, data });
   },
 );
 

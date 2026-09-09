@@ -257,6 +257,7 @@ export function compilePolicyBundle(
     detectionCapabilities:currentDetectionCapabilities(),
     policyId: config.policyId,
     policyVersion,
+    sourcePolicyVersion: config.version,
     dimensions,
     rules,
     exceptions,

@@ -20,7 +20,7 @@ function BundleBinding({ label, bundle }: { readonly label: string; readonly bun
   return (
     <div className="rounded-md border bg-white px-3 py-2">
       <p className="text-xs text-gray-500">{label}</p>
-      {bundle ? <><p className="mt-1 truncate text-sm font-medium">v{bundle.version} · {bundle.state}</p><p className="mt-1 truncate font-mono text-[11px] text-gray-500" title={bundle.contentHash}>{bundle.contentHash.slice(0, 16)}…</p></> : <p className="mt-1 text-sm text-gray-400">未绑定</p>}
+      {bundle ? <><p className="mt-1 truncate text-sm font-medium">包版本 v{bundle.version} · {bundle.state}</p><p className="mt-1 truncate font-mono text-[11px] text-gray-500" title={bundle.contentHash}>{bundle.contentHash.slice(0, 16)}…</p><p className="mt-1 text-xs text-gray-500">源配置 {bundle.sourcePolicyVersion ? 'v' + bundle.sourcePolicyVersion : '未记录（历史包）'}</p></> : <p className="mt-1 text-sm text-gray-400">未绑定</p>}
     </div>
   );
 }
@@ -50,7 +50,7 @@ export function PolicyRuntimeStatus() {
             {summary?.ready ? <ShieldCheck className="h-5 w-5 text-emerald-600" /> : <AlertTriangle className="h-5 w-5 text-amber-600" />}
             运行时策略绑定
           </CardTitle>
-          <CardDescription>readiness、签名验证、Bundle generation 与受治理资产摘要</CardDescription>
+          <CardDescription>当前应用实际使用的签名包；配置保存和包编译后仍需完成测试、审批与发布</CardDescription>
         </div>
         <Button variant="outline" size="icon" title="刷新运行时状态" onClick={() => void load()} disabled={loading}><RefreshCw className={loading ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} /></Button>
       </CardHeader>
@@ -64,10 +64,10 @@ export function PolicyRuntimeStatus() {
             {summary.reasonCode && <Badge variant="destructive">{summary.reasonCode}</Badge>}
           </div>
           <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-            <BundleBinding label="ACTIVE" bundle={summary.binding?.active ?? null} />
-            <BundleBinding label="SHADOW" bundle={summary.binding?.shadow ?? null} />
+            <BundleBinding label="全量生效" bundle={summary.binding?.active ?? null} />
+            <BundleBinding label="影子验证" bundle={summary.binding?.shadow ?? null} />
             <BundleBinding label={`CANARY ${summary.binding?.canaryPercent ?? 0}%`} bundle={summary.binding?.canary ?? null} />
-            <BundleBinding label="LAST-KNOWN-GOOD" bundle={summary.binding?.previous ?? null} />
+            <BundleBinding label="上次可用版本" bundle={summary.binding?.previous ?? null} />
           </div>
           <div className="grid gap-2 text-xs sm:grid-cols-3">
             <div className="rounded-md bg-gray-50 p-3"><p className="text-gray-500">词典摘要</p><p className="mt-1 font-medium">{summary.governedDigests.dictionaryDigests.length} 个版本</p></div>

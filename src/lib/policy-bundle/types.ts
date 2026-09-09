@@ -22,6 +22,8 @@ export interface CompiledPolicyBundle {
   readonly schemaVersion: '1.0';
   readonly policyId: string;
   readonly policyVersion: number;
+  /** Editor revision captured at compilation; absent on historical bundles. */
+  readonly sourcePolicyVersion?: number;
   readonly dimensions: readonly {
     readonly id: string;
     readonly code: string;

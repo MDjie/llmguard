@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Archive, CheckCircle2, GitBranch, Loader2, Play, RefreshCw, RotateCcw, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
@@ -30,6 +31,10 @@ interface PolicyBundle {
   policyId: string;
   version: number;
   state: BundleState;
+  sourcePolicyVersion: number | null;
+  currentSourcePolicyVersion: number | null;
+  draftComparison: 'current' | 'changed' | 'unavailable';
+  signatureAlgorithm: string;
   contentHash: string;
   signingKeyId: string;
   createdBy: string;
@@ -156,6 +161,8 @@ export default function PolicyReleasesPage() {
   }, []);
 
   useEffect(() => {
+    const requested = new URLSearchParams(window.location.search).get('policyId');
+    if (requested) { setPolicyId(requested); setCompilePolicyId(requested); }
     void loadData();
   }, [loadData]);
 
@@ -238,7 +245,8 @@ export default function PolicyReleasesPage() {
         </Button>
       </div>
 
-      <PolicyRuntimeStatus />
+      <PolicyRuntimeStatus key={bundles.map(bundle => bundle.id + ':' + bundle.lifecycleVersion).join('|')} />
+      <p className="text-sm text-muted-foreground">配置版本记录策略编辑；包版本在每次编译时递增；流转次数记录测试、审批及发布操作。同一签名密钥可以签署多个包，内容 SHA-256 才是包内容的摘要。</p>
 
       <div className="flex flex-wrap items-end gap-3 border-y border-gray-200 bg-white px-3 py-3">
         <div className="min-w-72 space-y-1.5">
@@ -246,7 +254,7 @@ export default function PolicyReleasesPage() {
           <Select value={compilePolicyId} onValueChange={setCompilePolicyId}>
             <SelectTrigger><SelectValue placeholder="选择需要编译的策略" /></SelectTrigger>
             <SelectContent>
-              {policies.map((policy) => <SelectItem key={policy.id} value={policy.id}>{policy.name} · v{policy.version}</SelectItem>)}
+              {policies.map((policy) => <SelectItem key={policy.id} value={policy.id}>{policy.name} · 配置 v{policy.version}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
@@ -272,8 +280,8 @@ export default function PolicyReleasesPage() {
             <TableRow>
               <TableHead>策略与版本</TableHead>
               <TableHead className="w-28">状态</TableHead>
-              <TableHead className="w-28">生命周期</TableHead>
-              <TableHead className="w-48">签名与摘要</TableHead>
+              <TableHead className="w-28">流转次数</TableHead>
+              <TableHead className="w-64">内容摘要与签名密钥</TableHead>
               <TableHead className="w-40">测试证据</TableHead>
               <TableHead className="w-40">审批人</TableHead>
               <TableHead className="w-40">创建时间</TableHead>
@@ -288,14 +296,18 @@ export default function PolicyReleasesPage() {
             ) : filteredBundles.map((bundle) => (
               <TableRow key={bundle.id}>
                 <TableCell>
-                  <p className="font-medium text-gray-900">{policyNames.get(bundle.policyId) ?? bundle.policyId}</p>
-                  <p className="mt-1 text-xs text-gray-500">包版本 v{bundle.version} · 创建人 {bundle.createdBy}</p>
+                  <Link className="font-medium text-primary hover:underline" href={"/policies/" + encodeURIComponent(bundle.policyId)}>{policyNames.get(bundle.policyId) ?? bundle.policyId}</Link>
+                  <p className="mt-1 text-xs text-gray-500">包版本 v{bundle.version} ← 源配置 {bundle.sourcePolicyVersion === null ? "未记录（历史包）" : "v" + bundle.sourcePolicyVersion}</p>
+<p className="mt-1 text-xs">当前配置 {bundle.currentSourcePolicyVersion === null ? "不可读取" : "v" + bundle.currentSourcePolicyVersion} · {bundle.draftComparison === "current" ? "内容与当前配置一致" : bundle.draftComparison === "changed" ? "配置有变更，需重新编译" : "暂无法比对配置"}</p>
+<p className="mt-1 text-xs text-gray-500">创建人 {bundle.createdBy}</p>
                 </TableCell>
                 <TableCell><Badge variant="outline" className={stateClasses[bundle.state]}>{stateLabels[bundle.state]}</Badge></TableCell>
-                <TableCell className="font-mono text-xs">v{bundle.lifecycleVersion}</TableCell>
+                <TableCell className="font-mono text-xs">{bundle.lifecycleVersion}</TableCell>
                 <TableCell>
-                  <p className="truncate font-mono text-xs" title={bundle.contentHash}>{bundle.contentHash.slice(0, 14)}...</p>
-                  <p className="mt-1 truncate text-xs text-gray-500" title={bundle.signingKeyId}>{bundle.signingKeyId}</p>
+                  <p className="text-xs text-muted-foreground">内容 SHA-256</p>
+<p className="max-w-64 break-all font-mono text-xs" title={bundle.contentHash}>{bundle.contentHash}</p>
+<p className="mt-2 text-xs text-muted-foreground">签名算法：{bundle.signatureAlgorithm}</p>
+<p className="mt-1 break-all text-xs">签名密钥 ID：{bundle.signingKeyId}</p>
                 </TableCell>
                 <TableCell className="text-xs">
                   {bundle.testEvidenceId ? (

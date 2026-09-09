@@ -1,3 +1,5 @@
+import { policyConfigurationDigest } from '@/lib/policy-bundle/configuration-digest';
+import { parseCompiledPolicyBundlePayload } from '@/lib/policy-bundle/runtime';
 import { generateKeyPairSync } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import {
@@ -122,6 +124,32 @@ describe('signed policy bundles', () => {
         },
       },
     }, publicKey)).toBe(false);
+  });
+
+  it('keeps source revision distinct from bundle sequence and binds it to the signature', () => {
+    const { privateKey, publicKey } = generateKeyPairSync('ed25519');
+    const first = signPolicyBundle(compilePolicyBundle(config, 12), { privateKey, signingKeyId: 'shared-key' });
+    const second = signPolicyBundle(compilePolicyBundle(config, 13), { privateKey, signingKeyId: 'shared-key' });
+    expect(first.payload.sourcePolicyVersion).toBe(3);
+    expect(first.payload.policyVersion).toBe(12);
+    expect(parseCompiledPolicyBundlePayload(first.payload).sourcePolicyVersion).toBe(3);
+    expect(first.signingKeyId).toBe(second.signingKeyId);
+    expect(first.contentHash).not.toBe(second.contentHash);
+    expect(first.signature).not.toBe(second.signature);
+    expect(policyConfigurationDigest(first.payload)).toBe(policyConfigurationDigest(second.payload));
+    expect(verifyPolicyBundle({ ...first, payload: { ...first.payload, sourcePolicyVersion: 4 } }, publicKey)).toBe(false);
+  });
+
+  it('compares content changes independently of revision counters and accepts historical signed payloads', () => {
+    const payload = compilePolicyBundle(config, 12);
+    const legacy = { ...payload }; delete legacy.sourcePolicyVersion;
+    const { privateKey, publicKey } = generateKeyPairSync('ed25519');
+    const signed = signPolicyBundle(legacy, { privateKey, signingKeyId: 'legacy-key' });
+    expect(parseCompiledPolicyBundlePayload(signed.payload).sourcePolicyVersion).toBeUndefined();
+    expect(verifyPolicyBundle(signed, publicKey)).toBe(true);
+    expect(policyConfigurationDigest(legacy)).toBe(policyConfigurationDigest(payload));
+    const changed = compilePolicyBundle({ ...config, dimensionConfigs: config.dimensionConfigs.map(value => ({ ...value, blockThreshold: 70 })) }, 12);
+    expect(policyConfigurationDigest(changed)).not.toBe(policyConfigurationDigest(payload));
   });
 
   it('selects canary bundles with a stable server-side routing hash', () => {

@@ -56,6 +56,7 @@ import { ABComparePanel } from './components/ABComparePanel';
 import { JudgeConfigPanel } from './components/JudgeConfigPanel';
 import { EscalationConfigPanel } from './components/EscalationConfigPanel';
 import { csrfHeaders } from '@/lib/auth/csrf-client';
+import { PolicyPublicationStatus } from '@/components/policy/policy-publication-status';
 import { PromptInjectionCatalogPanel } from '@/components/content-safety/PromptInjectionCatalogPanel';
 import { parseKeywordBatchText } from '@/lib/policy/keyword-batch-parser';
 
@@ -121,6 +122,7 @@ export default function PolicyDetailPage() {
   const [policy, setPolicy] = useState<PolicyDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [publicationRefresh, setPublicationRefresh] = useState(0);
   const [activeTab, setActiveTab] = useState('rules');
 
   // 关键词管理状态
@@ -146,6 +148,7 @@ export default function PolicyDetailPage() {
       const data = await res.json();
       if (data.success) {
         setPolicy(data.data);
+        setPublicationRefresh(value => value + 1);
       } else {
         toast.error('加载失败: ' + data.error);
         router.push('/policies');
@@ -405,7 +408,7 @@ export default function PolicyDetailPage() {
               ))}
             </div>
           )}
-          <Badge variant="outline">版本 {policy.version}</Badge>
+          <Badge variant="outline">配置 v{policy.version}</Badge>
           <Button
             variant="default"
             size="sm"
@@ -417,6 +420,8 @@ export default function PolicyDetailPage() {
           </Button>
         </div>
       </div>
+
+      <PolicyPublicationStatus key={publicationRefresh} policyId={policy.id} revision={policy.version} />
 
       {/* Tab 内容 */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>

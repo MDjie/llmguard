@@ -19,7 +19,7 @@ describe('policy governance consoles', () => {
   });
 
   it('shows runtime generation and protected evidence access in the existing consoles', () => {
-    expect(read('src/app/policy-releases/page.tsx')).toContain('<PolicyRuntimeStatus />');
+    expect(read('src/app/policy-releases/page.tsx')).toContain('<PolicyRuntimeStatus ');
     expect(read('src/components/policy/policy-runtime-status.tsx')).toContain('generation');
     expect(read('src/app/incidents/page.tsx')).toContain('<EvidenceAccessPanel');
     const evidence = read('src/components/incidents/evidence-access-panel.tsx');

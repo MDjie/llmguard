@@ -43,6 +43,8 @@ const databaseState = vi.hoisted(() => {
       applicationId: 'policyDimensionConfig.applicationId',
     },
     policyProfiles: {
+      id: 'policyProfiles.id',
+      version: 'policyProfiles.version',
       isDefault: 'policyProfiles.isDefault',
       tenantId: 'policyProfiles.tenantId',
       applicationId: 'policyProfiles.applicationId',
@@ -144,6 +146,7 @@ function configureDatabase(options: {
   rule?: Partial<MockRow>;
   whitelist?: Partial<MockRow>;
 } = {}): void {
+  databaseState.rows.policyProfiles.push({ id: policyId, version: 7 });
   databaseState.rows.policyDimensionConfig.push({
     id: 'config-1',
     policyId,
@@ -320,6 +323,31 @@ describe('dynamic detection engine behavior', () => {
     clearPolicyCache(policyId);
     await getPolicyConfig(policyId, LEGACY_TENANT_SCOPE);
     expect(databaseState.selectCalls).toBeGreaterThan(callsAfterFirstLoad);
+  });
+
+  it('reads the editor revision and bypasses cached drafts for compilation', async () => {
+    configureDatabase();
+    expect((await getPolicyConfig(policyId, LEGACY_TENANT_SCOPE))?.version).toBe(7);
+    databaseState.rows.policyProfiles[0].version = 8;
+    expect((await getPolicyConfig(policyId, LEGACY_TENANT_SCOPE))?.version).toBe(7);
+    expect((await getPolicyConfig(policyId, LEGACY_TENANT_SCOPE, { fresh: true }))?.version).toBe(8);
+  });
+
+  it('uses the same editor revision with legacy policy-rule storage', async () => {
+    configureDatabase();
+    databaseState.rows.policyDimensionConfig.length = 0;
+    databaseState.rows.policyRules.push({ id: 'legacy-rule', policyId, dimension: 'prompt_injection', enabled: true, warnThreshold: '50', blockThreshold: '80' });
+    expect((await getPolicyConfig(policyId, LEGACY_TENANT_SCOPE, { fresh: true }))?.version).toBe(7);
+  });
+
+  it('compiles saved editor rules even when an older dimension configuration also exists', async () => {
+    configureDatabase();
+    databaseState.rows.policyDimensionConfig[0].customWeight = '0.6';
+    databaseState.rows.policyRules.push({ id: 'editor-rule', policyId, dimension: 'prompt_injection', enabled: true, warnThreshold: '0', blockThreshold: '55' });
+    const config = await getPolicyConfig(policyId, LEGACY_TENANT_SCOPE, { fresh: true });
+    expect(config?.dimensionConfigs[0]).toMatchObject({ warnThreshold: 0, blockThreshold: 55, customWeight: 0.6 });
+    databaseState.rows.policyRules[0].enabled = false;
+    expect((await getPolicyConfig(policyId, LEGACY_TENANT_SCOPE, { fresh: true }))?.dimensionConfigs).toEqual([]);
   });
 
   it('fails closed when a configured regular expression is unsafe', async () => {

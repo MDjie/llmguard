@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 const digest = z.object({ id: z.string(), version: z.string(), sha256: z.string() });
 export const bundleSummarySchema = z.object({
+  sourcePolicyVersion: z.number().int().positive().nullable().default(null),
   id: z.string(), version: z.number().int(), state: z.string(), contentHash: z.string(), signingKeyId: z.string(), policyId: z.string(),
 });
 export const policyRuntimeSummarySchema = z.object({

@@ -70,12 +70,7 @@ export async function compileAndStorePolicyBundle(
   policyId: string,
   actorId: string,
 ): Promise<typeof policyBundles.$inferSelect> {
-  const config = await getPolicyConfig(policyId, scope);
-  if (!config) {
-    throw new PolicyBundleTransitionError('POLICY_NOT_AVAILABLE', 'Policy cannot be compiled');
-  }
-  const governance = await loadGovernedPolicyArtifacts(scope, policyId);
-  const judgeDraft = await loadJudgeDraft(scope, policyId);
+  const payload = await compileCurrentPolicyDraft(scope, policyId, 1);
   return db.transaction(async (transaction) => {
     await transaction.execute(sql`select pg_advisory_xact_lock(hashtext(${`${scope.tenantId}:${scope.applicationId}:${policyId}`}))`);
     const [latest] = await transaction.select({ version: policyBundles.version })
@@ -84,13 +79,7 @@ export async function compileAndStorePolicyBundle(
       .orderBy(desc(policyBundles.version))
       .limit(1);
     const version = (latest?.version ?? 0) + 1;
-    const signed = signPolicyBundle(compilePolicyBundle(config, version, {
-      semanticClassifier: parseSemanticClassifierBuildConfig(),
-      judgeProfiles:judgeDraft.profilesV2,decisionPolicyVersion:judgeDraft.decisionPolicyVersion,
-      semanticDecisionMode:judgeDraft.semanticDecisionMode,semanticCoverage:judgeDraft.semanticCoverage,
-      resourceAdmission: parseGuardResourceAdmissionBuildConfig(),
-      governance,
-    }), {
+    const signed = signPolicyBundle({ ...payload, policyVersion: version }, {
       privateKey: signingPrivateKey(),
       signingKeyId: policySigningKeyId(),
     });
@@ -114,6 +103,23 @@ export async function compileAndStorePolicyBundle(
     }));
     return created;
   });
+}
+
+/** Read-only compilation used to compare current draft content with signed snapshots. */
+export async function compileCurrentPolicyDraft(scope: TenantScope, policyId: string, version: number) {
+  const config = await getPolicyConfig(policyId, scope, { fresh: true });
+  if (!config) {
+    throw new PolicyBundleTransitionError('POLICY_NOT_AVAILABLE', 'Policy cannot be compiled');
+  }
+  const governance = await loadGovernedPolicyArtifacts(scope, policyId);
+  const judgeDraft = await loadJudgeDraft(scope, policyId);
+  return compilePolicyBundle(config, version, {
+      semanticClassifier: parseSemanticClassifierBuildConfig(),
+      judgeProfiles:judgeDraft.profilesV2,decisionPolicyVersion:judgeDraft.decisionPolicyVersion,
+      semanticDecisionMode:judgeDraft.semanticDecisionMode,semanticCoverage:judgeDraft.semanticCoverage,
+      resourceAdmission: parseGuardResourceAdmissionBuildConfig(),
+      governance,
+    });
 }
 
 function requireReason(action: BundleTransition, reason: string | undefined): void {

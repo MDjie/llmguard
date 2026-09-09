@@ -225,16 +225,37 @@ export async function getDefaultPolicyId(scope: TenantScope): Promise<string | n
 export async function getPolicyConfig(
   policyId: string,
   scope: TenantScope,
+  options: { readonly fresh?: boolean } = {},
 ): Promise<CachedPolicyConfig | null> {
   const cacheKey = policyCacheKey(scope, policyId);
   // 检查缓存
   const cached = policyCache.get(cacheKey);
-  if (cached && Date.now() - cached.cachedAt < CACHE_TTL) {
+  if (!options.fresh && cached && Date.now() - cached.cachedAt < CACHE_TTL) {
     return cached;
   }
 
   try {
-    // 首先尝试从policy_dimension_config表获取配置
+    const [profile] = await db.select({ version: policyProfiles.version }).from(policyProfiles)
+      .where(and(eq(policyProfiles.id, policyId), scopePredicate(policyProfiles, scope))).limit(1);
+    if (!profile) return null;
+    // 从policy_rules表获取配置
+    try {
+      const policyRulesData = await db
+        .select()
+        .from(policyRules)
+        .where(and(
+          eq(policyRules.policyId, policyId),
+          scopePredicate(policyRules, scope),
+        ));
+
+      if (policyRulesData && policyRulesData.length > 0) {
+        return await buildConfigFromPolicyRules(policyId, policyRulesData, scope, profile.version);
+      }
+    } catch (error) {
+      if (!isUndefinedTableError(error)) throw error;
+    }
+
+    // Older installations may only have policy_dimension_config.
     try {
       const dimConfigs = await db
         .select()
@@ -247,26 +268,9 @@ export async function getPolicyConfig(
           )
         );
 
-      // 如果policy_dimension_config表有数据，使用原有逻辑
+      // Fall back only when the editable policy_rules source is absent.
       if (dimConfigs && dimConfigs.length > 0) {
-        return await buildConfigFromDimensionConfig(policyId, dimConfigs, scope);
-      }
-    } catch (error) {
-      if (!isUndefinedTableError(error)) throw error;
-    }
-
-    // 从policy_rules表获取配置
-    try {
-      const policyRulesData = await db
-        .select()
-        .from(policyRules)
-        .where(and(
-          eq(policyRules.policyId, policyId),
-          scopePredicate(policyRules, scope),
-        ));
-
-      if (policyRulesData && policyRulesData.length > 0) {
-        return await buildConfigFromPolicyRules(policyId, policyRulesData, scope);
+        return await buildConfigFromDimensionConfig(policyId, dimConfigs, scope, profile.version);
       }
     } catch (error) {
       if (!isUndefinedTableError(error)) throw error;
@@ -365,6 +369,7 @@ async function buildConfigFromDimensionConfig(
   policyId: string,
   dimConfigs: typeof policyDimensionConfig.$inferSelect[],
   scope: TenantScope,
+  version: number,
 ): Promise<CachedPolicyConfig | null> {
   const dimensionIds = dimConfigs.map(dc => dc.dimensionId);
   const [dimensionRows, ruleRows, groupRows] = await Promise.all([
@@ -400,7 +405,7 @@ async function buildConfigFromDimensionConfig(
 
   const config: CachedPolicyConfig = {
     policyId,
-    version: 1,
+    version,
     dimensions,
     rules,
     ruleGroups: ruleGroupsMap,
@@ -432,12 +437,20 @@ async function buildConfigFromPolicyRules(
   policyId: string,
   policyRulesData: typeof policyRules.$inferSelect[],
   scope: TenantScope,
+  version: number,
 ): Promise<CachedPolicyConfig | null> {
   const dimensions: DetectionDimension[] = [];
   const rulesMap = new Map<string, DetectionRule[]>();
   const ruleGroupsMap = new Map<string, RuleGroup[]>();
   const dimensionConfigs: PolicyDimensionConfigItem[] = [];
 
+  // policy_rules is the editor source of truth. Preserve detailed weights/action
+  // metadata from the older table without allowing it to override saved thresholds.
+  let detailedConfigs: typeof policyDimensionConfig.$inferSelect[] = [];
+  try {
+    detailedConfigs = await db.select().from(policyDimensionConfig)
+      .where(and(eq(policyDimensionConfig.policyId, policyId), scopePredicate(policyDimensionConfig, scope)));
+  } catch (error) { if (!isUndefinedTableError(error)) throw error; }
   // 只处理启用的维度
   const enabledRules = policyRulesData.filter(r => r.enabled);
   const dimensionCodes = [...new Set(enabledRules.map((rule) => rule.dimension))];
@@ -471,6 +484,7 @@ async function buildConfigFromPolicyRules(
       addedDimensionIds.add(dim.id);
       dimensions.push(mapDimension(dim));
 
+      const detail = detailedConfigs.find(item => item.dimensionId === dim.id);
       // 构建维度配置
       dimensionConfigs.push({
         id: `${policyId}-${dim.id}`,
@@ -479,12 +493,12 @@ async function buildConfigFromPolicyRules(
         enabled: true,
         warnEnabled: rule.warnEnabled ?? true,
         blockEnabled: rule.blockEnabled ?? true,
-        warnThreshold: parseFloat(rule.warnThreshold) || 50,
-        blockThreshold: parseFloat(rule.blockThreshold) || 80,
+        warnThreshold: Number(rule.warnThreshold),
+        blockThreshold: Number(rule.blockThreshold),
         autoMask: rule.autoMask || false,
         autoRewrite: rule.autoRewrite || false,
-        customWeight: 1.0,
-        actionConfig: {},
+        customWeight: detail?.customWeight != null ? Number(detail.customWeight) : 1,
+        actionConfig: (detail?.actionConfig as Record<string, unknown> | null) ?? {},
       });
 
       rulesMap.set(
@@ -503,7 +517,7 @@ async function buildConfigFromPolicyRules(
 
   const config: CachedPolicyConfig = {
     policyId,
-    version: 1,
+    version,
     dimensions,
     rules: rulesMap,
     ruleGroups: ruleGroupsMap,

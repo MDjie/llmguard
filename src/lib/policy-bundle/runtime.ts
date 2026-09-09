@@ -105,6 +105,7 @@ const payloadSchema = z.object({
   schemaVersion: z.literal('1.0'),
   policyId: z.string(),
   policyVersion: z.number().int().positive(),
+  sourcePolicyVersion: z.number().int().positive().optional(),
   dimensions: z.array(z.object({
     id: z.string(),
     code: z.string(),
