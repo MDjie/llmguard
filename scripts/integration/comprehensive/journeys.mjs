@@ -1,12 +1,16 @@
+import { authenticatedApi } from './auth.mjs';
 import { chromium, expect } from '@playwright/test';
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 const out = resolve(process.argv[2] ?? '');
 const f = JSON.parse(readFileSync(out + '/fixture.private.json', 'utf8'));
 if (f.dataset !== 'SYNTHETIC_ONLY_NEW_EMPTY_DATABASE' || f.baseURL !== 'http://127.0.0.1:58089') throw new Error('ISOLATED_FIXTURE_REQUIRED');
+const selected=process.env.JOURNEY_IDS?.split(',')??Array.from({length:17},(_,index)=>'J'+String(index+1).padStart(2,'0'));
+if(selected.includes('J18'))throw new Error('USE_AUTH_WORKFLOWS_WITH_DEDICATED_LOGOUT_SUBJECTS');
+if(selected.includes('J17')&&!existsSync(out+'/crawl.json'))throw new Error('CRAWL_REQUIRED_BEFORE_MOBILE_JOURNEY');
 const browser = await chromium.launch({headless:true});
 const context = await browser.newContext({baseURL:f.baseURL,viewport:{width:1440,height:1000}});
-if(process.env.REUSE_SESSION==='1' && existsSync(out+'/browser-state.private.json')){const state=JSON.parse(readFileSync(out+'/browser-state.private.json','utf8'));await context.addCookies(state.cookies);}
+if(process.env.REUSE_SESSION==='1'){const session=await authenticatedApi(out);try{const state=await session.api.storageState();await context.addCookies(state.cookies);}finally{await session.api.dispose();}}
 const page = await context.newPage(); page.setDefaultTimeout(7000);
 const prefix = 'AUTO' + Date.now(); const results = [], requests = [], errors = [];
 mkdirSync(out + '/screenshots', {recursive:true});
@@ -21,7 +25,7 @@ async function mutate(path,method,action,expected=[200]) {
  return data;
 }
 async function step(id,module,action) {
- if(process.env.JOURNEY_IDS && !process.env.JOURNEY_IDS.split(',').includes(id))return;
+ if(!selected.includes(id))return;
  const start=Date.now(), ri=requests.length, ei=errors.length; let status='PASS',detail;
  try {detail=await action(); if(errors.length>ei)throw new Error(errors.slice(ei).join(';')); if(detail?.diagnosticOnly)status='OBSERVATION';}
  catch(e){status='FAIL';detail={error:e.message.slice(0,600),ui:(await page.locator('body').innerText()).slice(-2200)};}

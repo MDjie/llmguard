@@ -1,4 +1,5 @@
-import { spawn,spawnSync } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
+import { runBoundedCommand } from './bounded-command.mjs';
 import { readFileSync,writeFileSync,readdirSync,existsSync,openSync,closeSync } from 'node:fs';
 import {resolve,relative}from'node:path';import{createHash}from'node:crypto';import net from'node:net';
 const [source,directory]=process.argv.slice(2);if(!source||!directory)throw new Error('Usage: pnpm test:comprehensive <private-environment-source> <new-directory>');
@@ -8,9 +9,10 @@ const fileHash=p=>createHash('sha256').update(readFileSync(p)).digest('hex');
 const collect=(dir)=>readdirSync(dir,{withFileTypes:true}).flatMap(e=>e.isDirectory()?collect(dir+'/'+e.name):[dir+'/'+e.name]);
 async function command(id,args,options={}){
  console.log('STEP '+id);const started=new Date().toISOString();const fd=existsSync(out)?openSync(out+'/'+id+'.private.log','a'):null;
- const child=spawn(options.program??process.execPath,args,{env:{...process.env,...options.env},windowsHide:true,stdio:fd===null?'inherit':['ignore',fd,fd]});const heartbeat=setInterval(()=>console.log('RUNNING '+id),30000);
- const exitCode=await new Promise(resolve=>{child.once('error',()=>resolve(1));child.once('exit',code=>resolve(code??1));});clearInterval(heartbeat);if(fd!==null)closeSync(fd);
- const status=exitCode===0?'PASS':exitCode===2&&options.allowBlocked?'BLOCKED':'FAIL';steps.push({id,status,exitCode,started,finished:new Date().toISOString()});if(existsSync(out))writeFileSync(out+'/commands.json',JSON.stringify({steps},null,2));console.log(JSON.stringify(steps.at(-1)));return status==='PASS';
+ const timeoutMs=options.timeoutMs??(['build','unit'].includes(id)?1200000:id==='media-stages'?3600000:900000);
+ if(existsSync(out))writeFileSync(out+'/commands.json',JSON.stringify({steps,running:{id,started,timeoutMs}},null,2));
+ const {exitCode,timedOut,elapsedMs}=await runBoundedCommand(options.program??process.execPath,args,{env:{...process.env,...options.env},stdio:fd===null?'inherit':['ignore',fd,fd],timeoutMs,onProgress:progress=>console.log(JSON.stringify({stage:id,...progress}))});if(fd!==null)closeSync(fd);
+ const status=exitCode===0?'PASS':exitCode===2&&options.allowBlocked?'BLOCKED':'FAIL';steps.push({id,status,exitCode,timedOut,elapsedMs,timeoutMs,started,finished:new Date().toISOString()});if(existsSync(out))writeFileSync(out+'/commands.json',JSON.stringify({steps},null,2));console.log(JSON.stringify(steps.at(-1)));return status==='PASS';
 }
 const envRun=(mode,...args)=>['scripts/integration/comprehensive/run-with-env.mjs',out,mode,...args];
 try{
@@ -25,8 +27,10 @@ try{
  if(!await command('provision',['scripts/integration/comprehensive/provision.mjs',out]))throw new Error('PROVISION_REQUIRED');
  if(!await command('build',envRun('next','build')))throw new Error('BUILD_REQUIRED');
  await command('unit',['node_modules/vitest/vitest.mjs','run','--reporter=json','--outputFile='+out+'/unit-results.json']);
+ if(!await command('normalized-purge',envRun('tsx','scripts/integration/comprehensive/normalized-purge.ts')))throw new Error('NORMALIZED_PURGE_VALIDATION_REQUIRED');
+ if(!await command('normalized-rag',envRun('tsx','scripts/integration/comprehensive/normalized-rag.ts')))throw new Error('NORMALIZED_RAG_VALIDATION_REQUIRED');
  if(!await command('start',['scripts/integration/comprehensive/start.mjs',out]))throw new Error('START_REQUIRED');ready=true;
- for(let n=0;n<60;n++){try{if((await fetch('http://127.0.0.1:58089/api/health/db')).status===200)break;}catch{}if(n===59)throw new Error('HEALTH_TIMEOUT');await new Promise(resolve=>setTimeout(resolve,1000));}
+ for(let n=0;n<60;n++){try{if((await fetch('http://127.0.0.1:58089/api/health/db',{signal:AbortSignal.timeout(5000)})).status===200)break;}catch{}if(n===59)throw new Error('HEALTH_TIMEOUT');await new Promise(resolve=>setTimeout(resolve,1000));}
  await command('schema-parity',envRun('tsx','scripts/integration/comprehensive/schema-parity.ts',out));
  await command('policy-mutations',envRun('tsx','scripts/integration/comprehensive/policy-mutations.ts'));
  await command('trace-fixture',envRun('tsx','scripts/integration/comprehensive/trace-fixture.ts'));
@@ -44,6 +48,7 @@ try{
  await command('uploads',envRun('tsx','scripts/integration/multiformat/upload-matrix.ts',out));
  await command('media-stages',['scripts/integration/comprehensive/media-stages.mjs',out],{allowBlocked:true});
  await command('layered-evidence',envRun('tsx','scripts/integration/comprehensive/layered-evidence.ts'));
+ await command('normalized-rag-http',envRun('tsx','scripts/integration/comprehensive/normalized-rag-http.ts'));
  await command('data-audit',envRun('tsx','scripts/integration/comprehensive/data-audit.ts'));
  await command('archive-boundaries',envRun('tsx','scripts/integration/comprehensive/archive-boundaries.ts'));
  await command('auth-workflows',['scripts/integration/comprehensive/auth-workflows.mjs',out]);
