@@ -8,6 +8,7 @@ import { scopePredicate, type TenantScope } from '@/lib/tenancy';
 import { db } from '@/storage/database/shared/db';
 import { artifacts, ragChunks, ragSources, ragRetrievalAudits } from '@/storage/database/shared/schema';
 import { guardRagFlow, type RagCandidate, type RagPrincipal } from './flow';
+import { validateMediaRagLineage } from './media-lineage';
 import { ragContentHash } from './provenance';
 import { ragReferenceBinding, ragReferenceDigest } from './reference-binding';
 
@@ -64,12 +65,16 @@ export async function retrieveGuardedRagContext(input:{
     )).orderBy(ragChunks.id).limit(input.maximumCandidates);
   const candidates:RagCandidate[]=[],unavailable:Array<{chunkId:string;code:string}>=[];
   let totalChars=0;
-  for(const {source,chunk} of rows) {
+  for(const {source,chunk,artifact} of rows) {
     signal.throwIfAborted();
     assertRagRetrievalAccess({scope:input.scope,principal:input.principal,source});
     const metadata=metadataSchema.safeParse(chunk.metadata);
     if(!metadata.success||(metadata.data.validUntilEpochMs!==undefined&&metadata.data.validUntilEpochMs<=Date.now())){
       unavailable.push({chunkId:chunk.externalChunkId,code:'RAG_SOURCE_VERSION_OR_EXPIRY_INVALID'});continue;
+    }
+    if (artifact.metadata?.mediaLineage !== undefined) {
+      try { await validateMediaRagLineage(db, input.scope, artifact.ownerId, artifact.metadata.mediaLineage); }
+      catch { unavailable.push({chunkId:chunk.externalChunkId,code:'RAG_MEDIA_SOURCE_UNAVAILABLE'}); continue; }
     }
     const acl=aclSchema.parse(source.acl??{});
     const text=await readAcceptedTextArtifact(input.scope,chunk.artifactId,131072,['RAG_CHUNK'],signal);
@@ -110,6 +115,7 @@ export async function retrieveGuardedRagContext(input:{
         .where(and(scopePredicate(ragChunks,input.scope),inArray(ragChunks.id,rows.map(row=>row.chunk.id)))).for('share');
       if(current.length!==rows.length)throw new RagRetrievalError('RAG_REFERENCE_CHANGED');
       for(const row of current){
+        if (acceptedIds.has(row.chunk.externalChunkId) && row.artifact.metadata?.mediaLineage !== undefined) await validateMediaRagLineage(transaction, input.scope, row.artifact.ownerId, row.artifact.metadata.mediaLineage);
         const original=rows.find(item=>item.chunk.id===row.chunk.id);
         if(!original||ragReferenceBinding(row)!==ragReferenceBinding(original)||row.artifact.contentExpiresAt<=new Date())throw new RagRetrievalError('RAG_REFERENCE_CHANGED');
         const latestMetadata=metadataSchema.safeParse(row.chunk.metadata);

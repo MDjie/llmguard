@@ -2,7 +2,7 @@ import {pcmFromMetadata} from '@/lib/media/formats/pcm';
 import {textEncodingFromMetadata} from '@/lib/media/formats/text-decoder';
 import {validateMediaFileMetadata, MEDIA_LIMITS} from '@/lib/media/formats/registry';
 import { createHash, randomUUID } from 'node:crypto';
-import { and, eq, inArray, sql } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 import { canonicalJson } from '@/lib/policy-bundle';
 import { objectStoreConfig, S3Presigner } from '@/lib/object-store';
 import { scopePredicate, type TenantScope } from '@/lib/tenancy';
@@ -85,7 +85,7 @@ export async function createArtifactUpload(input: {
       bytes: sql<string>`coalesce(sum(${artifacts.declaredSize}), 0)`,
     }).from(artifacts).where(and(
       eq(artifacts.tenantId, input.scope.tenantId),
-      inArray(artifacts.state, ['uploading', 'verifying', 'verification_running', 'accepted', 'failed', 'quarantined', 'deleted']),
+      isNull(artifacts.purgedAt),
     ));
     if (Number(usage?.bytes ?? 0) + input.sizeBytes > TENANT_QUOTA_BYTES) {
       throw new ArtifactError('GRD_TENANT_ARTIFACT_QUOTA_EXCEEDED', 'Tenant artifact quota exceeded');
@@ -118,17 +118,22 @@ export async function signArtifactPart(
   ownerId: string,
   artifactId: string,
   partNumber: number,
+  checksumSha256?: string,
 ) {
-  const [artifact] = await db.select().from(artifacts).where(and(
+  return db.transaction(async transaction => {
+  const [artifact] = await transaction.select().from(artifacts).where(and(
     eq(artifacts.id, artifactId),
     eq(artifacts.ownerId, ownerId),
     eq(artifacts.state, 'uploading'),
     scopePredicate(artifacts, scope),
-  )).limit(1);
-  if (!artifact) throw new ArtifactError('GRD_ARTIFACT_NOT_UPLOADABLE', 'Artifact upload is unavailable');
-  if (partNumber > artifact.partCount) throw new ArtifactError('GRD_ARTIFACT_PART_INVALID', 'Part number exceeds manifest');
+  )).limit(1).for('update');
+  if (!artifact || artifact.contentExpiresAt <= new Date()) throw new ArtifactError('GRD_ARTIFACT_NOT_UPLOADABLE', 'Artifact upload is unavailable');
+  if (!Number.isSafeInteger(partNumber) || partNumber < 1 || partNumber > artifact.partCount) throw new ArtifactError('GRD_ARTIFACT_PART_INVALID', 'Part number exceeds manifest');
   const signer = new S3Presigner(objectStoreConfig());
-  return signer.presign('PUT', artifactPartKey(artifact.objectPrefix, partNumber), { expiresSeconds: 60, ifNoneMatch: true });
+  const now = new Date();
+  await transaction.update(artifacts).set({ uploadExpiresAt: new Date(now.getTime() + 60000) }).where(eq(artifacts.id, artifactId));
+  return signer.presign('PUT', artifactPartKey(artifact.objectPrefix, partNumber), { expiresSeconds: 60, now, ifNoneMatch: true, checksumSha256 });
+  });
 }
 
 export async function completeArtifactUpload(

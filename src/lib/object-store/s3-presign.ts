@@ -61,7 +61,7 @@ export class S3Presigner {
   async presign(
     method: 'GET' | 'PUT' | 'DELETE',
     key: string,
-    options: { expiresSeconds?: number; sha256Header?: string; now?: Date; versionId?: string; ifNoneMatch?: boolean; checksumSha256?: string } = {},
+    options: { expiresSeconds?: number; sha256Header?: string; now?: Date; versionId?: string; ifNoneMatch?: boolean; checksumSha256?: string; versions?: { prefix: string; keyMarker?: string; versionIdMarker?: string } } = {},
   ): Promise<{ url: string; headers: Readonly<Record<string, string>> }> {
     await this.endpointPolicy.assertAllowed(this.config.endpoint, 'custom');
     const expires = Math.min(3_600, Math.max(30, options.expiresSeconds ?? 900));
@@ -83,6 +83,12 @@ export class S3Presigner {
       'X-Amz-SignedHeaders': signedHeaders,
     });
     if (options.versionId) { if (method === 'PUT' || options.versionId.length > 1024) throw new Error('OBJECT_VERSION_INVALID'); query.set('versionId', options.versionId); }
+    if (options.versions) {
+      if (method !== 'GET' || key !== '' || !options.versions.prefix || options.versionId) throw new Error('OBJECT_VERSION_LIST_INVALID');
+      query.set('versions', ''); query.set('prefix', options.versions.prefix); query.set('max-keys', '1000'); query.set('encoding-type', 'url');
+      if (options.versions.keyMarker) query.set('key-marker', options.versions.keyMarker);
+      if (options.versions.versionIdMarker) query.set('version-id-marker', options.versions.versionIdMarker);
+    }
     query.sort();
     const canonicalHeaders = Object.entries(headers).sort(([left], [right]) => left.localeCompare(right))
       .map(([name, value]) => `${name}:${value.trim()}\n`).join('');

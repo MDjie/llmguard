@@ -50,6 +50,7 @@
     "security-scan:worker": "tsx scripts/security-scan-worker.ts",
     "security:text-evaluate": "tsx scripts/security/evaluate-text-defense.ts",
     "artifact:worker": "tsx scripts/artifact-verifier-worker.ts",
+    "artifact:purge-worker": "tsx scripts/artifact-purge-worker.ts",
     "acceptance:trace": "node scripts/acceptance/generate-traceability.mjs",
     "acceptance:audit": "node scripts/acceptance/audit-requirements.mjs",
     "acceptance:code": "node scripts/acceptance/run-pocs.mjs",
@@ -104,6 +105,7 @@
     "acceptance:v11": "node scripts/acceptance/v11-readiness.mjs",
     "detection:replay-offline": "tsx scripts/content-safety/replay-offline.ts",
     "detection:multiformat-quality": "tsx scripts/content-safety/multiformat-quality.ts",
+    "detection:media-manifest": "tsx scripts/content-safety/media-manifest.ts",
     "test:comprehensive": "node scripts/integration/comprehensive/run.mjs"
   },
   "dependencies": {

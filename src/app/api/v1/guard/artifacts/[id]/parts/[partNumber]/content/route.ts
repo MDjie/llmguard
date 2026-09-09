@@ -3,8 +3,7 @@ import {and,eq} from 'drizzle-orm';
 import {withApiSecurity,ApiProblem,readBodyBytesWithLimit} from '@/lib/api-security';
 import {artifactPartParamsSchema} from '@/contracts/http/artifacts';
 import {jsonObjectResponseSchema} from '@/contracts/http/common';
-import {artifactPartKey} from '@/lib/artifacts/service';
-import {S3Presigner,objectStoreConfig} from '@/lib/object-store';
+import {signArtifactPart} from '@/lib/artifacts/service';
 import {requireTenantContext,scopePredicate} from '@/lib/tenancy';
 import {db} from '@/storage/database/shared/db';
 import {artifacts} from '@/storage/database/shared/schema';
@@ -21,7 +20,7 @@ async({request,principal,routeContext})=>{
   const bytes=await readBodyBytesWithLimit(request,expected);
   if(bytes.length!==expected) throw new ApiProblem({status:422,code:'GRD_ARTIFACT_PART_SIZE_MISMATCH',title:'分片长度不符',detail:'请重试此分片。'});
   const digest=createHash('sha256').update(bytes).digest();
-  const signed=await new S3Presigner(objectStoreConfig()).presign('PUT',artifactPartKey(artifact.objectPrefix,partNumber),{expiresSeconds:60,ifNoneMatch:true,checksumSha256:digest.toString('base64')});
+  const signed=await signArtifactPart(scope,principal!.subject,artifact.id,partNumber,digest.toString('base64'));
   const response=await fetch(signed.url,{method:'PUT',headers:signed.headers,body:Buffer.from(bytes),redirect:'error',signal:AbortSignal.any([request.signal,AbortSignal.timeout(60000)])});
   await response.body?.cancel();
   if(!response.ok && response.status!==412) throw new ApiProblem({status:502,code:'OBJECT_STORE_UPLOAD_FAILED',title:'存储写入失败',detail:'请稍后重试。'});

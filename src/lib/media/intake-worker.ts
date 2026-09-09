@@ -26,6 +26,9 @@ import {analyzeAudioVideo} from './analyzer';
 import {fuseMediaTimeline} from './timeline-fusion';
 import {analyzeNativeArtifacts} from '@/lib/multimodal/native-analyzer';
 import {runGlmJointEvidence} from '@/lib/multimodal/joint-evidence-judge';
+import {persistNormalizedAsset} from '@/lib/artifacts/normalized';
+import {projectDocument,projectMedia,projectText} from '@/lib/artifacts/normalized-projection';
+import type {NormalizedAsset} from '@/lib/artifacts/normalized-contract';
 
 /** All console file entry points use the same accepted-artifact and policy-bound job. */
 export async function processNextIntakeJob(){
@@ -39,6 +42,7 @@ export async function processNextIntakeJob(){
   const reasons=new Set<string>(),relations:RelationSource[]=[];
   const mediaInputs:Parameters<typeof analyzeNativeArtifacts>[0]['artifacts'][number][]=[];
   let textBudget=0;
+  const normalizedAssets:NormalizedAsset[]=[];
   const context=()=>({...scope,direction:'INPUT' as const,taskPurpose:initial.binding.taskPurpose||undefined,traceId:'intake-'+job.id,absoluteDeadlineEpochMs:Date.now()+60_000});
   for(const [index,artifact] of initial.artifacts.entries()){
    signal.throwIfAborted();await updateGuardJobProgress(job,'analyzing_sources',5+index*75/initial.artifacts.length,{artifactId:artifact.id,sourceIndex:index});
@@ -77,6 +81,7 @@ export async function processNextIntakeJob(){
      }
 
     }
+    normalizedAssets.push(await persistNormalizedAsset(job,projectText({parentArtifactId:artifact.id,parentSha256:artifact.verifiedSha256!,sourceKind:'TEXT'},decoded.text,decoded.encoding),signal));
     coverage.push({artifactId:artifact.id,complete,encoding:decoded.encoding,expectedChunks:chunks.length,processedChunks:Math.min(chunks.length,512)});
     if(textBudget+decoded.text.length<=131072){relations.push({id:artifact.id,text:decoded.text,sourceType:'FILE',instructionCapability:'FORBIDDEN',objectRef:artifact.id});textBudget+=decoded.text.length;}else reasons.add('CROSS_SOURCE_TEXT_BUDGET_EXCEEDED');
     continue;
@@ -85,6 +90,7 @@ export async function processNextIntakeJob(){
    const input={artifact,parts,scope,signal};mediaInputs.push({artifact,parts});
    if(artifact.kind==='IMAGE'||artifact.kind==='DOCUMENT'){
     const analysis=await analyzeDocumentOrImage(input);
+    normalizedAssets.push(await persistNormalizedAsset(job,projectDocument({parentArtifactId:artifact.id,parentSha256:artifact.verifiedSha256!,sourceKind:artifact.kind},analysis),signal));
     const fused=await fuseMultimodal({bundle,context:context(),userText:initial.binding.taskPurpose,artifactSha256:artifact.verifiedSha256??undefined,analysisCoverage:analysis.coverage,
      documentText:analysis.documentText?.map(part=>({...part,artifactId:artifact.id,artifactSha256:artifact.verifiedSha256??undefined})),
       ocr:analysis.ocr.map(item=>({...item,artifactId:artifact.id,artifactSha256:artifact.verifiedSha256??undefined})),codes:analysis.codes.map(item=>({...item,artifactId:artifact.id,artifactSha256:artifact.verifiedSha256??undefined})),visual:analysis.visual.map(item=>({...item,artifactId:artifact.id,artifactSha256:artifact.verifiedSha256??undefined})),
@@ -94,6 +100,7 @@ export async function processNextIntakeJob(){
     if(fused.degraded||!fused.coverage.complete){reasons.add('DOCUMENT_ANALYSIS_INCOMPLETE');analysis.analysisFailures.forEach(item=>reasons.add(item.code));}
    }else{
     const analysis=await analyzeAudioVideo(input);
+    normalizedAssets.push(await persistNormalizedAsset(job,projectMedia({parentArtifactId:artifact.id,parentSha256:artifact.verifiedSha256!,sourceKind:artifact.kind==='AUDIO'?'AUDIO':'VIDEO'},analysis),signal));
     const fused=await fuseMediaTimeline({bundle,context:context(),userText:initial.binding.taskPurpose,artifactId:artifact.id,artifactSha256:artifact.verifiedSha256??undefined,analysisCoverage:analysis.coverage,
      segments:[...analysis.transcript.map(item=>({...item,viewId:item.sourceViewId,source:'audio' as const})),...analysis.subtitles.map(item=>({...item,viewId:item.sourceViewId,source:'subtitle' as const})),...analysis.frames.flatMap(frame=>[...(frame.ocrText?[{source:'frame_ocr' as const,text:frame.ocrText,startMs:frame.timeMs,endMs:frame.timeMs,frameIndex:frame.frameIndex,viewId:'frame_'+frame.frameIndex}]:[]),...frame.codes.map(code=>({source:'qr_code' as const,text:code.text,confidence:code.confidence,startMs:frame.timeMs,endMs:frame.timeMs,frameIndex:frame.frameIndex,viewId:code.viewId}))])],
      visual:analysis.frames.flatMap(frame=>frame.risks.map(risk=>({...risk,timeMs:frame.timeMs,frameIndex:frame.frameIndex}))),analysisFailures:analysis.analysisFailures,sourceTrust:'UNTRUSTED',instructionCapability:'FORBIDDEN',anomalyScore:Math.max(0,...analysis.anomalies.map(item=>item.score))});
@@ -119,7 +126,7 @@ export async function processNextIntakeJob(){
   if(reasons.size)actions.push('REQUIRE_REVIEW');
   const action=combineActionConstraints(actions).action,eligible=!reasons.size&&['ALLOW','WARN'].includes(action);
   await completeGuardJob(job,{contractVersion:'1.0',analysisContractVersion:'intake-1',artifactId:job.artifactId,bundleId:job.bundleId,action,sourceBinding:initial.binding,analysisCoverage:coverage,evidence,
-   relationAssessment:{...relationAssessment,evidence:relationAssessment.evidence},nativeBinding:native?.binding??null,nativeAssessment:native?.assessment??null,nativeCoverage:native?.gate??null,jointEvidence:joint,degraded:reasons.size>0,degradationReasons:[...reasons],operationalOutcome:reasons.size?'INCOMPLETE':action==='REQUIRE_REVIEW'?'REQUIRES_REVIEW':'COMPLETE',
+   normalizedAssets,relationAssessment:{...relationAssessment,evidence:relationAssessment.evidence},nativeBinding:native?.binding??null,nativeAssessment:native?.assessment??null,nativeCoverage:native?.gate??null,jointEvidence:joint,degraded:reasons.size>0,degradationReasons:[...reasons],operationalOutcome:reasons.size?'INCOMPLETE':action==='REQUIRE_REVIEW'?'REQUIRES_REVIEW':'COMPLETE',
    releaseEligibility:{eligible,executionPermitRequired:true,reasonCodes:eligible?[]:[...reasons,...(!['ALLOW','WARN'].includes(action)?['ACTION_REQUIRES_INTERVENTION']:[])]}},{views,mappings});
   return {jobId:job.id,status:'completed'};
  }catch(error:unknown){if(monitor.signal.aborted||isGuardJobCancellationError(error))return {jobId:job.id,status:'cancelled'};await failGuardJob(job,error);return {jobId:job.id,status:job.attempt>=job.maxAttempts?'failed':'retrying'};}finally{monitor.stop();}

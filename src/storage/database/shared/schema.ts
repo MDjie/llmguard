@@ -1787,6 +1787,9 @@ export const artifacts = pgTable(
 		declaredSha256: varchar("declared_sha256", { length: 64 }).notNull(),
 		verifiedSha256: varchar("verified_sha256", { length: 64 }),
 		objectPrefix: varchar("object_prefix", { length: 800 }).notNull(),
+		purgedAt: timestamp('purged_at', { withTimezone: true }),
+		holdUntil: timestamp('hold_until', { withTimezone: true }),
+		uploadExpiresAt: timestamp('upload_expires_at', { withTimezone: true }),
 		state: varchar("state", { length: 24 }).notNull().default("uploading"),
 		idempotencyKey: varchar("idempotency_key", { length: 128 }).notNull(),
 		requestHash: varchar("request_hash", { length: 64 }).notNull(),
@@ -1806,6 +1809,16 @@ export const artifacts = pgTable(
 		index("artifacts_expires_at_idx").on(table.contentExpiresAt),
 	]
 );
+
+export const artifactPurgeLedger = pgTable('artifact_purge_ledger', {
+  artifactId: varchar('artifact_id', { length: 36 }).primaryKey(), ...tenantScopeColumns(),
+  state: varchar('state', { length: 20 }).notNull().default('PENDING'), objectPrefix: varchar('object_prefix', { length: 800 }).notNull(),
+  notBefore: timestamp('not_before', { withTimezone: true }).notNull(), retryAt: timestamp('retry_at', { withTimezone: true }).notNull().defaultNow(),
+  leaseToken: uuid('lease_token'), leaseUntil: timestamp('lease_until', { withTimezone: true }),
+  versions: jsonb('versions').$type<Array<{ key: string; versionId: string; deleteMarker: boolean }>>().notNull().default([]),
+  attempt: integer('attempt').notNull().default(0), errorCode: varchar('error_code', { length: 128 }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(), purgedAt: timestamp('purged_at', { withTimezone: true }),
+}, t => [foreignKey({ columns: [t.tenantId, t.applicationId, t.artifactId], foreignColumns: [artifacts.tenantId, artifacts.applicationId, artifacts.id] }), index('artifact_purge_pending_idx').on(t.state, t.retryAt, t.notBefore)]);
 
 export const artifactParts = pgTable(
 	"artifact_parts",

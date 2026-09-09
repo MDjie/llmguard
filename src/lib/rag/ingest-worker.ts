@@ -17,6 +17,7 @@ import { scopePredicate } from '@/lib/tenancy';
 import { ragContentHash, signRagProvenance } from './provenance';
 import {assertRagIngestBinding} from './ingest-binding';
 import {ragIngestContent,ragIngestDisposition} from './ingest-policy';
+import {validateMediaRagLineage} from './media-lineage';
 
 const sourceMetadataSchema = z.object({
   sourceUri: z.string().max(2_000).default('unknown'),
@@ -45,6 +46,7 @@ export async function processNextRagIngestJob() {
     if (!artifact) throw new Error('RAG_SOURCE_UNAVAILABLE');
     assertRagIngestBinding(job.executionBinding,artifact);
     const metadata = sourceMetadataSchema.parse(artifact.metadata ?? {});
+    if (metadata.mediaLineage !== undefined) await validateMediaRagLineage(db, scope, job.ownerId, metadata.mediaLineage);
     const text = await readAcceptedTextArtifact(
       scope,
       artifact.id,
@@ -67,6 +69,7 @@ export async function processNextRagIngestJob() {
       const [current]=await transaction.select().from(artifacts).where(and(scopePredicate(artifacts,scope),eq(artifacts.id,artifact.id),eq(artifacts.ownerId,job.ownerId))).for('share');
       if(!current)throw new Error('RAG_SOURCE_UNAVAILABLE');
       assertRagIngestBinding(job.executionBinding,current);
+      if (metadata.mediaLineage !== undefined) await validateMediaRagLineage(transaction, scope, job.ownerId, metadata.mediaLineage);
       const chunkId = metadata.externalChunkId ?? artifact.id;
       await transaction.execute(sql`select pg_advisory_xact_lock(hashtext(${scope.tenantId+':'+scope.applicationId+':rag-chunk:'+chunkId}))`);
       const [previousOwner]=await transaction.select({ownerId:artifacts.ownerId}).from(ragChunks).innerJoin(artifacts,and(eq(artifacts.id,ragChunks.artifactId),scopePredicate(artifacts,scope))).where(and(scopePredicate(ragChunks,scope),eq(ragChunks.externalChunkId,chunkId))).limit(1);

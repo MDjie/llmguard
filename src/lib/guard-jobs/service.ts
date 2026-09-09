@@ -57,6 +57,7 @@ export async function submitGuardJob(input: {
   contextArtifactId?: string;
   nativeArtifactIds?: string[];
   sourceArtifactIds?: string[];
+  expectedIntakeSources?: Array<{ artifactId: string; sha256: string; kind: string }>;
   taskPurpose?: string;
   direction?: 'INPUT'|'OUTPUT_COMPLETE'|'OUTPUT_CHUNK'|'TOOL_RESULT';
   bundleId: string;
@@ -105,7 +106,7 @@ export async function submitGuardJob(input: {
   if (jobType !== 'native_joint' && (input.nativeArtifactIds || input.direction)) throw new GuardJobError('GRD_NATIVE_JOB_OPTIONS_INVALID', 'Native options require a native_joint job');
   if (jobType === 'native_joint' && (!input.contextArtifactId || !input.nativeArtifactIds || input.nativeArtifactIds[0] !== input.artifactId)) throw new GuardJobError('GRD_NATIVE_JOB_CONTEXT_REQUIRED', 'Native jobs require an ordered source list beginning with the primary artifact and an owned context artifact');
   let executionBinding: Record<string, unknown> | undefined;
-  if (jobType !== 'intake' && (input.sourceArtifactIds || input.taskPurpose)) throw new GuardJobError('GRD_INTAKE_OPTIONS_INVALID', 'Intake options require an intake job');
+  if (jobType !== 'intake' && (input.sourceArtifactIds || input.taskPurpose || input.expectedIntakeSources)) throw new GuardJobError('GRD_INTAKE_OPTIONS_INVALID', 'Intake options require an intake job');
   if (jobType === 'intake') {
     const ids=input.sourceArtifactIds ?? [input.artifactId];
     if(ids[0]!==input.artifactId)throw new GuardJobError('GRD_INTAKE_SOURCE_INVALID','The first source must be the primary artifact');
@@ -118,6 +119,10 @@ export async function submitGuardJob(input: {
     if(artifact.kind!=='RAG_CHUNK')throw new GuardJobError('GRD_RAG_SOURCE_INVALID','RAG ingest requires an accepted RAG_CHUNK artifact');
     executionBinding=(await import('@/lib/rag/ingest-binding')).captureRagIngestBinding(artifact);
   } else if (jobType === 'code_scan') executionBinding = await (await import('@/lib/connectors/code-sentinel-config')).captureCodeScanBinding(input.scope, input.ownerId, input.artifactId);
+  if (input.expectedIntakeSources) {
+    const binding = (await import('./intake-binding')).intakeBindingSchema.parse(executionBinding);
+    if (canonicalJson(binding.artifacts.map(ref => ({artifactId:ref.id,sha256:ref.sha256,kind:ref.kind}))) !== canonicalJson(input.expectedIntakeSources)) throw new GuardJobError('GRD_INTAKE_SOURCE_CHANGED', 'Source does not match the expected manifest');
+  }
   const requestHash = createHash('sha256').update(canonicalJson({
     ownerId: input.ownerId,
     maxAttempts: input.maxAttempts,
@@ -140,6 +145,16 @@ export async function submitGuardJob(input: {
         throw new GuardJobError('GRD_IDEMPOTENCY_CONFLICT', 'Idempotency key was used for another job');
       }
       return { job: existing, reused: true };
+    }
+    const sourceIds = [...new Set([input.artifactId, ...(input.contextArtifactId ? [input.contextArtifactId] : []), ...(input.sourceArtifactIds ?? []), ...(input.nativeArtifactIds ?? [])])].sort();
+    const currentSources = await transaction.select().from(artifacts).where(and(scopePredicate(artifacts, input.scope), eq(artifacts.ownerId, input.ownerId), inArray(artifacts.id, sourceIds))).orderBy(artifacts.id).for('share');
+    if (currentSources.length !== sourceIds.length || currentSources.some(row => row.state !== 'accepted' || row.contentExpiresAt <= new Date())) throw new GuardJobError('GRD_ARTIFACT_NOT_ACCEPTED', 'Source changed before job submission');
+    if (jobType === 'intake') {
+      const binding = (await import('./intake-binding')).intakeBindingSchema.parse(executionBinding);
+      for (const ref of binding.artifacts) {
+        const row = currentSources.find(item => item.id === ref.id);
+        if (!row || row.verifiedSha256 !== ref.sha256 || row.kind !== ref.kind || row.verifiedSize !== ref.sizeBytes || row.detectedMediaType !== ref.mediaType) throw new GuardJobError('GRD_INTAKE_SOURCE_CHANGED', 'Source changed before job submission');
+      }
     }
     const [created] = await transaction.insert(guardJobs).values({
       ...input.scope,
