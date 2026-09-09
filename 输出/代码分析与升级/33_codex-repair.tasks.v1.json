@@ -408,10 +408,11 @@
           ".artifact-build/comprehensive-repair-20260909-f/aggregate.json"
         ],
         "qualityQualification": "NOT_IMPLIED_BY_ENGINEERING_RESULTS",
-        "supplementalAudit": "H轮派生聊天控制面与目标请求归档、清理真实进程恢复和v2媒体定位补强已验证；1767单元通过。首次失败保留，不是完整浏览器冷启动，真实模型/标签/质量及生产资格仍未关闭。",
+        "supplementalAudit": "L 轮完整冷启动 42 阶段，0 执行失败；1789 单元、23 页面巡检及主要业务流程通过。49 媒体用例 6 PASS/43 BLOCKED，真实模型、独立标签及 G0–G5/生产资格继续开放。 本轮新增独立原件审批、正反证保留、格式缺口和真实 TTL/备份恢复验收；首次失败未删除。",
         "supplementalEvidence": [
           "输出/代码分析与升级/34_接续修复证据_2026-09-09/verification.json",
-          "输出/代码分析与升级/35_剩余任务证据_2026-09-09/verification.json"
+          "输出/代码分析与升级/35_剩余任务证据_2026-09-09/verification.json",
+          "输出/代码分析与升级/36_剩余工程证据_2026-09-09/verification.json"
         ]
       }
     },
@@ -463,10 +464,11 @@
           ".artifact-build/comprehensive-repair-20260909-f/evidence-workflow.json"
         ],
         "qualityQualification": "NOT_IMPLIED_BY_ENGINEERING_RESULTS",
-        "supplementalAudit": "H轮派生聊天控制面与目标请求归档、清理真实进程恢复和v2媒体定位补强已验证；1767单元通过。首次失败保留，不是完整浏览器冷启动，真实模型/标签/质量及生产资格仍未关闭。",
+        "supplementalAudit": "L 轮完整冷启动 42 阶段，0 执行失败；1789 单元、23 页面巡检及主要业务流程通过。49 媒体用例 6 PASS/43 BLOCKED，真实模型、独立标签及 G0–G5/生产资格继续开放。 本轮新增独立原件审批、正反证保留、格式缺口和真实 TTL/备份恢复验收；首次失败未删除。",
         "supplementalEvidence": [
           "输出/代码分析与升级/34_接续修复证据_2026-09-09/verification.json",
-          "输出/代码分析与升级/35_剩余任务证据_2026-09-09/verification.json"
+          "输出/代码分析与升级/35_剩余任务证据_2026-09-09/verification.json",
+          "输出/代码分析与升级/36_剩余工程证据_2026-09-09/verification.json"
         ]
       }
     },
@@ -523,10 +525,11 @@
           ".artifact-build/comprehensive-repair-20260909-f/evidence-workflow.json"
         ],
         "qualityQualification": "NOT_IMPLIED_BY_ENGINEERING_RESULTS",
-        "supplementalAudit": "H轮派生聊天控制面与目标请求归档、清理真实进程恢复和v2媒体定位补强已验证；1767单元通过。首次失败保留，不是完整浏览器冷启动，真实模型/标签/质量及生产资格仍未关闭。",
+        "supplementalAudit": "L 轮完整冷启动 42 阶段，0 执行失败；1789 单元、23 页面巡检及主要业务流程通过。49 媒体用例 6 PASS/43 BLOCKED，真实模型、独立标签及 G0–G5/生产资格继续开放。 本轮新增独立原件审批、正反证保留、格式缺口和真实 TTL/备份恢复验收；首次失败未删除。",
         "supplementalEvidence": [
           "输出/代码分析与升级/34_接续修复证据_2026-09-09/verification.json",
-          "输出/代码分析与升级/35_剩余任务证据_2026-09-09/verification.json"
+          "输出/代码分析与升级/35_剩余任务证据_2026-09-09/verification.json",
+          "输出/代码分析与升级/36_剩余工程证据_2026-09-09/verification.json"
         ]
       }
     },
@@ -571,10 +574,11 @@
           ".artifact-build/comprehensive-repair-20260909-f/release-gates.json"
         ],
         "qualityQualification": "NOT_IMPLIED_BY_ENGINEERING_RESULTS",
-        "supplementalAudit": "H轮派生聊天控制面与目标请求归档、清理真实进程恢复和v2媒体定位补强已验证；1767单元通过。首次失败保留，不是完整浏览器冷启动，真实模型/标签/质量及生产资格仍未关闭。",
+        "supplementalAudit": "L 轮完整冷启动 42 阶段，0 执行失败；1789 单元、23 页面巡检及主要业务流程通过。49 媒体用例 6 PASS/43 BLOCKED，真实模型、独立标签及 G0–G5/生产资格继续开放。 本轮新增独立原件审批、正反证保留、格式缺口和真实 TTL/备份恢复验收；首次失败未删除。",
         "supplementalEvidence": [
           "输出/代码分析与升级/34_接续修复证据_2026-09-09/verification.json",
-          "输出/代码分析与升级/35_剩余任务证据_2026-09-09/verification.json"
+          "输出/代码分析与升级/35_剩余任务证据_2026-09-09/verification.json",
+          "输出/代码分析与升级/36_剩余工程证据_2026-09-09/verification.json"
         ]
       }
     }
@@ -585,7 +589,7 @@
   "latestCompletedRun": ".artifact-build/comprehensive-repair-20260909-f",
   "activeRun": null,
   "knownDefectsD01ToD09": "REPAIRED_AND_REGRESSION_VERIFIED",
-  "latestSupplementalRun": ".artifact-build/comprehensive-resume-20260909-h",
+  "latestSupplementalRun": ".artifact-build/comprehensive-resume-20260909-l",
   "deferredByUser": [
     "REAL_MODEL_ROLE_CONFIGURATION",
     "INDEPENDENT_DUAL_REVIEWED_LABELS"

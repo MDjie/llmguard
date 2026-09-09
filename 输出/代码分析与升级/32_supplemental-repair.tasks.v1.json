@@ -320,7 +320,10 @@
       "constraints": "不得将ffmpeg存在当作所有codec可用；资格从已批准范围读取，UI不展示秘密或内部地址。",
       "acceptance": "无适配器、缺codec、过期资格、文本独立可用四类契约测试。",
       "dependsOn": [],
-      "latestAudit": "新增格式分阶段能力、codec/适配器缺口、9 Worker心跳、文档/音视频独立预检；真实模型资格仍待鉴定。"
+      "latestAudit": "I–L 轮能力投影补充多视频流、HEIF 序列和非 ZIP Office 隐藏内容限制；真实格式边界 10 项通过。实际模型和稀有 profile 资格仍未齐备。",
+      "latestEvidence": [
+        "输出/代码分析与升级/36_剩余工程证据_2026-09-09/verification.json"
+      ]
     },
     {
       "id": "R02",
@@ -376,10 +379,11 @@
       "constraints": "保留原件；不能截断证据来凑4MiB；对象版本、授权访问、保留/删除与幂等必须覆盖全部分块。",
       "acceptance": "大文档与多媒体超过4MiB、部分上传、重试、授权消费、hold/删除冲突。",
       "dependsOn": [],
-      "latestAudit": "H轮标准派生件已接通聊天控制面及目标请求归档；完整上下文与父子摘要重检通过。大媒体/PDF预览产物和完整媒体消费仍有剩余工程。",
+      "latestAudit": "I–L 轮新增独立 MEDIA_ORIGINAL 授权、单页 PDF 栅格预览和原始媒体消费，真实 5 MiB PDF/音频、一次授权、并发竞争、来源变更及有效授权保留保护通过。仅明确格式和预算开放；转换/模型资格及大范围格式消费不作完成声明。",
       "latestEvidence": [
         "输出/代码分析与升级/34_接续修复证据_2026-09-09/verification.json",
-        "输出/代码分析与升级/35_剩余任务证据_2026-09-09/verification.json"
+        "输出/代码分析与升级/35_剩余任务证据_2026-09-09/verification.json",
+        "输出/代码分析与升级/36_剩余工程证据_2026-09-09/verification.json"
       ]
     },
     {
@@ -441,9 +445,10 @@
         "R01",
         "R04"
       ],
-      "latestAudit": "G轮补OOXML/ODF惰性成员清单、隐藏媒体/嵌入对象SHA与明确未覆盖状态，四类确定性测试通过。宏/对象仍不执行；旧Office/OFD/WPS/AMR/HEIF序列/多视频流完整实样本鉴定未关闭。",
+      "latestAudit": "I–L 轮拒绝静默选取多视频流、明确旧 Office 非 ZIP 内容未完成隐藏对象枚举。真实 FFmpeg 正常/第二流/损坏/时长超限、旧 Office 及 OOXML 隐藏文本 10 项通过；OFD/WPS/AMR/HEIF 序列/多流完整鉴定继续开放。",
       "latestEvidence": [
-        "输出/代码分析与升级/34_接续修复证据_2026-09-09/verification.json"
+        "输出/代码分析与升级/34_接续修复证据_2026-09-09/verification.json",
+        "输出/代码分析与升级/36_剩余工程证据_2026-09-09/verification.json"
       ]
     },
     {
@@ -460,10 +465,11 @@
       "dependsOn": [
         "R04"
       ],
-      "latestAudit": "G轮13项清理保护继续通过；H轮新增6项真实进程崩溃/重启、租约保护、剩余版本恢复及子件删除后父件引用释放。TTL/部分租约为受控时间；实际先前崩溃也已在租约到期后恢复。默认Worker仍未启用，长期运行与部署验收未闭合。",
+      "latestAudit": "I–L 轮完成实际 60 秒签名及 65 秒排空、旧链接不能重建对象的 6 项验收；pg_dump/新库 pg_restore 核对 8 类表、授权消费状态、原件与密文回放，共 5 项通过。对象桶/密钥未演练丢失，长期保留与生产部署仍未关闭。",
       "latestEvidence": [
         "输出/代码分析与升级/34_接续修复证据_2026-09-09/verification.json",
-        "输出/代码分析与升级/35_剩余任务证据_2026-09-09/verification.json"
+        "输出/代码分析与升级/35_剩余任务证据_2026-09-09/verification.json",
+        "输出/代码分析与升级/36_剩余工程证据_2026-09-09/verification.json"
       ]
     },
     {
@@ -473,17 +479,19 @@
       "originalTasks": [
         "T21"
       ],
-      "status": "PARTIAL_VERIFIED",
+      "status": "ENGINEERING_VERIFIED",
       "deliverables": "复用证据访问授权，支持图片框/PDF页/音视频时间点；显示正反证、模型身份、来源映射、覆盖和运行失败。",
       "constraints": "浏览器仅获取已授权的正确版本；证据视图偏移不可套用到脱敏文本；不加载任意外部URL。",
       "acceptance": "浏览器点击定位、授权过期/使用一次、跨用户、正反证及处理失败分类。",
       "dependsOn": [
         "R04"
       ],
-      "latestAudit": "H轮接通当前音轨v2时间坐标，校验音轨起点/时长/精度；视频记录源时长，播放器校验完整区间并显示关联证据，补充解析器/模型身份及覆盖失败信息。旧无时长映射不提供跳转。PDF/intake原件专属授权与完整浏览器正反证交互仍待完成。",
+      "latestAudit": "I–L 轮完成 PDF/intake 原件独立双人审批、逐页/逐来源绑定、音频跳转、正反证和模型/判定角色回放；多窗口反证保留且不增加局部放行资格。13 项真实 PG/MinIO/解析器检查、6 项真实浏览器交互通过；仅对支持格式与预算声明工程完成。",
       "latestEvidence": [
-        "输出/代码分析与升级/35_剩余任务证据_2026-09-09/verification.json"
-      ]
+        "输出/代码分析与升级/35_剩余任务证据_2026-09-09/verification.json",
+        "输出/代码分析与升级/36_剩余工程证据_2026-09-09/verification.json"
+      ],
+      "verificationScope": "SUPPORTED_BOUNDED_ORIGINAL_PREVIEW_AND_AUTHORIZED_REVIEW; NOT_MODEL_QUALITY_QUALIFICATION"
     },
     {
       "id": "R10",
@@ -560,10 +568,11 @@
         "R10",
         "R11"
       ],
-      "latestAudit": "H轮增量27项派生聊天控制面、6项清理恢复、13项清理回归、10项RAG回归及1767单元通过；不是完整浏览器冷启动，不替代G0-G5、真实角色、质量或生产资格。",
+      "latestAudit": "L 轮完整冷启动 42 阶段，0 执行失败；1789 单元、23 页面巡检及主要业务流程通过。49 媒体用例 6 PASS/43 BLOCKED，真实模型、独立标签及 G0–G5/生产资格继续开放。",
       "latestEvidence": [
         "输出/代码分析与升级/34_接续修复证据_2026-09-09/verification.json",
-        "输出/代码分析与升级/35_剩余任务证据_2026-09-09/verification.json"
+        "输出/代码分析与升级/35_剩余任务证据_2026-09-09/verification.json",
+        "输出/代码分析与升级/36_剩余工程证据_2026-09-09/verification.json"
       ]
     }
   ],
@@ -571,13 +580,14 @@
   "executionSummary": {
     "engineeringVerified": [
       "R02",
-      "R03"
+      "R03",
+      "R09"
     ],
-    "openCount": 10,
+    "openCount": 9,
     "evidenceDirectory": "输出/代码分析与升级/32_补充修复证据_2026-09-08",
-    "latestIncrementalEvidence": "输出/代码分析与升级/34_接续修复证据_2026-09-09/verification.json",
+    "latestIncrementalEvidence": "输出/代码分析与升级/36_剩余工程证据_2026-09-09/verification.json",
     "allDevelopmentComplete": false
   },
   "latestDevelopmentAudit": "2026-09-09",
-  "latestSupplementalRun": ".artifact-build/comprehensive-resume-20260909-h"
+  "latestSupplementalRun": ".artifact-build/comprehensive-resume-20260909-l"
 }

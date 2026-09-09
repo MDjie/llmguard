@@ -1,0 +1,1187 @@
+{
+  "version": "remaining-work-verification-2",
+  "date": "2026-09-09",
+  "baselineHead": "c31de18570c2437f45ab0ce916644aeca73059b4",
+  "finalRun": "L",
+  "coldRun": true,
+  "status": "PARTIAL_VERIFIED",
+  "allDevelopmentComplete": false,
+  "qualityAccepted": false,
+  "productionActivated": false,
+  "defaultPurgeWorkerEnabled": false,
+  "realUpstreamModelCalled": false,
+  "sourceIdentity": {
+    "head": "c31de18570c2437f45ab0ce916644aeca73059b4",
+    "sha256": "cd3be96f912eac02c4ee2d5bc12f133a9500450c4384d0ff38e4be9c2b30e745",
+    "fileCount": 1385,
+    "currentFilesMatch": true,
+    "rawEvidence": ".artifact-build/comprehensive-resume-20260909-l/source-identity.json"
+  },
+  "finalColdRun": {
+    "status": "BLOCKED",
+    "steps": [
+      {
+        "id": "initialize",
+        "status": "PASS",
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedMs": 136,
+        "timeoutMs": 900000,
+        "started": "2026-09-09T02:29:47.100Z",
+        "finished": "2026-09-09T02:29:47.239Z"
+      },
+      {
+        "id": "database",
+        "status": "PASS",
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedMs": 1501,
+        "timeoutMs": 900000,
+        "started": "2026-09-09T02:29:47.389Z",
+        "finished": "2026-09-09T02:29:48.890Z"
+      },
+      {
+        "id": "fixture",
+        "status": "PASS",
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedMs": 2219,
+        "timeoutMs": 900000,
+        "started": "2026-09-09T02:29:48.890Z",
+        "finished": "2026-09-09T02:29:51.116Z"
+      },
+      {
+        "id": "analyzer-build",
+        "status": "PASS",
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedMs": 507,
+        "timeoutMs": 900000,
+        "started": "2026-09-09T02:29:51.116Z",
+        "finished": "2026-09-09T02:29:51.632Z"
+      },
+      {
+        "id": "provision",
+        "status": "PASS",
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedMs": 1487,
+        "timeoutMs": 900000,
+        "started": "2026-09-09T02:29:51.633Z",
+        "finished": "2026-09-09T02:29:53.129Z"
+      },
+      {
+        "id": "build",
+        "status": "PASS",
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedMs": 24596,
+        "timeoutMs": 1200000,
+        "started": "2026-09-09T02:29:53.129Z",
+        "finished": "2026-09-09T02:30:17.732Z"
+      },
+      {
+        "id": "unit",
+        "status": "PASS",
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedMs": 20476,
+        "timeoutMs": 1200000,
+        "started": "2026-09-09T02:30:17.732Z",
+        "finished": "2026-09-09T02:30:38.218Z"
+      },
+      {
+        "id": "original-preview",
+        "status": "PASS",
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedMs": 3027,
+        "timeoutMs": 900000,
+        "started": "2026-09-09T02:30:38.218Z",
+        "finished": "2026-09-09T02:30:41.246Z"
+      },
+      {
+        "id": "derived-chat",
+        "status": "PASS",
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedMs": 3266,
+        "timeoutMs": 900000,
+        "started": "2026-09-09T02:30:41.247Z",
+        "finished": "2026-09-09T02:30:44.514Z"
+      },
+      {
+        "id": "purge-recovery",
+        "status": "PASS",
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedMs": 6111,
+        "timeoutMs": 900000,
+        "started": "2026-09-09T02:30:44.515Z",
+        "finished": "2026-09-09T02:30:50.627Z"
+      },
+      {
+        "id": "normalized-purge",
+        "status": "PASS",
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedMs": 2230,
+        "timeoutMs": 900000,
+        "started": "2026-09-09T02:30:50.628Z",
+        "finished": "2026-09-09T02:30:52.859Z"
+      },
+      {
+        "id": "purge-real-ttl",
+        "status": "PASS",
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedMs": 127338,
+        "timeoutMs": 180000,
+        "started": "2026-09-09T02:30:52.860Z",
+        "finished": "2026-09-09T02:33:00.199Z"
+      },
+      {
+        "id": "normalized-rag",
+        "status": "PASS",
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedMs": 2086,
+        "timeoutMs": 900000,
+        "started": "2026-09-09T02:33:00.200Z",
+        "finished": "2026-09-09T02:33:02.295Z"
+      },
+      {
+        "id": "backup-restore",
+        "status": "PASS",
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedMs": 2863,
+        "timeoutMs": 180000,
+        "started": "2026-09-09T02:33:02.295Z",
+        "finished": "2026-09-09T02:33:05.159Z"
+      },
+      {
+        "id": "start",
+        "status": "PASS",
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedMs": 9087,
+        "timeoutMs": 900000,
+        "started": "2026-09-09T02:33:05.159Z",
+        "finished": "2026-09-09T02:33:14.248Z"
+      },
+      {
+        "id": "schema-parity",
+        "status": "PASS",
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedMs": 635,
+        "timeoutMs": 900000,
+        "started": "2026-09-09T02:33:14.940Z",
+        "finished": "2026-09-09T02:33:15.576Z"
+      },
+      {
+        "id": "policy-mutations",
+        "status": "PASS",
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedMs": 738,
+        "timeoutMs": 900000,
+        "started": "2026-09-09T02:33:15.577Z",
+        "finished": "2026-09-09T02:33:16.316Z"
+      },
+      {
+        "id": "trace-fixture",
+        "status": "PASS",
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedMs": 757,
+        "timeoutMs": 900000,
+        "started": "2026-09-09T02:33:16.317Z",
+        "finished": "2026-09-09T02:33:17.074Z"
+      },
+      {
+        "id": "format-fixture",
+        "status": "PASS",
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedMs": 616,
+        "timeoutMs": 900000,
+        "started": "2026-09-09T02:33:17.075Z",
+        "finished": "2026-09-09T02:33:17.692Z"
+      },
+      {
+        "id": "format-generate",
+        "status": "PASS",
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedMs": 10975,
+        "timeoutMs": 900000,
+        "started": "2026-09-09T02:33:17.693Z",
+        "finished": "2026-09-09T02:33:28.669Z"
+      },
+      {
+        "id": "profile-boundaries",
+        "status": "PASS",
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedMs": 1218,
+        "timeoutMs": 900000,
+        "started": "2026-09-09T02:33:28.670Z",
+        "finished": "2026-09-09T02:33:29.889Z"
+      },
+      {
+        "id": "crawl",
+        "status": "PASS",
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedMs": 39763,
+        "timeoutMs": 900000,
+        "started": "2026-09-09T02:33:29.889Z",
+        "finished": "2026-09-09T02:34:09.663Z"
+      },
+      {
+        "id": "journeys",
+        "status": "PASS",
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedMs": 38698,
+        "timeoutMs": 900000,
+        "started": "2026-09-09T02:34:09.664Z",
+        "finished": "2026-09-09T02:34:48.374Z"
+      },
+      {
+        "id": "repair-workflows",
+        "status": "PASS",
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedMs": 128494,
+        "timeoutMs": 900000,
+        "started": "2026-09-09T02:34:48.375Z",
+        "finished": "2026-09-09T02:36:56.870Z"
+      },
+      {
+        "id": "extended",
+        "status": "PASS",
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedMs": 17104,
+        "timeoutMs": 900000,
+        "started": "2026-09-09T02:36:56.871Z",
+        "finished": "2026-09-09T02:37:13.983Z"
+      },
+      {
+        "id": "diagnostics",
+        "status": "PASS",
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedMs": 10842,
+        "timeoutMs": 900000,
+        "started": "2026-09-09T02:37:13.983Z",
+        "finished": "2026-09-09T02:37:24.833Z"
+      },
+      {
+        "id": "final",
+        "status": "PASS",
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedMs": 4407,
+        "timeoutMs": 900000,
+        "started": "2026-09-09T02:37:24.834Z",
+        "finished": "2026-09-09T02:37:29.248Z"
+      },
+      {
+        "id": "evidence-workflow",
+        "status": "PASS",
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedMs": 2083,
+        "timeoutMs": 900000,
+        "started": "2026-09-09T02:37:29.249Z",
+        "finished": "2026-09-09T02:37:31.339Z"
+      },
+      {
+        "id": "original-preview-refresh",
+        "status": "PASS",
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedMs": 3178,
+        "timeoutMs": 900000,
+        "started": "2026-09-09T02:37:31.340Z",
+        "finished": "2026-09-09T02:37:34.532Z"
+      },
+      {
+        "id": "original-preview-browser",
+        "status": "PASS",
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedMs": 5756,
+        "timeoutMs": 900000,
+        "started": "2026-09-09T02:37:34.532Z",
+        "finished": "2026-09-09T02:37:40.289Z"
+      },
+      {
+        "id": "security",
+        "status": "PASS",
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedMs": 5102,
+        "timeoutMs": 900000,
+        "started": "2026-09-09T02:37:40.290Z",
+        "finished": "2026-09-09T02:37:45.400Z"
+      },
+      {
+        "id": "uploads",
+        "status": "PASS",
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedMs": 97866,
+        "timeoutMs": 900000,
+        "started": "2026-09-09T02:37:45.401Z",
+        "finished": "2026-09-09T02:39:23.268Z"
+      },
+      {
+        "id": "media-stages",
+        "status": "BLOCKED",
+        "exitCode": 2,
+        "timedOut": false,
+        "elapsedMs": 345312,
+        "timeoutMs": 3600000,
+        "started": "2026-09-09T02:39:23.269Z",
+        "finished": "2026-09-09T02:45:08.591Z"
+      },
+      {
+        "id": "layered-evidence",
+        "status": "PASS",
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedMs": 3066,
+        "timeoutMs": 900000,
+        "started": "2026-09-09T02:45:08.591Z",
+        "finished": "2026-09-09T02:45:11.658Z"
+      },
+      {
+        "id": "normalized-rag-http",
+        "status": "PASS",
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedMs": 1718,
+        "timeoutMs": 900000,
+        "started": "2026-09-09T02:45:11.658Z",
+        "finished": "2026-09-09T02:45:13.378Z"
+      },
+      {
+        "id": "data-audit",
+        "status": "PASS",
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedMs": 280,
+        "timeoutMs": 900000,
+        "started": "2026-09-09T02:45:13.378Z",
+        "finished": "2026-09-09T02:45:13.665Z"
+      },
+      {
+        "id": "archive-boundaries",
+        "status": "PASS",
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedMs": 2114,
+        "timeoutMs": 900000,
+        "started": "2026-09-09T02:45:13.666Z",
+        "finished": "2026-09-09T02:45:15.790Z"
+      },
+      {
+        "id": "auth-workflows",
+        "status": "PASS",
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedMs": 3794,
+        "timeoutMs": 900000,
+        "started": "2026-09-09T02:45:15.791Z",
+        "finished": "2026-09-09T02:45:19.593Z"
+      },
+      {
+        "id": "single-audit",
+        "status": "PASS",
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedMs": 327,
+        "timeoutMs": 900000,
+        "started": "2026-09-09T02:45:19.593Z",
+        "finished": "2026-09-09T02:45:19.921Z"
+      },
+      {
+        "id": "health-recovery",
+        "status": "PASS",
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedMs": 76844,
+        "timeoutMs": 900000,
+        "started": "2026-09-09T02:45:19.922Z",
+        "finished": "2026-09-09T02:46:36.767Z"
+      },
+      {
+        "id": "release-gates",
+        "status": "BLOCKED",
+        "exitCode": 2,
+        "timedOut": false,
+        "elapsedMs": 345,
+        "timeoutMs": 900000,
+        "started": "2026-09-09T02:46:36.768Z",
+        "finished": "2026-09-09T02:46:37.121Z"
+      },
+      {
+        "id": "cleanup",
+        "status": "PASS",
+        "exitCode": 0,
+        "timedOut": false,
+        "elapsedMs": 18336,
+        "timeoutMs": 900000,
+        "started": "2026-09-09T02:46:37.122Z",
+        "finished": "2026-09-09T02:46:55.471Z"
+      }
+    ],
+    "stageCounts": {
+      "PASS": 40,
+      "FAIL": 0,
+      "BLOCKED": 2,
+      "OBSERVATION": 0
+    },
+    "scope": "SYNTHETIC_REAL_BROWSER_HTTP_DB_OBJECT_STORE"
+  },
+  "unit": {
+    "status": "PASS",
+    "total": 1789,
+    "passed": 1789,
+    "failed": 0,
+    "skipped": 0
+  },
+  "checks": {
+    "originalPreview": {
+      "status": "PASS",
+      "count": 13,
+      "checks": [
+        {
+          "id": "SOURCE_LIST_RETURNS_NO_ORIGINAL_BYTES",
+          "status": "PASS"
+        },
+        {
+          "id": "DERIVED_TEXT_GRANT_CANNOT_READ_ORIGINAL",
+          "status": "PASS"
+        },
+        {
+          "id": "SUPPORT_AND_COUNTER_EVIDENCE_ENCRYPTED_REPLAY",
+          "status": "PASS"
+        },
+        {
+          "id": "DATABASE_TRIGGER_REJECTS_UNBOUND_SOURCE",
+          "status": "PASS"
+        },
+        {
+          "id": "REQUESTER_TENANT_AND_PAGE_BOUND",
+          "status": "PASS"
+        },
+        {
+          "id": "LARGE_PDF_REAL_RASTER_AND_EXACT_PAGE_ONCE",
+          "status": "PASS"
+        },
+        {
+          "id": "ORIGINAL_AUDIO_OVER_FOUR_MIB_AND_V2_TIMELINE_REPLAY",
+          "status": "PASS"
+        },
+        {
+          "id": "CONCURRENT_CONSUME_SUCCEEDS_EXACTLY_ONCE",
+          "status": "PASS"
+        },
+        {
+          "id": "OWNER_CHANGE_REVOKES_ORIGINAL_BINDING",
+          "status": "PASS"
+        },
+        {
+          "id": "PART_MANIFEST_CHANGE_REVOKES_APPROVAL",
+          "status": "PASS"
+        },
+        {
+          "id": "FAILED_PAGE_RENDER_DOES_NOT_BURN_GRANT",
+          "status": "PASS"
+        },
+        {
+          "id": "EXPIRED_ORIGINAL_CANNOT_BE_DISCLOSED",
+          "status": "PASS"
+        },
+        {
+          "id": "ACTIVE_ORIGINAL_GRANT_PRESERVES_SOURCE_SNAPSHOT",
+          "status": "PASS"
+        }
+      ],
+      "rawEvidence": ".artifact-build/comprehensive-resume-20260909-l/original-preview.json"
+    },
+    "browser": {
+      "status": "PASS",
+      "count": 6,
+      "checks": [
+        {
+          "id": "PDF_REAL_BROWSER_IMAGE_PAGE_BINDING_AND_CLEAR",
+          "status": "PASS"
+        },
+        {
+          "id": "AUDIO_REAL_BROWSER_SEEK_ASSOCIATION_AND_CLEAR",
+          "status": "PASS"
+        },
+        {
+          "id": "PDF_VERIFIED_REGION_APPEARS_ONLY_ON_BOUND_PAGE",
+          "status": "PASS"
+        },
+        {
+          "id": "AUTOMATIC_PREVIEW_CLEAR_AFTER_60_SECONDS",
+          "status": "PASS"
+        },
+        {
+          "id": "SUPPORT_COUNTER_EVIDENCE_HIGHLIGHT_AND_CLEAR",
+          "status": "PASS"
+        },
+        {
+          "id": "NO_ACTIVE_PDF_EMBED_OR_BROWSER_ERRORS",
+          "status": "PASS"
+        }
+      ],
+      "rawEvidence": ".artifact-build/comprehensive-resume-20260909-l/original-preview-browser.json"
+    },
+    "profileBoundaries": {
+      "status": "PASS",
+      "count": 10,
+      "checks": [
+        {
+          "id": "REAL_SINGLE_VIDEO_PROFILE_PROBED",
+          "status": "PASS"
+        },
+        {
+          "id": "REAL_SECOND_VIDEO_STREAM_CANNOT_BE_SILENTLY_OMITTED",
+          "status": "PASS"
+        },
+        {
+          "id": "REAL_TRUNCATED_CONTAINER_REJECTED",
+          "status": "PASS"
+        },
+        {
+          "id": "REAL_PROBED_DURATION_BUDGET_ENFORCED",
+          "status": "PASS"
+        },
+        {
+          "id": "REAL_DOC_HIDDEN_CONTENT_REMAINS_UNASSESSED",
+          "status": "PASS"
+        },
+        {
+          "id": "REAL_XLS_HIDDEN_CONTENT_REMAINS_UNASSESSED",
+          "status": "PASS"
+        },
+        {
+          "id": "REAL_PPT_HIDDEN_CONTENT_REMAINS_UNASSESSED",
+          "status": "PASS"
+        },
+        {
+          "id": "REAL_RTF_HIDDEN_CONTENT_REMAINS_UNASSESSED",
+          "status": "PASS"
+        },
+        {
+          "id": "REAL_XLSX_HIDDEN_TEXT_ENUMERATED",
+          "status": "PASS"
+        },
+        {
+          "id": "REAL_PPTX_HIDDEN_TEXT_ENUMERATED",
+          "status": "PASS"
+        }
+      ],
+      "rawEvidence": ".artifact-build/comprehensive-resume-20260909-l/profile-boundaries.json"
+    },
+    "purgeRealTtl": {
+      "status": "PASS",
+      "count": 6,
+      "checks": [
+        {
+          "id": "REAL_TTL_DRAIN_PREVENTS_EARLY_DELETION",
+          "status": "PASS"
+        },
+        {
+          "id": "NEW_SIGNATURE_REJECTED_AFTER_CANCELLATION",
+          "status": "PASS"
+        },
+        {
+          "id": "OLD_PUT_SIGNATURE_EXPIRES_WITH_REAL_CLOCK",
+          "status": "PASS"
+        },
+        {
+          "id": "DRAIN_GRACE_PRESERVES_OBJECT_AFTER_SIGNATURE_EXPIRY",
+          "status": "PASS"
+        },
+        {
+          "id": "REAL_DRAIN_ELAPSES_BEFORE_VERSION_DELETE_AND_QUOTA_RELEASE",
+          "status": "PASS"
+        },
+        {
+          "id": "EXPIRED_SIGNATURE_CANNOT_RECREATE_PURGED_OBJECT",
+          "status": "PASS"
+        }
+      ],
+      "rawEvidence": ".artifact-build/comprehensive-resume-20260909-l/purge-real-ttl.json"
+    },
+    "backupRestore": {
+      "status": "PASS",
+      "count": 5,
+      "checks": [
+        {
+          "id": "CONSISTENT_REAL_PG_DUMP_SAVED",
+          "status": "PASS"
+        },
+        {
+          "id": "FRESH_DATABASE_RESTORES_EXACT_CRITICAL_ROWS",
+          "status": "PASS"
+        },
+        {
+          "id": "CONSUMED_ONE_TIME_GRANTS_REMAIN_CONSUMED",
+          "status": "PASS"
+        },
+        {
+          "id": "ORIGINAL_SCOPE_TRIGGER_RESTORED",
+          "status": "PASS"
+        },
+        {
+          "id": "RESTORED_DATABASE_REPLAYS_EXISTING_ENCRYPTED_OBJECTS",
+          "status": "PASS"
+        }
+      ],
+      "rawEvidence": ".artifact-build/comprehensive-resume-20260909-l/backup-restore.json"
+    },
+    "derivedChat": {
+      "status": "PASS",
+      "count": 27,
+      "checks": [
+        {
+          "id": "FULL_CONTEXT_REAL_INTAKE_BOUND",
+          "status": "PASS"
+        },
+        {
+          "id": "CONTEXT_BOUND_SUBMISSION_IDEMPOTENT",
+          "status": "PASS"
+        },
+        {
+          "id": "CHANGED_CONTEXT_IDEMPOTENCY_CONFLICT",
+          "status": "PASS"
+        },
+        {
+          "id": "UNCONFIGURED_ROUTE_DENIED",
+          "status": "PASS"
+        },
+        {
+          "id": "EXACT_TEXT_WIRE_ORDER_AND_SOURCE_PROVENANCE",
+          "status": "PASS"
+        },
+        {
+          "id": "PROMPT_CHANGE_AFTER_4096_CHARS_REJECTED",
+          "status": "PASS"
+        },
+        {
+          "id": "REORDERED_OR_REPLACED_ATTACHMENTS_REJECTED",
+          "status": "PASS"
+        },
+        {
+          "id": "OWNER_AND_TENANT_ISOLATION",
+          "status": "PASS"
+        },
+        {
+          "id": "MODEL_AND_ROUTING_CHANGE_REJECTED",
+          "status": "PASS"
+        },
+        {
+          "id": "SIGNED_PROJECTION_PROOF_REVALIDATES_REAL_OBJECTS",
+          "status": "PASS"
+        },
+        {
+          "id": "SIGNED_PROOF_TAMPER_REJECTED",
+          "status": "PASS"
+        },
+        {
+          "id": "MANDATORY_ARCHIVE_CANNOT_BE_BYPASSED",
+          "status": "PASS"
+        },
+        {
+          "id": "LIVE_ADAPTER_REVOCATION_RECHECKED",
+          "status": "PASS"
+        },
+        {
+          "id": "TRANSFORM_VERSION_DRIFT_REJECTED",
+          "status": "PASS"
+        },
+        {
+          "id": "ORIGINAL_REVOCATION_RECHECKED",
+          "status": "PASS"
+        },
+        {
+          "id": "CHILD_DIGEST_CHANGE_REJECTED",
+          "status": "PASS"
+        },
+        {
+          "id": "STALE_JOB_CANNOT_RELEASE",
+          "status": "PASS"
+        },
+        {
+          "id": "TARGET_WIRE_BUDGET_ENFORCED",
+          "status": "PASS"
+        },
+        {
+          "id": "INCOMPLETE_DETECTION_CANNOT_RELEASE",
+          "status": "PASS"
+        },
+        {
+          "id": "GATEWAY_AUTHORIZATION_ARCHIVES_DERIVED_PROVENANCE",
+          "status": "PASS"
+        },
+        {
+          "id": "REAL_GATEWAY_RECHECKS_FULL_PROJECTED_INPUT",
+          "status": "PASS"
+        },
+        {
+          "id": "PROJECTED_INPUT_REWRITE_REQUIRES_NEW_ANALYSIS",
+          "status": "PASS"
+        },
+        {
+          "id": "SEND_INTENT_REQUIRES_DURABLE_MODEL_INPUT",
+          "status": "PASS"
+        },
+        {
+          "id": "TARGET_MODEL_WIRE_TAMPER_REJECTED",
+          "status": "PASS"
+        },
+        {
+          "id": "EXACT_TARGET_MODEL_WIRE_ENCRYPTED_AND_READ_BACK",
+          "status": "PASS"
+        },
+        {
+          "id": "SIGNED_REQUEST_RECEIVES_SEND_INTENT_AFTER_CHECKS",
+          "status": "PASS"
+        },
+        {
+          "id": "ADAPTER_REVOCATION_BEFORE_SEND_START_REJECTED",
+          "status": "PASS"
+        }
+      ],
+      "rawEvidence": ".artifact-build/comprehensive-resume-20260909-l/derived-chat.json"
+    },
+    "purgeRecovery": {
+      "status": "PASS",
+      "count": 6,
+      "checks": [
+        {
+          "id": "REAL_WORKER_CRASH_PRESERVES_LEDGER_AND_QUOTA",
+          "status": "PASS"
+        },
+        {
+          "id": "RESTART_CANNOT_STEAL_LIVE_LEASE",
+          "status": "PASS"
+        },
+        {
+          "id": "FRESH_PROCESS_RESUMES_EXACT_REMAINING_VERSION",
+          "status": "PASS"
+        },
+        {
+          "id": "EXPIRED_PARENT_RETAINED_WHILE_CHILD_REFERENCES_IT",
+          "status": "PASS"
+        },
+        {
+          "id": "CHILD_PURGE_RELEASES_PARENT_REFERENCE_ON_RESTART",
+          "status": "PASS"
+        },
+        {
+          "id": "COMPLETED_LEDGER_IS_IDEMPOTENT_AFTER_RESTART",
+          "status": "PASS"
+        }
+      ],
+      "rawEvidence": ".artifact-build/comprehensive-resume-20260909-l/purge-recovery.json"
+    },
+    "normalizedPurge": {
+      "status": "PASS",
+      "count": 13,
+      "checks": [
+        {
+          "id": "NORMALIZED_REAL_OBJECT_AND_PARENT_DIGEST",
+          "status": "PASS"
+        },
+        {
+          "id": "NORMALIZED_IDEMPOTENT_RETRY",
+          "status": "PASS"
+        },
+        {
+          "id": "NORMALIZED_OWNER_ISOLATION",
+          "status": "PASS"
+        },
+        {
+          "id": "NORMALIZED_DIGEST_TAMPER_REJECTED",
+          "status": "PASS"
+        },
+        {
+          "id": "NORMALIZED_CANCELLED_ATTEMPT_FENCED",
+          "status": "PASS"
+        },
+        {
+          "id": "PURGE_INTERRUPTED_UPLOAD_QUEUED_IDEMPOTENTLY",
+          "status": "PASS"
+        },
+        {
+          "id": "PURGE_NEW_UPLOAD_SIGNATURE_REJECTED",
+          "status": "PASS"
+        },
+        {
+          "id": "PURGE_WAIT_FOR_SIGNED_UPLOAD_EXPIRY",
+          "status": "PASS"
+        },
+        {
+          "id": "PURGE_HOLD_WINS_BEFORE_CLAIM",
+          "status": "PASS"
+        },
+        {
+          "id": "PURGE_FAILED_DELETE_RETAINS_QUOTA",
+          "status": "PASS"
+        },
+        {
+          "id": "PURGE_VERSION_REWRITE_RETAINS_QUOTA",
+          "status": "PASS"
+        },
+        {
+          "id": "PURGE_EXACT_VERSIONS_AND_HOLD_RACE",
+          "status": "PASS"
+        },
+        {
+          "id": "PURGE_QUOTA_RELEASED_AFTER_EMPTY_VERSION_CHECK",
+          "status": "PASS"
+        }
+      ],
+      "rawEvidence": ".artifact-build/comprehensive-resume-20260909-l/normalized-purge-final.json"
+    },
+    "normalizedRag": {
+      "status": "PASS",
+      "count": 10,
+      "checks": [
+        {
+          "id": "MANIFEST_WRONG_SOURCE_DIGEST_REJECTED",
+          "status": "PASS"
+        },
+        {
+          "id": "REAL_TEXT_INTAKE_CREATED_NORMALIZED_ASSET",
+          "status": "PASS"
+        },
+        {
+          "id": "MEDIA_RAG_SUBMISSION_IDEMPOTENT",
+          "status": "PASS"
+        },
+        {
+          "id": "MEDIA_RAG_OWNER_ISOLATION",
+          "status": "PASS"
+        },
+        {
+          "id": "REAL_NORMALIZED_RAG_INGEST_PERSISTED_OWNER_ACL",
+          "status": "PASS"
+        },
+        {
+          "id": "RAG_FOREIGN_PRINCIPAL_CANNOT_READ_PROJECTION",
+          "status": "PASS"
+        },
+        {
+          "id": "RAG_ORIGINAL_REVOCATION_RECHECKED",
+          "status": "PASS"
+        },
+        {
+          "id": "RAG_INTAKE_RESULT_DIGEST_CHANGE_REJECTED",
+          "status": "PASS"
+        },
+        {
+          "id": "CANCELLED_MEDIA_RAG_CANNOT_INDEX",
+          "status": "PASS"
+        },
+        {
+          "id": "INCOMPLETE_MEDIA_COVERAGE_CANNOT_INDEX",
+          "status": "PASS"
+        }
+      ],
+      "rawEvidence": ".artifact-build/comprehensive-resume-20260909-l/normalized-rag.json"
+    },
+    "normalizedRagHttp": {
+      "status": "PASS",
+      "count": 5,
+      "checks": [
+        {
+          "id": "OWNER",
+          "status": "PASS"
+        },
+        {
+          "id": "OTHER_OWNER",
+          "status": "PASS"
+        },
+        {
+          "id": "FOREIGN_TENANT",
+          "status": "PASS"
+        },
+        {
+          "id": "ANONYMOUS",
+          "status": "PASS"
+        },
+        {
+          "id": "MALFORMED_SOURCE",
+          "status": "PASS"
+        }
+      ],
+      "rawEvidence": ".artifact-build/comprehensive-resume-20260909-l/normalized-rag-http.json"
+    },
+    "layeredEvidence": {
+      "status": "PASS",
+      "count": 7,
+      "checks": [
+        {
+          "id": "ack-loss-retry",
+          "status": "PASS"
+        },
+        {
+          "id": "partial-publish-not-readable",
+          "status": "PASS"
+        },
+        {
+          "id": "full-untruncated-roundtrip",
+          "status": "PASS"
+        },
+        {
+          "id": "immutable-chunk-identity",
+          "status": "PASS"
+        },
+        {
+          "id": "hold-blocks-delete",
+          "status": "PASS"
+        },
+        {
+          "id": "exact-version-delete-confirmed",
+          "status": "PASS"
+        },
+        {
+          "id": "deleted-unavailable",
+          "status": "PASS"
+        }
+      ],
+      "rawEvidence": ".artifact-build/comprehensive-resume-20260909-l/layered-evidence.json"
+    },
+    "healthRecovery": {
+      "status": "PASS",
+      "count": 4,
+      "checks": [
+        {
+          "id": "REAL_WORKER_STOP_DETECTED",
+          "status": "PASS"
+        },
+        {
+          "id": "REAL_WORKER_RESTART_RECOVERED",
+          "status": "PASS"
+        },
+        {
+          "id": "REAL_ANALYZER_STOP_DETECTED",
+          "status": "PASS"
+        },
+        {
+          "id": "REAL_ANALYZER_RESTART_RECOVERED",
+          "status": "PASS"
+        }
+      ],
+      "rawEvidence": ".artifact-build/comprehensive-resume-20260909-l/health-recovery.json"
+    }
+  },
+  "mediaMatrix": {
+    "total": 49,
+    "counts": {
+      "PASS": 6,
+      "FAIL": 0,
+      "BLOCKED": 43,
+      "OBSERVATION": 0
+    },
+    "semanticQualification": false
+  },
+  "browserCrawl": {
+    "total": 23,
+    "counts": {
+      "PASS": 23,
+      "FAIL": 0,
+      "BLOCKED": 0,
+      "OBSERVATION": 0
+    }
+  },
+  "aggregateCounts": {
+    "PASS": 54,
+    "FAIL": 0,
+    "BLOCKED": 43,
+    "OBSERVATION": 2
+  },
+  "budgets": {
+    "originalMediaBytes": 16777216,
+    "pdfInputBytes": 268435456,
+    "pdfPages": 2000,
+    "pdfOutputBytes": 8388608,
+    "pdfMaxEdgePixels": 1600,
+    "previewClearSeconds": 60,
+    "grantValidityMinutes": 15,
+    "nativeModelInputBytes": 1048576
+  },
+  "remaining": [
+    {
+      "tasks": [
+        "R01",
+        "R07"
+      ],
+      "dependency": "EXACT_PROFILE_ADAPTERS_AND_REAL_SAMPLES",
+      "next": "OFD 受控适配器、旧 Office/WPS 隐藏对象、AMR、HEIF 序列及多视频流的实际样本和正常/风险/损坏/超限鉴定；当前显式保留覆盖缺口。"
+    },
+    {
+      "tasks": [
+        "R04",
+        "R05",
+        "R06",
+        "R10"
+      ],
+      "dependency": "AUTHORIZED_REAL_MODEL_CONFIGURATION_AND_PROFILE_QUALIFICATION",
+      "next": "按用户已确认延期的真实 ASR/视觉/音频分类/原生联合配置，验收对应格式与模型路由、文档/混合聊天及两类媒体 RAG。原件预览仅在明确格式和预算内开放。"
+    },
+    {
+      "tasks": [
+        "R11",
+        "FX12"
+      ],
+      "dependency": "INDEPENDENT_DOUBLE_REVIEWED_LABELS",
+      "next": "双人审定的开发/独立标签、真实消融、阈值校准和冻结质量评测；不得以合成工程样本替代。"
+    },
+    {
+      "tasks": [
+        "R08"
+      ],
+      "dependency": "LONG_TERM_RETENTION_OBJECT_STORE_KEY_RECOVERY_AND_DEPLOYMENT_SCOPE",
+      "next": "对象桶与密钥的灾难恢复、长期保留观察，以及明确部署范围后的清理 Worker 启用；当前只完成专用数据库恢复和真实签名排空。"
+    },
+    {
+      "tasks": [
+        "R12",
+        "FX03",
+        "FX05",
+        "FX09",
+        "FX10",
+        "FX11"
+      ],
+      "dependency": "PRIOR_QUALIFICATION_GATES_AND_PRODUCTION_ACCEPTANCE",
+      "next": "合格策略完整发布生命周期、G0–G5、影子/灰度及业务观察。当前冷启动工程回归不授予生产资格。"
+    }
+  ],
+  "releaseGates": {
+    "status": "BLOCKED",
+    "blockers": [
+      "DOUBLE_REVIEWED_INDEPENDENT_HOLDOUT_AND_DEVELOPMENT_LINEAGE_REQUIRED",
+      "EXACT_ASR_VLM_AUDIO_CLASSIFIER_JOINT_MODEL_QUALIFICATION_REQUIRED"
+    ],
+    "productionDeployAllowed": false,
+    "quality": null,
+    "syntheticCasesUsedForQuality": false
+  },
+  "restore": {
+    "sourceDatabase": "guardllm_integration_full_1788920987180",
+    "restoredDatabase": "guardllm_integration_full_1788921182367",
+    "backupSha256": "53fdeefc8b8c6d3ac8c893022a9bbf682dbf6425beb0430ced74d0b4dc5895a1",
+    "criticalTables": 8,
+    "limitations": [
+      "Object store was not lost or restored",
+      "Encryption keys were retained",
+      "Not a production disaster recovery or long-term retention certification"
+    ]
+  },
+  "cleanup": {
+    "results": [
+      {
+        "name": "security-scan",
+        "status": "STOPPED"
+      },
+      {
+        "name": "archive",
+        "status": "STOPPED"
+      },
+      {
+        "name": "native",
+        "status": "STOPPED"
+      },
+      {
+        "name": "rag",
+        "status": "STOPPED"
+      },
+      {
+        "name": "gateway-reconcile",
+        "status": "STOPPED"
+      },
+      {
+        "name": "media",
+        "status": "STOPPED"
+      },
+      {
+        "name": "evaluation",
+        "status": "STOPPED"
+      },
+      {
+        "name": "intake",
+        "status": "STOPPED"
+      },
+      {
+        "name": "verifier",
+        "status": "STOPPED"
+      },
+      {
+        "name": "app",
+        "status": "STOPPED"
+      },
+      {
+        "name": "guardllm-fx33-analyzer-1788920987180",
+        "status": "STOPPED"
+      }
+    ]
+  },
+  "priorAttempts": [
+    {
+      "run": "J",
+      "status": "FAIL",
+      "failures": [
+        {
+          "id": "profile-boundaries",
+          "exitCode": 1
+        }
+      ],
+      "rawEvidence": ".artifact-build/comprehensive-resume-20260909-j/run-result.json"
+    },
+    {
+      "run": "K",
+      "status": "FAIL",
+      "failures": [
+        {
+          "id": "original-preview",
+          "exitCode": 1
+        },
+        {
+          "id": "runner",
+          "message": "ORIGINAL_PREVIEW_VALIDATION_REQUIRED"
+        }
+      ],
+      "rawEvidence": ".artifact-build/comprehensive-resume-20260909-k/run-result.json"
+    }
+  ],
+  "retainedPitfalls": [
+    "I: MEDIA_ORIGINAL 被旧资源类型 CHECK 约束拒绝，新增迁移 0072 修正并增数据库来源/任务/所有者校验。",
+    "I: 浏览器测试把 aria-label 当作可见文本，改用可访问角色定位；原始失败日志保留。",
+    "J: pnpm 不暴露间接 esbuild 依赖，改用声明依赖 tsup；本轮不修改依赖锁。",
+    "K preflight: 前轮 Docker 停止后端口短暂未释放，确认无占用后才重新启动。",
+    "K: 直接改归档到期时间被不可变约束正确拒绝，改为合法创建临近到期历史任务夹具，未放宽约束。"
+  ],
+  "validation": {
+    "strictTypeScript": "PASS",
+    "changedFilesEslint": "PASS_NO_WARNINGS",
+    "analyzerBuild": "PASS",
+    "nextProductionBuild": "PASS",
+    "publicContracts": "PASS"
+  },
+  "evidenceDirectory": "输出/代码分析与升级/36_剩余工程证据_2026-09-09"
+}
