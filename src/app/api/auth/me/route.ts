@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { ApiProblem, PLATFORM_PERMISSIONS, withApiSecurity } from '@/lib/api-security';
 import { findUserById, normalizePlatformRole } from '@/lib/auth';
+import { iamDeploymentMode } from '@/lib/iam/deployment-mode';
 
 const meResponseSchema = z.object({
   success: z.literal(true),
@@ -13,6 +14,7 @@ const meResponseSchema = z.object({
     department: z.string().nullable(),
     role: z.string(),
     permissions: z.array(z.enum(PLATFORM_PERMISSIONS)),
+    deploymentMode: z.enum(['strict','implementation']),
     mustChangePassword: z.boolean(),
     tenantId: z.string(),
     applicationId: z.string(),
@@ -63,6 +65,7 @@ export const GET = withApiSecurity(
         department: user.department,
         role,
         permissions: [...principal.permissions],
+        deploymentMode: iamDeploymentMode(),
         mustChangePassword: Boolean(user.mustChangePassword),
         tenantId: principal.tenantId!,
         applicationId: principal.applicationId!,

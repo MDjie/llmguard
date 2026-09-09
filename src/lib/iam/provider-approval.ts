@@ -4,7 +4,8 @@ import { db } from '@/storage/database/shared/db';
 import { llmProviders,users } from '@/storage/database/shared/schema';
 import { requireTenantContext,scopePredicate } from '@/lib/tenancy';
 import type { AuthenticatedPrincipal } from '@/lib/api-security/types';
-import { normalizePlatformRole } from '@/lib/auth/authorization';
+import { hasPermission,normalizePlatformRole } from '@/lib/auth/authorization';
+import { isImplementationAdmin } from './deployment-mode';
 import { providerApprovalRequests } from './schema';
 import { auditIam,iamDigest } from './management';
 import { denied,listEffectiveApplications } from './grants';
@@ -45,10 +46,11 @@ export async function decideProviderApproval(principal:AuthenticatedPrincipal,id
   return db.transaction(async tx=>{
     const [request]=await tx.select().from(providerApprovalRequests).where(and(eq(providerApprovalRequests.id,id),scopePredicate(providerApprovalRequests,scope))).for('update');
     if(!request||request.status!=='pending'||request.expiresAt<=new Date())throw denied('PROVIDER_APPROVAL_NOT_PENDING',409);
-    if(request.requesterId===principal.subject)throw denied('IAM_INDEPENDENT_APPROVAL_REQUIRED');
+    if(request.requesterId===principal.subject&&!isImplementationAdmin(principal))throw denied('IAM_INDEPENDENT_APPROVAL_REQUIRED');
     const [provider]=await tx.select().from(llmProviders).where(and(eq(llmProviders.id,request.providerId),scopePredicate(llmProviders,scope))).for('update');
     const [requester]=await tx.select().from(users).where(eq(users.id,request.requesterId)).for('share');
-    if(!requester||requester.status!=='active'||normalizePlatformRole(requester.role)!=='SECURITY_ADMIN'||
+    const requesterRole=requester?normalizePlatformRole(requester.role):null;
+    if(!requester||requester.status!=='active'||!requesterRole||!hasPermission(requesterRole,'provider:manage')||
       !(await listEffectiveApplications(request.requesterId,scope.tenantId)).some(row=>row.app.id===scope.applicationId))throw denied('IAM_REQUESTER_AUTHORITY_REVOKED');
     if(!provider||provider.isEnabled||provider.governanceVersion!==request.expectedVersion||provider.proposedBy!==request.requesterId)throw denied('PROVIDER_VERSION_CONFLICT',409);
     const intended=z.object({isDefaultTarget:z.boolean(),isDefaultJudge:z.boolean()}).parse(request.payload);

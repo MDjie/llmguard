@@ -1,7 +1,9 @@
 import {
+  PLATFORM_PERMISSIONS,
   type Permission,
   type PlatformRole,
 } from '@/lib/api-security/types';
+import { iamDeploymentMode } from '@/lib/iam/deployment-mode';
 
 const rolePermissions: Readonly<Record<PlatformRole, readonly Permission[]>> = {
   SYSTEM_ADMIN: [
@@ -107,9 +109,9 @@ export function permissionsForRole(
   if (mustChangePassword) {
     return ['auth:password:change'];
   }
-  return rolePermissions[role];
+  return role === 'SYSTEM_ADMIN' && iamDeploymentMode() === 'implementation' ? PLATFORM_PERMISSIONS : rolePermissions[role];
 }
 
 export function hasPermission(role: PlatformRole, permission: Permission): boolean {
-  return rolePermissions[role].includes(permission);
+  return permissionsForRole(role).includes(permission);
 }

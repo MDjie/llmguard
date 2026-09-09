@@ -1,30 +1,39 @@
 import assert from 'node:assert/strict';
 import { randomBytes,generateKeyPairSync,createHash,sign } from 'node:crypto';
 import { createServer } from 'node:http';
-import { execFileSync,spawn,type ChildProcess } from 'node:child_process';
+import { execFileSync,spawn,spawnSync,type ChildProcess } from 'node:child_process';
 import { readFileSync,readdirSync,writeFileSync,mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import postgres from 'postgres';
 import type { AuthenticatedPrincipal,PlatformRole } from '../../src/lib/api-security/types';
 
 async function main(){
+  const workerImageIndex=process.argv.indexOf('--worker-image');
+  const workerImage=workerImageIndex>=0?process.argv[workerImageIndex+1]:undefined;
+  if(workerImageIndex>=0&&(!workerImage||!/^[a-zA-Z0-9][a-zA-Z0-9._/:@-]{0,255}$/.test(workerImage)))throw new Error('VALID_WORKER_IMAGE_REQUIRED');
+  const appImageIndex=process.argv.indexOf('--app-image');
+  const appImage=appImageIndex>=0?process.argv[appImageIndex+1]:undefined;
+  if(appImageIndex>=0&&(!appImage||!/^[a-zA-Z0-9][a-zA-Z0-9._/:@-]{0,255}$/.test(appImage)))throw new Error('VALID_APP_IMAGE_REQUIRED');
+  if(appImage&&!process.argv.includes('--browser'))throw new Error('APP_IMAGE_REQUIRES_BROWSER_TESTS');
   const name='guardllm-iam-test-'+randomBytes(5).toString('hex');
   const password=randomBytes(24).toString('hex');
   const port=55439;
   execFileSync('docker',['run','--detach','--name',name,'--publish','127.0.0.1:'+port+':5432',
+    ...(appImage?['--publish','127.0.0.1:58889:5000']:[]),
     '--env','POSTGRES_USER=iam_test','--env','POSTGRES_PASSWORD='+password,
     '--env','POSTGRES_DB=guardllm_integration_iam','postgres:16.10-alpine'],{windowsHide:true,stdio:'pipe'});
   const url='postgres://iam_test:'+password+'@127.0.0.1:'+port+'/guardllm_integration_iam';
   Object.assign(process.env,{PGDATABASE_URL:url,INTEGRATION_DATABASE_URL:url,DATABASE_SSL_MODE:'disable',
     DATABASE_PLAINTEXT_ALLOWED_HOSTS:'127.0.0.1',JWT_SECRET:randomBytes(40).toString('hex'),
     AUDIT_CHAIN_KEY:randomBytes(40).toString('hex'),CONTENT_HASH_KEY:randomBytes(40).toString('hex'),
-    IAM_ENTERPRISE_LOGIN_REQUIRED:'false',IAM_OIDC_ALLOW_LOCAL_HTTP:'true',SESSION_COOKIE_SECURE:'false',
+    IAM_DEPLOYMENT_MODE:'strict',IAM_ENTERPRISE_LOGIN_REQUIRED:'false',IAM_OIDC_ALLOW_LOCAL_HTTP:'true',SESSION_COOKIE_SECURE:'false',
     AUDIT_SINK_TYPE:'database',NODE_ENV:'test'});
   const client=postgres(url,{max:1,onnotice:()=>undefined});
   const results:{name:string;status:string}[]=[];
   let closeApplicationDatabase:(()=>Promise<void>)|undefined;
   let closeIdp:(()=>Promise<void>)|undefined;
   let webProcess:ChildProcess|undefined;
+  let appContainerName:string|undefined;
   let migrationUserId='',migrationDefaultApp='';
   async function check(name:string,run:()=>Promise<void>){await run();results.push({name,status:'PASS'});console.log('PASS '+name);}
   try{
@@ -298,7 +307,106 @@ async function main(){
         body:JSON.stringify({username:'iam.oidc',password:passwordValue})}),{});
       assert.equal(response.status,403);
     });
-    const reportDir=resolve('输出/测试报告/2026-09-09/iam');
+    const implementation=process.argv.includes('--implementation');
+    let implementationBrowserProviderId='';
+    if(implementation){
+      await check('implementation preflight accepts one administrator and strict mode reports missing duties',async()=>{
+        // A second empty database in this disposable container isolates the preflight fixture.
+        await client.unsafe('create database guardllm_iam_preflight');
+        const preflightUrl=new URL(url);preflightUrl.pathname='/guardllm_iam_preflight';
+        const preflight=postgres(preflightUrl.toString(),{max:1,onnotice:()=>undefined});
+        try{
+          await preflight.unsafe(`create table tenants(id text primary key,status text); create table applications(id text primary key,tenant_id text,status text,environment text,data_class text);
+            create table users(id text primary key,role text,status text); create table tenant_memberships(user_id text,tenant_id text,default_application_id text,status text);
+            insert into tenants values('test-tenant','active'); insert into applications values('test-app','test-tenant','active','test','internal');
+            insert into users values('single-admin','SYSTEM_ADMIN','active'); insert into tenant_memberships values('single-admin','test-tenant','test-app','active');`);
+          for(const mode of ['implementation','strict']){
+            const result=spawnSync(process.execPath,['--import','tsx','scripts/iam-preflight.ts'],{windowsHide:true,encoding:'utf8',
+              env:{...process.env,PGDATABASE_URL:preflightUrl.toString(),IAM_DEPLOYMENT_MODE:mode}});
+            assert.equal(result.status,mode==='implementation'?0:2);
+            const body=JSON.parse(result.stdout);assert.equal(body.anomalies.length,0);
+            assert.equal(body.missingAdministrativeRoles.length,2);assert.equal(body.blockingMissingAdministrativeRoles.length,mode==='implementation'?0:2);
+          }
+        }finally{await preflight.end();}
+      });
+      await check('implementation administrator creates and changes privileged accounts without a second person',async()=>{
+        process.env.IAM_DEPLOYMENT_MODE='implementation';
+        try{
+          const actor=asPrincipal(admin);
+          const created=await iam.createUserWithGrants(actor,create('iam.implementation.admin','SECURITY_ADMIN'));
+          assert.equal(created.approvalRequired,false);assert.equal(created.data.status,'active');
+          const changed=await iam.changeManagedUser(actor,updateIamUserSchema.parse({id:created.data.id,expectedTokenVersion:created.data.tokenVersion,status:'disabled',reason:'implementation lifecycle test'}));
+          assert.equal(changed.approvalRequired,false);assert.equal(changed.data.status,'disabled');
+          await assert.rejects(()=>iam.changeManagedUser(actor,updateIamUserSchema.parse({id:admin.id,expectedTokenVersion:admin.tokenVersion,status:'disabled',reason:'self protection still applies'})));
+          await assert.rejects(()=>iam.createUserWithGrants(actor,createIamUserSchema.parse({...create('iam.implementation.denied'),assignment:{defaultApplicationId:appB.id,grants:[{applicationId:appB.id,attributes:defaultGrantAttributes}]}})));
+          const recovery=await iam.createUserWithGrants(actor,createIamUserSchema.parse({...create('iam.implementation.recovery','SYSTEM_ADMIN'),identity:{loginMethod:'emergency'}}));
+          assert.equal(recovery.data.status,'disabled');
+          const req=await iam.requestEmergencyAccess(actor,recovery.data.id,'implementation must retain emergency controls',5);
+          await assert.rejects(()=>iam.decideIamChange(actor,req.requestId,'approve'));
+        }finally{process.env.IAM_DEPLOYMENT_MODE='strict';}
+      });
+      await check('implementation can clear an existing privileged approval and strict restores live session permissions',async()=>{
+        const pending=await iam.createUserWithGrants(sys,create('iam.implementation.pending','AUDIT_ADMIN'));assert(pending.requestId);
+        const token=auth.issueSession({id:admin.id,username:admin.username,role:'SYSTEM_ADMIN',tokenVersion:admin.tokenVersion},false).token;
+        const request=new NextRequest('http://localhost/api/auth/me',{headers:{authorization:'Bearer '+token}});
+        process.env.IAM_DEPLOYMENT_MODE='implementation';
+        try{
+          const principal=await authenticateRequest(request);assert(principal);assert(principal.permissions.includes('policy:approve'));
+          assert.equal((await iam.decideIamChange(principal,pending.requestId,'approve')).status,'approved');
+          const {GET:me}=await import('../../src/app/api/auth/me/route');
+          const response=await me(request,{});assert.equal(response.status,200);
+          assert.equal((await response.json()).user.deploymentMode,'implementation');
+          process.env.IAM_DEPLOYMENT_MODE='strict';
+          const strict=await authenticateRequest(request);assert(strict);assert(!strict.permissions.includes('policy:approve'));
+        }finally{process.env.IAM_DEPLOYMENT_MODE='strict';}
+      });
+      await check('implementation provider self approval is versioned and is rejected after returning to strict',async()=>{
+        const provider=await import('../../src/lib/iam/provider-approval');
+        process.env.IAM_DEPLOYMENT_MODE='implementation';
+        try{
+          const actor=asPrincipal(admin);
+          const [row]=await db.insert(llmProviders).values({tenantId:tenant.id,applicationId:appA.id,name:'iam-implementation-model',displayName:'Implementation Model',
+            providerType:'ollama',baseUrl:'http://127.0.0.1:11434',defaultModel:'fixture',isEnabled:false,createdBy:admin.id,proposedBy:admin.id}).returning();
+          const req=await provider.requestProviderApproval(actor,provider.providerRequestSchema.parse({providerId:row.id,reason:'implementation release test'}));
+          process.env.IAM_DEPLOYMENT_MODE='strict';
+          await assert.rejects(()=>provider.decideProviderApproval(asPrincipal(admin),req.requestId,'approve'));
+          process.env.IAM_DEPLOYMENT_MODE='implementation';
+          await provider.decideProviderApproval(actor,req.requestId,'approve');
+          assert.equal((await db.select().from(llmProviders).where(eq(llmProviders.id,row.id)))[0].isEnabled,true);
+          await assert.rejects(()=>provider.decideProviderApproval(actor,req.requestId,'approve'));
+          const [browserRow]=await db.insert(llmProviders).values({tenantId:tenant.id,applicationId:appA.id,name:'iam-browser-model',displayName:'Browser Model',
+            providerType:'ollama',baseUrl:'http://127.0.0.1:11434',defaultModel:'fixture',isEnabled:false,createdBy:admin.id,proposedBy:admin.id}).returning();
+          implementationBrowserProviderId=browserRow.id;
+          await provider.requestProviderApproval(actor,provider.providerRequestSchema.parse({providerId:browserRow.id,reason:'Implementation browser release'}));
+        }finally{process.env.IAM_DEPLOYMENT_MODE='strict';}
+      });
+    }
+    if(workerImage){
+      await check('packaged IAM worker starts, completes maintenance and shuts down cleanly',async()=>{
+        const workerName=name+'-worker';
+        const workerUrl=new URL(url);workerUrl.port='5432';
+        const workerEnvironment={PGDATABASE_URL:workerUrl.toString(),DATABASE_SSL_MODE:'disable',DATABASE_PLAINTEXT_ALLOWED_HOSTS:'127.0.0.1',
+          AUDIT_CHAIN_KEY:process.env.AUDIT_CHAIN_KEY!,JWT_SECRET:process.env.JWT_SECRET!,CONTENT_HASH_KEY:process.env.CONTENT_HASH_KEY!,
+          IAM_DEPLOYMENT_MODE:implementation?'implementation':'strict'};
+        const args=['run','--detach','--name',workerName,'--network','container:'+name,
+          ...Object.entries(workerEnvironment).flatMap(([key,value])=>['--env',key+'='+value]),workerImage,
+          'node','--import','tsx','scripts/run-worker.mjs','iam'];
+        execFileSync('docker',args,{windowsHide:true,stdio:'pipe'});
+        try{
+          for(let retry=0;;retry++){
+            const logs=execFileSync('docker',['logs',workerName],{windowsHide:true,encoding:'utf8',stdio:'pipe'});
+            assert(!logs.includes('iam.maintenance.failed'),'Packaged worker maintenance failed');
+            if(logs.includes('"event":"iam.maintenance"'))break;
+            if(retry>=30)throw new Error('PACKAGED_IAM_WORKER_NOT_READY');
+            await new Promise(resolve=>setTimeout(resolve,500));
+          }
+          execFileSync('docker',['stop','--time','10',workerName],{windowsHide:true,stdio:'pipe'});
+          const exitCode=execFileSync('docker',['inspect','--format','{{.State.ExitCode}}',workerName],{windowsHide:true,encoding:'utf8'}).trim();
+          assert.equal(exitCode,'0');
+        }finally{execFileSync('docker',['rm','--force',workerName],{windowsHide:true,stdio:'pipe'});}
+      });
+    }
+    const reportDir=resolve(implementation?'输出/测试报告/2026-09-09/iam-implementation':'输出/测试报告/2026-09-09/iam');
     await check('ORM models and all migrated tables remain consistent',async()=>{
       const output=execFileSync(process.execPath,['--import','tsx','scripts/integration/comprehensive/schema-parity.ts'],
         {windowsHide:true,env:process.env,encoding:'utf8'});
@@ -307,10 +415,23 @@ async function main(){
     if(process.argv.includes('--browser')){
       mkdirSync(reportDir,{recursive:true});
       const base='http://127.0.0.1:58889';
-      webProcess=spawn(process.execPath,['node_modules/next/dist/bin/next','start','--hostname','127.0.0.1','--port','58889'],
-        {windowsHide:true,env:{...process.env,NODE_ENV:'production'},stdio:'ignore'});
+      if(appImage){
+        const appUrl=new URL(url);appUrl.port='5432';
+        const appEnvironment={PGDATABASE_URL:appUrl.toString(),DATABASE_SSL_MODE:'disable',DATABASE_PLAINTEXT_ALLOWED_HOSTS:'127.0.0.1',
+          AUDIT_CHAIN_KEY:process.env.AUDIT_CHAIN_KEY!,JWT_SECRET:process.env.JWT_SECRET!,CONTENT_HASH_KEY:process.env.CONTENT_HASH_KEY!,
+          IAM_DEPLOYMENT_MODE:implementation?'implementation':'strict',IAM_ENTERPRISE_LOGIN_REQUIRED:'false',SESSION_COOKIE_SECURE:'false',
+          AUDIT_SINK_TYPE:'database',GATEWAY_V2_ENABLED:'false',HOSTNAME:'0.0.0.0',PORT:'5000'};
+        const containerName=name+'-app';
+        execFileSync('docker',['run','--detach','--name',containerName,'--network','container:'+name,
+          ...Object.entries(appEnvironment).flatMap(([key,value])=>['--env',key+'='+value]),appImage],{windowsHide:true,stdio:'pipe'});
+        appContainerName=containerName;
+      }else{
+        webProcess=spawn(process.execPath,['node_modules/next/dist/bin/next','start','--hostname','127.0.0.1','--port','58889'],
+          {windowsHide:true,env:{...process.env,NODE_ENV:'production',IAM_DEPLOYMENT_MODE:implementation?'implementation':'strict'},stdio:'ignore'});
+      }
       for(let retry=0;;retry++){
-        if(webProcess.exitCode!==null)throw new Error('BROWSER_TEST_SERVER_EXITED');
+        if(webProcess&&webProcess.exitCode!==null)throw new Error('BROWSER_TEST_SERVER_EXITED');
+        if(appContainerName&&execFileSync('docker',['inspect','--format','{{.State.Running}}',appContainerName],{windowsHide:true,encoding:'utf8'}).trim()!=='true')throw new Error('BROWSER_TEST_CONTAINER_EXITED');
         try{const response=await fetch(base+'/api/health/live',{signal:AbortSignal.timeout(3000)});if(response.ok)break;}catch{/* bounded startup retry */}
         if(retry>90)throw new Error('BROWSER_TEST_SERVER_NOT_READY');
         await new Promise(resolve=>setTimeout(resolve,500));
@@ -334,7 +455,7 @@ async function main(){
               if(role==='SYSTEM_ADMIN'){
                 await expect(page.getByRole('heading',{name:'账户与授权',exact:true})).toBeVisible({timeout:30000});
                 await expect(page.getByRole('link',{name:'账户与授权',exact:true})).toBeVisible();
-                await expect(page.getByRole('link',{name:'安全策略',exact:true})).toHaveCount(0);
+                await expect(page.getByRole('link',{name:'安全策略',exact:true})).toHaveCount(implementation?1:0);
                 await page.getByRole('button',{name:'新建账户',exact:true}).click();
                 await page.getByLabel('用户名',{exact:true}).fill('iam.browser.created');
                 await page.getByLabel('姓名',{exact:true}).fill('浏览器验收用户');
@@ -347,6 +468,20 @@ async function main(){
                 await expect(page.getByText('iam.browser.created',{exact:true})).toBeVisible();
                 const [created]=await db.select().from(users).where(eq(users.username,'iam.browser.created'));
                 assert(created);assert.equal((await resolveUserTenantScope(created.id))?.applicationId,appA.id);
+                if(implementation){
+                  await expect(page.getByRole('status').filter({hasText:'实施测试模式'})).toBeVisible();
+                  await expect(page.getByRole('link',{name:'模型管理',exact:true})).toBeVisible();
+                  await expect(page.getByRole('link',{name:'导出报告',exact:true})).toBeVisible();
+                  await page.goto(base+'/iam-approvals');
+                  const item=page.getByText('Implementation browser release · pending',{exact:true}).locator('..');
+                  await item.getByRole('button',{name:'批准上线',exact:true}).click();
+                  await expect(page.getByText('Implementation browser release · approved',{exact:true})).toBeVisible();
+                  assert.equal((await db.select().from(llmProviders).where(eq(llmProviders.id,implementationBrowserProviderId)))[0].isEnabled,true);
+                  await page.screenshot({path:resolve(reportDir,'browser-implementation-approval.png'),fullPage:true});
+                  await page.goto(base+'/users');
+                  await expect(page.getByText('iam.browser.created',{exact:true})).toBeVisible();
+                  await expect(page.getByRole('button',{name:'新建账户',exact:true})).toBeVisible();
+                }
               }else{
                 await expect(page.getByRole('heading',{name:'无权访问此页面'})).toBeVisible({timeout:30000});
                 await expect(page.getByRole('link',{name:'账户与授权',exact:true})).toHaveCount(0);
@@ -367,10 +502,11 @@ async function main(){
         }
       }finally{await browser.close();}
     }
-    mkdirSync(reportDir,{recursive:true});writeFileSync(resolve(reportDir,'integration.json'),JSON.stringify({status:'PASS',tests:results,at:new Date().toISOString()},null,2));
+    mkdirSync(reportDir,{recursive:true});writeFileSync(resolve(reportDir,'integration.json'),JSON.stringify({status:'PASS',tests:results,workerImage:workerImage??null,appImage:appImage??null,at:new Date().toISOString()},null,2));
     console.log('IAM integration PASS: '+results.length+' scenarios');
     void hidden;
   }finally{
+    if(appContainerName)execFileSync('docker',['rm','--force',appContainerName],{windowsHide:true,stdio:'pipe'});
     if(webProcess && webProcess.exitCode===null){webProcess.kill();await new Promise<void>(resolve=>webProcess!.once('exit',()=>resolve()));}
     await closeIdp?.();await closeApplicationDatabase?.();await client.end({timeout:5});
     execFileSync('docker',['rm','--force',name],{windowsHide:true,stdio:'pipe'});

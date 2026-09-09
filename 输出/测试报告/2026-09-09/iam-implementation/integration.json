@@ -1,0 +1,124 @@
+{
+  "status": "PASS",
+  "tests": [
+    {
+      "name": "migration backfills only the existing default and never resurrects revoked grants",
+      "status": "PASS"
+    },
+    {
+      "name": "ineligible password logins preserve success counters and failure history",
+      "status": "PASS"
+    },
+    {
+      "name": "atomic provisioning + usable default grant + first password change",
+      "status": "PASS"
+    },
+    {
+      "name": "ungranted same-tenant application and foreign tenant are denied",
+      "status": "PASS"
+    },
+    {
+      "name": "failed cross-application provisioning leaves no user",
+      "status": "PASS"
+    },
+    {
+      "name": "tenant-scoped user listing and foreign identity mutation rejection",
+      "status": "PASS"
+    },
+    {
+      "name": "privileged creation is disabled until independent approval; replay denied",
+      "status": "PASS"
+    },
+    {
+      "name": "revocation invalidates bearer and signed scope cookies",
+      "status": "PASS"
+    },
+    {
+      "name": "approval payload tampering and stale target revisions fail",
+      "status": "PASS"
+    },
+    {
+      "name": "revoked requester authority prevents later execution of privileged approval",
+      "status": "PASS"
+    },
+    {
+      "name": "emergency activation requires two independent roles and expires on every request",
+      "status": "PASS"
+    },
+    {
+      "name": "model approval binds author, configuration and one-time version",
+      "status": "PASS"
+    },
+    {
+      "name": "OIDC signed MFA token succeeds; browser binding and replay are enforced",
+      "status": "PASS"
+    },
+    {
+      "name": "OIDC rejects missing MFA and incorrect audience",
+      "status": "PASS"
+    },
+    {
+      "name": "OIDC rejects incorrect nonce, expired tokens and forged signatures",
+      "status": "PASS"
+    },
+    {
+      "name": "identity collision after insertion rolls back user and application grants",
+      "status": "PASS"
+    },
+    {
+      "name": "OIDC accounts cannot use local password login",
+      "status": "PASS"
+    },
+    {
+      "name": "implementation preflight accepts one administrator and strict mode reports missing duties",
+      "status": "PASS"
+    },
+    {
+      "name": "implementation administrator creates and changes privileged accounts without a second person",
+      "status": "PASS"
+    },
+    {
+      "name": "implementation can clear an existing privileged approval and strict restores live session permissions",
+      "status": "PASS"
+    },
+    {
+      "name": "implementation provider self approval is versioned and is rejected after returning to strict",
+      "status": "PASS"
+    },
+    {
+      "name": "packaged IAM worker starts, completes maintenance and shuts down cleanly",
+      "status": "PASS"
+    },
+    {
+      "name": "ORM models and all migrated tables remain consistent",
+      "status": "PASS"
+    },
+    {
+      "name": "browser menu and page boundary SYSTEM_ADMIN",
+      "status": "PASS"
+    },
+    {
+      "name": "browser menu and page boundary SECURITY_ADMIN",
+      "status": "PASS"
+    },
+    {
+      "name": "browser menu and page boundary AUDIT_ADMIN",
+      "status": "PASS"
+    },
+    {
+      "name": "browser menu and page boundary BUSINESS_OPERATOR",
+      "status": "PASS"
+    },
+    {
+      "name": "browser menu and page boundary APP_DEVELOPER",
+      "status": "PASS"
+    },
+    {
+      "name": "browser menu and page boundary READ_ONLY",
+      "status": "PASS"
+    }
+  ],
+  "workerImage": "guardllm-worker:iam-implementation-test",
+  "appImage": "guardllm-app:iam-implementation-test",
+  "at": "2026-09-09T11:50:26.505Z"
+}

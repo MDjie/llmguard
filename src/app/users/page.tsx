@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card,CardContent,CardHeader,CardTitle } from '@/components/ui/card';
 import { Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { usePermissions } from '@/hooks/use-permissions';
+import { useAccessProfile } from '@/hooks/use-permissions';
 import { iamFetch,roleLabels } from '@/lib/iam/client';
 import { grantAttributesSchema,type GrantAttributes } from '@/lib/iam/policy';
 import { GrantFields } from '@/components/iam/grant-fields';
@@ -24,7 +24,8 @@ const appsSchema=z.object({items:z.array(z.object({id:z.string(),name:z.string()
 const resultSchema=z.object({success:z.boolean(),approvalRequired:z.boolean().optional()});
 const selectClass='h-10 w-full rounded-md border bg-background px-3 text-sm';
 export default function UsersPage(){
-  const can=usePermissions();
+  const {can,deploymentMode}=useAccessProfile();
+  const implementationAdmin=deploymentMode==='implementation'&&can('iam:users:manage');
   const [rows,setRows]=useState<User[]>([]);
   const [apps,setApps]=useState<z.infer<typeof appsSchema>['items']>([]);
   const [total,setTotal]=useState(0),[page,setPage]=useState(1),[keyword,setKeyword]=useState('');
@@ -78,7 +79,7 @@ export default function UsersPage(){
   }
   return <div className="space-y-5 p-6">
     <div className="flex flex-wrap items-center justify-between gap-3"><div><h1 className="text-2xl font-semibold">账户与授权</h1>
-      <p className="mt-1 text-sm text-muted-foreground">按角色分工，显式分配应用。高权限账户的敏感变更需独立审批。</p></div>
+      <p className="mt-1 text-sm text-muted-foreground">{implementationAdmin?'实施测试模式：管理员开户和他人账户变更直接生效，仍需分配有效应用。':'按角色分工，显式分配应用。高权限账户的敏感变更需独立审批。'}</p></div>
       {can('iam:users:manage')&&<Button onClick={()=>edit(null)}>新建账户</Button>}</div>
     <Card><CardContent className="pt-6"><Input aria-label="搜索账户" placeholder="按用户名或姓名搜索" value={keyword} onChange={event=>{setKeyword(event.target.value);setPage(1);}}/>
       {error&&<p role="alert" className="mt-3 text-destructive">{error}</p>}
@@ -91,7 +92,7 @@ export default function UsersPage(){
       <div className="mt-4 flex items-center justify-end gap-3"><span>共 {total} 个</span><Button variant="outline" disabled={page===1} onClick={()=>setPage(page-1)}>上一页</Button><span>{page}</span><Button variant="outline" disabled={page*20>=total} onClick={()=>setPage(page+1)}>下一页</Button></div>
     </CardContent></Card>
     <Dialog open={open} onOpenChange={value=>{if(!busy){setOpen(value);if(!value)setPassword('');}}}><DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
-      <DialogHeader><DialogTitle>{editing?'编辑账户与授权':'新建账户'}</DialogTitle><DialogDescription>应用、默认应用和身份资料一起保存。管理员敏感变更在审批通过后生效；初始密码请通过安全渠道交付。</DialogDescription></DialogHeader>
+      <DialogHeader><DialogTitle>{editing?'编辑账户与授权':'新建账户'}</DialogTitle><DialogDescription>应用、默认应用和身份资料一起保存。{implementationAdmin?'本次非应急变更直接生效。':'管理员敏感变更在审批通过后生效。'}初始密码请通过安全渠道交付。</DialogDescription></DialogHeader>
       <form onSubmit={save} className="space-y-4">
         <div className="grid grid-cols-2 gap-4"><div><Label htmlFor="iam-username">用户名</Label><Input id="iam-username" required disabled={Boolean(editing)} value={username} onChange={e=>setUsername(e.target.value)}/></div>
           <div><Label htmlFor="iam-nickname">姓名</Label><Input id="iam-nickname" value={nickname} onChange={e=>setNickname(e.target.value)}/></div>

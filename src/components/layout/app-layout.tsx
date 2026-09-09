@@ -111,6 +111,7 @@ interface UserInfo {
   nickname?: string;
   role: string;
   permissions: Permission[];
+  deploymentMode?: 'strict' | 'implementation';
   mustChangePassword?: boolean;
   tenantId: string;
   applicationId: string;
@@ -383,6 +384,7 @@ export function AppLayout({
         </div>
       </aside>
       <main id="main-content" tabIndex={-1} className="console-content min-h-screen min-w-0 px-3 pb-6 pt-[76px] outline-none sm:px-5 md:ml-[188px]">
+        {user?.deploymentMode==='implementation'&&<div role="status" className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950">实施测试模式：系统管理员可完成配置和账户管理，并确认自己的模型上线申请。正式职责分离验收请切回严格模式。</div>}
         {navigationGroups.flatMap(group=>group.items).some(item=>(pathname===item.href||(item.href!=='/'&&pathname.startsWith(item.href+'/')))&&!user?.permissions.includes(item.permission)) ?
           <div className="rounded-lg border p-8"><h1 className="text-xl font-semibold">无权访问此页面</h1><p className="mt-2 text-muted-foreground">当前账户未获得该功能权限，请从左侧选择已授权功能。</p></div> : children}
       </main>

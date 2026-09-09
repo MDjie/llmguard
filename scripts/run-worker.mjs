@@ -1,3 +1,5 @@
+import { existsSync } from 'node:fs';
+
 const workerEntrypoints = Object.freeze({
   iam: './iam-worker.ts',
   archive: './archive-worker.ts',
@@ -18,6 +20,15 @@ const workerEntrypoints = Object.freeze({
 });
 
 const workerName = process.argv[2];
+if (workerName === '--check') {
+  const missing = Object.entries(workerEntrypoints).filter(([, file]) => !existsSync(new URL(file, import.meta.url)));
+  if (missing.length) {
+    console.error('Missing worker entrypoints: ' + missing.map(([name, file]) => name + '=' + file).join(', '));
+    process.exit(1);
+  }
+  console.log(JSON.stringify({ status: 'PASS', workers: Object.keys(workerEntrypoints) }));
+  process.exit(0);
+}
 const entrypoint = workerName ? workerEntrypoints[workerName] : undefined;
 
 if (!entrypoint) {

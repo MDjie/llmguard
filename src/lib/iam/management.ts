@@ -13,6 +13,7 @@ import { createIamUserSchema, updateIamUserSchema, identitySchema, type iamUserL
 import { iamChangeRequests, iamIdentityProfiles, userApplicationMemberships } from './schema';
 import { denied, listEffectiveApplications, validateAssignment, writeAssignment, type IamTransaction } from './grants';
 import { independentDecision, isPrivilegedRole } from './policy';
+import { iamDeploymentMode, isImplementationAdmin } from './deployment-mode';
 
 const { password: omittedPassword, ...storedShape } = updateIamUserSchema.shape;
 void omittedPassword;
@@ -30,7 +31,7 @@ export function iamDigest(value: unknown): string {
 
 export async function auditIam(tx: IamTransaction, scope: TenantContext, event: string, target: string, summary: unknown) {
   const eventId = randomUUID();
-  const serialized=canonicalJson(summary);
+  const serialized=canonicalJson({deploymentMode:iamDeploymentMode(),summary});
   await appendAuditEventInTransaction(tx, {
     event, outcome: 'ALLOWED', status: 200, requestId: eventId, traceId: eventId,
     method: 'INTERNAL', path: '/iam/' + encodeURIComponent(target), latencyMs: 0,
@@ -137,7 +138,7 @@ export async function createUserWithGrants(principal: AuthenticatedPrincipal, in
     const [duplicate] = await tx.select({ id: users.id }).from(users).where(or(eq(users.username, input.username),
       input.email ? sql`lower(${users.email}) = lower(${input.email})` : undefined)).limit(1);
     if (duplicate) throw denied('USER_IDENTITY_CONFLICT', 409);
-    const approvalRequired = isPrivilegedRole(input.role);
+    const approvalRequired = isPrivilegedRole(input.role) && !isImplementationAdmin(principal);
     const [user] = await tx.insert(users).values({
       username: input.username, password, nickname: input.nickname ?? input.username, email: input.email ?? null,
       phone: input.phone ?? null, department: input.department ?? null, description: input.description ?? null,
@@ -207,7 +208,7 @@ export async function changeManagedUser(principal: AuthenticatedPrincipal, input
     const change: StoredChange = { ...fields, ...(passwordHash ? { passwordHash } : {}) };
     if (input.assignment) await validateAssignment(tx,scope,input.assignment);
     const sensitive = Boolean(input.role || input.assignment || input.identity || password || input.status);
-    if (sensitive && (isPrivilegedRole(normalizePlatformRole(current.role) ?? '') || isPrivilegedRole(input.role ?? ''))) {
+    if (sensitive && !isImplementationAdmin(principal) && (isPrivilegedRole(normalizePlatformRole(current.role) ?? '') || isPrivilegedRole(input.role ?? ''))) {
       const requestId = await requestChange(tx,scope,current,'USER_CHANGE',change,input.reason);
       return { success: true, approvalRequired: true, requestId, data: publicUser(current) };
     }
@@ -245,8 +246,9 @@ export async function decideIamChange(principal: AuthenticatedPrincipal, id: str
     if(!originalRequester||originalRequester.status!=='active'||originalRequester.tokenVersion!==request.requesterTokenVersion)throw denied('IAM_REQUESTER_AUTHORITY_REVOKED');
     const [actor] = await tx.select().from(users).where(eq(users.id,scope.principalId)).for('share');
     if (!actor || actor.status !== 'active' || normalizePlatformRole(actor.role) !== principal.roles[0]) throw denied('IAM_REVIEWER_AUTHORITY_REVOKED');
+    const implementationReview = !recovery && isImplementationAdmin(principal) && request.targetUserId !== scope.principalId;
     if (!principal.permissions.includes(recovery ? 'iam:recovery:approve' : 'iam:changes:approve') ||
-      !independentDecision(request.requesterId,scope.principalId,request.targetUserId)) throw denied('IAM_INDEPENDENT_APPROVAL_REQUIRED');
+      (!implementationReview && !independentDecision(request.requesterId,scope.principalId,request.targetUserId))) throw denied('IAM_INDEPENDENT_APPROVAL_REQUIRED');
     if (iamDigest(request.payload) !== request.payloadDigest) throw denied('IAM_APPROVAL_DIGEST_MISMATCH',409);
     const {reviewContext,...executionPayload}=request.payload;
     void reviewContext;

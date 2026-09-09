@@ -1,5 +1,7 @@
 import postgres from 'postgres';
+import { iamDeploymentMode,requiredAdministrativeRoles } from '../src/lib/iam/deployment-mode';
 async function main(){
+  const mode=iamDeploymentMode();
   const url=process.env.PGDATABASE_URL??process.env.DATABASE_URL;
   if(!url)throw new Error('Explicit PGDATABASE_URL is required');
   const client=postgres(url,{max:1});
@@ -24,9 +26,13 @@ async function main(){
     const tenants=await client`SELECT id FROM tenants WHERE status='active'`;
     const missing=tenants.flatMap(tenant=>['SYSTEM_ADMIN','SECURITY_ADMIN','AUDIT_ADMIN'].filter(role=>
       !roles.some(row=>row.tenant_id===tenant.id&&row.role===role)).map(role=>({tenantId:tenant.id,role})));
-    console.log(JSON.stringify({status:anomalies.length||missing.length?'ACTION_REQUIRED':'PASS',anomalies,missingAdministrativeRoles:missing,
-      backfillPolicy:'only existing default application; no expansion',migration:'0073 then 0074; bootstrap missing roles before application cutover'},null,2));
-    if(anomalies.length||missing.length)process.exitCode=2;
+    const blockingMissing=missing.filter(item=>requiredAdministrativeRoles(mode).includes(item.role));
+    const blocked=anomalies.length>0||blockingMissing.length>0;
+    console.log(JSON.stringify({status:blocked?'ACTION_REQUIRED':'PASS',deploymentMode:mode,anomalies,missingAdministrativeRoles:missing,
+      blockingMissingAdministrativeRoles:blockingMissing,
+      warnings:mode==='implementation'?['Implementation mode permits one SYSTEM_ADMIN; security/audit roles are optional for testing.']:[],
+      backfillPolicy:'only existing default application; no expansion',migration:'0073 then 0074; existing databases require explicit migration'},null,2));
+    if(blocked)process.exitCode=2;
   }finally{await client.end();}
 }
 main().catch((error:unknown)=>{console.error(error instanceof Error?error.message:'PREFLIGHT_FAILED');process.exitCode=1;});

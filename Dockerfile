@@ -44,6 +44,10 @@ COPY --chown=node:node \
     scripts/evaluation-worker.ts \
     scripts/gateway-request-worker.ts \
     scripts/gateway-shadow-worker.ts \
+    scripts/iam-worker.ts \
+    scripts/iam-maintenance.ts \
+    scripts/iam-preflight.ts \
+    scripts/bootstrap-admin.ts \
     scripts/native-multimodal-worker.ts \
     scripts/code-sentinel-worker.ts \
     scripts/rag-ingest-worker.ts \
@@ -53,6 +57,8 @@ COPY --chown=node:node \
 
 COPY --chown=node:node scripts/release/gateway-v2-migrate.mjs scripts/release/gateway-v2-identity-preflight.mjs ./scripts/release/
 COPY --chown=node:node drizzle ./drizzle
+
+RUN node scripts/run-worker.mjs --check
 
 USER node
 STOPSIGNAL SIGTERM
