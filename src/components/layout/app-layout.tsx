@@ -58,7 +58,6 @@ const navigationGroups: readonly {
       { name: '安全对话', href: '/', icon: MessageCircle, desc: '双引擎安全对话', permission: 'guard:use' },
       { name: '链路实验', href: '/simulate', icon: Zap, desc: '非生产检测流程', permission: 'guard:use', experimental: true },
       { name: '告警明细', href: '/security-alerts', icon: Shield, desc: '统一风险告警与命中证据', permission: 'security:operate' },
-      { name: '对话归档', href: '/conversations', icon: Shield, desc: '180 天内容版本与归档完整性', permission: 'history:read' },
       { name: '文档检测', href: '/document-scan', icon: FileText, desc: '文档安全扫描', permission: 'security:operate' },
     ]
   },
@@ -89,7 +88,7 @@ const navigationGroups: readonly {
 
       { name: '风险事件', href: '/incidents', icon: Shield, desc: '研判与处置闭环', permission: 'security:operate' },
       { name: '请求执行', href: '/gateway-requests', icon: GitCompare, desc: '检测与实际执行链路', permission: 'history:read' },
-      { name: '内容审计', href: '/history', icon: History, desc: '检测历史查询', permission: 'history:read' },
+      { name: '内容审计', href: '/history', icon: History, desc: '检测记录与对话归档', permission: 'history:read' },
       { name: 'Agent日志', href: '/agent-logs', icon: FileText, desc: '调用日志追踪', permission: 'audit:read' },
       { name: '运维巡检', href: '/operations', icon: Cpu, desc: '服务器资源与后台服务', permission: 'observability:metrics:read' },
       { name: '导出报告', href: '/export', icon: Download, desc: '数据导出报告', permission: 'audit:export' },
