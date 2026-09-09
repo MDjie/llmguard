@@ -1,0 +1,301 @@
+{
+  "version": 1,
+  "generatedAt": "2026-09-09T00:15:17.322109+00:00",
+  "status": "INCREMENTAL_ENGINEERING_VERIFIED_WITH_OPEN_DEPENDENCIES",
+  "sourceSha256": "048702740d2dd07da5f21e600bd9ed5f66dfd154913f589bd583825455125c62",
+  "sourceIdentity": ".artifact-build/comprehensive-resume-20260909-g/source-identity.json",
+  "singleColdRunPass": false,
+  "allDevelopmentComplete": false,
+  "qualityAccepted": false,
+  "productionQualification": false,
+  "unit": {
+    "numTotalTests": 1757,
+    "numPassedTests": 1757,
+    "numFailedTests": 0,
+    "numPendingTests": 0
+  },
+  "build": {
+    "stage": "next-production-build",
+    "exitCode": 0,
+    "finishedAt": "2026-09-09T00:13:19.5582541Z"
+  },
+  "additionalCommands": {
+    "typecheck": "PASS",
+    "eslintChangedFiles": "PASS",
+    "contractsCheck": "PASS",
+    "analyzerBuild": "PASS",
+    "evidenceOrigin": "Observed command exit codes in this task"
+  },
+  "database": {
+    "status": "PASS",
+    "database": "guardllm_integration_full_1788911207438",
+    "tables": 103,
+    "expectedColumns": 1635,
+    "missing": [],
+    "shapeErrors": []
+  },
+  "normalizedPurge": {
+    "status": "PASS",
+    "scope": "ISOLATED_REAL_POSTGRES_AND_VERSIONED_MINIO",
+    "purgeClock": "CONTROLLED_SYNTHETIC_TTL_BOUNDARY",
+    "checks": [
+      {
+        "id": "NORMALIZED_REAL_OBJECT_AND_PARENT_DIGEST",
+        "status": "PASS"
+      },
+      {
+        "id": "NORMALIZED_IDEMPOTENT_RETRY",
+        "status": "PASS"
+      },
+      {
+        "id": "NORMALIZED_OWNER_ISOLATION",
+        "status": "PASS"
+      },
+      {
+        "id": "NORMALIZED_DIGEST_TAMPER_REJECTED",
+        "status": "PASS"
+      },
+      {
+        "id": "NORMALIZED_CANCELLED_ATTEMPT_FENCED",
+        "status": "PASS"
+      },
+      {
+        "id": "PURGE_INTERRUPTED_UPLOAD_QUEUED_IDEMPOTENTLY",
+        "status": "PASS"
+      },
+      {
+        "id": "PURGE_NEW_UPLOAD_SIGNATURE_REJECTED",
+        "status": "PASS"
+      },
+      {
+        "id": "PURGE_WAIT_FOR_SIGNED_UPLOAD_EXPIRY",
+        "status": "PASS"
+      },
+      {
+        "id": "PURGE_HOLD_WINS_BEFORE_CLAIM",
+        "status": "PASS"
+      },
+      {
+        "id": "PURGE_FAILED_DELETE_RETAINS_QUOTA",
+        "status": "PASS"
+      },
+      {
+        "id": "PURGE_VERSION_REWRITE_RETAINS_QUOTA",
+        "status": "PASS"
+      },
+      {
+        "id": "PURGE_EXACT_VERSIONS_AND_HOLD_RACE",
+        "status": "PASS"
+      },
+      {
+        "id": "PURGE_QUOTA_RELEASED_AFTER_EMPTY_VERSION_CHECK",
+        "status": "PASS"
+      }
+    ]
+  },
+  "normalizedRag": {
+    "status": "PASS",
+    "scope": "ISOLATED_REAL_POSTGRES_MINIO_AND_TEXT_WORKERS",
+    "nativeModelQualification": false,
+    "checks": [
+      {
+        "id": "MANIFEST_WRONG_SOURCE_DIGEST_REJECTED",
+        "status": "PASS"
+      },
+      {
+        "id": "REAL_TEXT_INTAKE_CREATED_NORMALIZED_ASSET",
+        "status": "PASS"
+      },
+      {
+        "id": "MEDIA_RAG_SUBMISSION_IDEMPOTENT",
+        "status": "PASS"
+      },
+      {
+        "id": "MEDIA_RAG_OWNER_ISOLATION",
+        "status": "PASS"
+      },
+      {
+        "id": "REAL_NORMALIZED_RAG_INGEST_PERSISTED_OWNER_ACL",
+        "status": "PASS"
+      },
+      {
+        "id": "RAG_FOREIGN_PRINCIPAL_CANNOT_READ_PROJECTION",
+        "status": "PASS"
+      },
+      {
+        "id": "RAG_ORIGINAL_REVOCATION_RECHECKED",
+        "status": "PASS"
+      },
+      {
+        "id": "RAG_INTAKE_RESULT_DIGEST_CHANGE_REJECTED",
+        "status": "PASS"
+      },
+      {
+        "id": "CANCELLED_MEDIA_RAG_CANNOT_INDEX",
+        "status": "PASS"
+      },
+      {
+        "id": "INCOMPLETE_MEDIA_COVERAGE_CANNOT_INDEX",
+        "status": "PASS"
+      }
+    ]
+  },
+  "normalizedRagHttp": {
+    "status": "PASS",
+    "scope": "REAL_HTTP_ISOLATED_DATABASE",
+    "results": [
+      {
+        "id": "OWNER",
+        "status": "PASS",
+        "http": 202
+      },
+      {
+        "id": "OTHER_OWNER",
+        "status": "PASS",
+        "http": 422
+      },
+      {
+        "id": "FOREIGN_TENANT",
+        "status": "PASS",
+        "http": 422
+      },
+      {
+        "id": "ANONYMOUS",
+        "status": "PASS",
+        "http": 401
+      },
+      {
+        "id": "MALFORMED_SOURCE",
+        "status": "PASS",
+        "http": 400
+      }
+    ]
+  },
+  "uploadSecurity": {
+    "scope": "REAL_ISOLATED_OWNER_TENANT_IMMUTABILITY_MULTIPART",
+    "results": [
+      {
+        "test": "other-principal-read",
+        "status": 404,
+        "pass": true
+      },
+      {
+        "test": "other-principal-write",
+        "status": 409,
+        "pass": true
+      },
+      {
+        "test": "foreign-tenant-read",
+        "status": 404,
+        "pass": true
+      },
+      {
+        "test": "foreign-tenant-write",
+        "status": 409,
+        "pass": true
+      },
+      {
+        "test": "immutable-part-retains-original-bytes",
+        "state": "accepted",
+        "pass": true
+      },
+      {
+        "test": "17MiB-two-part-integrity",
+        "state": "accepted",
+        "pass": true
+      }
+    ]
+  },
+  "browser": {
+    "crawlCount": 23,
+    "crawlPassed": 23,
+    "initialJourneyPassed": 17,
+    "initialJourneyFailed": 1,
+    "initialFailures": [
+      {
+        "id": "J17",
+        "detail": {
+          "error": "ENOENT: no such file or directory, open 'E:\\大模型安全\\大模型护栏\\.artifact-build\\comprehensive-resume-20260909-g\\crawl.json'",
+          "ui": "跳转到主内容\n国舜大模型安全网关平台\n当前应用\nAUTO1788912312150应用\n自动化验收应用\n导出报告\n\n导出脱敏审计摘要；统计与导出使用相同的 UTC 自然日边界。每次下载需独立审批。\n\n刷新统计与审批\n导出配置\n导出格式\nJSON\nCSV\nMARKDOWN\n时间范围\n全部记录\n处理动作\n全部动作\n导出用途（至少 10 字）\n申请导出审批下载已批准的报告\n\n当前查询尚无可用批准。申请后等待另一名审批人审核，再刷新。 修改筛选条件或格式后需重新申请。\n\n数据统计\n单次最多导出 1,000 条；超限须缩小范围\n0 条\n\n全部 — 全部\n\n暂无可导出记录\n\n待审批申请\n只能审批其他主体的申请；审批不改变其查询范围\n\n暂无待审批申请"
+        }
+      }
+    ],
+    "mobileRetry": [
+      {
+        "id": "J17",
+        "status": "PASS",
+        "detail": {
+          "pages": 21
+        }
+      }
+    ]
+  },
+  "cleanup": {
+    "results": [
+      {
+        "name": "security-scan",
+        "status": "STOPPED"
+      },
+      {
+        "name": "archive",
+        "status": "STOPPED"
+      },
+      {
+        "name": "native",
+        "status": "STOPPED"
+      },
+      {
+        "name": "rag",
+        "status": "STOPPED"
+      },
+      {
+        "name": "gateway-reconcile",
+        "status": "STOPPED"
+      },
+      {
+        "name": "media",
+        "status": "STOPPED"
+      },
+      {
+        "name": "evaluation",
+        "status": "STOPPED"
+      },
+      {
+        "name": "intake",
+        "status": "STOPPED"
+      },
+      {
+        "name": "verifier",
+        "status": "STOPPED"
+      },
+      {
+        "name": "app",
+        "status": "STOPPED"
+      }
+    ]
+  },
+  "automaticArtifactPurgeEnabled": false,
+  "deferredByUser": [
+    "REAL_MODEL_ROLE_CONFIGURATION",
+    "INDEPENDENT_DUAL_REVIEWED_LABELS"
+  ],
+  "openEngineering": [
+    "MIXED_CHAT_EXACT_WIRE_RELEASE",
+    "FULL_AUTHORIZED_AUDIO_VIDEO_PREVIEW",
+    "RARE_FORMAT_AND_HIDDEN_CONTENT_QUALIFICATION",
+    "REAL_MEDIA_RAG_AND_EVALUATION",
+    "PURGE_OPERATIONAL_ACCEPTANCE",
+    "G0_G5_RELEASE"
+  ],
+  "resolvedToolFailure": {
+    "stage": "schema-parity",
+    "reason": "New check string escaping caused a transform error; corrected and schema-parity/final build passed."
+  },
+  "approvalReview": {
+    "action": "Enable deleting purge worker in default Docker Compose",
+    "result": "REJECTED",
+    "reason": "Potential irreversible deletion in shared/production environment; missing explicit environment and complete acceptance",
+    "fallback": "Code and isolated synthetic tests only; no automatic deployment"
+  },
+  "evidenceDirectory": ".artifact-build/comprehensive-resume-20260909-g"
+}

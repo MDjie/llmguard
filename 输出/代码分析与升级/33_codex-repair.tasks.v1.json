@@ -407,7 +407,11 @@
           ".artifact-build/comprehensive-repair-20260909-f/auth-workflows.json",
           ".artifact-build/comprehensive-repair-20260909-f/aggregate.json"
         ],
-        "qualityQualification": "NOT_IMPLIED_BY_ENGINEERING_RESULTS"
+        "qualityQualification": "NOT_IMPLIED_BY_ENGINEERING_RESULTS",
+        "supplementalAudit": "G round incremental evidence: normalized assets, RAG, manifest, hidden member inventory, purge protections and bounded runner; initial mobile dependency failure retained, retry passed. Real model/label/release scope remains open.",
+        "supplementalEvidence": [
+          "输出/代码分析与升级/34_接续修复证据_2026-09-09/verification.json"
+        ]
       }
     },
     {
@@ -457,7 +461,11 @@
           ".artifact-build/comprehensive-repair-20260909-f/health-recovery.json",
           ".artifact-build/comprehensive-repair-20260909-f/evidence-workflow.json"
         ],
-        "qualityQualification": "NOT_IMPLIED_BY_ENGINEERING_RESULTS"
+        "qualityQualification": "NOT_IMPLIED_BY_ENGINEERING_RESULTS",
+        "supplementalAudit": "G round incremental evidence: normalized assets, RAG, manifest, hidden member inventory, purge protections and bounded runner; initial mobile dependency failure retained, retry passed. Real model/label/release scope remains open.",
+        "supplementalEvidence": [
+          "输出/代码分析与升级/34_接续修复证据_2026-09-09/verification.json"
+        ]
       }
     },
     {
@@ -512,7 +520,11 @@
           ".artifact-build/comprehensive-repair-20260909-f/layered-evidence.json",
           ".artifact-build/comprehensive-repair-20260909-f/evidence-workflow.json"
         ],
-        "qualityQualification": "NOT_IMPLIED_BY_ENGINEERING_RESULTS"
+        "qualityQualification": "NOT_IMPLIED_BY_ENGINEERING_RESULTS",
+        "supplementalAudit": "G round incremental evidence: normalized assets, RAG, manifest, hidden member inventory, purge protections and bounded runner; initial mobile dependency failure retained, retry passed. Real model/label/release scope remains open.",
+        "supplementalEvidence": [
+          "输出/代码分析与升级/34_接续修复证据_2026-09-09/verification.json"
+        ]
       }
     },
     {
@@ -555,7 +567,11 @@
         "evidence": [
           ".artifact-build/comprehensive-repair-20260909-f/release-gates.json"
         ],
-        "qualityQualification": "NOT_IMPLIED_BY_ENGINEERING_RESULTS"
+        "qualityQualification": "NOT_IMPLIED_BY_ENGINEERING_RESULTS",
+        "supplementalAudit": "G round incremental evidence: normalized assets, RAG, manifest, hidden member inventory, purge protections and bounded runner; initial mobile dependency failure retained, retry passed. Real model/label/release scope remains open.",
+        "supplementalEvidence": [
+          "输出/代码分析与升级/34_接续修复证据_2026-09-09/verification.json"
+        ]
       }
     }
   ],
@@ -564,5 +580,10 @@
   "qualityAccepted": false,
   "latestCompletedRun": ".artifact-build/comprehensive-repair-20260909-f",
   "activeRun": null,
-  "knownDefectsD01ToD09": "REPAIRED_AND_REGRESSION_VERIFIED"
+  "knownDefectsD01ToD09": "REPAIRED_AND_REGRESSION_VERIFIED",
+  "latestSupplementalRun": ".artifact-build/comprehensive-resume-20260909-g",
+  "deferredByUser": [
+    "REAL_MODEL_ROLE_CONFIGURATION",
+    "INDEPENDENT_DUAL_REVIEWED_LABELS"
+  ]
 }

@@ -376,7 +376,10 @@
       "constraints": "保留原件；不能截断证据来凑4MiB；对象版本、授权访问、保留/删除与幂等必须覆盖全部分块。",
       "acceptance": "大文档与多媒体超过4MiB、部分上传、重试、授权消费、hold/删除冲突。",
       "dependsOn": [],
-      "latestAudit": "6.9MB证据分7块、部分失败重试、不可变版本、hold与确切删除已通过真实PG/MinIO；NormalizedAsset标准派生对象及对应释放协议仍未完成。"
+      "latestAudit": "G轮新增NormalizedAsset父子SHA、转换版本、完整文本/坐标/时段及attempt隔离；>4MiB原件真实PG/MinIO、幂等/所有者/摘要/取消检查通过。派生RAG文本闭环已过，混合聊天许可协议与完整媒体消费仍未关闭。",
+      "latestEvidence": [
+        "输出/代码分析与升级/34_接续修复证据_2026-09-09/verification.json"
+      ]
     },
     {
       "id": "R05",
@@ -403,7 +406,7 @@
         "T14",
         "T22"
       ],
-      "status": "OPEN",
+      "status": "PARTIAL_VERIFIED",
       "deliverables": "在统一Artifact/Job上接入派生入库、源ACL/方向和风险隔离；CSV/TSV支持已验证媒体引用；manifest固定语义案例组与源谱系。",
       "constraints": "UNKNOWN不进入主标签分母；同语义换容器不独立计数；实验结果不能获得生产资格。",
       "acceptance": "两种媒体和混合附件的RAG/评测真实执行，跨租户及不匹配摘要拒绝。",
@@ -411,7 +414,10 @@
         "R03",
         "R04"
       ],
-      "latestAudit": "多模态RAG派生入库及媒体评测manifest仍待完成；文本RAG取消原子化不等于本项完成。"
+      "latestAudit": "G轮新增派生RAG入库及检索来源复核、owner-only ACL、CSV/TSV/JSON媒体清单和语义组指标；10项真实文本RAG、5项HTTP权限及清单回归通过。两种真实媒体/混合附件及独立语义评测待模型和标签。",
+      "latestEvidence": [
+        "输出/代码分析与升级/34_接续修复证据_2026-09-09/verification.json"
+      ]
     },
     {
       "id": "R07",
@@ -431,7 +437,10 @@
         "R01",
         "R04"
       ],
-      "latestAudit": "45格式上传及真实解析矩阵已建立，PCM/RTF和音频时长兼容性已修复；OFD/WPS/AMR/HEIF序列及嵌入对象四类样本未完成。"
+      "latestAudit": "G轮补OOXML/ODF惰性成员清单、隐藏媒体/嵌入对象SHA与明确未覆盖状态，四类确定性测试通过。宏/对象仍不执行；旧Office/OFD/WPS/AMR/HEIF序列/多视频流完整实样本鉴定未关闭。",
+      "latestEvidence": [
+        "输出/代码分析与升级/34_接续修复证据_2026-09-09/verification.json"
+      ]
     },
     {
       "id": "R08",
@@ -440,14 +449,17 @@
       "originalTasks": [
         "T20"
       ],
-      "status": "OPEN",
+      "status": "PARTIAL_VERIFIED",
       "deliverables": "上传中断、取消及到期进入purge ledger；枚举受控prefix的确切版本，核验活跃引用与hold；物理删除核实完成后才释放配额。",
       "constraints": "事务声明+租约+版本确认；不批量删桶，不用取消请求直接删仍被Job/证据引用的原件。",
       "acceptance": "对象写入后崩溃、重复删除、hold竞争、版本回写、旧预签名TTL及配额恢复。",
       "dependsOn": [
         "R04"
       ],
-      "latestAudit": "证据对象版本删除已实现；原Artifact清理账本、活跃引用/hold竞争、旧预签名TTL及容量释放仍待独立实现与验收。"
+      "latestAudit": "G轮实现原Artifact purge ledger、受控前缀确切版本、签名TTL等待、引用/hold及租约保护、空版本后返还配额。标准资产与清理13项实PG/MinIO检查通过，含故障/版本回写；TTL为受控合成边界。默认部署因自动审批拒绝未启用，长期运行/引用释放验收仍待完成。",
+      "latestEvidence": [
+        "输出/代码分析与升级/34_接续修复证据_2026-09-09/verification.json"
+      ]
     },
     {
       "id": "R09",
@@ -481,7 +493,10 @@
       "dependsOn": [
         "R01"
       ],
-      "latestAudit": "测试环境没有真实ASR/VLM/音频分类/联合裁判角色资格，不以合成端点或协议占位符替代真实模型鉴定。"
+      "latestAudit": "用户2026-09-09明确未准备真实ASR/视觉/音频分类配置，先执行其他任务。本轮不构造端点、授权或模型资格。",
+      "latestEvidence": [
+        "输出/代码分析与升级/34_接续修复证据_2026-09-09/verification.json"
+      ]
     },
     {
       "id": "R11",
@@ -500,7 +515,10 @@
         "R06",
         "R10"
       ],
-      "latestAudit": "独立双人审定开发/验收标签、模型与数据运行身份尚未齐备。"
+      "latestAudit": "用户2026-09-09明确未准备独立双人标签。评测清单及FPR/FDR分母工程已补，独立语义集、真实消融/校准与质量验收延期。",
+      "latestEvidence": [
+        "输出/代码分析与升级/34_接续修复证据_2026-09-09/verification.json"
+      ]
     },
     {
       "id": "R12",
@@ -534,17 +552,22 @@
         "R10",
         "R11"
       ],
-      "latestAudit": "33号D01-D09及新增生命周期约束已修复；F轮执行无失败、媒体语义与质量门槛BLOCKED。32号剩余研发和G0-G5尚未关闭。"
+      "latestAudit": "G轮增量工程已验证：1757单测、构建/类型/静态/协议检查、103表1635字段、派生资产/RAG/清理及浏览器回归。初次J17缺前置清单失败，修复后独立重跑通过，未声称单次冷启动全绿；R05/R09和真实语义/资格/G0-G5仍未关闭。",
+      "latestEvidence": [
+        "输出/代码分析与升级/34_接续修复证据_2026-09-09/verification.json"
+      ]
     }
   ],
-  "updatedAt": "2026-09-08T12:18:46.274817+00:00",
+  "updatedAt": "2026-09-09",
   "executionSummary": {
     "engineeringVerified": [
       "R02",
       "R03"
     ],
     "openCount": 10,
-    "evidenceDirectory": "输出/代码分析与升级/32_补充修复证据_2026-09-08"
+    "evidenceDirectory": "输出/代码分析与升级/32_补充修复证据_2026-09-08",
+    "latestIncrementalEvidence": "输出/代码分析与升级/34_接续修复证据_2026-09-09/verification.json",
+    "allDevelopmentComplete": false
   },
   "latestDevelopmentAudit": "2026-09-09"
 }
