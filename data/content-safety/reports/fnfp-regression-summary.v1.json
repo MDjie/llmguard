@@ -1,0 +1,27 @@
+{
+  "schema": "content-safety-fnfp-regression-summary/v1",
+  "generatedAt": "2026-09-10T06:37:00.779481",
+  "source": "eval-data/llmguard-eval/pred_chinesesafe.csv",
+  "output": "data/content-safety/evaluations/chinesesafe-llmguard-fnfp.v1.jsonl",
+  "fn_total": 779,
+  "fp_total": 190,
+  "fn_buckets": {
+    "other": 555,
+    "violence_crime": 51,
+    "insult": 47,
+    "self_harm": 35,
+    "political": 33,
+    "ad_redirect": 26,
+    "privacy_probe": 14,
+    "gambling_fraud": 9,
+    "discrimination": 8,
+    "sexual": 1
+  },
+  "fp_buckets": {
+    "other": 90,
+    "nli_template": 61,
+    "fintech_qa": 25,
+    "literary": 14
+  },
+  "note": "分桶为规则关键词粗分(v1), 供词库扩充与语义回归; 建议对 other 桶做人工复核迭代。"
+}

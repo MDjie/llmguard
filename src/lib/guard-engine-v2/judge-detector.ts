@@ -24,6 +24,7 @@ export class ConfigurableJudgeDetector implements GuardDetector {
       ...base,riskType:'semantic_coverage',decisionRole:selected.mode === 'ENFORCE' ? 'UNKNOWN' : undefined,semanticCoverage:'INCOMPLETE',
       reasonCode:selected.mode === 'ENFORCE' ? 'JUDGE_ENFORCE_UNKNOWN' : 'JUDGE_SHADOW_UNKNOWN',
       configurationDigest:result.profileDigest,
+      failMode: 'DEGRADED',
     }];
     const profile = result.profile; const view = context.views.find(v => v.id === 'original');
     if (!view) throw new Error('JUDGE_ORIGINAL_VIEW_REQUIRED');

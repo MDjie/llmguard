@@ -246,12 +246,22 @@ async function executeNode(input: {
 function shouldRun(
   node: DetectorNodeSpec,
   parentOutcomes: readonly NodeOutcome[],
+  allOutcomes: readonly NodeOutcome[],
   terminal: (observation: Observation) => boolean,
 ): boolean {
   if (node.runCondition === 'ALWAYS') return true;
   if (node.runCondition === 'WHEN_NO_MANDATORY_DENY') return !parentOutcomes.some(outcome => outcome.observations.some(o => isConfirmedObservation(o) && (o.reasonCode === 'MANDATORY_DENY' || o.decisionRole === 'HARD_DENY')));
   if (node.runCondition === 'WHEN_PARENT_MATCHES') {
     return parentOutcomes.some((outcome) => outcome.status === 'MATCH');
+  }
+  if (node.runCondition === 'WHEN_PARENT_CANDIDATES') {
+    const mandatoryDeny = allOutcomes.some((outcome) => outcome.observations.some((observation) =>
+      isConfirmedObservation(observation) &&
+      (observation.reasonCode === 'MANDATORY_DENY' || observation.decisionRole === 'HARD_DENY'),
+    ));
+    return !mandatoryDeny && parentOutcomes.some((outcome) =>
+      outcome.observations.some((observation) => observation.decisionRole === 'CANDIDATE'),
+    );
   }
   if (node.runCondition === 'WHEN_PARENT_FAILS') {
     return parentOutcomes.some(
@@ -292,7 +302,7 @@ export async function executeDetectorDag(input: {
     const pending = ready.map((node): Promise<NodeOutcome> => {
       const detector = detectorsById.get(node.detectorId)!;
       const parents = node.dependsOn.map((dependency) => outcomes.get(dependency)!);
-      if (!shouldRun(node, parents, terminal)) {
+      if (!shouldRun(node, parents, [...outcomes.values()], terminal)) {
         observeGuardDetectorNode({
           detectorId: detector.id,
           tier: node.tier,
@@ -360,7 +370,19 @@ export async function executeDetectorDag(input: {
   const ordered = input.dag.nodes.map((node) => outcomes.get(node.id)!);
   const failed = ordered.filter((outcome) => outcome.failureReason !== undefined);
   return {
-    trace:ordered.map(outcome=>({nodeId:outcome.node.id,detectorId:outcome.detector.id,status:outcome.status,attempts:outcome.attempts,reason:outcome.failureReason??(outcome.status==='SKIPPED'&&outcome.attempts===0?'RUN_CONDITION_'+outcome.node.runCondition:'EXECUTED')})),
+    trace:ordered.map(outcome=>({
+      nodeId:outcome.node.id,
+      detectorId:outcome.detector.id,
+      tier:outcome.node.tier,
+      runCondition:outcome.node.runCondition,
+      candidateInput:outcome.node.dependsOn.some(dependency =>
+        outcomes.get(dependency)?.observations.some(observation => observation.decisionRole === 'CANDIDATE') ?? false,
+      ),
+      failurePolicy:outcome.node.failurePolicy,
+      status:outcome.status,
+      attempts:outcome.attempts,
+      reason:outcome.failureReason??(outcome.status==='SKIPPED'&&outcome.attempts===0?'RUN_CONDITION_'+outcome.node.runCondition:'EXECUTED'),
+    })),
     observations: ordered.flatMap((outcome) => outcome.observations),
     degradationReasons: failed.map((outcome) => outcome.failureReason!).sort(),
     failClosedReasons: failed

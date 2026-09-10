@@ -9,6 +9,7 @@ export { createGuardEngine } from './engine';
 export { buildGuardCacheKey } from './cache-key';
 export type { GuardCacheIdentity } from './cache-key';
 export { DEFAULT_DETECTOR_DAG } from './default-dag';
+export { withCandidateJudgeDetectorDag, withJudgeDetectorDag } from './semantic-routing';
 export { executeDetectorDag, resolveAndValidateDetectorDag } from './dag';
 export {
   parseSemanticClassifierBuildConfig,
@@ -62,6 +63,7 @@ export type {
   GuardEngine,
   GuardEngineDependencies,
   GuardEnginePolicy,
+  GuardEvaluationTrace,
   NormalizationTransform,
   NormalizedView,
   OriginSpan,

@@ -13,7 +13,7 @@ export interface ProviderTestFailure {
 // content, so the cheap 10-token probe reports a misleading empty response.
 // Covers GLM-4.5+/5.x, DeepSeek reasoner/R1, Qwen3/QwQ, Doubao Seed and any
 // explicit *-thinking* model id (e.g. Kimi K2 Thinking) across vendors.
-const thinkingModelPattern = /(?:^glm-(?:4\.[5-9]|5))|(?:^deepseek-(?:reasoner|r1))|(?:^qwen3)|(?:^qwq)|(?:^doubao-seed)|thinking/u;
+const thinkingModelPattern = /(?:^glm-(?:4\.[5-9]|5))|(?:^deepseek-(?:reasoner|r1))|(?:^deepseek-v4\.1-flash(?:-|$))|(?:^qwen3)|(?:^qwq)|(?:^doubao-seed)|thinking/u;
 
 export function providerConnectionTestOptions(
   provider: Pick<ProviderConnection, 'providerType' | 'defaultModel'>,

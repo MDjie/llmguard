@@ -4,7 +4,7 @@ import type {
   OriginSpan,
 } from './types';
 
-export const NORMALIZATION_ALGORITHM_VERSION = 'guard-normalization-3.2.0';
+export const NORMALIZATION_ALGORITHM_VERSION = 'guard-normalization-3.3.0';
 
 export interface NormalizationBudget {
   readonly maxRounds: number;
@@ -59,10 +59,12 @@ const HTML_ENTITY = /&(?:#(\d+)|#x([0-9a-f]+)|amp|lt|gt|quot|apos);/giu;
 const BASE64_TOKEN = /(?:base64\s*:\s*)?((?:[A-Za-z0-9+/]{4}){4,}(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?)/giu;
 const BASE32_TOKEN = /(?:base32\s*:\s*)?([A-Z2-7]{8,}={0,6})/giu;
 const HEX_TOKEN = /(?:hex\s*:\s*)?((?:[0-9a-f]{2}){4,})/giu;
-const QUOTED_PRINTABLE = /(?:=[0-9a-f]{2}){4,}/iu;
+const QUOTED_PRINTABLE = /(?:=[0-9a-f]{2}){4,}/giu;
 const ROT13_PREFIX = /\brot13\s*:\s*([^\r\n]{4,})/giu;
 const ESCAPED_CODE_POINT = /\\(?:x([0-9a-f]{2})|u\{([0-9a-f]{1,6})\}|u([0-9a-f]{4}))/giu;
-const SLICED_TOKEN = /(?:[\p{L}\p{N}][\s\p{P}\p{S}_]{1,3}){3,}[\p{L}\p{N}]/gu;
+// Do not consume the first character of a normal word after a sliced token.
+const SLICED_TOKEN = /(?:[\p{L}\p{N}][\s\p{P}\p{S}_]{1,3}){3,}[\p{L}\p{N}](?=$|[^\p{L}\p{N}])/gu;
+const URL_PERCENT_RUN = /(?:%[0-9a-f]{2})+/giu;
 
 const CONFUSABLES: Readonly<Record<string, string>> = {
   'Α': 'A', 'А': 'A', 'Ꭺ': 'A', 'Β': 'B', 'В': 'B', 'Ᏼ': 'B',
@@ -307,12 +309,17 @@ function htmlCandidates(view: NormalizedView): readonly CandidateView[] {
 
 function urlCandidates(view: NormalizedView): readonly CandidateView[] {
   if (!/%[0-9a-f]{2}/iu.test(view.text)) return [];
-  try {
-    const decoded = decodeURIComponent(view.text.replace(/\+/gu, '%20'));
-    return decoded === view.text ? [] : [wholeViewCandidate(view, 'url_percent', decoded, 0.98)];
-  } catch {
-    return [];
-  }
+  const replacements = [...view.text.matchAll(URL_PERCENT_RUN)].flatMap((match) => {
+    const encoded = match[0];
+    try {
+      const decoded = decodeURIComponent(encoded);
+      const start = match.index ?? 0;
+      return decoded === encoded ? [] : [{ start, end: start + encoded.length, value: decoded }];
+    } catch {
+      return [];
+    }
+  });
+  return replaceMappedRanges(view, 'url_percent', 0.98, replacements);
 }
 
 function escapedCandidates(view: NormalizedView): readonly CandidateView[] {
@@ -431,12 +438,18 @@ function hexCandidates(view: NormalizedView): readonly CandidateView[] {
 }
 
 function quotedPrintableCandidates(view: NormalizedView): readonly CandidateView[] {
-  if (!QUOTED_PRINTABLE.test(view.text)) return [];
-  const decoded = view.text.replace(/=([0-9a-f]{2})/giu, (_match, byte: string) =>
-    String.fromCharCode(Number.parseInt(byte, 16)));
-  return decoded === view.text || printableRatio(decoded) < 0.85
-    ? []
-    : [wholeViewCandidate(view, 'quoted_printable', decoded, 0.97)];
+  const matches = [...view.text.matchAll(QUOTED_PRINTABLE)];
+  if (matches.length === 0) return [];
+  const replacements = matches.flatMap((match) => {
+    const encoded = match[0];
+    const bytes = [...encoded.matchAll(/=([0-9a-f]{2})/giu)].map((part) =>
+      Number.parseInt(part[1] ?? '', 16));
+    const decoded = Buffer.from(bytes).toString('utf8');
+    if (!decoded || decoded.includes('\\uFFFD') || printableRatio(decoded) < 0.85) return [];
+    const start = match.index ?? 0;
+    return [{ start, end: start + encoded.length, value: decoded }];
+  });
+  return replaceMappedRanges(view, 'quoted_printable', 0.97, replacements);
 }
 
 function rot13Candidates(view: NormalizedView): readonly CandidateView[] {

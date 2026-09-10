@@ -88,10 +88,15 @@ async function readJsonLines<T>(relativePath: string): Promise<T[]> {
 }
 
 describe('content-safety lexicon pipeline artifacts', () => {
-  it('locks every external source to a revision, byte length, and SHA-256', async () => {
+  it('records source provenance and locks every external file by byte length and SHA-256', async () => {
     const lock = await readJson<SourceLock>('data/content-safety/sources/sources.lock.json');
     expect(lock.schemaVersion).toBe('1.0.0');
-    expect(lock.sources).toHaveLength(3);
+    expect(lock.sources.map(source => source.sourceId).sort()).toEqual([
+      'fwwdn-sensitive-stop-words', 'mlcommons-ailuminate', 'toxiccn-v1', 'unicode-tr39',
+    ]);
+    const toxiccn = lock.sources.find(source => source.sourceId === 'toxiccn-v1');
+    expect(toxiccn?.allowedUse).toBe('candidate_import_only');
+    expect(toxiccn?.files).toHaveLength(5);
 
     const lockedFiles = lock.sources.flatMap((source) => {
       expect(source.revision).not.toHaveLength(0);
@@ -102,7 +107,7 @@ describe('content-safety lexicon pipeline artifacts', () => {
       ]).toContain(source.allowedUse);
       return source.files;
     });
-    expect(lockedFiles).toHaveLength(9);
+    expect(lockedFiles).toHaveLength(14);
 
     for (const file of lockedFiles) {
       const absolutePath = path.join(PROJECT_ROOT, file.path);

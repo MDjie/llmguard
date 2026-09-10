@@ -38,6 +38,21 @@ prompt set. GuardLLM keeps this data outside the lexicon and training pipeline.
 Confusable skeletons are internal detection features. They must not replace the
 original content or be displayed as normalized user text.
 
+## ToxiCN lexicon
+
+- Upstream: https://github.com/thu-coai/ToxiCN
+- Locked revision: UNPINNED — files copied from the local evaluation workspace
+  (`eval-data/toxiccn/lexicon/*.json`); upstream commit and exact file mapping
+  have not been verified yet.
+- Upstream license statement: PENDING_REVIEW
+- Local use: candidate discovery only (Chinese offensive-language slurs across
+  general / racism / sexism / region / LGBT categories)
+- Important limitations: several entries are homophone or censorship-evasion
+  variants with no literal meaning; others are standard vocabulary or community
+  self-labels that must be excluded during review. Category-to-risk mapping is
+  recorded per candidate and requires human sign-off before any word can leave
+  `candidate` state. No imported word is active by default.
+
 ## Integrity
 
 Exact file sizes and SHA-256 values are recorded in sources.lock.json. A change

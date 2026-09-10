@@ -88,6 +88,7 @@ describe('provider connection tests', () => {
     ['glm', 'glm-4.6'],
     ['deepseek', 'deepseek-reasoner'],
     ['deepseek', 'deepseek-r1-distill-qwen-7b'],
+    ['deepseek', 'deepseek-v4.1-flash-expires-on-0910'],
     ['qwen', 'qwen3-235b-a22b'],
     ['qwen', 'qwq-32b'],
     ['doubao', 'doubao-seed-1.6-flash'],

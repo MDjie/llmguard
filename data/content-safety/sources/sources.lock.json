@@ -1,92 +1,131 @@
 {
-  "schemaVersion": "1.0.0",
-  "generatedAt": "2026-09-04T00:00:00+08:00",
-  "policy": {
-    "rawFilesAreProductionInputs": false,
-    "requireExactSha256": true,
-    "requireLicenseReview": true
-  },
-  "sources": [
+ "schemaVersion": "1.0.0",
+ "generatedAt": "2026-09-04T00:00:00+08:00",
+ "policy": {
+  "rawFilesAreProductionInputs": false,
+  "requireExactSha256": true,
+  "requireLicenseReview": true
+ },
+ "sources": [
+  {
+   "sourceId": "fwwdn-sensitive-stop-words",
+   "upstream": "https://github.com/fwwdn/sensitive-stop-words",
+   "revision": "a7d06bb1c321e669943b6841570d9da6dad8ce2b",
+   "license": "Apache-2.0",
+   "allowedUse": "candidate_import_only",
+   "files": [
     {
-      "sourceId": "fwwdn-sensitive-stop-words",
-      "upstream": "https://github.com/fwwdn/sensitive-stop-words",
-      "revision": "a7d06bb1c321e669943b6841570d9da6dad8ce2b",
-      "license": "Apache-2.0",
-      "allowedUse": "candidate_import_only",
-      "files": [
-        {
-          "path": "data/content-safety/sources/raw/fwwdn-files/广告.txt",
-          "url": "https://raw.githubusercontent.com/fwwdn/sensitive-stop-words/a7d06bb1c321e669943b6841570d9da6dad8ce2b/%E5%B9%BF%E5%91%8A.txt",
-          "bytes": 1327,
-          "sha256": "5978fb1c0f47e8849215c586682a3447a22990db0dc5ae17c1a5d07302ad4eb1"
-        },
-        {
-          "path": "data/content-safety/sources/raw/fwwdn-files/色情类.txt",
-          "url": "https://raw.githubusercontent.com/fwwdn/sensitive-stop-words/a7d06bb1c321e669943b6841570d9da6dad8ce2b/%E8%89%B2%E6%83%85%E7%B1%BB.txt",
-          "bytes": 2651,
-          "sha256": "2f846d586eb3f0099b1fbb53b0afee0148f09e4394912162b31eb02aee7db1d2"
-        },
-        {
-          "path": "data/content-safety/sources/raw/fwwdn-files/涉枪涉爆违法信息关键词.txt",
-          "url": "https://raw.githubusercontent.com/fwwdn/sensitive-stop-words/a7d06bb1c321e669943b6841570d9da6dad8ce2b/%E6%B6%89%E6%9E%AA%E6%B6%89%E7%88%86%E8%BF%9D%E6%B3%95%E4%BF%A1%E6%81%AF%E5%85%B3%E9%94%AE%E8%AF%8D.txt",
-          "bytes": 8823,
-          "sha256": "82a319f9d2c03e6033ce51b15e03d0a18396c09d24998212c578d3056bba0dd4"
-        },
-        {
-          "path": "data/content-safety/sources/raw/fwwdn-files/政治类.txt",
-          "url": "https://raw.githubusercontent.com/fwwdn/sensitive-stop-words/a7d06bb1c321e669943b6841570d9da6dad8ce2b/%E6%94%BF%E6%B2%BB%E7%B1%BB.txt",
-          "bytes": 3330,
-          "sha256": "bb4079468345a5ed1e630c82a43ab947828ae2c263e8702a6432bfe253d70f90"
-        },
-        {
-          "path": "data/content-safety/sources/raw/fwwdn-files/LICENSE",
-          "url": "https://raw.githubusercontent.com/fwwdn/sensitive-stop-words/a7d06bb1c321e669943b6841570d9da6dad8ce2b/LICENSE",
-          "bytes": 11310,
-          "sha256": "552e63d5bb2e8a2fcf52b57caa146429a63215d3590121fb2cac0345a4c1ea7a"
-        }
-      ]
+     "path": "data/content-safety/sources/raw/fwwdn-files/广告.txt",
+     "url": "https://raw.githubusercontent.com/fwwdn/sensitive-stop-words/a7d06bb1c321e669943b6841570d9da6dad8ce2b/%E5%B9%BF%E5%91%8A.txt",
+     "bytes": 1327,
+     "sha256": "5978fb1c0f47e8849215c586682a3447a22990db0dc5ae17c1a5d07302ad4eb1"
     },
     {
-      "sourceId": "mlcommons-ailuminate",
-      "upstream": "https://github.com/mlcommons/ailuminate",
-      "revision": "769cc2be9d20c8d4fb26ce53b68865ed41dfb8e2",
-      "license": "CC-BY-4.0 for the Demo prompt dataset; repository code license is recorded upstream",
-      "allowedUse": "evaluation_only_not_training",
-      "files": [
-        {
-          "path": "data/content-safety/sources/raw/mlcommons-files/airr_official_1.0_demo_en_us_prompt_set_release.csv",
-          "url": "https://raw.githubusercontent.com/mlcommons/ailuminate/769cc2be9d20c8d4fb26ce53b68865ed41dfb8e2/airr_official_1.0_demo_en_us_prompt_set_release.csv",
-          "bytes": 322200,
-          "sha256": "63e2b654325c5405096fabf28ef5f057b0ad674904b1839fd1f52b523e324d02"
-        },
-        {
-          "path": "data/content-safety/sources/raw/mlcommons-files/LICENSE.md",
-          "url": "https://raw.githubusercontent.com/mlcommons/ailuminate/769cc2be9d20c8d4fb26ce53b68865ed41dfb8e2/LICENSE.md",
-          "bytes": 10174,
-          "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594"
-        },
-        {
-          "path": "data/content-safety/sources/raw/mlcommons-files/README.md",
-          "url": "https://raw.githubusercontent.com/mlcommons/ailuminate/769cc2be9d20c8d4fb26ce53b68865ed41dfb8e2/README.md",
-          "bytes": 6146,
-          "sha256": "8e6d5fd820e51bd5a6b5c75daae7899151d15694dce15f31ffd8948e90669263"
-        }
-      ]
+     "path": "data/content-safety/sources/raw/fwwdn-files/色情类.txt",
+     "url": "https://raw.githubusercontent.com/fwwdn/sensitive-stop-words/a7d06bb1c321e669943b6841570d9da6dad8ce2b/%E8%89%B2%E6%83%85%E7%B1%BB.txt",
+     "bytes": 2651,
+     "sha256": "2f846d586eb3f0099b1fbb53b0afee0148f09e4394912162b31eb02aee7db1d2"
     },
     {
-      "sourceId": "unicode-tr39",
-      "upstream": "https://www.unicode.org/Public/security/latest/confusables.txt",
-      "revision": "17.0.0 (file header dated 2025-07-22; exact bytes locked by SHA-256)",
-      "license": "Unicode License/Terms of Use",
-      "allowedUse": "confusable_detection_only",
-      "files": [
-        {
-          "path": "data/content-safety/sources/raw/unicode-confusables.txt",
-          "url": "https://www.unicode.org/Public/security/latest/confusables.txt",
-          "bytes": 745683,
-          "sha256": "091c7f82fc39ef208faf8f94d29c244de99254675e09de163160c810d13ef22a"
-        }
-      ]
+     "path": "data/content-safety/sources/raw/fwwdn-files/涉枪涉爆违法信息关键词.txt",
+     "url": "https://raw.githubusercontent.com/fwwdn/sensitive-stop-words/a7d06bb1c321e669943b6841570d9da6dad8ce2b/%E6%B6%89%E6%9E%AA%E6%B6%89%E7%88%86%E8%BF%9D%E6%B3%95%E4%BF%A1%E6%81%AF%E5%85%B3%E9%94%AE%E8%AF%8D.txt",
+     "bytes": 8823,
+     "sha256": "82a319f9d2c03e6033ce51b15e03d0a18396c09d24998212c578d3056bba0dd4"
+    },
+    {
+     "path": "data/content-safety/sources/raw/fwwdn-files/政治类.txt",
+     "url": "https://raw.githubusercontent.com/fwwdn/sensitive-stop-words/a7d06bb1c321e669943b6841570d9da6dad8ce2b/%E6%94%BF%E6%B2%BB%E7%B1%BB.txt",
+     "bytes": 3330,
+     "sha256": "bb4079468345a5ed1e630c82a43ab947828ae2c263e8702a6432bfe253d70f90"
+    },
+    {
+     "path": "data/content-safety/sources/raw/fwwdn-files/LICENSE",
+     "url": "https://raw.githubusercontent.com/fwwdn/sensitive-stop-words/a7d06bb1c321e669943b6841570d9da6dad8ce2b/LICENSE",
+     "bytes": 11310,
+     "sha256": "552e63d5bb2e8a2fcf52b57caa146429a63215d3590121fb2cac0345a4c1ea7a"
     }
-  ]
+   ]
+  },
+  {
+   "sourceId": "mlcommons-ailuminate",
+   "upstream": "https://github.com/mlcommons/ailuminate",
+   "revision": "769cc2be9d20c8d4fb26ce53b68865ed41dfb8e2",
+   "license": "CC-BY-4.0 for the Demo prompt dataset; repository code license is recorded upstream",
+   "allowedUse": "evaluation_only_not_training",
+   "files": [
+    {
+     "path": "data/content-safety/sources/raw/mlcommons-files/airr_official_1.0_demo_en_us_prompt_set_release.csv",
+     "url": "https://raw.githubusercontent.com/mlcommons/ailuminate/769cc2be9d20c8d4fb26ce53b68865ed41dfb8e2/airr_official_1.0_demo_en_us_prompt_set_release.csv",
+     "bytes": 322200,
+     "sha256": "63e2b654325c5405096fabf28ef5f057b0ad674904b1839fd1f52b523e324d02"
+    },
+    {
+     "path": "data/content-safety/sources/raw/mlcommons-files/LICENSE.md",
+     "url": "https://raw.githubusercontent.com/mlcommons/ailuminate/769cc2be9d20c8d4fb26ce53b68865ed41dfb8e2/LICENSE.md",
+     "bytes": 10174,
+     "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594"
+    },
+    {
+     "path": "data/content-safety/sources/raw/mlcommons-files/README.md",
+     "url": "https://raw.githubusercontent.com/mlcommons/ailuminate/769cc2be9d20c8d4fb26ce53b68865ed41dfb8e2/README.md",
+     "bytes": 6146,
+     "sha256": "8e6d5fd820e51bd5a6b5c75daae7899151d15694dce15f31ffd8948e90669263"
+    }
+   ]
+  },
+  {
+   "sourceId": "unicode-tr39",
+   "upstream": "https://www.unicode.org/Public/security/latest/confusables.txt",
+   "revision": "17.0.0 (file header dated 2025-07-22; exact bytes locked by SHA-256)",
+   "license": "Unicode License/Terms of Use",
+   "allowedUse": "confusable_detection_only",
+   "files": [
+    {
+     "path": "data/content-safety/sources/raw/unicode-confusables.txt",
+     "url": "https://www.unicode.org/Public/security/latest/confusables.txt",
+     "bytes": 745683,
+     "sha256": "091c7f82fc39ef208faf8f94d29c244de99254675e09de163160c810d13ef22a"
+    }
+   ]
+  },
+  {
+   "sourceId": "toxiccn-v1",
+   "upstream": "https://github.com/thu-coai/ToxiCN",
+   "revision": "UNPINNED (local eval-data/toxiccn copy; upstream commit and license review pending)",
+   "license": "PENDING_REVIEW",
+   "allowedUse": "candidate_import_only",
+   "files": [
+    {
+     "path": "data/content-safety/sources/raw/toxiccn-files/LGBT.json",
+     "url": "https://github.com/thu-coai/ToxiCN (local eval-data/toxiccn copy; upstream file mapping pending verification)/LGBT.json",
+     "bytes": 696,
+     "sha256": "8e65e8944d9c9f9256b94bf9c5b5249d7fa794d9f0fa8bf9fff8ea3380865a9b"
+    },
+    {
+     "path": "data/content-safety/sources/raw/toxiccn-files/general.json",
+     "url": "https://github.com/thu-coai/ToxiCN (local eval-data/toxiccn copy; upstream file mapping pending verification)/general.json",
+     "bytes": 4960,
+     "sha256": "e042fe5483d2543b5425d442682e766f95e7a3274e5438a8d00d429a0599038f"
+    },
+    {
+     "path": "data/content-safety/sources/raw/toxiccn-files/racism.json",
+     "url": "https://github.com/thu-coai/ToxiCN (local eval-data/toxiccn copy; upstream file mapping pending verification)/racism.json",
+     "bytes": 3923,
+     "sha256": "05ed05ec5824b313d9964bf93dd9b4a5881350c420662243df6ce48b3fe4202b"
+    },
+    {
+     "path": "data/content-safety/sources/raw/toxiccn-files/region.json",
+     "url": "https://github.com/thu-coai/ToxiCN (local eval-data/toxiccn copy; upstream file mapping pending verification)/region.json",
+     "bytes": 1243,
+     "sha256": "32f55a9c55ebe222df39ef699f385c2135bd003dadbf9bdbb8fe66d7ed8b27a6"
+    },
+    {
+     "path": "data/content-safety/sources/raw/toxiccn-files/sexism.json",
+     "url": "https://github.com/thu-coai/ToxiCN (local eval-data/toxiccn copy; upstream file mapping pending verification)/sexism.json",
+     "bytes": 3066,
+     "sha256": "f9170c73f684ccc54c5c4078a99a30c41474a577ef2e6e37feb818990f54cb5b"
+    }
+   ]
+  }
+ ]
 }

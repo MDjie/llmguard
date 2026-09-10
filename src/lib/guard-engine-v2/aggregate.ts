@@ -50,8 +50,18 @@ export function aggregateGuardDecision(params: {
     params.policy.semanticClassifier !== undefined;
   const coverageMode=params.policy.semanticDecisionMode==='coverage-v1';
   const missingRisks=coverageGaps(params.policy,params.request,observations);
-  const judgeMissing = coverageMode ? missingRisks.length>0 : (v2 && semanticCapabilityConfigured && selectedJudge?.mode !== 'ENFORCE') || (selectedJudge?.mode === 'ENFORCE' && selectedJudge.riskIds.some(id => !observations.some(o => o.detectorId === 'configurable-judge' && o.riskType === id && o.semanticCoverage === 'COMPLETE' && (o.decisionRole === 'CLEARED' || o.decisionRole === 'CONFIRMED_RISK'))));
   const candidates = observations.filter(o => o.decisionRole === 'CANDIDATE');
+  // The candidate funnel is opt-in. When L3 emitted no candidate, L4 was deliberately
+  // skipped and its absence is not a coverage failure; once a candidate exists, retain
+  // the ordinary Judge completeness requirement so a degraded Judge cannot allow it.
+  const judgeRequired = params.policy.judgeCandidateFunnel?.enabled !== true || candidates.length > 0;
+  const judgeMissing = coverageMode ? missingRisks.length>0 : judgeRequired && (
+    (v2 && semanticCapabilityConfigured && selectedJudge?.mode !== 'ENFORCE') ||
+    (selectedJudge?.mode === 'ENFORCE' && selectedJudge.riskIds.some(id => !observations.some(o =>
+      o.detectorId === 'configurable-judge' && o.riskType === id && o.semanticCoverage === 'COMPLETE' &&
+      (o.decisionRole === 'CLEARED' || o.decisionRole === 'CONFIRMED_RISK'),
+    )))
+  );
   const unresolvedCandidates = candidates.some(c => !observations.some(o => o.riskType === c.riskType && o.semanticCoverage === 'COMPLETE' && (o.decisionRole === 'CLEARED' || o.decisionRole === 'CONFIRMED_RISK')));
   const unresolved = v2 && unresolvedCandidates;
   const matches = observations.filter(isConfirmedObservation);

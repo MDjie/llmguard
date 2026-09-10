@@ -110,6 +110,8 @@ export type DetectorTier = 'L0' | 'L1' | 'L2' | 'L3' | 'L4';
 export type DetectorRunCondition =
   | 'ALWAYS'
   | 'WHEN_PARENT_MATCHES'
+  /** Run a refinement stage only when its direct parents emitted unresolved candidates. */
+  | 'WHEN_PARENT_CANDIDATES'
   | 'WHEN_PARENT_FAILS'
   | 'WHEN_NO_MANDATORY_DENY'
   | 'WHEN_NO_BLOCKING_MATCH';
@@ -140,6 +142,8 @@ export interface GuardEnginePolicy {
   readonly decisionPolicyVersion?: 1 | 2;
   readonly riskThresholds?: Readonly<Record<string, { readonly warn: number; readonly block: number }>>;
   readonly judgeProfiles?: readonly import('@/lib/judge/profile').JudgeProfile[];
+  /** Opt-in P1 funnel: a Judge is required only after an unresolved candidate. */
+  readonly judgeCandidateFunnel?: { readonly enabled: true; };
   readonly id: string;
   readonly bundleId: string;
   readonly policyVersion?: string;
@@ -154,7 +158,18 @@ export interface GuardEnginePolicy {
 export interface GuardEvaluationTrace {
   readonly requestId:string;
   readonly normalization:Omit<import('./normalization').NormalizationResult,'views'> & {readonly viewCount:number;readonly sourceCount:number};
-  readonly nodes:readonly {readonly nodeId:string;readonly detectorId:string;readonly status:string;readonly attempts:number;readonly reason:string}[];
+  readonly nodes:readonly {
+    readonly nodeId:string;
+    readonly detectorId:string;
+    readonly tier:DetectorTier;
+    readonly runCondition:DetectorRunCondition;
+    /** Whether a direct dependency supplied an unresolved candidate to this node. */
+    readonly candidateInput:boolean;
+    readonly failurePolicy:DetectorFailurePolicy;
+    readonly status:string;
+    readonly attempts:number;
+    readonly reason:string;
+  }[];
   readonly aggregateAction:GuardAction;
 }
 export interface GuardEngineDependencies {
